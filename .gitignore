@@ -1,0 +1,34 @@
+# Claude
+CLAUDE.md
+.claude/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker volumes (if mapped locally)
+postgres_data/

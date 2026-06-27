@@ -1,0 +1,23 @@
+# Vimana — Sacred Logistics · CHANGELOG.md
+
+> FILL ──────────────────────────────
+> Назначение: короткие логи значимых изменений проекта.
+> Когда обновлять: при любом значимом изменении кода, моделей, инфраструктуры или PRD.
+> Что НЕ дублировать: подробную логику (TECHSTATE), стек (ENVIRONMENT), задачи (TASKS).
+> Формат записи (новые сверху): `YYYY-MM-DD · <уровень> · что изменилось · затронутые файлы`
+>   уровень ∈ { PRD, MODEL, INFRA, FEATURE, FIX, DECISION }
+> ───────────────────────────────────
+
+---
+
+## Записи
+
+- **2026-06-27 · INFRA** · T0.1 выполнен: git init (ветка Azzot_main), структура `backend/` + `frontend/`, `docker-compose.dev.yml` (postgres:16 + redis:7), `.env.example`, `.gitignore` · затронуты: backend/Dockerfile, backend/requirements.txt, frontend/Dockerfile, docker-compose.dev.yml, .env.example, TECHSTATE §1.
+- **2026-06-27 · PRD** · УБА-формула зафиксирована: `round(F_norm × Q_norm × V_norm × D_factor × 1000)` [0–1000]; 5 уровней (Новичок→Элита); D — бонус-множитель [1.0–1.5], не штраф; Q считает только сделки с двумя DealVault-фото · затронуты: IMPLEMENTATIONPLAN §6 §3.1, TASKS T3.1, METRICS §4, TECHSTATE §4 Фаза 3.
+- **2026-06-27 · DECISION** · D10 зафиксирован: Nostr-совместимость = Вариант A (кастодиальный keypair → self-custody path) + Вариант D (NIP-07 browser extension override); детали механики в TECHSTATE §2b · затронуты: TECHSTATE, IMPLEMENTATIONPLAN §5, TASKS T2.2.
+- **2026-06-27 · PRD** · Реструктуризация фаз: 4 → 6 (крипто-эскроу выведен в Фазу 5, добавлены Фазы 2/3/4 — Identity+Keys, UBA+Arbitration, Card payments); добавлен Социальный граф (Invite, Connections) в Фазу 1; BlackBox переименован в **DealVault** во всех файлах; добавлены варианты Nostr-совместимости (D10 в TECHSTATE) · затронуты: MASTERPLAN, IMPLEMENTATIONPLAN, TASKS, TECHSTATE, все PRD-файлы.
+- **2026-06-27 · PRD** · Проект переименован PeerFlew → Vimana — Sacred Logistics; добавлены слоганы (Wings of Trust / Peer-to-Air / People Are the Network); заполнена Карта файлов в CLAUDE.md · затронуты: все PRD-файлы, CLAUDE.md.
+- **2026-06-?? · PRD** · Инициализирована PRD-система Vimana — Sacred Logistics (PROJECT + 5 PRD-узлов + 5 артефактов) · затронуты: все файлы системы.
+- **2026-06-?? · DECISION** · Зафиксированы решения D1–D5 (стек, не-кастодиальный BTC-эскроу 2-of-3, Уровень Бизнес-Активности вместо репутации, фазы-функциональные-блоки, «Чёрный ящик») · TECHSTATE.md.
+
+*(Новые записи добавлять сверху. Дату проставлять фактическую.)*
