@@ -20,8 +20,7 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: str | None = None
-    phone: str | None = None
+    login: str
     password: str
 
 

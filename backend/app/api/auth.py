@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,7 +6,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.user import Token, UserCreate, UserOut
+from app.schemas.user import Token, UserCreate, UserLogin, UserOut
 
 router = APIRouter()
 
@@ -41,21 +40,17 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(
-    form: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db),
-):
-    username = form.username
+async def login(body: UserLogin, db: AsyncSession = Depends(get_db)):
     user: User | None = None
 
-    if "@" in username:
-        result = await db.execute(select(User).where(User.email == username))
+    if "@" in body.login:
+        result = await db.execute(select(User).where(User.email == body.login))
         user = result.scalar_one_or_none()
     else:
-        result = await db.execute(select(User).where(User.phone == username))
+        result = await db.execute(select(User).where(User.phone == body.login))
         user = result.scalar_one_or_none()
 
-    if not user or not verify_password(form.password, user.password_hash):
+    if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token(str(user.id))

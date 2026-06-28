@@ -35,8 +35,13 @@ export default function RegisterPage() {
       const { data: user } = await me()
       setAuth(user, tokenData.access_token)
       navigate('/')
-    } catch {
-      setError('Ошибка регистрации. Возможно, такой пользователь уже существует.')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 409) {
+        setError('Пользователь с таким email или телефоном уже существует.')
+      } else {
+        setError('Ошибка сервера. Попробуйте ещё раз.')
+      }
     } finally {
       setLoading(false)
     }

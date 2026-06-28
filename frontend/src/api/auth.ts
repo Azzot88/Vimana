@@ -32,7 +32,7 @@ export const register = (payload: RegisterPayload) =>
   api.post<TokenResponse>('/api/auth/register', payload)
 
 export const login = (payload: LoginPayload) =>
-  api.post<TokenResponse>('/api/auth/token', payload)
+  api.post<TokenResponse>('/api/auth/login', payload)
 
 export const me = () =>
-  api.get<User>('/api/me')
+  api.get<User>('/api/auth/me')
