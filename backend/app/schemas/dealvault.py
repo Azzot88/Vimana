@@ -1,0 +1,32 @@
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
+
+
+class AttachmentOut(BaseModel):
+    id: uuid.UUID
+    message_id: uuid.UUID
+    r2_key: str
+    file_hash: str
+    ipfs_cid: str | None
+    kind: str
+    url: str | None = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MessageOut(BaseModel):
+    id: uuid.UUID
+    deal_id: uuid.UUID
+    sender_id: uuid.UUID | None
+    text: str | None
+    is_system: bool
+    attachments: list[AttachmentOut]
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MessageCreate(BaseModel):
+    text: str | None = None
+    is_system: bool = False
