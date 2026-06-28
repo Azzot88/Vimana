@@ -15,8 +15,9 @@ export default function TripsPage() {
   const [date, setDate] = useState('')
   const [orderTripId, setOrderTripId] = useState<string | null>(null)
   const [cargoDesc, setCargoDesc] = useState('')
-  const [cargoWeight, setCargoWeight] = useState('')
   const [cargoCategory, setCargoCategory] = useState('other')
+  const [declaredValue, setDeclaredValue] = useState('')
+  const [recipientContact, setRecipientContact] = useState('')
   const [orderLoading, setOrderLoading] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -50,12 +51,19 @@ export default function TripsPage() {
     if (!orderTripId) return
     setOrderLoading(true)
     setError('')
+    const trip = trips.find((t) => t.id === orderTripId)
+    if (!trip) return
     try {
       await matchDeal({
         trip_id: orderTripId,
-        cargo_description: cargoDesc,
-        cargo_weight: parseFloat(cargoWeight),
-        cargo_category: cargoCategory,
+        order: {
+          recipient_contact: recipientContact,
+          origin: trip.origin,
+          destination: trip.destination,
+          category: cargoCategory,
+          declared_value: Number(declaredValue),
+          description: cargoDesc,
+        },
       })
       setOrderSuccess(true)
       setOrderTripId(null)
@@ -161,27 +169,37 @@ export default function TripsPage() {
                   <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">Оформить заявку</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Контакт получателя</label>
+                      <input
+                        type="text"
+                        value={recipientContact}
+                        onChange={(e) => setRecipientContact(e.target.value)}
+                        required
+                        className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                        placeholder="+7 999 000 00 00"
+                      />
+                    </div>
+                    <div className="col-span-2">
                       <label className="block text-xs font-body font-medium text-navy/60 mb-1">Описание груза</label>
                       <input
                         type="text"
                         value={cargoDesc}
                         onChange={(e) => setCargoDesc(e.target.value)}
-                        required
                         className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
                         placeholder="Документы, небольшая коробка"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Вес (кг)</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Объявленная стоимость (USD)</label>
                       <input
                         type="number"
-                        step="0.1"
-                        min="0.1"
-                        value={cargoWeight}
-                        onChange={(e) => setCargoWeight(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        value={declaredValue}
+                        onChange={(e) => setDeclaredValue(e.target.value)}
                         required
                         className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-                        placeholder="1.5"
+                        placeholder="100"
                       />
                     </div>
                     <div>

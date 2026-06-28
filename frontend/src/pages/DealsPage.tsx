@@ -47,15 +47,13 @@ export default function DealsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1.5">
                     <MonoText className="text-base text-navy font-medium">
-                      {deal.origin} → {deal.destination}
+                      {deal.id.slice(0, 8)}...
                     </MonoText>
                     <div className="flex items-center gap-3 text-xs font-body text-navy/50">
                       <span className="bg-navy/5 px-2 py-0.5 rounded font-mono">{role}</span>
-                      <span>{deal.cargo_description}</span>
-                      <MonoText className="text-xs">{deal.cargo_weight} кг</MonoText>
                     </div>
                     <MonoText className="text-xs text-navy/40">
-                      {new Date(deal.depart_at).toLocaleString('ru-RU')}
+                      {new Date(deal.created_at).toLocaleString('ru-RU')}
                     </MonoText>
                   </div>
                   <div className="flex flex-col items-end gap-2">

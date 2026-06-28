@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
 from app.models.marketplace import Order, OrderCategory, OrderStatus, Trip, TripStatus
 from app.models.user import User
-from app.schemas.marketplace import DealEventOut, DealOut, OrderCreate
+from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
 
 router = APIRouter()
 
@@ -185,6 +185,44 @@ async def confirm_deal(
     await db.commit()
     await db.refresh(deal)
     return deal
+
+
+@router.get("/{deal_id}", response_model=DealDetailOut)
+async def get_deal(
+    deal_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    deal = await db.get(Deal, deal_id)
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    if current_user.id not in (deal.sender_id, deal.carrier_id):
+        raise HTTPException(status_code=403, detail="Not a deal participant")
+
+    trip = await db.get(Trip, deal.trip_id)
+    order = await db.get(Order, deal.order_id)
+    sender = await db.get(User, deal.sender_id)
+    carrier = await db.get(User, deal.carrier_id)
+
+    return DealDetailOut(
+        id=deal.id,
+        order_id=deal.order_id,
+        trip_id=deal.trip_id,
+        sender_id=deal.sender_id,
+        carrier_id=deal.carrier_id,
+        recipient_id=deal.recipient_id,
+        status=deal.status.value,
+        created_at=deal.created_at,
+        origin=trip.origin if trip else "",
+        destination=trip.destination if trip else "",
+        depart_at=trip.depart_at if trip else deal.created_at,
+        sender_name=sender.display_name if sender else "",
+        carrier_name=carrier.display_name if carrier else "",
+        cargo_description=order.description or "" if order else "",
+        cargo_category=order.category.value if order else "",
+        declared_value=order.declared_value if order else 0,
+        currency=order.currency if order else "USD",
+    )
 
 
 @router.get("", response_model=list[DealOut])

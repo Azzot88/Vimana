@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
-import { getDeal, acceptDeal, addEvent, confirmDeal, type Deal } from '../api/deals'
+import { getDeal, acceptDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
 
 export default function DealPage() {
   const { dealId } = useParams<{ dealId: string }>()
   const user = useAuthStore((s) => s.user)
-  const [deal, setDeal] = useState<Deal | null>(null)
+  const [deal, setDeal] = useState<DealDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
@@ -106,8 +106,8 @@ export default function DealPage() {
             <p className="text-sm font-body text-navy">{deal.cargo_description}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-navy/40 mb-1">Вес / Категория</p>
-            <MonoText className="text-sm text-navy">{deal.cargo_weight} кг · {deal.cargo_category}</MonoText>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">Категория</p>
+            <MonoText className="text-sm text-navy">{deal.cargo_category}</MonoText>
           </div>
           <div className="col-span-2">
             <p className="text-xs font-body font-medium text-navy/40 mb-1">ID сделки</p>

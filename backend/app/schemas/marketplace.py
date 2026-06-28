@@ -48,6 +48,27 @@ class DealOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DealDetailOut(BaseModel):
+    id: uuid.UUID
+    order_id: uuid.UUID
+    trip_id: uuid.UUID
+    sender_id: uuid.UUID
+    carrier_id: uuid.UUID
+    recipient_id: uuid.UUID | None
+    status: str
+    created_at: datetime
+    origin: str
+    destination: str
+    depart_at: datetime
+    sender_name: str
+    carrier_name: str
+    cargo_description: str
+    cargo_category: str
+    declared_value: float
+    currency: str
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DealEventOut(BaseModel):
     id: uuid.UUID
     deal_id: uuid.UUID
