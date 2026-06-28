@@ -12,6 +12,8 @@
 
 ## Записи
 
+- **2026-06-28 · MODEL** · T1.2: доменные модели — User, InviteLink, Connection, Trip, Order, Deal, DealEvent, DealVaultMessage, Attachment; миграция 0001_initial_models; nostr_sig/ipfs_cid/nostr_pubkey как nullable-заглушки Фазы 2/6 · `backend/app/models/`, `backend/alembic/versions/0001_initial_models.py`.
+- **2026-06-28 · INFRA** · T1.1: FastAPI скелет + async SQLAlchemy + Alembic env · `backend/app/main.py`, `backend/app/core/`, `backend/alembic/`.
 - **2026-06-27 · INFRA** · T0.1 выполнен: git init (ветка Azzot_main), структура `backend/` + `frontend/`, `docker-compose.dev.yml` (postgres:16 + redis:7), `.env.example`, `.gitignore` · затронуты: backend/Dockerfile, backend/requirements.txt, frontend/Dockerfile, docker-compose.dev.yml, .env.example, TECHSTATE §1.
 - **2026-06-27 · PRD** · УБА-формула зафиксирована: `round(F_norm × Q_norm × V_norm × D_factor × 1000)` [0–1000]; 5 уровней (Новичок→Элита); D — бонус-множитель [1.0–1.5], не штраф; Q считает только сделки с двумя DealVault-фото · затронуты: IMPLEMENTATIONPLAN §6 §3.1, TASKS T3.1, METRICS §4, TECHSTATE §4 Фаза 3.
 - **2026-06-27 · DECISION** · D10 зафиксирован: Nostr-совместимость = Вариант A (кастодиальный keypair → self-custody path) + Вариант D (NIP-07 browser extension override); детали механики в TECHSTATE §2b · затронуты: TECHSTATE, IMPLEMENTATIONPLAN §5, TASKS T2.2.

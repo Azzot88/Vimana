@@ -14,6 +14,8 @@
 | Блок | Фаза | Статус |
 |---|---|---|
 | Инфраструктура / Docker / БД | 0 | ✅ готово |
+| FastAPI + SQLAlchemy + Alembic | 1 | ✅ готово |
+| Доменные модели (все 9 таблиц + миграция) | 1 | ✅ готово |
 | Auth + Социальный граф (Invite, Connections) | 1 | ⬜ не начато |
 | Маркетплейс (Рейсы, Заявки, Мэтчинг) | 1 | ⬜ не начато |
 | Сделка (lifecycle + DealEvent) | 1 | ⬜ не начато |
@@ -88,7 +90,12 @@
 
 | Механика | Где реализовано (файлы) |
 |---|---|
-| _(добавлять по мере реализации)_ | _(пути)_ |
+| FastAPI app + /health + CORS | `backend/app/main.py` |
+| Настройки (pydantic-settings) | `backend/app/core/config.py` |
+| Async SQLAlchemy engine + Base + get_db() | `backend/app/core/database.py` |
+| Alembic async migrations | `backend/alembic/env.py` |
+| Все доменные модели (9 таблиц) | `backend/app/models/` |
+| Первая миграция (все таблицы + enum-ы + FK) | `backend/alembic/versions/0001_initial_models.py` |
 
 ---
 

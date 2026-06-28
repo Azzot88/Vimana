@@ -31,20 +31,20 @@
 
 ## 🧱 ЭТАП 1 — Ядро доверия (Фаза 1, V1)
 
-### T1.1 — FastAPI + SQLAlchemy + Alembic
-- [ ] Инициализировать FastAPI.
-- [ ] Подключение к PostgreSQL (SQLAlchemy async).
-- [ ] Инициализировать Alembic.
-**Acceptance:** сервер стартует, отвечает на `/health`, Alembic готов к первой миграции.
+### T1.1 — FastAPI + SQLAlchemy + Alembic ✅
+- [x] Инициализировать FastAPI.
+- [x] Подключение к PostgreSQL (SQLAlchemy async).
+- [x] Инициализировать Alembic.
+**Acceptance:** сервер стартует, отвечает на `/health`, Alembic готов к первой миграции. ✅
 
-### T1.2 — Доменные модели
+### T1.2 — Доменные модели ✅
 По IMPLEMENTATIONPLAN §4 §1.1:
-- [ ] `User` (+ nullable-заглушки `business_activity_level`, `nostr_pubkey`).
-- [ ] `Connection`, `InviteLink` (социальный граф).
-- [ ] `Trip`, `Order` (с `category` enum), `Deal`.
-- [ ] `DealEvent` (append-only), `DealVaultMessage`, `Attachment` (+ `file_hash`, nullable `ipfs_cid`).
-- [ ] Сгенерировать и применить Alembic-миграцию.
-**Acceptance:** таблицы созданы, Foreign Keys корректны, append-only ограничения на месте, все nullable-заглушки присутствуют.
+- [x] `User` (+ nullable-заглушки `business_activity_level`, `nostr_pubkey`).
+- [x] `Connection`, `InviteLink` (социальный граф).
+- [x] `Trip`, `Order` (с `category` enum), `Deal`.
+- [x] `DealEvent` (append-only), `DealVaultMessage`, `Attachment` (+ `file_hash`, nullable `ipfs_cid`).
+- [x] Миграция `0001_initial_models.py` создана. Применить: `docker compose exec backend alembic upgrade head`.
+**Acceptance:** таблицы созданы, Foreign Keys корректны, append-only ограничения на месте, все nullable-заглушки присутствуют. ✅
 
 ### T1.3 — Аутентификация + Социальный граф
 - [ ] JWT регистрация/логин.
@@ -82,7 +82,15 @@
 - [ ] Email/push о статусах и приближении прибытия (мягкие формулировки).
 **Acceptance:** пользователю приходят деликатные уведомления без ручного запуска.
 
-> **Финиш V1** достигается после T1.7 (см. критерий ниже).
+### T1.8 — Staging-деплой, домен и smoke test V1
+- [ ] Поднять VPS / облачный сервер (Ubuntu 22+ или Debian 12), установить Docker + Docker Compose.
+- [ ] Клонировать репо, скопировать `.env.example` → `.env`, заполнить production-значения.
+- [ ] `docker compose -f docker-compose.dev.yml up -d --build` + `docker compose exec backend alembic upgrade head`.
+- [ ] Nginx reverse proxy: домен → backend `:8000` (API) и frontend `:5173` (SPA). SSL через Let's Encrypt или Cloudflare.
+- [ ] Smoke test: зарегистрировать два аккаунта (Отправитель + Перевозчик), опубликовать маршрут, убедиться что DealVault открывается и ошибок в логах нет.
+**Acceptance:** приложение доступно по домену через HTTPS; регистрация и публикация маршрута работают end-to-end; в логах контейнеров нет критических ошибок.
+
+> **Финиш V1** достигается после T1.8 (см. критерий ниже).
 
 ---
 
