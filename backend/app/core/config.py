@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     REDIS_URL: str = "redis://localhost:6379/0"
+    CORS_ORIGINS: str = "*"
 
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
