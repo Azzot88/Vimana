@@ -54,12 +54,12 @@
 - [x] Guest-invite: `recipient_contact` принимается в body `/api/invites`.
 **Acceptance:** пользователь создаёт аккаунт, генерирует инвайт, друг принимает, оба видят связь. ✅
 
-### T1.4 — API маршрутов и сделки
-- [ ] `POST /api/trips`, `GET /api/trips` (с фильтрами маршрут/дата).
-- [ ] `POST /api/deals/match`, `POST /api/deals/{id}/accept`.
-- [ ] `POST /api/deals/{id}/event` (handoff/in_transit/received).
-- [ ] `POST /api/deals/{id}/confirm`, `GET /api/deals`.
-**Acceptance:** перевозчик публикует маршрут; две стороны создают сделку, проходят статусы до закрытия.
+### T1.4 — API маршрутов и сделки ✅
+- [x] `POST /api/trips`, `GET /api/trips` (фильтры origin/destination/date).
+- [x] `POST /api/deals/match`, `POST /api/deals/{id}/accept`.
+- [x] `POST /api/deals/{id}/event` (handoff/in_transit/received).
+- [x] `POST /api/deals/{id}/confirm`, `GET /api/deals`.
+**Acceptance:** перевозчик публикует маршрут; две стороны создают сделку, проходят статусы до закрытия. ✅
 
 ### T1.5 — DealVault (API + хранилище)
 - [ ] `GET/POST /api/deals/{id}/dealvault` (сообщения).

@@ -12,6 +12,7 @@
 
 ## Записи
 
+- **2026-06-28 · FEATURE** · T1.4: Trips API (POST/GET с фильтрами), Deals API (match→accept→event→confirm→closed), DealEvent append-only · `backend/app/api/trips.py`, `backend/app/api/deals.py`.
 - **2026-06-28 · FEATURE** · T1.3: JWT auth (register/login/me), InviteLink (TTL 7д, одноразовый), двусторонняя Connection, GET /api/me/connections · `backend/app/api/auth.py`, `backend/app/api/social.py`, `backend/app/core/security.py`.
 - **2026-06-28 · MODEL** · T1.2: доменные модели — User, InviteLink, Connection, Trip, Order, Deal, DealEvent, DealVaultMessage, Attachment; миграция 0001_initial_models; nostr_sig/ipfs_cid/nostr_pubkey как nullable-заглушки Фазы 2/6 · `backend/app/models/`, `backend/alembic/versions/0001_initial_models.py`.
 - **2026-06-28 · INFRA** · T1.1: FastAPI скелет + async SQLAlchemy + Alembic env · `backend/app/main.py`, `backend/app/core/`, `backend/alembic/`.

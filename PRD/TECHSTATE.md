@@ -17,8 +17,8 @@
 | FastAPI + SQLAlchemy + Alembic | 1 | ✅ готово |
 | Доменные модели (все 9 таблиц + миграция) | 1 | ✅ готово |
 | Auth + Социальный граф (Invite, Connections) | 1 | ✅ готово |
-| Маркетплейс (Рейсы, Заявки, Мэтчинг) | 1 | ⬜ не начато |
-| Сделка (lifecycle + DealEvent) | 1 | ⬜ не начато |
+| Маркетплейс (Рейсы, Заявки, Мэтчинг) | 1 | ✅ готово |
+| Сделка (lifecycle + DealEvent) | 1 | ✅ готово |
 | DealVault (чат + фото + лог, IPFS-ready) | 1 | ⬜ не начато |
 | Уведомления | 1 | ⬜ не начато |
 | KYC + Комплаенс | 2 | ⬜ не начато |
@@ -96,6 +96,8 @@
 | get_current_user dependency | `backend/app/api/deps.py` |
 | Auth API: register/login/me | `backend/app/api/auth.py` |
 | Invite + Connection API | `backend/app/api/social.py` |
+| Trips API (POST/GET + фильтры) | `backend/app/api/trips.py` |
+| Deals API (match/accept/event/confirm) + DealEvent append-only | `backend/app/api/deals.py` |
 | Async SQLAlchemy engine + Base + get_db() | `backend/app/core/database.py` |
 | Alembic async migrations | `backend/alembic/env.py` |
 | Все доменные модели (9 таблиц) | `backend/app/models/` |
