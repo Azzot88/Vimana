@@ -1,0 +1,44 @@
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { useAuthStore } from './stores/auth'
+import Layout from './components/Layout'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
+import TripsPage from './pages/TripsPage'
+import NewTripPage from './pages/NewTripPage'
+import DealsPage from './pages/DealsPage'
+import DealPage from './pages/DealPage'
+import DealVaultPage from './pages/DealVaultPage'
+import ProfilePage from './pages/ProfilePage'
+import InvitePage from './pages/InvitePage'
+import AcceptInvitePage from './pages/AcceptInvitePage'
+
+function ProtectedRoute() {
+  const token = useAuthStore((s) => s.token)
+  if (!token) return <Navigate to="/login" replace />
+  return <Outlet />
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/invite/:token" element={<AcceptInvitePage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/trips" element={<TripsPage />} />
+            <Route path="/trips/new" element={<NewTripPage />} />
+            <Route path="/deals" element={<DealsPage />} />
+            <Route path="/deals/:dealId" element={<DealPage />} />
+            <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/invite" element={<InvitePage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}
