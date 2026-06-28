@@ -46,13 +46,13 @@
 - [x] Миграция `0001_initial_models.py` создана. Применить: `docker compose exec backend alembic upgrade head`.
 **Acceptance:** таблицы созданы, Foreign Keys корректны, append-only ограничения на месте, все nullable-заглушки присутствуют. ✅
 
-### T1.3 — Аутентификация + Социальный граф
-- [ ] JWT регистрация/логин.
-- [ ] `POST /api/invites` — генерация InviteLink (одноразовая, с TTL).
-- [ ] `POST /api/invites/{token}/accept` — принять приглашение → создать двустороннюю Connection.
-- [ ] `GET /api/me/connections` — список связей.
-- [ ] Guest-invite по `recipient_contact` + токен-привязка к сделке.
-**Acceptance:** пользователь создаёт аккаунт, генерирует инвайт, друг переходит по ссылке, оба видят связь в профиле; guest-invite работает.
+### T1.3 — Аутентификация + Социальный граф ✅
+- [x] JWT регистрация/логин.
+- [x] `POST /api/invites` — генерация InviteLink (одноразовая, TTL 7 дней).
+- [x] `POST /api/invites/{token}/accept` — принять приглашение → двусторонняя Connection.
+- [x] `GET /api/me/connections` — список связей с профилями.
+- [x] Guest-invite: `recipient_contact` принимается в body `/api/invites`.
+**Acceptance:** пользователь создаёт аккаунт, генерирует инвайт, друг принимает, оба видят связь. ✅
 
 ### T1.4 — API маршрутов и сделки
 - [ ] `POST /api/trips`, `GET /api/trips` (с фильтрами маршрут/дата).

@@ -1,8 +1,10 @@
 import os
 
-# pyrefly: ignore [missing-import]
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.auth import router as auth_router
+from app.api.social import router as social_router
 
 app = FastAPI(title="Vimana")
 
@@ -16,14 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(social_router, prefix="/api", tags=["social"])
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-
-
-from app.api.auth import router as auth_router
-from app.api.social import router as social_router
-
-app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
-app.include_router(social_router, prefix="/api", tags=["social"])

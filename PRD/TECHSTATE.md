@@ -16,7 +16,7 @@
 | Инфраструктура / Docker / БД | 0 | ✅ готово |
 | FastAPI + SQLAlchemy + Alembic | 1 | ✅ готово |
 | Доменные модели (все 9 таблиц + миграция) | 1 | ✅ готово |
-| Auth + Социальный граф (Invite, Connections) | 1 | ⬜ не начато |
+| Auth + Социальный граф (Invite, Connections) | 1 | ✅ готово |
 | Маркетплейс (Рейсы, Заявки, Мэтчинг) | 1 | ⬜ не начато |
 | Сделка (lifecycle + DealEvent) | 1 | ⬜ не начато |
 | DealVault (чат + фото + лог, IPFS-ready) | 1 | ⬜ не начато |
@@ -90,8 +90,12 @@
 
 | Механика | Где реализовано (файлы) |
 |---|---|
-| FastAPI app + /health + CORS | `backend/app/main.py` |
+| FastAPI app + /health + CORS + роутеры | `backend/app/main.py` |
 | Настройки (pydantic-settings) | `backend/app/core/config.py` |
+| JWT (HS256, 30д), bcrypt | `backend/app/core/security.py` |
+| get_current_user dependency | `backend/app/api/deps.py` |
+| Auth API: register/login/me | `backend/app/api/auth.py` |
+| Invite + Connection API | `backend/app/api/social.py` |
 | Async SQLAlchemy engine + Base + get_db() | `backend/app/core/database.py` |
 | Alembic async migrations | `backend/alembic/env.py` |
 | Все доменные модели (9 таблиц) | `backend/app/models/` |
