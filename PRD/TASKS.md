@@ -68,14 +68,15 @@
 - [x] Структура DealVaultMessage совместима с Nostr event — `nostr_sig` nullable-заглушка Фазы 2.
 **Acceptance:** стороны переписываются, грузят файлы; записи иммутабельны; SHA-256 хеш сохраняется. ✅
 
-### T1.6 — Frontend (дашборд, социальный граф, сделка)
-- [ ] Vite + React + TailwindCSS, дизайн-система по DESIGNGUIDELINES (навигация, табло-моно для данных).
-- [ ] Дашборд (Я везу / Мне везут / Я отправляю).
-- [ ] Мастер рейса/маршрута и заявки.
-- [ ] Экран сделки с DealVault + посадочный талон-сводка.
-- [ ] Профиль: заглушка УБА + секция «Контакты» (список Connections).
-- [ ] Поток инвайта: генерация ссылки, экран принятия, подтверждение связи.
-**Acceptance:** полный флоу доставки проходится через UI; инвайт работает end-to-end; Connections видны в профиле.
+### T1.6 — Frontend (дашборд, социальный граф, сделка) ✅
+- [x] Vite + React + TypeScript + TailwindCSS; Space Grotesk / Inter / IBM Plex Mono; цвета navy/cyan/amber/ivory.
+- [x] Дашборд (Я везу / Мне везут / Я отправляю).
+- [x] Мастер рейса (NewTripPage) и заявки (TripsPage → matchDeal).
+- [x] Экран сделки (DealPage) с посадочным талоном + кнопки по роли/статусу; DealVaultPage.
+- [x] Профиль: заглушка УБА + секция «Контакты» (Connections).
+- [x] Поток инвайта: InvitePage + AcceptInvitePage.
+- [x] GET /api/deals/{id} — обогащённый DealDetailOut (trip + order + user names).
+**Acceptance:** полный флоу доставки проходится через UI; инвайт end-to-end; Connections в профиле. ✅
 
 ### T1.7 — Уведомления
 - [ ] Celery beat — проверка дедлайнов/статусов.

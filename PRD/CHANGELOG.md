@@ -12,6 +12,7 @@
 
 ## Записи
 
+- **2026-06-28 · FEATURE** · T1.6: Frontend SPA — React 18 + Vite + TypeScript + TailwindCSS; дизайн-система (navy/amber/ivory, IBM Plex Mono); 11 страниц; Zustand auth store; DealDetailOut на бэкенде · `frontend/src/`, `backend/app/api/deals.py`, `backend/app/schemas/marketplace.py`.
 - **2026-06-28 · FEATURE** · T1.5: DealVault API — чат, загрузка файлов (multipart), SHA-256 хеш, presigned URL, иммутабельность на уровне API; R2 graceful degradation без R2_ENDPOINT · `backend/app/api/dealvault.py`, `backend/app/core/storage.py`.
 - **2026-06-28 · FEATURE** · T1.4: Trips API (POST/GET с фильтрами), Deals API (match→accept→event→confirm→closed), DealEvent append-only · `backend/app/api/trips.py`, `backend/app/api/deals.py`.
 - **2026-06-28 · FEATURE** · T1.3: JWT auth (register/login/me), InviteLink (TTL 7д, одноразовый), двусторонняя Connection, GET /api/me/connections · `backend/app/api/auth.py`, `backend/app/api/social.py`, `backend/app/core/security.py`.

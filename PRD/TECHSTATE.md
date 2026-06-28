@@ -20,6 +20,7 @@
 | Маркетплейс (Рейсы, Заявки, Мэтчинг) | 1 | ✅ готово |
 | Сделка (lifecycle + DealEvent) | 1 | ✅ готово |
 | DealVault (чат + фото + лог, IPFS-ready) | 1 | ✅ готово |
+| Frontend SPA (React + Vite + Tailwind) | 1 | ✅ готово |
 | Уведомления | 1 | ⬜ не начато |
 | KYC + Комплаенс | 2 | ⬜ не начато |
 | Keypair + Nostr-совместимость | 2 | ⬜ не начато |
@@ -100,6 +101,8 @@
 | Deals API (match/accept/event/confirm) + DealEvent append-only | `backend/app/api/deals.py` |
 | DealVault API (чат + загрузка файлов + SHA-256) | `backend/app/api/dealvault.py` |
 | R2/S3 клиент (graceful без R2_ENDPOINT) | `backend/app/core/storage.py` |
+| Frontend SPA — 11 страниц, design system | `frontend/src/` |
+| GET /api/deals/{id} — DealDetailOut (trip+order+users) | `backend/app/api/deals.py` |
 | Async SQLAlchemy engine + Base + get_db() | `backend/app/core/database.py` |
 | Alembic async migrations | `backend/alembic/env.py` |
 | Все доменные модели (9 таблиц) | `backend/app/models/` |
