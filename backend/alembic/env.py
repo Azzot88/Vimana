@@ -17,6 +17,7 @@ database_url = os.environ["DATABASE_URL"]
 config.set_main_option("sqlalchemy.url", database_url)
 
 from app.core.database import Base
+import app.models  # registers all models with Base.metadata
 target_metadata = Base.metadata
 
 
