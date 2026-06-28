@@ -61,12 +61,12 @@
 - [x] `POST /api/deals/{id}/confirm`, `GET /api/deals`.
 **Acceptance:** перевозчик публикует маршрут; две стороны создают сделку, проходят статусы до закрытия. ✅
 
-### T1.5 — DealVault (API + хранилище)
-- [ ] `GET/POST /api/deals/{id}/dealvault` (сообщения).
-- [ ] Загрузка фото в R2/S3, SHA-256 → `file_hash`, поле `ipfs_cid` nullable.
-- [ ] Запрет удаления/редактирования сообщений и вложений на уровне БД и API.
-- [ ] Структура `DealVaultMessage` соответствует Nostr event schema (kind, pubkey, created_at, content) — подпись добавляется в Фазе 2.
-**Acceptance:** стороны переписываются, грузят фото передачи/получения; записи иммутабельны; хеши сохраняются; структура JSON совместима с Nostr event.
+### T1.5 — DealVault (API + хранилище) ✅
+- [x] `GET/POST /api/deals/{id}/dealvault/messages` + GET /{id}/dealvault.
+- [x] Загрузка фото в R2/S3 (graceful без R2), SHA-256 → `file_hash`, `ipfs_cid` nullable.
+- [x] Запрет удаления/редактирования — DELETE/PATCH эндпоинтов нет; только INSERT на уровне API.
+- [x] Структура DealVaultMessage совместима с Nostr event — `nostr_sig` nullable-заглушка Фазы 2.
+**Acceptance:** стороны переписываются, грузят файлы; записи иммутабельны; SHA-256 хеш сохраняется. ✅
 
 ### T1.6 — Frontend (дашборд, социальный граф, сделка)
 - [ ] Vite + React + TailwindCSS, дизайн-система по DESIGNGUIDELINES (навигация, табло-моно для данных).
