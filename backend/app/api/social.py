@@ -1,0 +1,94 @@
+import secrets
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.api.deps import get_current_user
+from app.core.database import get_db
+from app.models.social import Connection, InviteLink
+from app.models.user import User
+from app.schemas.social import ConnectionOut, InviteLinkOut
+
+router = APIRouter()
+
+
+class InviteBody(BaseModel):
+    recipient_contact: str | None = None
+
+
+@router.post("/invites", response_model=InviteLinkOut, status_code=201)
+async def create_invite(
+    body: InviteBody = InviteBody(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    invite = InviteLink(
+        creator_id=current_user.id,
+        token=secrets.token_urlsafe(32),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+    )
+    db.add(invite)
+    await db.commit()
+    await db.refresh(invite)
+    return invite
+
+
+@router.post("/invites/{token}/accept")
+async def accept_invite(
+    token: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    result = await db.execute(select(InviteLink).where(InviteLink.token == token))
+    invite = result.scalar_one_or_none()
+
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    if invite.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="Invite expired")
+    if invite.used_by is not None:
+        raise HTTPException(status_code=409, detail="Invite already used")
+    if invite.creator_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot accept your own invite")
+
+    existing = await db.execute(
+        select(Connection).where(
+            Connection.user_id == current_user.id,
+            Connection.connected_user_id == invite.creator_id,
+        )
+    )
+    if existing.scalar_one_or_none() is None:
+        db.add(Connection(
+            user_id=invite.creator_id,
+            connected_user_id=current_user.id,
+            invite_token=token,
+        ))
+        db.add(Connection(
+            user_id=current_user.id,
+            connected_user_id=invite.creator_id,
+            invite_token=token,
+        ))
+
+    invite.used_by = current_user.id
+    await db.commit()
+    return {"ok": True}
+
+
+@router.get("/me/connections", response_model=list[ConnectionOut])
+async def list_connections(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Connection)
+        .where(Connection.user_id == current_user.id)
+        .options(selectinload(Connection.connected_user))
+    )
+    connections = result.scalars().all()
+    return connections
