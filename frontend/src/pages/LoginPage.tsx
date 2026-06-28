@@ -17,6 +17,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const { data: tokenData } = await login({ login: loginVal, password })
+      localStorage.setItem('token', tokenData.access_token)
       const { data: user } = await me()
       setAuth(user, tokenData.access_token)
       navigate('/')
