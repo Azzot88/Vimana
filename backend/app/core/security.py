@@ -1,23 +1,21 @@
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from fastapi import HTTPException
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 _ALGORITHM = "HS256"
 _DEFAULT_EXPIRE_DAYS = 30
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_access_token(subject: str, expires_delta: timedelta | None = None) -> str:
