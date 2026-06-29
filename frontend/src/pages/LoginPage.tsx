@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login, me } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
+import { APP_VERSION } from '../version'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -73,12 +74,15 @@ export default function LoginPage() {
             {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
-        <p className="text-center text-xs font-body text-navy/50 mt-4">
-          Нет аккаунта?{' '}
-          <Link to="/register" className="text-cyan hover:underline">
-            Зарегистрироваться
-          </Link>
-        </p>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs font-body text-navy/50">
+            Нет аккаунта?{' '}
+            <Link to="/register" className="text-cyan hover:underline">
+              Зарегистрироваться
+            </Link>
+          </p>
+          <span className="font-mono text-xs text-navy/20">v{APP_VERSION}</span>
+        </div>
       </div>
     </div>
   )

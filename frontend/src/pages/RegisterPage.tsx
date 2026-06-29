@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register, login, me } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
+import { APP_VERSION } from '../version'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -126,12 +127,15 @@ export default function RegisterPage() {
             {loading ? 'Регистрация...' : 'Создать аккаунт'}
           </button>
         </form>
-        <p className="text-center text-xs font-body text-navy/50 mt-4">
-          Уже есть аккаунт?{' '}
-          <Link to="/login" className="text-cyan hover:underline">
-            Войти
-          </Link>
-        </p>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs font-body text-navy/50">
+            Уже есть аккаунт?{' '}
+            <Link to="/login" className="text-cyan hover:underline">
+              Войти
+            </Link>
+          </p>
+          <span className="font-mono text-xs text-navy/20">v{APP_VERSION}</span>
+        </div>
       </div>
     </div>
   )
