@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import { me } from '../api/auth'
 import { listConnections, type Connection } from '../api/social'
 import MonoText from '../components/MonoText'
+import { APP_VERSION } from '../version'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -114,12 +115,15 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <button
-        onClick={handleLogout}
-        className="text-sm font-body text-navy/40 hover:text-navy transition-colors"
-      >
-        Выйти из аккаунта
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={handleLogout}
+          className="text-sm font-body text-navy/40 hover:text-navy transition-colors"
+        >
+          Выйти из аккаунта
+        </button>
+        <MonoText className="text-xs text-navy/20">v{APP_VERSION}</MonoText>
+      </div>
     </div>
   )
 }

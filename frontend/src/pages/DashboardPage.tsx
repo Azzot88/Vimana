@@ -6,6 +6,7 @@ import { listDeals, type Deal } from '../api/deals'
 import { listTrips, type Trip } from '../api/trips'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
+import { APP_VERSION } from '../version'
 
 export default function DashboardPage() {
   const { user, setAuth, token } = useAuthStore()
@@ -192,6 +193,10 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
+
+      <div className="flex justify-end pt-4">
+        <MonoText className="text-xs text-navy/20">v{APP_VERSION}</MonoText>
+      </div>
     </div>
   )
 }

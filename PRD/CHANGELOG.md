@@ -12,6 +12,10 @@
 
 ## Записи
 
+- **2026-06-28 · PRD** · T1.10 уточнён: OpenFlights в память, Haversine (D11), кнопка геолокации, дропдаун 3+прокрутка; добавлен T1.12 (мобильная версия); D11 зафиксирован в Decision Log · TASKS §T1.10 T1.12, IMPLEMENTATIONPLAN §1.4, TECHSTATE §1 §2.
+- **2026-06-28 · PRD** · Добавлены задачи Фазы 1: T1.9 (i18n, 5 языков), T1.10 (база аэропортов + autocomplete), T1.11 (телефон в профиль); T1.7 расширен — Telegram + WhatsApp каналы уведомлений · TASKS §T1.7–T1.11, IMPLEMENTATIONPLAN §1.4–1.5, TECHSTATE §1.
+- **2026-06-28 · FIX** · Auth: login URL `/api/auth/token` → `/api/auth/login`; me URL `/api/me` → `/api/auth/me`; OAuth2 form → JSON body; токен сохраняется в localStorage до вызова me() · `frontend/src/api/auth.ts`, `frontend/src/pages/LoginPage.tsx`, `frontend/src/pages/RegisterPage.tsx`, `backend/app/api/auth.py`.
+- **2026-06-28 · FIX** · bcrypt: заменена `passlib[bcrypt]` на прямой `bcrypt==4.2.0` (Python 3.12 совместимость) · `backend/requirements.txt`, `backend/app/core/security.py`.
 - **2026-06-28 · FEATURE** · T1.6: Frontend SPA — React 18 + Vite + TypeScript + TailwindCSS; дизайн-система (navy/amber/ivory, IBM Plex Mono); 11 страниц; Zustand auth store; DealDetailOut на бэкенде · `frontend/src/`, `backend/app/api/deals.py`, `backend/app/schemas/marketplace.py`.
 - **2026-06-28 · FEATURE** · T1.5: DealVault API — чат, загрузка файлов (multipart), SHA-256 хеш, presigned URL, иммутабельность на уровне API; R2 graceful degradation без R2_ENDPOINT · `backend/app/api/dealvault.py`, `backend/app/core/storage.py`.
 - **2026-06-28 · FEATURE** · T1.4: Trips API (POST/GET с фильтрами), Deals API (match→accept→event→confirm→closed), DealEvent append-only · `backend/app/api/trips.py`, `backend/app/api/deals.py`.
