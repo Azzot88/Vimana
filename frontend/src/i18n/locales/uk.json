@@ -112,6 +112,8 @@
     "telegramNotConnected": "не підключено",
     "whatsappNotSet": "не вказано",
     "connectTelegram": "Підключити Telegram →",
-    "logout": "Вийти з акаунту"
+    "logout": "Вийти з акаунту",
+    "phoneSelectCountry": "Обрати…",
+    "phoneSearchCountry": "Пошук країни…"
   }
 }

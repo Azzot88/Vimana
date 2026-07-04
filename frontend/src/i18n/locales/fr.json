@@ -112,6 +112,8 @@
     "telegramNotConnected": "non connecté",
     "whatsappNotSet": "non défini",
     "connectTelegram": "Connecter Telegram →",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "phoneSelectCountry": "Choisir…",
+    "phoneSearchCountry": "Rechercher un pays…"
   }
 }

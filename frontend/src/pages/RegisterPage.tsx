@@ -11,7 +11,6 @@ export default function RegisterPage() {
   const setAuth = useAuthStore((s) => s.setAuth)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [isCarrier, setIsCarrier] = useState(false)
   const [error, setError] = useState('')
@@ -20,21 +19,15 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!email && !phone) {
-      setError(t('auth.errorCredentials'))
-      return
-    }
     setLoading(true)
     try {
       await register({
         display_name: displayName,
-        email: email || undefined,
-        phone: phone || undefined,
+        email,
         password,
         is_carrier: isCarrier,
       })
-      const loginVal = email || phone
-      const { data: tokenData } = await login({ login: loginVal, password })
+      const { data: tokenData } = await login({ login: email, password })
       localStorage.setItem('token', tokenData.access_token)
       const { data: user } = await me()
       setAuth(user, tokenData.access_token)
@@ -79,20 +72,12 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               placeholder="user@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              {t('auth.phone')}
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-              placeholder="+1 999 000 0000"
             />
           </div>
           <div>
