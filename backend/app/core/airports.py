@@ -59,7 +59,11 @@ _NAME_TO_ISO = _build_name_to_iso()
 
 
 def _load_cities_index() -> dict[tuple[str, str], dict]:
-    """Build (city_name_lower, iso) → {alt_names, population} index from GeoNames."""
+    """Build (name_variant_lower, iso) → {alt_names, population} index from GeoNames.
+
+    Indexed by *every* alt_name variant so that airports whose city string uses one
+    spelling (e.g. OpenFlights "Kiev") match a GeoNames record indexed as "Kyiv".
+    """
     idx: dict[tuple[str, str], dict] = {}
     if not CITIES_PATH.exists():
         return idx
@@ -78,13 +82,16 @@ def _load_cities_index() -> dict[tuple[str, str], dict]:
                 population = 0
             if not iso:
                 continue
-            alt_names = [n for n in alt_names_raw.split(",") if n]
+            alt_names_list = [n for n in alt_names_raw.split(",") if n]
             payload = {
-                "alt_names": tuple([name, ascii_name] + alt_names),
+                "alt_names": tuple([name, ascii_name] + alt_names_list),
                 "population": population,
             }
-            for candidate in (name.lower(), ascii_name.lower()):
-                key = (candidate, iso)
+            variants: set[str] = {name.lower(), ascii_name.lower()}
+            for alt in alt_names_list:
+                variants.add(alt.lower())
+            for variant in variants:
+                key = (variant, iso)
                 existing = idx.get(key)
                 if existing is None or existing["population"] < population:
                     idx[key] = payload
