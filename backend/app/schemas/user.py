@@ -24,6 +24,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    display_name: str | None = None
+    phone: str | None = None
+    notify_email: bool | None = None
+    notify_telegram: bool | None = None
+    notify_whatsapp: bool | None = None
+    whatsapp_number: str | None = None
+
+
 class UserOut(BaseModel):
     id: uuid.UUID
     email: str | None
@@ -32,6 +41,11 @@ class UserOut(BaseModel):
     is_carrier: bool
     nostr_pubkey: str | None
     business_activity_level: float | None
+    notify_email: bool
+    notify_telegram: bool
+    notify_whatsapp: bool
+    telegram_chat_id: str | None
+    whatsapp_number: str | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 

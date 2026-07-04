@@ -19,5 +19,12 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_PORT: int = 587
 
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_USERNAME: str = ""
+
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_WHATSAPP_FROM: str = ""
+
 
 settings = Settings()

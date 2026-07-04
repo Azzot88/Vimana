@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
-import { me } from '../api/auth'
+import { me, updateMe, getTelegramLink } from '../api/auth'
 import { listConnections, type Connection } from '../api/social'
 import MonoText from '../components/MonoText'
 import { APP_VERSION } from '../version'
@@ -32,6 +32,22 @@ export default function ProfilePage() {
   const handleLogout = () => {
     logout()
     navigate('/login')
+  }
+
+  const handleToggle = async (field: 'notify_email' | 'notify_telegram' | 'notify_whatsapp') => {
+    if (!user) return
+    const newVal = !user[field]
+    try {
+      const { data } = await updateMe({ [field]: newVal })
+      setAuth(data, token!)
+    } catch { /* silent */ }
+  }
+
+  const handleConnectTelegram = async () => {
+    try {
+      const { data } = await getTelegramLink()
+      window.open(data.link, '_blank')
+    } catch { /* silent */ }
   }
 
   return (
@@ -112,6 +128,38 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+        <h2 className="font-display font-semibold text-base text-navy">Уведомления</h2>
+
+        {([
+          { key: 'notify_email' as const, label: 'Email', sub: user?.email ?? '—' },
+          { key: 'notify_telegram' as const, label: 'Telegram', sub: user?.telegram_chat_id ? 'подключён' : 'не подключён' },
+          { key: 'notify_whatsapp' as const, label: 'WhatsApp', sub: user?.whatsapp_number ?? 'не указан' },
+        ]).map(({ key, label, sub }) => (
+          <div key={key} className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-body text-navy">{label}</p>
+              <p className="text-xs font-mono text-navy/40">{sub}</p>
+            </div>
+            <button
+              onClick={() => handleToggle(key)}
+              className={`w-10 h-6 rounded-full transition-colors ${user?.[key] ? 'bg-cyan' : 'bg-navy/20'}`}
+            >
+              <span className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${user?.[key] ? 'translate-x-2' : '-translate-x-2'}`} />
+            </button>
+          </div>
+        ))}
+
+        {user?.notify_telegram && !user?.telegram_chat_id && (
+          <button
+            onClick={handleConnectTelegram}
+            className="w-full text-sm font-body text-cyan border border-cyan/30 rounded-lg py-2 hover:bg-cyan/5 transition-colors"
+          >
+            Подключить Telegram →
+          </button>
         )}
       </div>
 

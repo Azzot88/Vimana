@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.tasks.notifications import notify_deal_status
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
 from app.models.marketplace import Order, OrderCategory, OrderStatus, Trip, TripStatus
 from app.models.user import User
@@ -107,6 +108,7 @@ async def accept_deal(
 
     await db.commit()
     await db.refresh(deal)
+    notify_deal_status.delay(str(deal.id), deal.status.value)
     return deal
 
 
@@ -146,6 +148,8 @@ async def add_event(
 
     await db.commit()
     await db.refresh(event)
+    if event_type in status_map:
+        notify_deal_status.delay(str(deal_id), deal.status.value)
     return event
 
 
@@ -184,6 +188,7 @@ async def confirm_deal(
 
     await db.commit()
     await db.refresh(deal)
+    notify_deal_status.delay(str(deal.id), deal.status.value)
     return deal
 
 

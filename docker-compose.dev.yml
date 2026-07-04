@@ -57,6 +57,33 @@ services:
     depends_on:
       - backend
 
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.worker.celery_app worker -Q notifications,celery -l info
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - celery-worker
+    command: celery -A app.worker.celery_app beat -l info
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

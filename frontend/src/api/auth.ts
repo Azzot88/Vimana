@@ -26,6 +26,20 @@ export interface User {
   is_carrier: boolean
   nostr_pubkey: string | null
   business_activity_level: number | null
+  notify_email: boolean
+  notify_telegram: boolean
+  notify_whatsapp: boolean
+  telegram_chat_id: string | null
+  whatsapp_number: string | null
+}
+
+export interface UserUpdate {
+  display_name?: string
+  phone?: string
+  notify_email?: boolean
+  notify_telegram?: boolean
+  notify_whatsapp?: boolean
+  whatsapp_number?: string
 }
 
 export const register = (payload: RegisterPayload) =>
@@ -36,3 +50,9 @@ export const login = (payload: LoginPayload) =>
 
 export const me = () =>
   api.get<User>('/api/auth/me')
+
+export const updateMe = (payload: UserUpdate) =>
+  api.patch<User>('/api/auth/me', payload)
+
+export const getTelegramLink = () =>
+  api.get<{ link: string; already_connected: boolean }>('/api/telegram/connect')

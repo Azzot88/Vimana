@@ -22,6 +22,12 @@ boto3==1.35.77
 # Cryptography (Phase 2 — Nostr keypair)
 coincurve==20.0.0
 
+# Sync DB driver (Celery tasks)
+psycopg2-binary==2.9.10
+
+# Notifications
+twilio==9.4.0
+
 # Utilities
 pydantic==2.10.3
 pydantic-settings==2.6.1
