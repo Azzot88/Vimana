@@ -6,7 +6,7 @@ import psycopg2
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -68,12 +68,33 @@ async def _seed_default_categories(engine) -> None:
         await db.commit()
 
 
+async def _migrate_orders_category_to_string(engine) -> None:
+    """T1.17 schema fix: orders.category enum → VARCHAR(50). Idempotent."""
+    async with engine.begin() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT data_type FROM information_schema.columns "
+                    "WHERE table_name='orders' AND column_name='category'"
+                )
+            )
+        ).fetchone()
+        if row and row[0] == "USER-DEFINED":
+            await conn.execute(
+                text(
+                    "ALTER TABLE orders ALTER COLUMN category TYPE VARCHAR(50) USING category::text"
+                )
+            )
+            await conn.execute(text("DROP TYPE IF EXISTS ordercategory"))
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     _ensure_test_database()
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _migrate_orders_category_to_string(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
