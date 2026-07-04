@@ -68,3 +68,53 @@ async def test_accept_unknown_invite_returns_404(client, carrier_headers):
         "/api/invites/nonexistent-token-value/accept", headers=friend_headers
     )
     assert resp.status_code == 404
+
+
+async def test_create_invite_ttl_is_14_days(client, carrier_headers):
+    from datetime import datetime, timezone
+    resp = await client.post("/api/invites", headers=carrier_headers, json={})
+    assert resp.status_code == 201
+    expires_at = datetime.fromisoformat(resp.json()["expires_at"].replace("Z", "+00:00"))
+    delta = expires_at - datetime.now(timezone.utc)
+    days = delta.total_seconds() / 86400
+    assert 13.9 < days <= 14.0
+
+
+async def test_list_my_invites_returns_pending_status(client):
+    email = unique_email("inv-owner")
+    headers = await _register_and_login(client, email)
+
+    create = await client.post("/api/invites", headers=headers, json={})
+    token = create.json()["token"]
+
+    resp = await client.get("/api/invites/mine", headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    mine = [i for i in body if i["token"] == token]
+    assert len(mine) == 1
+    assert mine[0]["status"] == "pending"
+    assert mine[0]["accepted_by_display_name"] is None
+
+
+async def test_list_my_invites_reflects_accepted(client):
+    owner_headers = await _register_and_login(client, unique_email("inv-o"))
+    create = await client.post("/api/invites", headers=owner_headers, json={})
+    token = create.json()["token"]
+
+    friend_headers = await _register_and_login(client, unique_email("inv-friend"))
+    accept = await client.post(f"/api/invites/{token}/accept", headers=friend_headers)
+    assert accept.status_code == 200
+
+    resp = await client.get("/api/invites/mine", headers=owner_headers)
+    assert resp.status_code == 200
+    mine = [i for i in resp.json() if i["token"] == token]
+    assert len(mine) == 1
+    assert mine[0]["status"] == "accepted"
+    assert mine[0]["accepted_by_display_name"] is not None
+
+
+async def test_list_my_invites_empty_for_new_user(client):
+    headers = await _register_and_login(client, unique_email("inv-empty"))
+    resp = await client.get("/api/invites/mine", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json() == []

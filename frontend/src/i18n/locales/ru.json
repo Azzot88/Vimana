@@ -114,6 +114,16 @@
     "connectTelegram": "Подключить Telegram →",
     "logout": "Выйти из аккаунта",
     "phoneSelectCountry": "Выбрать…",
-    "phoneSearchCountry": "Поиск страны…"
+    "phoneSearchCountry": "Поиск страны…",
+    "invites": "Мои инвайты",
+    "inviteCreate": "+ Создать инвайт",
+    "noInvites": "Пока нет инвайтов",
+    "inviteExpiresIn": "истекает через {{time}}",
+    "inviteCopy": "Скопировать",
+    "inviteStatus": {
+      "pending": "Активен",
+      "accepted": "Принят",
+      "expired": "Истёк"
+    }
   }
 }

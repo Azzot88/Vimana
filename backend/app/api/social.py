@@ -13,9 +13,11 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.social import Connection, InviteLink
 from app.models.user import User
-from app.schemas.social import ConnectionOut, InviteLinkOut
+from app.schemas.social import ConnectionOut, InviteLinkOut, MyInviteOut
 
 router = APIRouter()
+
+INVITE_TTL_DAYS = 14
 
 
 class InviteBody(BaseModel):
@@ -31,12 +33,53 @@ async def create_invite(
     invite = InviteLink(
         creator_id=current_user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_TTL_DAYS),
     )
     db.add(invite)
     await db.commit()
     await db.refresh(invite)
     return invite
+
+
+@router.get("/invites/mine", response_model=list[MyInviteOut])
+async def list_my_invites(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(InviteLink)
+        .where(InviteLink.creator_id == current_user.id)
+        .order_by(InviteLink.created_at.desc())
+    )
+    invites = result.scalars().all()
+
+    now = datetime.now(timezone.utc)
+    accepted_names: dict[uuid.UUID, str] = {}
+    accepted_ids = [inv.used_by for inv in invites if inv.used_by is not None]
+    if accepted_ids:
+        users_result = await db.execute(select(User).where(User.id.in_(accepted_ids)))
+        for u in users_result.scalars().all():
+            accepted_names[u.id] = u.display_name
+
+    out: list[MyInviteOut] = []
+    for inv in invites:
+        expires_at = inv.expires_at.replace(tzinfo=timezone.utc) if inv.expires_at.tzinfo is None else inv.expires_at
+        if inv.used_by is not None:
+            status = "accepted"
+        elif expires_at < now:
+            status = "expired"
+        else:
+            status = "pending"
+        out.append(
+            MyInviteOut(
+                token=inv.token,
+                created_at=inv.created_at,
+                expires_at=inv.expires_at,
+                status=status,
+                accepted_by_display_name=accepted_names.get(inv.used_by) if inv.used_by else None,
+            )
+        )
+    return out
 
 
 @router.post("/invites/{token}/accept")

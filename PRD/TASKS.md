@@ -55,7 +55,7 @@
 
 ### T1.3 — Аутентификация + Социальный граф ✅
 - [x] JWT регистрация/логин.
-- [x] `POST /api/invites` — генерация InviteLink (одноразовая, TTL 7 дней).
+- [x] `POST /api/invites` — генерация InviteLink (одноразовая, TTL 14 дней — было 7, увеличено в T1.14).
 - [x] `POST /api/invites/{token}/accept` — принять приглашение → двусторонняя Connection.
 - [x] `GET /api/me/connections` — список связей с профилями.
 - [x] Guest-invite: `recipient_contact` принимается в body `/api/invites`.
@@ -162,15 +162,17 @@
   - Без флагов.
 **Acceptance:** переключатель — компактный dropdown; открытие показывает 6 языков endonym-названиями; выбор мгновенно меняет UI; сохраняется в localStorage; старые пользователи с `lang=uk` автоматически на `ua`. ✅
 
-### T1.14 — Раздел «Инвайты» в личном кабинете
-- [ ] Бэкенд: `GET /api/invites/mine` — список инвайтов, созданных текущим юзером; поля: `token`, `recipient_contact`, `created_at`, `expires_at`, `status` ∈ {`pending`, `accepted`, `expired`}, `accepted_by_display_name` (nullable).
-- [ ] Статус вычисляется на бэке: `accepted` если есть Connection по этому инвайту; `expired` если `expires_at < now()`; иначе `pending`.
-- [ ] В `ProfilePage` добавить секцию «Мои инвайты» между «Контактами» и «Уведомлениями»:
-  - Кнопка «+ Создать инвайт» (открывает `InvitePage` или inline-форму с полем `recipient_contact`).
-  - Список выданных инвайтов: `recipient_contact`, статус (бейдж), для `pending` — мелким текстом «истекает через 3д 4ч» (dynamic countdown из `expires_at`).
-- [ ] Срок жизни инвайта остаётся **7 дней** (уже задан в T1.3, не менять).
-- [ ] i18n-ключи: `profile.invites`, `profile.inviteCreate`, `profile.inviteExpiresIn`, `profile.inviteStatus.{pending,accepted,expired}`.
-**Acceptance:** в ЛК видно список выданных инвайтов со статусом и обратным отсчётом; можно создать новый инвайт из ЛК; после принятия статус меняется на «Принят».
+### T1.14 — Раздел «Инвайты» в личном кабинете ✅
+- [x] Бэкенд: `GET /api/invites/mine` — список инвайтов, созданных текущим юзером; поля: `token`, `created_at`, `expires_at`, `status` ∈ {`pending`, `accepted`, `expired`}, `accepted_by_display_name` (nullable).
+- [x] Статус вычисляется на бэке: `accepted` если `used_by != null`; `expired` если `expires_at < now()`; иначе `pending`. `accepted_by_display_name` подгружается одним запросом по `used_by`.
+- [x] TTL инвайта увеличен с 7 до **14 дней** (`INVITE_TTL_DAYS = 14` в `app/api/social.py`).
+- [x] В `ProfilePage` — секция «Мои инвайты» между «Контактами» и «Уведомлениями»:
+  - Кнопка «+ Создать инвайт» — вызывает `POST /api/invites`, затем перезагружает список.
+  - Список: бейдж статуса (цвет по статусу), для `pending` — мелким текстом «истекает через 3д 4ч» (формат **только дни + часы, без минут**).
+  - Для `accepted` — «→ {display_name}»; для `pending` — кнопка «Copy link» на `{origin}/invite/{token}`.
+- [x] i18n-ключи `profile.invites`, `profile.inviteCreate`, `profile.noInvites`, `profile.inviteExpiresIn`, `profile.inviteCopy`, `profile.inviteStatus.{pending,accepted,expired}` — во всех 6 локалях.
+- [x] Backend-тесты: `test_create_invite_ttl_is_14_days`, `test_list_my_invites_returns_pending_status`, `test_list_my_invites_reflects_accepted`, `test_list_my_invites_empty_for_new_user`.
+**Acceptance:** в ЛК видно список выданных инвайтов со статусом и обратным отсчётом «3д 4ч»; можно создать новый инвайт; после принятия статус меняется на «Принят» с именем принявшего; ссылка копируется. ✅
 
 ### T1.15 — UX-полишинг: формы, логин, логотип
 - [ ] **Персистентность форм в браузере** (localStorage):

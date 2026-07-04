@@ -15,11 +15,22 @@ export interface Connection {
   connected_at: string
 }
 
+export interface MyInvite {
+  token: string
+  created_at: string
+  expires_at: string
+  status: 'pending' | 'accepted' | 'expired'
+  accepted_by_display_name: string | null
+}
+
 export const createInvite = () =>
   api.post<Invite>('/api/invites')
 
 export const acceptInvite = (token: string) =>
   api.post<{ message: string }>(`/api/invites/${token}/accept`)
+
+export const listMyInvites = () =>
+  api.get<MyInvite[]>('/api/invites/mine')
 
 export const listConnections = () =>
   api.get<Connection[]>('/api/me/connections')

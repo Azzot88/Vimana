@@ -114,6 +114,16 @@
     "connectTelegram": "Connect Telegram →",
     "logout": "Sign out",
     "phoneSelectCountry": "Select…",
-    "phoneSearchCountry": "Search country…"
+    "phoneSearchCountry": "Search country…",
+    "invites": "My invites",
+    "inviteCreate": "+ Create invite",
+    "noInvites": "No invites yet",
+    "inviteExpiresIn": "expires in {{time}}",
+    "inviteCopy": "Copy link",
+    "inviteStatus": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "expired": "Expired"
+    }
   }
 }

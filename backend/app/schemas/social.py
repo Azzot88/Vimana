@@ -20,3 +20,11 @@ class ConnectionOut(BaseModel):
     connected_user: UserOut
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class MyInviteOut(BaseModel):
+    token: str
+    created_at: datetime
+    expires_at: datetime
+    status: str
+    accepted_by_display_name: str | None = None

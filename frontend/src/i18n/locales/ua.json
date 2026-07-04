@@ -114,6 +114,16 @@
     "connectTelegram": "Підключити Telegram →",
     "logout": "Вийти з акаунту",
     "phoneSelectCountry": "Обрати…",
-    "phoneSearchCountry": "Пошук країни…"
+    "phoneSearchCountry": "Пошук країни…",
+    "invites": "Мої запрошення",
+    "inviteCreate": "+ Створити запрошення",
+    "noInvites": "Ще немає запрошень",
+    "inviteExpiresIn": "закінчиться через {{time}}",
+    "inviteCopy": "Скопіювати",
+    "inviteStatus": {
+      "pending": "Активний",
+      "accepted": "Прийнято",
+      "expired": "Закінчився"
+    }
   }
 }
