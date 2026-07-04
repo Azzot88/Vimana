@@ -150,14 +150,25 @@
 - [x] `AirportSelect` и `CountryCodeSelect` — dropdown корректно открываются на мобильном благодаря `absolute` + `w-full` / `w-72`.
 **Acceptance:** ключевые флоу проходятся на мобильном экране (375-390px) без горизонтального скролла и мелких тач-целей. ✅
 
-### T1.13 — Локализация: UK→UA, добавить RU
+### T1.13 — Локализация: UK→UA, добавить RU, endonym-переключатель
 - [ ] Переименовать `frontend/src/i18n/locales/uk.json` → `ua.json`; обновить импорты в `frontend/src/i18n/index.ts` (`uk: {...}` → `ua: {...}`).
-- [ ] `LanguageSwitcher.tsx`: код `'uk'` → `'ua'`, label `'UK'` → `'UA'`. Правило: Ukraine всегда сокращается до **UA** (не UK — во избежание конфликта с United Kingdom).
+- [ ] Правило: Ukraine всегда сокращается до **UA** (не UK — во избежание конфликта с United Kingdom).
 - [ ] Миграция localStorage: при старте, если `localStorage.getItem('lang') === 'uk'` → заменить на `'ua'`.
 - [ ] Создать `frontend/src/i18n/locales/ru.json` со всеми ключами из `en.json` (nav, auth, common, dashboard, trips, deals, profile).
-- [ ] Добавить `ru` в `i18n/index.ts` и в `LANGS` в `LanguageSwitcher`. Итого 6 языков: EN / UA / RU / PL / FR / ES.
-- [ ] Обновить упоминания UK в PRD-файлах (уже сделано в этой задаче).
-**Acceptance:** переключатель показывает 6 языков (EN / UA / RU / PL / FR / ES); UA выводит украинский, RU — русский; старые пользователи с `lang=uk` в localStorage автоматически переезжают на `ua` без потери выбора.
+- [ ] Добавить `ru` в `i18n/index.ts`. Итого 6 языков: EN / UA / RU / PL / FR / ES.
+- [ ] **Переработать `LanguageSwitcher.tsx` как выпадающий список** (не строка кнопок):
+  - Кнопка-триггер показывает текущий язык на его родном языке (endonym).
+  - Клик открывает dropdown со списком всех 6 языков — **каждый пункт написан на своём родном языке** (endonyms):
+    - `en` → "English"
+    - `ua` → "Українська"
+    - `ru` → "Русский"
+    - `pl` → "Polski"
+    - `fr` → "Français"
+    - `es` → "Español"
+  - **Без флагов** (иначе Ukraine/UK путаются, плюс визуальный шум).
+  - Click-outside закрывает; выбор → `i18n.changeLanguage` + `localStorage.setItem('lang', ...)` + закрытие.
+- [ ] Обновить упоминания UK в PRD-файлах.
+**Acceptance:** переключатель — компактный dropdown; открытие показывает 6 языков с endonym-названиями (English / Українська / Русский / Polski / Français / Español); выбор мгновенно меняет UI; выбор сохраняется в localStorage; старые пользователи с `lang=uk` автоматически переезжают на `ua`.
 
 ### T1.14 — Раздел «Инвайты» в личном кабинете
 - [ ] Бэкенд: `GET /api/invites/mine` — список инвайтов, созданных текущим юзером; поля: `token`, `recipient_contact`, `created_at`, `expires_at`, `status` ∈ {`pending`, `accepted`, `expired`}, `accepted_by_display_name` (nullable).
