@@ -14,6 +14,8 @@
 > - Нельзя перескакивать фазы из IMPLEMENTATIONPLAN.md.
 > - Если задачи нет здесь — её не существует.
 > - После выполнения — обновить статус здесь и зафиксировать в TECHSTATE.md / CHANGELOG.md (если применимо).
+> - **Тесты (ОБЯЗАТЕЛЬНО после T_TEST.1):** каждая задача добавляет тесты новой функциональности; перед закрытием задачи весь backend-сьют должен проходить (`docker compose exec backend pytest`); frontend-сборка не должна падать (`npm run build`). Правила изоляции — ENVIRONMENT.md §8. До завершения T_TEST.1 это правило не применяется.
+> - **Версия:** после каждой закрытой задачи — обновить `frontend/src/version.ts` (см. CLAUDE.md).
 
 ---
 
@@ -94,6 +96,20 @@
 - [x] Бэкенд: сообщения об ошибках API остаются на EN (клиент переводит по коду или ключу).
 **Acceptance:** интерфейс полностью переключается на один из 5 языков без перезагрузки; выбор сохраняется между сессиями. ✅
 
+### T_TEST.1 — Backend тест-сьют (фундамент)
+> Перенесено из блока «Тестирование» — базовый сьют строится **до** T1.10, потому что все последующие задачи обязаны его расширять и прогонять.
+- [ ] Добавить в `backend/requirements.txt`: `pytest`, `pytest-asyncio`, `pytest-cov`.
+- [ ] `backend/pyproject.toml` или `backend/pytest.ini`: конфигурация pytest, `asyncio_mode = "auto"`.
+- [ ] `.env.example` дополнить `TEST_DATABASE_URL=postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test`; создать БД `vimana_test` (idempotent init скрипт или ручная команда в README).
+- [ ] `backend/tests/conftest.py`: сид-фикстуры `scope="session"` — два пользователя (Отправитель + Перевозчик), один рейс, одна сделка. Создаются идемпотентно (`WHERE email = 'seed-carrier@vimana.test'`). **Никогда не удаляются**, тесты пишут в новые записи или проверяют существующие.
+- [ ] Тесты auth: `POST /register` (новый юзер), `POST /login` (валид + невалид), `GET /me`, `PATCH /me`.
+- [ ] Тесты trips: `POST /trips`, `GET /trips` (список + фильтры `origin`/`destination`/`date`).
+- [ ] Тесты deals: `POST /match`, `POST /accept`, `POST /event`, `POST /confirm`.
+- [ ] Тесты dealvault: `GET /dealvault`, `POST /dealvault/messages` (без реального R2 — mock storage).
+- [ ] Тесты social: `POST /invites`, `POST /invites/{token}/accept`, `GET /me/connections`.
+- [ ] README-инструкция как запускать: `docker compose exec backend pytest`; целевое время < 30 сек.
+**Acceptance:** `pytest` проходит зелёным на чистой `vimana_test`; повторный прогон идентичен первому; сид-данные не удаляются.
+
 ### T1.10 — База аэропортов + геолокация
 - [ ] Бэкенд загружает `airports.dat` (OpenFlights, ~7 000 записей, ~1 МБ) при старте из публичного источника; хранит в памяти (Python dict); поля: IATA-код, город, страна, lat, lon.
 - [ ] `GET /api/airports?q=` — поиск по IATA-коду или названию (город/страна); возвращает до 10 результатов: `{iata, city, country, lat, lon}`.
@@ -167,19 +183,9 @@
 
 ---
 
-## 🧪 ТЕСТИРОВАНИЕ — Базовый тест-сьют (сквозной, Фаза 1)
+## 🧪 ТЕСТИРОВАНИЕ — Расширение сьюта
 
-> Тесты выполняются против отдельной БД `vimana_test`. Сид-данные создаются один раз и не удаляются. Подробные правила — ENVIRONMENT.md §8.
-
-### T_TEST.1 — Backend тест-сьют
-- [ ] `pytest` + `httpx.AsyncClient`; конфигурация в `pyproject.toml`; `TEST_DATABASE_URL` в `.env`.
-- [ ] `conftest.py`: сид-фикстуры `scope="session"` — два пользователя (Отправитель + Перевозчик), рейс, сделка. Создаются идемпотентно (проверка `WHERE email = 'seed@...'`).
-- [ ] Тесты auth: `POST /register` (новый), `POST /login`, `GET /me`, `PATCH /me`.
-- [ ] Тесты trips: `POST /trips`, `GET /trips` (список + фильтры).
-- [ ] Тесты deals: `POST /match`, `POST /accept`, `POST /event`, `POST /confirm`.
-- [ ] Тесты dealvault: `GET /dealvault`, `POST /dealvault/messages`.
-- [ ] Тесты social: `POST /invites`, `POST /invites/{token}/accept`, `GET /me/connections`.
-**Acceptance:** все тесты проходят без удаления сид-данных; повторный запуск даёт тот же результат.
+> T_TEST.1 (базовый backend-сьют) перенесён вверх — сразу после T1.9, чтобы стать фундаментом. Правила изоляции — ENVIRONMENT.md §8. Каждая новая задача T1.x обязана добавлять свои тесты в этот сьют.
 
 ### T_TEST.2 — Frontend smoke-тесты
 - [ ] `vitest` + `@testing-library/react`.
