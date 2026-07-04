@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { renderWithProviders } from './render'
 import i18n from '../i18n'
@@ -11,12 +11,13 @@ describe('LanguageSwitcher', () => {
     renderWithProviders(<LanguageSwitcher />)
 
     await user.click(screen.getByRole('button'))
-    expect(screen.getByText('English')).toBeInTheDocument()
-    expect(screen.getByText('Українська')).toBeInTheDocument()
-    expect(screen.getByText('Русский')).toBeInTheDocument()
-    expect(screen.getByText('Polski')).toBeInTheDocument()
-    expect(screen.getByText('Français')).toBeInTheDocument()
-    expect(screen.getByText('Español')).toBeInTheDocument()
+    const list = screen.getByRole('list')
+    expect(within(list).getByText('English')).toBeInTheDocument()
+    expect(within(list).getByText('Українська')).toBeInTheDocument()
+    expect(within(list).getByText('Русский')).toBeInTheDocument()
+    expect(within(list).getByText('Polski')).toBeInTheDocument()
+    expect(within(list).getByText('Français')).toBeInTheDocument()
+    expect(within(list).getByText('Español')).toBeInTheDocument()
   })
 
   it('changes i18n language and persists to localStorage on click', async () => {
@@ -24,7 +25,8 @@ describe('LanguageSwitcher', () => {
     renderWithProviders(<LanguageSwitcher />)
 
     await user.click(screen.getByRole('button'))
-    await user.click(screen.getByText('Русский'))
+    const list = screen.getByRole('list')
+    await user.click(within(list).getByText('Русский'))
 
     expect(i18n.language).toBe('ru')
     expect(localStorage.getItem('lang')).toBe('ru')

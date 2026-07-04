@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   airportsInCity,
+  listCitiesInCountry,
   listCountries,
   lookupAirports,
   nearestAirports,
-  searchAirports,
   type Airport,
   type CityMatch,
   type CountryCount,
@@ -82,32 +82,38 @@ export default function AirportSelect({ value, onChange, placeholder, required }
 
   useEffect(() => {
     const q = query.trim()
-    if (!q) {
-      setCountryMatches([])
-      setCityMatches([])
-      setAirportMatches([])
-      return
-    }
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
-        if (countryFilter && !cityFilter) {
-          const { data } = await airportsInCity(countryFilter.iso, q).catch(() => ({ data: [] as Airport[] }))
-          if (cancelled) return
-          setAirportMatches([])
-          setCityMatches([])
-          setCountryMatches([])
-          setAirportMatches(data)
-          return
-        }
         if (cityFilter) {
           const { data } = await airportsInCity(cityFilter.iso, cityFilter.city)
-          if (!cancelled) {
-            const filtered = data.filter((a) => a.iata.toLowerCase().includes(q.toLowerCase()))
-            setAirportMatches(filtered.length > 0 ? filtered : data)
-            setCityMatches([])
-            setCountryMatches([])
-          }
+          if (cancelled) return
+          const filtered = q
+            ? data.filter((a) => a.iata.toLowerCase().includes(q.toLowerCase()))
+            : data
+          setCountryMatches([])
+          setCityMatches([])
+          setAirportMatches(filtered.length > 0 ? filtered : data)
+          return
+        }
+        if (countryFilter) {
+          const { data: cities } = await listCitiesInCountry(countryFilter.iso)
+          if (cancelled) return
+          const qLow = q.toLowerCase()
+          const filtered = q
+            ? cities.filter((c) => c.city.toLowerCase().includes(qLow))
+            : cities
+          setCountryMatches([])
+          setCityMatches(
+            filtered.slice(0, 12).map((c) => ({ iso: countryFilter.iso, city: c.city, count: c.count })),
+          )
+          setAirportMatches([])
+          return
+        }
+        if (!q) {
+          setCountryMatches([])
+          setCityMatches([])
+          setAirportMatches([])
           return
         }
         const qLow = q.toLowerCase()
@@ -161,9 +167,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
     setCountryFilter({ iso: row.iso, name: row.name })
     setCityFilter(null)
     setQuery('')
-    setCountryMatches([])
-    setCityMatches([])
-    setAirportMatches([])
+    setOpen(true)
   }
 
   const pickCity = (c: CityMatch) => {
@@ -171,6 +175,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
     setCountryFilter({ iso: c.iso, name })
     setCityFilter({ iso: c.iso, city: c.city })
     setQuery('')
+    setOpen(true)
   }
 
   const pickAirport = (a: Airport) => {
