@@ -6,6 +6,7 @@ from pathlib import Path
 import pycountry
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "airports.dat"
+CITIES_PATH = Path(__file__).parent.parent / "data" / "cities15000.txt"
 
 # OpenFlights uses some country names that differ from pycountry's canonical names
 _COUNTRY_ALIASES: dict[str, str] = {
@@ -57,6 +58,42 @@ def _build_name_to_iso() -> dict[str, str]:
 _NAME_TO_ISO = _build_name_to_iso()
 
 
+def _load_cities_index() -> dict[tuple[str, str], dict]:
+    """Build (city_name_lower, iso) → {alt_names, population} index from GeoNames."""
+    idx: dict[tuple[str, str], dict] = {}
+    if not CITIES_PATH.exists():
+        return idx
+    with CITIES_PATH.open("r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.rstrip("\n").split("\t")
+            if len(parts) < 15:
+                continue
+            name = parts[1]
+            ascii_name = parts[2]
+            alt_names_raw = parts[3]
+            iso = parts[8]
+            try:
+                population = int(parts[14])
+            except ValueError:
+                population = 0
+            if not iso:
+                continue
+            alt_names = [n for n in alt_names_raw.split(",") if n]
+            payload = {
+                "alt_names": tuple([name, ascii_name] + alt_names),
+                "population": population,
+            }
+            for candidate in (name.lower(), ascii_name.lower()):
+                key = (candidate, iso)
+                existing = idx.get(key)
+                if existing is None or existing["population"] < population:
+                    idx[key] = payload
+    return idx
+
+
+_CITY_INDEX = _load_cities_index()
+
+
 @dataclass(frozen=True, slots=True)
 class Airport:
     iata: str
@@ -65,6 +102,9 @@ class Airport:
     country_iso: str
     lat: float
     lon: float
+    alt_names: tuple[str, ...]
+    population: int
+    order: int
 
 
 def _load() -> list[Airport]:
@@ -79,20 +119,28 @@ def _load() -> list[Airport]:
             if not iata or iata == r"\N" or len(iata) != 3 or kind != "airport":
                 continue
             try:
+                order = int(row[0])
                 lat = float(row[6])
                 lon = float(row[7])
             except ValueError:
                 continue
             country = row[3]
             iso = _NAME_TO_ISO.get(country.lower(), "")
+            city = row[2]
+            city_meta = _CITY_INDEX.get((city.lower(), iso)) if iso else None
+            alt_names = city_meta["alt_names"] if city_meta else (city,)
+            population = city_meta["population"] if city_meta else 0
             airports.append(
                 Airport(
                     iata=iata.upper(),
-                    city=row[2],
+                    city=city,
                     country=country,
                     country_iso=iso,
                     lat=lat,
                     lon=lon,
+                    alt_names=alt_names,
+                    population=population,
+                    order=order,
                 )
             )
     return airports
@@ -114,6 +162,7 @@ def search(query: str, limit: int = 10) -> list[Airport]:
     starts_iata: list[Airport] = []
     starts_city: list[Airport] = []
     contains: list[Airport] = []
+    alt_match: list[Airport] = []
 
     for a in _AIRPORTS:
         iata_l = a.iata.lower()
@@ -122,14 +171,25 @@ def search(query: str, limit: int = 10) -> list[Airport]:
 
         if iata_l == q:
             exact_iata.append(a)
-        elif iata_l.startswith(q):
+            continue
+        if iata_l.startswith(q):
             starts_iata.append(a)
-        elif city_l.startswith(q):
+            continue
+        if city_l.startswith(q):
             starts_city.append(a)
-        elif q in city_l or q in country_l:
+            continue
+        if q in city_l or q in country_l:
             contains.append(a)
+            continue
+        for name in a.alt_names:
+            if q in name.lower():
+                alt_match.append(a)
+                break
 
-    ranked = exact_iata + starts_iata + starts_city + contains
+    for group in (starts_iata, starts_city, contains, alt_match):
+        group.sort(key=lambda a: -a.population)
+
+    ranked = exact_iata + starts_iata + starts_city + contains + alt_match
     return ranked[:limit]
 
 
@@ -177,24 +237,41 @@ def list_cities(country_iso: str) -> list[dict]:
 def airports_in_city(country_iso: str, city: str) -> list[Airport]:
     iso = country_iso.upper()
     city_lower = city.strip().lower()
-    return [
+    result = [
         a for a in _AIRPORTS
         if a.country_iso == iso and a.city.lower() == city_lower
     ]
+    result.sort(key=lambda a: (a.order, a.iata))
+    return result
 
 
 def search_cities(query: str, limit: int = 8) -> list[dict]:
     q = query.strip().lower()
     if not q:
         return []
-    matches: dict[tuple[str, str], int] = {}
+    matches: dict[tuple[str, str], dict] = {}
     for a in _AIRPORTS:
         if not a.country_iso:
             continue
-        if q in a.city.lower():
-            key = (a.country_iso, a.city)
-            matches[key] = matches.get(key, 0) + 1
+        hit = False
+        for name in a.alt_names:
+            if q in name.lower():
+                hit = True
+                break
+        if not hit and q in a.city.lower():
+            hit = True
+        if not hit:
+            continue
+        key = (a.country_iso, a.city)
+        entry = matches.get(key)
+        if entry is None:
+            matches[key] = {"count": 1, "population": a.population}
+        else:
+            entry["count"] += 1
     return sorted(
-        [{"iso": iso, "city": city, "count": c} for (iso, city), c in matches.items()],
-        key=lambda x: (-x["count"], x["city"]),
+        [
+            {"iso": iso, "city": city, "count": m["count"], "population": m["population"]}
+            for (iso, city), m in matches.items()
+        ],
+        key=lambda x: (-x["population"], -x["count"], x["city"]),
     )[:limit]

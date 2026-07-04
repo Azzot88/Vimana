@@ -199,7 +199,9 @@
   - Клик по городу → чип 🇦🇪 UAE · Dubai, dropdown показывает аэропорты города.
   - Клик по аэропорту → в поле IATA, чип остаётся; кнопка «×» очищает.
   - Backend endpoint `GET /api/airports/lookup?q=` возвращает cities + airports одним запросом.
-- [x] Backend-тесты (7): countries, cities, by-city (positive/404), country_iso, lookup positive/empty.
+- [x] **Мультиязычный поиск городов** через GeoNames `cities15000.txt` (5MB в репо, ~34k городов с `alternatenames` — переводы на десятки языков: кириллица, китайский, арабский, ...). `Airport` обогащён полями `alt_names` (все переводы города) и `population`. Пример: user печатает **«Москва»** → находится Moscow (RU) → аэропорты MOW/DME/SVO/VKO.
+- [x] **Сортировка аэропортов внутри города по популярности**: `airports_in_city` сортирует по OpenFlights `order` (id из датасета — старые/крупные хабы идут первыми). Пример: Dubai → DXB (id=2188) перед DWC (id=8681).
+- [x] Backend-тесты (11): countries, cities, by-city (positive/404), country_iso, lookup positive/empty, cyrillic Moscow (search + lookup), Ukrainian Київ, DXB sorted first in Dubai.
 - [x] i18n-ключи `airports.{notWorking,selectCountry,selectCity,selectAirport}` + `common.search` — во всех 6 локалях.
 **Acceptance:** пользователь без геолокации через 3 клика (страна → город → аэропорт) выбирает нужный аэропорт; названия стран локализованы на 6 языков; поиск страны работает и на английском, и на языке UI. ✅
 

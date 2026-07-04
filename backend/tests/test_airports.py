@@ -104,3 +104,34 @@ async def test_lookup_empty_query_returns_empty(client):
     resp = await client.get("/api/airports/lookup", params={"q": ""})
     assert resp.status_code == 200
     assert resp.json() == {"cities": [], "airports": []}
+
+
+async def test_search_finds_by_cyrillic_moscow(client):
+    resp = await client.get("/api/airports", params={"q": "Москва"})
+    assert resp.status_code == 200
+    body = resp.json()
+    isos = {a["country_iso"] for a in body}
+    assert "RU" in isos
+
+
+async def test_lookup_by_cyrillic_moscow_finds_city(client):
+    resp = await client.get("/api/airports/lookup", params={"q": "Москва"})
+    assert resp.status_code == 200
+    cities = resp.json()["cities"]
+    assert any(c["city"] == "Moscow" and c["iso"] == "RU" for c in cities)
+
+
+async def test_lookup_by_kyiv_ukrainian_finds_city(client):
+    resp = await client.get("/api/airports/lookup", params={"q": "Київ"})
+    assert resp.status_code == 200
+    cities = resp.json()["cities"]
+    assert any(c["iso"] == "UA" for c in cities)
+
+
+async def test_airports_in_dubai_sorted_dxb_first(client):
+    resp = await client.get(
+        "/api/airports/by-city", params={"country": "AE", "city": "Dubai"}
+    )
+    assert resp.status_code == 200
+    iatas = [a["iata"] for a in resp.json()]
+    assert iatas[0] == "DXB", f"expected DXB first, got {iatas}"
