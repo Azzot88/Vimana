@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.airports import router as airports_router
 from app.api.auth import router as auth_router
+from app.api.categories import router as categories_router
 from app.api.dealvault import router as dealvault_router
 from app.api.deals import router as deals_router
 from app.api.social import router as social_router
@@ -30,6 +31,7 @@ app.include_router(deals_router, prefix="/api/deals", tags=["deals"])
 app.include_router(dealvault_router, prefix="/api/deals", tags=["dealvault"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
 app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
+app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
 
 
 @app.get("/health")

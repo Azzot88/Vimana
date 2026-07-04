@@ -45,6 +45,16 @@
     "groupCities": "Города",
     "groupAirports": "Аэропорты"
   },
+  "categories": {
+    "placeholder": "Категория или своя…",
+    "addNew": "+ Использовать",
+    "document": "Документы",
+    "medicine": "Медикаменты",
+    "electronics": "Электроника",
+    "gift": "Подарок",
+    "animal": "Животное",
+    "other": "Другое"
+  },
   "dashboard": {
     "welcome": "Добро пожаловать, {{name}}",
     "carrier": "Перевозчик",

@@ -4,10 +4,9 @@ import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
+import CategorySelect from '../components/CategorySelect'
 import MonoText from '../components/MonoText'
 import { usePersistedState } from '../hooks/usePersistedState'
-
-const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics', 'other']
 
 export default function TripsPage() {
   const user = useAuthStore((s) => s.user)
@@ -194,15 +193,7 @@ export default function TripsPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.category')}</label>
-                      <select
-                        value={cargoCategory}
-                        onChange={(e) => setCargoCategory(e.target.value)}
-                        className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-                      >
-                        {CATEGORIES.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
+                      <CategorySelect value={cargoCategory} onChange={setCargoCategory} />
                     </div>
                   </div>
                   {error && <p className="text-xs font-mono text-orange-600">{error}</p>}

@@ -45,6 +45,16 @@
     "groupCities": "Villes",
     "groupAirports": "Aéroports"
   },
+  "categories": {
+    "placeholder": "Catégorie ou personnalisée…",
+    "addNew": "+ Utiliser",
+    "document": "Documents",
+    "medicine": "Médicaments",
+    "electronics": "Électronique",
+    "gift": "Cadeau",
+    "animal": "Animal",
+    "other": "Autre"
+  },
   "dashboard": {
     "welcome": "Bienvenue, {{name}}",
     "carrier": "Transporteur",

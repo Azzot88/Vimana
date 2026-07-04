@@ -9,7 +9,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
-from app.models.marketplace import Order, OrderCategory, OrderStatus, Trip, TripStatus
+from app.models.marketplace import Category, Order, OrderStatus, Trip, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
 
@@ -38,17 +38,24 @@ async def match_deal(
     if trip.status != TripStatus.open:
         raise HTTPException(status_code=400, detail="Trip not available")
 
-    try:
-        category = OrderCategory(body.order.category)
-    except ValueError:
-        raise HTTPException(status_code=422, detail=f"Invalid category: {body.order.category}")
+    category_key = body.order.category.strip().lower()
+    if not category_key or len(category_key) > 50:
+        raise HTTPException(status_code=422, detail="Invalid category")
+
+    existing = await db.execute(select(Category).where(Category.name_key == category_key))
+    cat = existing.scalar_one_or_none()
+    if cat is None:
+        cat = Category(name_key=category_key, is_default=False, usage_count=1)
+        db.add(cat)
+    else:
+        cat.usage_count += 1
 
     order = Order(
         sender_id=current_user.id,
         recipient_contact=body.order.recipient_contact,
         origin=body.order.origin,
         destination=body.order.destination,
-        category=category,
+        category=category_key,
         declared_value=body.order.declared_value,
         currency=body.order.currency,
         description=body.order.description,
@@ -224,7 +231,7 @@ async def get_deal(
         sender_name=sender.display_name if sender else "",
         carrier_name=carrier.display_name if carrier else "",
         cargo_description=order.description or "" if order else "",
-        cargo_category=order.category.value if order else "",
+        cargo_category=order.category if order else "",
         declared_value=order.declared_value if order else 0,
         currency=order.currency if order else "USD",
     )

@@ -45,6 +45,16 @@
     "groupCities": "Міста",
     "groupAirports": "Аеропорти"
   },
+  "categories": {
+    "placeholder": "Категорія або своя…",
+    "addNew": "+ Використати",
+    "document": "Документи",
+    "medicine": "Медикаменти",
+    "electronics": "Електроніка",
+    "gift": "Подарунок",
+    "animal": "Тварина",
+    "other": "Інше"
+  },
   "dashboard": {
     "welcome": "Ласкаво просимо, {{name}}",
     "carrier": "Перевізник",

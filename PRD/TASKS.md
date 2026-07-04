@@ -205,17 +205,16 @@
 - [x] i18n-ключи `airports.{notWorking,selectCountry,selectCity,selectAirport}` + `common.search` — во всех 6 локалях.
 **Acceptance:** пользователь без геолокации через 3 клика (страна → город → аэропорт) выбирает нужный аэропорт; названия стран локализованы на 6 языков; поиск страны работает и на английском, и на языке UI. ✅
 
-### T1.17 — Расширяемые категории груза (animal + custom)
-> Замена жёсткого enum `OrderCategory` на справочник с возможностью добавлять свои.
-- [ ] Backend: новая модель `Category(id, name_key, is_default, usage_count, created_at)`. Дефолтные категории засеиваются миграцией: `document, medicine, electronics, gift, animal, other`.
-- [ ] Миграция: заменить enum-колонку `Order.category` на `String(50)` (значение — `name_key` категории). Backfill существующих: enum-value → строка.
-- [ ] Endpoints:
-  - `GET /api/categories?q=` — поиск по подстроке; сортировка: default → по `usage_count desc`; до 15 результатов.
-  - При `POST /api/deals/match` — если `category` не найдена в справочнике, создать новую запись (пользовательская), инкрементировать `usage_count`.
-- [ ] Frontend: заменить `<select>` категорий в `TripsPage` (форма заявки) и `NewTripPage` (allowed_categories) на компонент `CategorySelect` с autocomplete: показывает существующие + allow-new.
-- [ ] i18n: дефолтные категории имеют перевод в локалях (`categories.document`, `.animal`, `.other` и т.д.); пользовательские — показываются как ввёл создатель.
-- [ ] Backend-тесты: список категорий по префиксу; создание deal с новой категорией регистрирует её в справочнике; повторное использование инкрементирует счётчик.
-**Acceptance:** в форме заявки/рейса пользователь видит autocomplete со всеми известными категориями (включая animal); может ввести свою; введённая категория появляется в общей базе и доступна при поиске другим пользователям.
+### T1.17 — Расширяемые категории груза (animal + custom) ✅
+- [x] Backend: новая модель `Category(id, name_key, is_default, usage_count, created_at)`. Дефолтные категории засеиваются миграцией `0003_category_freeform.py`: `document, medicine, electronics, gift, animal, other`.
+- [x] Enum `OrderCategory` удалён; `Order.category` теперь `String(50)`. Миграция: `ALTER TABLE ... TYPE VARCHAR(50) USING ...; DROP TYPE ordercategory`. Backfill не нужен (enum-values уже совместимы с текстом).
+- [x] Endpoints:
+  - `GET /api/categories?q=` — поиск по substring; сортировка `is_default DESC, usage_count DESC, name_key ASC`; до 15 результатов.
+  - `POST /api/deals/match` — если `category` не в справочнике, создаётся запись `is_default=false`; при повторе `usage_count += 1`.
+- [x] Frontend: `CategorySelect` компонент с autocomplete + allow-new (Enter добавляет custom). `TripsPage` (форма заявки) — одиночный выбор. `NewTripPage` (allowed_categories) — chip-мультивыбор через тот же компонент.
+- [x] i18n: `categories.{document,medicine,electronics,gift,animal,other,placeholder,addNew}` в 6 локалях. Пользовательские категории — показываются как ввёл создатель.
+- [x] Backend-тесты (5): defaults включают animal, `is_default` отмечен, поиск по префиксу, новая категория регистрируется при match, `usage_count` инкрементируется.
+**Acceptance:** в форме заявки/рейса пользователь видит autocomplete со всеми категориями (включая animal); может ввести свою (например, «drone»); категория появляется в общей базе и доступна другим. ✅
 
 ### T1.8 — Staging-деплой, домен и smoke test V1
 - [ ] Поднять VPS / облачный сервер (Ubuntu 22+ или Debian 12), установить Docker + Docker Compose.

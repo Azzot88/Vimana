@@ -15,7 +15,7 @@ from app.core.database import Base, get_db
 from app.core.security import hash_password
 from app.main import app
 from app.models.deal import Deal, DealStatus
-from app.models.marketplace import Order, OrderCategory, OrderStatus, Trip, TripStatus
+from app.models.marketplace import Category, DEFAULT_CATEGORIES, Order, OrderStatus, Trip, TripStatus
 from app.models.user import User
 
 
@@ -55,12 +55,26 @@ def _ensure_test_database() -> None:
     conn.close()
 
 
+async def _seed_default_categories(engine) -> None:
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    async with maker() as db:
+        result = await db.execute(select(Category))
+        existing = {c.name_key for c in result.scalars().all()}
+        for key in DEFAULT_CATEGORIES:
+            if key in existing:
+                continue
+            db.add(Category(name_key=key, is_default=True, usage_count=0))
+        await db.commit()
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     _ensure_test_database()
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
 
@@ -170,7 +184,7 @@ async def seed_deal(session_maker, seed_carrier, seed_sender, seed_trip) -> Deal
             recipient_contact="+10000000000",
             origin=seed_trip.origin,
             destination=seed_trip.destination,
-            category=OrderCategory.document,
+            category="document",
             declared_value=100.0,
             currency="USD",
             description="Seed order",

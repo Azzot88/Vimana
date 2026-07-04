@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { createTrip } from '../api/trips'
 import AirportSelect from '../components/AirportSelect'
-
-const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics', 'other']
+import CategorySelect from '../components/CategorySelect'
 
 export default function NewTripPage() {
   const navigate = useNavigate()
@@ -27,10 +26,17 @@ export default function NewTripPage() {
     )
   }
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    )
+  const [categoryDraft, setCategoryDraft] = useState('')
+
+  const removeCategory = (cat: string) => {
+    setSelectedCategories((prev) => prev.filter((c) => c !== cat))
+  }
+
+  const addCategory = (cat: string) => {
+    const key = cat.trim().toLowerCase()
+    if (!key) return
+    setSelectedCategories((prev) => (prev.includes(key) ? prev : [...prev, key]))
+    setCategoryDraft('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,22 +98,26 @@ export default function NewTripPage() {
         </div>
         <div>
           <label className="block text-xs font-body font-medium text-navy/60 mb-2">{t('trips.allowedCategories')}</label>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className={`px-3 py-2 min-h-[2.5rem] rounded-full text-xs font-mono transition-colors ${
-                  selectedCategories.includes(cat)
-                    ? 'bg-cyan text-white'
-                    : 'bg-ivory text-navy/60 hover:bg-navy/10'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+          {selectedCategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {selectedCategories.map((cat) => (
+                <span
+                  key={cat}
+                  className="px-3 py-1 rounded-full text-xs font-mono bg-cyan text-white inline-flex items-center gap-1"
+                >
+                  {t(`categories.${cat}`, { defaultValue: cat })}
+                  <button
+                    type="button"
+                    onClick={() => removeCategory(cat)}
+                    className="hover:text-white/80"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <CategorySelect value={categoryDraft} onChange={addCategory} />
         </div>
         {error && <p className="text-xs font-mono text-orange-600">{error}</p>}
         <div className="flex gap-3 pt-2">

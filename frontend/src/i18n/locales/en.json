@@ -45,6 +45,16 @@
     "groupCities": "Cities",
     "groupAirports": "Airports"
   },
+  "categories": {
+    "placeholder": "Category or custom…",
+    "addNew": "+ Use",
+    "document": "Documents",
+    "medicine": "Medicine",
+    "electronics": "Electronics",
+    "gift": "Gift",
+    "animal": "Animal",
+    "other": "Other"
+  },
   "dashboard": {
     "welcome": "Welcome, {{name}}",
     "carrier": "Carrier",
