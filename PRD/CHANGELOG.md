@@ -12,6 +12,7 @@
 
 ## Записи
 
+- **2026-07-04 · FEATURE** · T_TEST.1: backend тест-сьют — pytest + pytest-asyncio, автосоздание `vimana_test` через psycopg2, идемпотентные сид-фикстуры (`seed_carrier`, `seed_sender`, `seed_trip`, `seed_deal`) `scope="session"`, autouse-мок Celery `notify_deal_status.delay`. Тесты покрывают auth / trips / deals / dealvault / social — 30+ кейсов · `backend/tests/conftest.py`, `test_{auth,trips,deals,dealvault,social}.py`, `backend/pytest.ini`, `backend/requirements.txt`, `.env.example`.
 - **2026-07-04 · PRD** · T_TEST.1 (backend-сьют) перенесён вверх — сразу после T1.9, до T1.10. Стал фундаментом: каждая последующая задача T1.x обязана добавлять свои тесты и прогонять весь сьют перед закрытием. Правило зафиксировано в TASKS.md (шапка), CLAUDE.md (новый раздел) · TASKS §T_TEST.1, CLAUDE.md.
 - **2026-07-04 · PRD** · Добавлены задачи Фазы 1: T1.13 (локализация UK→UA, +RU — итого 6 языков), T1.14 (раздел «Инвайты» в ЛК с трекингом статусов и обратным отсчётом), T1.15 (UX-полишинг: персистентность форм в localStorage, case-insensitive логин + no-autocapitalize, кликабельный логотип) · TASKS §T1.13–T1.15, IMPLEMENTATIONPLAN §1.4.
 - **2026-07-04 · FIX** · VITE_API_URL захардкоженный на старый IP ломал логин после смены EC2 IP; переменная убрана — фронт шлёт запросы на текущий origin через nginx-прокси; `.env.example` документирован · `.env.example`, `frontend/src/api/client.ts` (fallback `?? ''`).

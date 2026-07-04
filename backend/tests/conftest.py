@@ -1,0 +1,215 @@
+import os
+import uuid
+from datetime import datetime, timedelta, timezone
+
+import psycopg2
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.core.database import Base, get_db
+from app.core.security import hash_password
+from app.main import app
+from app.models.deal import Deal, DealStatus
+from app.models.marketplace import Order, OrderCategory, OrderStatus, Trip, TripStatus
+from app.models.user import User
+
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test",
+)
+
+SEED_CARRIER_EMAIL = "seed-carrier@vimana.test"
+SEED_SENDER_EMAIL = "seed-sender@vimana.test"
+SEED_PASSWORD = "seed-password-123"
+
+
+def _ensure_test_database() -> None:
+    sync_url = TEST_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+    _, _, rest = sync_url.partition("://")
+    creds, _, host_db = rest.partition("@")
+    user, _, password = creds.partition(":")
+    host_port, _, dbname = host_db.partition("/")
+    host, _, port = host_port.partition(":")
+    port = port or "5432"
+
+    conn = psycopg2.connect(
+        dbname="postgres", user=user, password=password, host=host, port=port
+    )
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM pg_database WHERE datname=%s", (dbname,))
+    if not cur.fetchone():
+        cur.execute(f'CREATE DATABASE "{dbname}"')
+    cur.close()
+    conn.close()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def test_engine():
+    _ensure_test_database()
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def session_maker(test_engine):
+    return async_sessionmaker(test_engine, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def override_db(session_maker):
+    async def _get_test_db():
+        async with session_maker() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = _get_test_db
+    yield
+    app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture(autouse=True)
+def _mute_celery(monkeypatch):
+    from app.api import deals as deals_module
+
+    class _NoopTask:
+        def delay(self, *args, **kwargs):
+            return None
+
+    monkeypatch.setattr(deals_module, "notify_deal_status", _NoopTask())
+
+
+async def _get_or_create_user(db: AsyncSession, *, email: str, display_name: str, is_carrier: bool) -> User:
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if user:
+        return user
+    user = User(
+        email=email,
+        password_hash=hash_password(SEED_PASSWORD),
+        display_name=display_name,
+        is_carrier=is_carrier,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture(scope="session")
+async def seed_carrier(session_maker) -> User:
+    async with session_maker() as db:
+        return await _get_or_create_user(
+            db, email=SEED_CARRIER_EMAIL, display_name="Seed Carrier", is_carrier=True
+        )
+
+
+@pytest_asyncio.fixture(scope="session")
+async def seed_sender(session_maker) -> User:
+    async with session_maker() as db:
+        return await _get_or_create_user(
+            db, email=SEED_SENDER_EMAIL, display_name="Seed Sender", is_carrier=False
+        )
+
+
+@pytest_asyncio.fixture(scope="session")
+async def seed_trip(session_maker, seed_carrier) -> Trip:
+    async with session_maker() as db:
+        result = await db.execute(
+            select(Trip).where(
+                Trip.carrier_id == seed_carrier.id,
+                Trip.origin == "SEED-ORIGIN",
+                Trip.destination == "SEED-DEST",
+            )
+        )
+        trip = result.scalars().first()
+        if trip:
+            return trip
+        trip = Trip(
+            carrier_id=seed_carrier.id,
+            origin="SEED-ORIGIN",
+            destination="SEED-DEST",
+            depart_at=datetime.now(timezone.utc) + timedelta(days=7),
+            capacity=5.0,
+            allowed_categories=["document"],
+            status=TripStatus.open,
+        )
+        db.add(trip)
+        await db.commit()
+        await db.refresh(trip)
+        return trip
+
+
+@pytest_asyncio.fixture(scope="session")
+async def seed_deal(session_maker, seed_carrier, seed_sender, seed_trip) -> Deal:
+    async with session_maker() as db:
+        result = await db.execute(
+            select(Deal).where(
+                Deal.trip_id == seed_trip.id,
+                Deal.sender_id == seed_sender.id,
+            )
+        )
+        deal = result.scalars().first()
+        if deal:
+            return deal
+        order = Order(
+            sender_id=seed_sender.id,
+            recipient_contact="+10000000000",
+            origin=seed_trip.origin,
+            destination=seed_trip.destination,
+            category=OrderCategory.document,
+            declared_value=100.0,
+            currency="USD",
+            description="Seed order",
+            status=OrderStatus.matched,
+            trip_id=seed_trip.id,
+        )
+        db.add(order)
+        await db.flush()
+        deal = Deal(
+            order_id=order.id,
+            trip_id=seed_trip.id,
+            sender_id=seed_sender.id,
+            carrier_id=seed_carrier.id,
+            status=DealStatus.matched,
+        )
+        db.add(deal)
+        await db.commit()
+        await db.refresh(deal)
+        return deal
+
+
+@pytest_asyncio.fixture
+async def client() -> AsyncClient:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+async def _login(client: AsyncClient, email: str) -> str:
+    resp = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+@pytest_asyncio.fixture
+async def carrier_headers(client, seed_carrier) -> dict[str, str]:
+    token = await _login(client, seed_carrier.email)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def sender_headers(client, seed_sender) -> dict[str, str]:
+    token = await _login(client, seed_sender.email)
+    return {"Authorization": f"Bearer {token}"}
+
+
+def unique_email(prefix: str = "user") -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:8]}@vimana.test"

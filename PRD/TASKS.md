@@ -96,19 +96,20 @@
 - [x] Бэкенд: сообщения об ошибках API остаются на EN (клиент переводит по коду или ключу).
 **Acceptance:** интерфейс полностью переключается на один из 5 языков без перезагрузки; выбор сохраняется между сессиями. ✅
 
-### T_TEST.1 — Backend тест-сьют (фундамент)
+### T_TEST.1 — Backend тест-сьют (фундамент) ✅
 > Перенесено из блока «Тестирование» — базовый сьют строится **до** T1.10, потому что все последующие задачи обязаны его расширять и прогонять.
-- [ ] Добавить в `backend/requirements.txt`: `pytest`, `pytest-asyncio`, `pytest-cov`.
-- [ ] `backend/pyproject.toml` или `backend/pytest.ini`: конфигурация pytest, `asyncio_mode = "auto"`.
-- [ ] `.env.example` дополнить `TEST_DATABASE_URL=postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test`; создать БД `vimana_test` (idempotent init скрипт или ручная команда в README).
-- [ ] `backend/tests/conftest.py`: сид-фикстуры `scope="session"` — два пользователя (Отправитель + Перевозчик), один рейс, одна сделка. Создаются идемпотентно (`WHERE email = 'seed-carrier@vimana.test'`). **Никогда не удаляются**, тесты пишут в новые записи или проверяют существующие.
-- [ ] Тесты auth: `POST /register` (новый юзер), `POST /login` (валид + невалид), `GET /me`, `PATCH /me`.
-- [ ] Тесты trips: `POST /trips`, `GET /trips` (список + фильтры `origin`/`destination`/`date`).
-- [ ] Тесты deals: `POST /match`, `POST /accept`, `POST /event`, `POST /confirm`.
-- [ ] Тесты dealvault: `GET /dealvault`, `POST /dealvault/messages` (без реального R2 — mock storage).
-- [ ] Тесты social: `POST /invites`, `POST /invites/{token}/accept`, `GET /me/connections`.
-- [ ] README-инструкция как запускать: `docker compose exec backend pytest`; целевое время < 30 сек.
-**Acceptance:** `pytest` проходит зелёным на чистой `vimana_test`; повторный прогон идентичен первому; сид-данные не удаляются.
+- [x] Добавить в `backend/requirements.txt`: `pytest`, `pytest-asyncio`.
+- [x] `backend/pytest.ini`: конфигурация pytest, `asyncio_mode = "auto"`.
+- [x] `.env.example` дополнен `TEST_DATABASE_URL=postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test`; БД создаётся автоматически в conftest при первом запуске через psycopg2 (`CREATE DATABASE IF NOT EXISTS`).
+- [x] `backend/tests/conftest.py`: сид-фикстуры `scope="session"` — два пользователя (`seed-carrier@vimana.test` + `seed-sender@vimana.test`), один рейс (`SEED-ORIGIN→SEED-DEST`), одна сделка. Создаются идемпотентно (`WHERE email = ...`).
+- [x] Тесты auth (`test_auth.py`): register (новый / duplicate 409 / нет email+phone 422), login (валид / wrong pw / unknown), me (200 / 401), PATCH me.
+- [x] Тесты trips (`test_trips.py`): создание carrier'ом (201), запрет sender'у (403), список + фильтр origin.
+- [x] Тесты deals (`test_deals.py`): match, accept (200 carrier / 403 sender), event handoff → in_transit, confirm → closed, list deals, GET /deal/{id} outsider 403.
+- [x] Тесты dealvault (`test_dealvault.py`): list, create message, forbidden для outsider.
+- [x] Тесты social (`test_social.py`): create invite, accept → двусторонний Connection, own invite 400, reused 409, unknown 404.
+- [x] Инструкция запуска в ENVIRONMENT.md §8: `docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v`.
+- [x] Celery `notify_deal_status.delay` замокан в autouse-фикстуре (тесты не требуют Redis для side-effect'ов).
+**Acceptance:** `pytest` проходит зелёным на чистой `vimana_test`; повторный прогон идентичен первому; сид-данные не удаляются. ✅
 
 ### T1.10 — База аэропортов + геолокация
 - [ ] Бэкенд загружает `airports.dat` (OpenFlights, ~7 000 записей, ~1 МБ) при старте из публичного источника; хранит в памяти (Python dict); поля: IATA-код, город, страна, lat, lon.
