@@ -34,7 +34,14 @@
     "back": "Назад",
     "send": "Надіслати",
     "sending": "Надсилання...",
-    "error": "Помилка"
+    "error": "Помилка",
+    "search": "Пошук…"
+  },
+  "airports": {
+    "notWorking": "Не працює? Країна → місто",
+    "selectCountry": "Оберіть країну",
+    "selectCity": "Оберіть місто",
+    "selectAirport": "Оберіть аеропорт"
   },
   "dashboard": {
     "welcome": "Ласкаво просимо, {{name}}",

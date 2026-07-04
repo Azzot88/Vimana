@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { nearestAirports, searchAirports, type Airport } from '../api/airports'
+import AirportCascadeModal from './AirportCascadeModal'
 
 interface Props {
   value: string
@@ -15,6 +16,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
   const [results, setResults] = useState<Airport[]>([])
   const [open, setOpen] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
+  const [cascadeOpen, setCascadeOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -122,6 +124,21 @@ export default function AirportSelect({ value, onChange, placeholder, required }
             </li>
           ))}
         </ul>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setCascadeOpen(true)}
+        className="mt-1 text-xs font-body text-cyan/70 hover:text-cyan hover:underline"
+      >
+        {t('airports.notWorking', { defaultValue: 'Not working? Pick country → city →' })}
+      </button>
+
+      {cascadeOpen && (
+        <AirportCascadeModal
+          onPick={(iata) => { onChange(iata); setQuery(iata) }}
+          onClose={() => setCascadeOpen(false)}
+        />
       )}
     </div>
   )

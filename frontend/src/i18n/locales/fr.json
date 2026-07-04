@@ -34,7 +34,14 @@
     "back": "Retour",
     "send": "Envoyer",
     "sending": "Envoi...",
-    "error": "Erreur"
+    "error": "Erreur",
+    "search": "Rechercher…"
+  },
+  "airports": {
+    "notWorking": "Ne fonctionne pas ? Pays → ville",
+    "selectCountry": "Choisir un pays",
+    "selectCity": "Choisir une ville",
+    "selectAirport": "Choisir un aéroport"
   },
   "dashboard": {
     "welcome": "Bienvenue, {{name}}",

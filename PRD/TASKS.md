@@ -186,20 +186,19 @@
 - [x] Backend-тесты: `test_register_normalizes_email_lowercase`, `test_login_is_case_insensitive_for_email`, `test_login_trims_whitespace`.
 **Acceptance:** повторный вход не требует набирать email заново; логин работает независимо от регистра и лишних пробелов; клик по логотипу возвращает на Dashboard. ✅
 
-### T1.16 — Cascade выбор аэропорта: страна → город → аэропорт + мультиязычный поиск
-> Расширение T1.10 для случаев, когда геолокация недоступна/отключена, а свободный поиск по IATA непонятен пользователю.
-- [ ] Backend: обогащение `Airport` полем `country_iso` (ISO 3166-1 alpha-2). При старте: маппинг `country_name → iso` через встроенный dict (~250 записей).
-- [ ] Backend endpoints:
-  - `GET /api/airports/countries` — все страны с ≥1 аэропортом: `[{iso, count}]`. Сортировка по количеству аэропортов.
-  - `GET /api/airports/cities?country=XX` — города страны (уникальные `city` для данного ISO), с количеством аэропортов.
-  - `GET /api/airports/by-city?country=XX&city=Y` — аэропорты в городе.
-- [ ] Frontend: расширить `AirportSelect` — под инпутом и кнопкой геолокации добавить ссылку **«Не работает?»** → открывает cascade-модалку:
-  - Шаг 1: список стран с локализованными названиями через `Intl.DisplayNames(i18n.language, {type: 'region'})`. Поиск по substring — на языке UI **и** на английском.
-  - Шаг 2: список городов выбранной страны (английский, из датасета).
-  - Шаг 3: список аэропортов в городе (IATA + название) → выбор.
-- [ ] Названия стран — на языке пользователя автоматически (Intl API); города/аэропорты — на английском (OpenFlights).
-- [ ] Backend-тесты: `countries` возвращает список с ISO кодами; `cities?country=AE` возвращает Dubai; `by-city` возвращает DXB.
-**Acceptance:** пользователь без геолокации может через 3 клика (страна → город → аэропорт) выбрать нужный аэропорт; названия стран локализованы на 6 языков; поиск страны работает и на английском, и на языке UI.
+### T1.16 — Cascade выбор аэропорта: страна → город → аэропорт + мультиязычный поиск ✅
+- [x] Backend: `Airport` обогащён полем `country_iso` (ISO 3166-1 alpha-2). Маппинг `country_name → iso` через `pycountry` + alias-словарь (Russia, South Korea, Vietnam, Iran, Taiwan и др.) для нестандартных имён OpenFlights.
+- [x] Backend endpoints:
+  - `GET /api/airports/countries` — `[{iso, count}]`, сортировка по количеству desc.
+  - `GET /api/airports/cities?country=XX` — `[{city, count}]`, сортировка по количеству desc.
+  - `GET /api/airports/by-city?country=XX&city=Y` — список аэропортов; 404 если пусто.
+- [x] Frontend: `AirportCascadeModal` — full-screen на мобильном, `sm:max-w-md` на десктопе, 3 шага с кнопкой ←; интегрирован в `AirportSelect` через ссылку «Not working?».
+  - Страны — локализованы через `Intl.DisplayNames(i18n.language, {type:'region'})`; поиск по substring на UI-языке **и** английском одновременно.
+  - Города — из датасета (английский); поиск по substring.
+  - Аэропорты — IATA + city; если в городе один аэропорт, выбирается автоматически.
+- [x] Backend-тесты (5): `test_countries_returns_iso_codes`, `test_cities_by_country_ae`, `test_by_city_dubai_ae`, `test_by_city_unknown_returns_404`, `test_country_iso_populated_for_dxb`.
+- [x] i18n-ключи `airports.{notWorking,selectCountry,selectCity,selectAirport}` + `common.search` — во всех 6 локалях.
+**Acceptance:** пользователь без геолокации через 3 клика (страна → город → аэропорт) выбирает нужный аэропорт; названия стран локализованы на 6 языков; поиск страны работает и на английском, и на языке UI. ✅
 
 ### T1.17 — Расширяемые категории груза (animal + custom)
 > Замена жёсткого enum `OrderCategory` на справочник с возможностью добавлять свои.

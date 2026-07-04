@@ -34,7 +34,14 @@
     "back": "Back",
     "send": "Send",
     "sending": "Sending...",
-    "error": "Error"
+    "error": "Error",
+    "search": "Search…"
+  },
+  "airports": {
+    "notWorking": "Not working? Pick country → city",
+    "selectCountry": "Select country",
+    "selectCity": "Select city",
+    "selectAirport": "Select airport"
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",

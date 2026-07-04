@@ -33,6 +33,7 @@ pydantic==2.10.3
 pydantic-settings==2.6.1
 python-dotenv==1.0.1
 httpx==0.28.0
+pycountry==24.6.1
 
 # PDF generation (boarding pass)
 weasyprint==63.0

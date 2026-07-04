@@ -34,7 +34,14 @@
     "back": "Назад",
     "send": "Отправить",
     "sending": "Отправка...",
-    "error": "Ошибка"
+    "error": "Ошибка",
+    "search": "Поиск…"
+  },
+  "airports": {
+    "notWorking": "Не работает? Страна → город",
+    "selectCountry": "Выберите страну",
+    "selectCity": "Выберите город",
+    "selectAirport": "Выберите аэропорт"
   },
   "dashboard": {
     "welcome": "Добро пожаловать, {{name}}",
