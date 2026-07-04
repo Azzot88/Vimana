@@ -1,3 +1,5 @@
+import uuid
+
 from tests.conftest import SEED_PASSWORD, unique_email
 
 
@@ -82,3 +84,26 @@ async def test_patch_me_updates_display_name(client, sender_headers):
     )
     assert resp.status_code == 200
     assert resp.json()["display_name"] == new_name
+
+
+async def test_patch_me_updates_phone(client, sender_headers):
+    new_phone = f"+1555{uuid.uuid4().hex[:7]}"
+    resp = await client.patch(
+        "/api/auth/me", headers=sender_headers, json={"phone": new_phone}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["phone"] == new_phone
+
+
+async def test_register_without_phone_succeeds(client):
+    email = unique_email("nophone")
+    resp = await client.post(
+        "/api/auth/register",
+        json={
+            "email": email,
+            "password": "test-password-1",
+            "display_name": "No Phone User",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["phone"] is None

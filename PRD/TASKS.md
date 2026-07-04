@@ -131,6 +131,7 @@
 - [x] Сохранение: `+{dial}{national}` → `PATCH /api/auth/me` (эндпоинт уже был готов в T1.7).
 - [x] Миграция не нужна (`phone` уже nullable).
 - [x] i18n-ключи `profile.phoneSelectCountry`, `profile.phoneSearchCountry` во всех 5 локалях.
+- [x] Backend-тесты: `test_patch_me_updates_phone`, `test_register_without_phone_succeeds`.
 **Acceptance:** регистрация проходит без телефона (только email + пароль); в ЛК можно выбрать страну (с поиском по названию на языке UI) и ввести номер, сохранить; при повторной загрузке страна и номер восстанавливаются. ✅
 
 ### T1.12 — Мобильная версия (responsive)
