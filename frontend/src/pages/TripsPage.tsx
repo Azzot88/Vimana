@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
+import AirportSelect from '../components/AirportSelect'
 import MonoText from '../components/MonoText'
 
 const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics', 'other']
@@ -81,23 +82,13 @@ export default function TripsPage() {
       <h1 className="font-display font-bold text-2xl text-navy">{t('trips.title')}</h1>
 
       <form onSubmit={handleSearch} className="bg-white rounded-xl border border-navy/10 p-4 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[140px]">
+        <div className="flex-1 min-w-[160px]">
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
-          <input
-            type="text"
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-          />
+          <AirportSelect value={origin} onChange={setOrigin} placeholder="DXB" />
         </div>
-        <div className="flex-1 min-w-[140px]">
+        <div className="flex-1 min-w-[160px]">
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
-          <input
-            type="text"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-          />
+          <AirportSelect value={destination} onChange={setDestination} placeholder="JFK" />
         </div>
         <div className="flex-1 min-w-[140px]">
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>

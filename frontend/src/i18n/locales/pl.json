@@ -79,7 +79,8 @@
     "allowedCategories": "Dozwolone kategorie",
     "publish": "Opublikuj lot",
     "carriersOnly": "Tylko przewoźnicy mogą publikować loty",
-    "publishError": "Nie udało się utworzyć lotu"
+    "publishError": "Nie udało się utworzyć lotu",
+    "useGeolocation": "Moja lokalizacja"
   },
   "deals": {
     "title": "Transakcje",

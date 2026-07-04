@@ -79,7 +79,8 @@
     "allowedCategories": "Allowed categories",
     "publish": "Publish trip",
     "carriersOnly": "Only carriers can publish trips",
-    "publishError": "Failed to create trip"
+    "publishError": "Failed to create trip",
+    "useGeolocation": "Use my location"
   },
   "deals": {
     "title": "Deals",

@@ -111,15 +111,18 @@
 - [x] Celery `notify_deal_status.delay` замокан в autouse-фикстуре (тесты не требуют Redis для side-effect'ов).
 **Acceptance:** `pytest` проходит зелёным на чистой `vimana_test`; повторный прогон идентичен первому; сид-данные не удаляются. ✅
 
-### T1.10 — База аэропортов + геолокация
-- [ ] Бэкенд загружает `airports.dat` (OpenFlights, ~7 000 записей, ~1 МБ) при старте из публичного источника; хранит в памяти (Python dict); поля: IATA-код, город, страна, lat, lon.
-- [ ] `GET /api/airports?q=` — поиск по IATA-коду или названию (город/страна); возвращает до 10 результатов: `{iata, city, country, lat, lon}`.
-- [ ] `GET /api/airports/nearest?lat=&lon=&limit=5` — ближайшие аэропорты по формуле Haversine (D11); возвращает до 5, отсортированных по расстоянию.
-- [ ] Названия города и страны — на языке пользователя (i18n lookup или поле `name_{lang}` в данных).
-- [ ] Фронтенд: компонент `AirportSelect` — текстовый поиск с autocomplete; дропдаун: 3 видимых строки, остальные — прокрутка; кнопка-иконка геолокации рядом с полем.
-- [ ] Кнопка геолокации: `navigator.geolocation.getCurrentPosition` → запрос `/nearest` → заполнить дропдаун ближайшими аэропортами.
-- [ ] Заменить свободный ввод `origin`/`destination` на `AirportSelect` в NewTripPage и форме заявки.
-**Acceptance:** поиск по тексту отдаёт релевантные аэропорты; кнопка геолокации показывает ближайшие (топ-3 видимы, дальше прокрутка); выбранное значение — IATA-код.
+### T1.10 — База аэропортов + геолокация ✅
+- [x] Файл `backend/app/data/airports.dat` (OpenFlights, 7698 записей, 1.1 МБ) хранится **в репозитории**; при старте backend читает его локально в память (`list[Airport]` с dataclass `Airport{iata, city, country, lat, lon}`). Работает офлайн.
+- [x] Скрипт `backend/scripts/update_airports.py` — скачивает свежую версию с `https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat` и перезаписывает файл. Запускается вручную.
+- [x] `GET /api/airports?q=` — поиск с ранжированием: exact IATA → IATA prefix → city prefix → substring в city/country; до 10 результатов.
+- [x] `GET /api/airports/nearest?lat=&lon=&limit=5` — Haversine, отсортировано по расстоянию.
+- [x] Названия города и страны — на английском (OpenFlights).
+- [x] Фронтенд: `AirportSelect` — autocomplete (200ms debounce), дропдаун `max-h-[9rem]` (~3 строки видно, дальше прокрутка), кнопка-иконка геолокации, click-outside закрывает.
+- [x] Кнопка геолокации: `navigator.geolocation.getCurrentPosition` → `nearestAirports` (limit=10) → дропдаун с ближайшими.
+- [x] `AirportSelect` подключён в `NewTripPage` (origin/destination) и в форме заявки `TripsPage` (origin/destination).
+- [x] Тесты backend (`test_airports.py`): search by IATA, search by city, empty query, лимит 10, nearest Dubai, nearest default limit, invalid coords 422.
+- [x] i18n-ключ `trips.useGeolocation` во всех 5 локалях.
+**Acceptance:** поиск отдаёт релевантные аэропорты; геолокация показывает ближайшие; выбранное значение — IATA-код; backend стартует без интернета; все тесты зелёные. ✅
 
 ### T1.11 — Телефон в профиль; убрать из регистрации
 - [ ] Убрать поле «Телефон» из RegisterPage.

@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.airports import router as airports_router
 from app.api.auth import router as auth_router
 from app.api.dealvault import router as dealvault_router
 from app.api.deals import router as deals_router
@@ -28,6 +29,7 @@ app.include_router(trips_router, prefix="/api/trips", tags=["trips"])
 app.include_router(deals_router, prefix="/api/deals", tags=["deals"])
 app.include_router(dealvault_router, prefix="/api/deals", tags=["dealvault"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
+app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 
 
 @app.get("/health")

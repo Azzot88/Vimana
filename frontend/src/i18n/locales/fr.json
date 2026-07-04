@@ -79,7 +79,8 @@
     "allowedCategories": "Catégories autorisées",
     "publish": "Publier le vol",
     "carriersOnly": "Seuls les transporteurs peuvent publier des vols",
-    "publishError": "Impossible de créer le vol"
+    "publishError": "Impossible de créer le vol",
+    "useGeolocation": "Ma position"
   },
   "deals": {
     "title": "Transactions",

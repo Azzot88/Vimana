@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { createTrip } from '../api/trips'
+import AirportSelect from '../components/AirportSelect'
 
 const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics', 'other']
 
@@ -59,23 +60,11 @@ export default function NewTripPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
-            <input
-              type="text"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-              required
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-            />
+            <AirportSelect value={origin} onChange={setOrigin} required placeholder="DXB" />
           </div>
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              required
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-            />
+            <AirportSelect value={destination} onChange={setDestination} required placeholder="JFK" />
           </div>
         </div>
         <div>

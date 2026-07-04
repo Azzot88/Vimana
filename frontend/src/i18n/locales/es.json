@@ -79,7 +79,8 @@
     "allowedCategories": "Categorías permitidas",
     "publish": "Publicar vuelo",
     "carriersOnly": "Solo los transportistas pueden publicar vuelos",
-    "publishError": "No se pudo crear el vuelo"
+    "publishError": "No se pudo crear el vuelo",
+    "useGeolocation": "Mi ubicación"
   },
   "deals": {
     "title": "Acuerdos",
