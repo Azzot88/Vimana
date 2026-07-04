@@ -108,7 +108,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-navy text-ivory font-display font-medium py-2.5 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+            className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
             {loading ? t('auth.registering') : t('auth.register')}
           </button>

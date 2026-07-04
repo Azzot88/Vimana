@@ -77,8 +77,8 @@ export default function DealPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-navy/10 overflow-hidden">
-        <div className="bg-navy px-6 py-5">
-          <div className="flex items-start justify-between">
+        <div className="bg-navy px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-1">
               <p className="text-xs font-mono text-white/40 uppercase tracking-widest">Посадочный талон</p>
               <MonoText className="text-xl text-white font-medium">
@@ -88,11 +88,11 @@ export default function DealPage() {
                 {new Date(deal.depart_at).toLocaleString('ru-RU')}
               </MonoText>
             </div>
-            <StatusBadge status={deal.status} />
+            <div className="self-start"><StatusBadge status={deal.status} /></div>
           </div>
         </div>
 
-        <div className="p-6 grid grid-cols-2 gap-4">
+        <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">Отправитель</p>
             <p className="text-sm font-body text-navy font-medium">{deal.sender_name}</p>
@@ -109,24 +109,24 @@ export default function DealPage() {
             <p className="text-xs font-body font-medium text-navy/40 mb-1">Категория</p>
             <MonoText className="text-sm text-navy">{deal.cargo_category}</MonoText>
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <p className="text-xs font-body font-medium text-navy/40 mb-1">ID сделки</p>
-            <MonoText className="text-xs text-navy/50">{deal.id}</MonoText>
+            <MonoText className="text-xs text-navy/50 break-all">{deal.id}</MonoText>
           </div>
         </div>
 
         {error && (
-          <div className="px-6 pb-4">
+          <div className="px-4 sm:px-6 pb-4">
             <p className="text-xs font-mono text-orange-600">{error}</p>
           </div>
         )}
 
-        <div className="px-6 pb-6 flex flex-wrap gap-3">
+        <div className="px-4 sm:px-6 pb-6 flex flex-col sm:flex-row sm:flex-wrap gap-3">
           {isCarrier && deal.status === 'matched' && (
             <button
               onClick={() => handleAction('accept')}
               disabled={actionLoading}
-              className="bg-cyan text-white font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {actionLoading ? '...' : 'Принять сделку'}
             </button>
@@ -135,7 +135,7 @@ export default function DealPage() {
             <button
               onClick={() => handleAction('handoff')}
               disabled={actionLoading}
-              className="bg-amber text-white font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="bg-amber text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {actionLoading ? '...' : 'Зафиксировать передачу'}
             </button>
@@ -144,14 +144,14 @@ export default function DealPage() {
             <button
               onClick={() => handleAction('confirm')}
               disabled={actionLoading}
-              className="bg-green-600 text-white font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="bg-green-600 text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {actionLoading ? '...' : 'Подтвердить получение'}
             </button>
           )}
           <Link
             to={`/deals/${deal.id}/vault`}
-            className="border border-navy/20 text-navy font-body font-medium px-5 py-2.5 rounded-lg text-sm hover:border-cyan transition-colors"
+            className="border border-navy/20 text-navy font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:border-cyan transition-colors text-center"
           >
             DealVault →
           </Link>

@@ -56,8 +56,8 @@ export default function NewTripPage() {
   return (
     <div className="max-w-lg">
       <h1 className="font-display font-bold text-2xl text-navy mb-6">{t('trips.newTrip')}</h1>
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-4 sm:p-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
             <AirportSelect value={origin} onChange={setOrigin} required placeholder="DXB" />
@@ -74,7 +74,7 @@ export default function NewTripPage() {
             value={departAt}
             onChange={(e) => setDepartAt(e.target.value)}
             required
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
           />
         </div>
         <div>
@@ -86,7 +86,7 @@ export default function NewTripPage() {
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
             required
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
             placeholder="5"
           />
         </div>
@@ -98,7 +98,7 @@ export default function NewTripPage() {
                 key={cat}
                 type="button"
                 onClick={() => toggleCategory(cat)}
-                className={`px-3 py-1 rounded-full text-xs font-mono transition-colors ${
+                className={`px-3 py-2 min-h-[2.5rem] rounded-full text-xs font-mono transition-colors ${
                   selectedCategories.includes(cat)
                     ? 'bg-cyan text-white'
                     : 'bg-ivory text-navy/60 hover:bg-navy/10'
@@ -114,14 +114,14 @@ export default function NewTripPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-navy text-ivory font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-none bg-navy text-ivory font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('trips.publish')}
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3"
+            className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3 min-h-[2.75rem]"
           >
             {t('common.cancel')}
           </button>

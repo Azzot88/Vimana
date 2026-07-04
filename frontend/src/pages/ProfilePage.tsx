@@ -107,12 +107,12 @@ export default function ProfilePage() {
           {user?.email && (
             <div>
               <p className="text-xs font-body font-medium text-navy/40 mb-0.5">{t('profile.email')}</p>
-              <MonoText className="text-sm text-navy">{user.email}</MonoText>
+              <MonoText className="text-sm text-navy break-all">{user.email}</MonoText>
             </div>
           )}
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('auth.phone')}</p>
-            <div className="flex gap-2 items-start">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
               <CountryCodeSelect value={phoneIso} onChange={setPhoneIso} />
               <input
                 type="tel"
@@ -120,13 +120,13 @@ export default function ProfilePage() {
                 value={phoneNational}
                 onChange={(e) => setPhoneNational(e.target.value)}
                 placeholder="555 000 0000"
-                className="flex-1 border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+                className="flex-1 border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
               />
               <button
                 type="button"
                 onClick={handleSavePhone}
                 disabled={phoneSaving || !phoneIso || !phoneNational}
-                className="bg-navy text-ivory font-display font-medium px-3 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+                className="bg-navy text-ivory font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
               >
                 {phoneSaving ? t('common.sending') : t('common.save')}
               </button>

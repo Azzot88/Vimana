@@ -66,15 +66,15 @@ export default function DealVaultPage() {
   }
 
   return (
-    <div className="max-w-2xl flex flex-col h-[calc(100vh-120px)]">
-      <div className="flex items-center gap-3 mb-4 shrink-0">
+    <div className="max-w-2xl flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
+      <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
         <Link to={`/deals/${dealId}`} className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
           ← Сделка
         </Link>
         <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
       </div>
 
-      <div className="bg-navy/5 rounded-lg px-4 py-2.5 mb-4 shrink-0 flex items-center gap-2">
+      <div className="bg-navy/5 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan"></span>
         <MonoText className="text-xs text-navy/60">Иммутабельно · SHA-256</MonoText>
       </div>
@@ -126,17 +126,17 @@ export default function DealVaultPage() {
           <div ref={bottomRef} />
         </div>
 
-        <div className="border-t border-navy/10 p-4 space-y-3 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="border-t border-navy/10 p-3 sm:p-4 space-y-2 sm:space-y-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={uploadKind}
               onChange={(e) => setUploadKind(e.target.value as typeof uploadKind)}
-              className="text-xs font-mono border border-navy/20 rounded-lg px-2 py-1.5 text-navy focus:outline-none focus:border-cyan"
+              className="text-xs font-mono border border-navy/20 rounded-lg px-2 py-2 min-h-[2.5rem] text-navy focus:outline-none focus:border-cyan"
             >
               <option value="handoff_photo">Фото передачи</option>
               <option value="receipt_photo">Фото получения</option>
             </select>
-            <label className="cursor-pointer border border-navy/20 rounded-lg px-3 py-1.5 text-xs font-body text-navy/60 hover:border-cyan transition-colors">
+            <label className="cursor-pointer border border-navy/20 rounded-lg px-3 py-2 min-h-[2.5rem] text-xs font-body text-navy/60 hover:border-cyan transition-colors flex items-center">
               Загрузить фото
               <input
                 ref={fileRef}
@@ -154,13 +154,13 @@ export default function DealVaultPage() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Сообщение..."
-              className="flex-1 border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+              className="flex-1 border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               disabled={sending}
             />
             <button
               type="submit"
               disabled={sending || !text.trim()}
-              className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+              className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
             >
               {sending ? '...' : 'Отправить'}
             </button>

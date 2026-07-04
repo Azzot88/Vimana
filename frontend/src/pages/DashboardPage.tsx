@@ -52,9 +52,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="font-display font-bold text-2xl text-navy">
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-navy">
             {currentUser
               ? t('dashboard.welcome', { name: currentUser.display_name })
               : 'Dashboard'}
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         {currentUser?.is_carrier && (
           <Link
             to="/trips/new"
-            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors"
+            className="bg-navy text-ivory font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors flex items-center"
           >
             {t('dashboard.publishTrip')}
           </Link>

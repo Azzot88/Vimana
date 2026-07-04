@@ -81,27 +81,27 @@ export default function TripsPage() {
     <div className="space-y-6">
       <h1 className="font-display font-bold text-2xl text-navy">{t('trips.title')}</h1>
 
-      <form onSubmit={handleSearch} className="bg-white rounded-xl border border-navy/10 p-4 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[160px]">
+      <form onSubmit={handleSearch} className="bg-white rounded-xl border border-navy/10 p-4 grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-3 md:items-end">
+        <div className="md:flex-1 md:min-w-[160px]">
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
           <AirportSelect value={origin} onChange={setOrigin} placeholder="DXB" />
         </div>
-        <div className="flex-1 min-w-[160px]">
+        <div className="md:flex-1 md:min-w-[160px]">
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
           <AirportSelect value={destination} onChange={setDestination} placeholder="JFK" />
         </div>
-        <div className="flex-1 min-w-[140px]">
+        <div className="md:flex-1 md:min-w-[140px]">
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
           />
         </div>
         <button
           type="submit"
-          className="bg-navy text-ivory font-display font-medium px-5 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors"
+          className="sm:col-span-2 md:col-span-1 bg-navy text-ivory font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors"
         >
           {t('trips.search')}
         </button>
@@ -124,13 +124,13 @@ export default function TripsPage() {
       ) : (
         <div className="grid gap-4">
           {trips.map((trip) => (
-            <div key={trip.id} className="bg-white rounded-xl border border-navy/10 p-5">
-              <div className="flex items-start justify-between">
+            <div key={trip.id} className="bg-white rounded-xl border border-navy/10 p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="space-y-2">
                   <MonoText className="text-base text-navy font-medium">
                     {trip.origin} → {trip.destination}
                   </MonoText>
-                  <div className="flex items-center gap-4 text-xs font-body text-navy/50">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
                     <span>{t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span></span>
                     <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
                     <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} кг</MonoText></span>
@@ -148,7 +148,7 @@ export default function TripsPage() {
                 {!user?.is_carrier && trip.carrier_id !== user?.id && (
                   <button
                     onClick={() => { setOrderTripId(trip.id); setOrderSuccess(false) }}
-                    className="bg-amber text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity shrink-0 ml-4"
+                    className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity shrink-0 w-full sm:w-auto sm:ml-4"
                   >
                     {t('trips.sendPackage')}
                   </button>
@@ -158,7 +158,7 @@ export default function TripsPage() {
               {orderTripId === trip.id && (
                 <form onSubmit={handleOrder} className="mt-4 pt-4 border-t border-navy/10 space-y-3">
                   <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">{t('trips.requestTitle')}</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.recipientContact')}</label>
                       <input

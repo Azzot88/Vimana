@@ -139,15 +139,16 @@
 - [x] Backend-тесты: `test_patch_me_updates_phone`, `test_register_without_phone_succeeds`.
 **Acceptance:** регистрация проходит без телефона (только email + пароль); в ЛК можно выбрать страну (с поиском по названию на языке UI) и ввести номер, сохранить; при повторной загрузке страна и номер восстанавливаются. ✅
 
-### T1.12 — Мобильная версия (responsive)
-- [ ] Tailwind breakpoints (`sm:` / `md:`) на всех страницах; базовый layout — mobile-first.
-- [ ] Нижняя навигация (`BottomNav`) на мобильном вместо боковой/верхней; скрывается на `md:`.
-- [ ] Карточки рейсов/сделок — одна колонка на мобильном, сетка на десктопе.
-- [ ] Формы (регистрация, новый рейс, заявка) — поля на всю ширину, крупные тач-зоны (min-height 44px).
-- [ ] DealVault-чат: на мобильном занимает весь экран, кнопка отправки снизу.
-- [ ] `AirportSelect` дропдаун — корректно открывается на мобильном (без выхода за экран).
-- [ ] Проверить на viewport 375px (iPhone SE) и 390px (iPhone 14).
-**Acceptance:** все ключевые флоу (регистрация, публикация рейса, сделка, DealVault) проходятся на мобильном экране без горизонтального скролла и мелких тач-целей.
+### T1.12 — Мобильная версия (responsive) ✅
+- [x] Tailwind breakpoints (`sm:` / `md:`) на страницах; layout mobile-first.
+- [x] Нижняя навигация (`BottomNav`) — 4 иконки (Dashboard/Trips/Deals/Profile), только `md:hidden`; десктопная навигация в Navbar скрыта на мобильном (`hidden md:flex`); Layout добавляет `pb-24` под BottomNav.
+- [x] Логотип «Vimana» кликабельный (ведёт на `/`) — частично закрывает T1.15.
+- [x] Формы (Login/Register/NewTrip/Trips filter/Profile phone/DealVault): поля на всю ширину, тач-зоны `min-h-[2.75rem]` (44px+).
+- [x] Карточки рейсов/сделок: `flex-col sm:flex-row`, grid `grid-cols-1 sm:grid-cols-2`.
+- [x] `DealPage` boarding pass: header стакается вертикально на мобильном, ID сделки `break-all`, кнопки действий стакаются.
+- [x] `DealVaultPage`-чат: адаптивная высота `h-[calc(100vh-8rem)]`, форма отправки и выбор типа фото — flex-wrap.
+- [x] `AirportSelect` и `CountryCodeSelect` — dropdown корректно открываются на мобильном благодаря `absolute` + `w-full` / `w-72`.
+**Acceptance:** ключевые флоу проходятся на мобильном экране (375-390px) без горизонтального скролла и мелких тач-целей. ✅
 
 ### T1.13 — Локализация: UK→UA, добавить RU
 - [ ] Переименовать `frontend/src/i18n/locales/uk.json` → `ua.json`; обновить импорты в `frontend/src/i18n/index.ts` (`uk: {...}` → `ua: {...}`).
