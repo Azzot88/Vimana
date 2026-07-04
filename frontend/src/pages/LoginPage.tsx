@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { login, me } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
+import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const setAuth = useAuthStore((s) => s.setAuth)
-  const [loginVal, setLoginVal] = useState('')
+  const [loginVal, setLoginVal] = usePersistedState<string>('login:login', '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -48,6 +49,9 @@ export default function LoginPage() {
               value={loginVal}
               onChange={(e) => setLoginVal(e.target.value)}
               required
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               placeholder="user@example.com"
             />

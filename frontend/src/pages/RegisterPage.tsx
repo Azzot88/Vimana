@@ -3,16 +3,17 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { register, login, me } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
+import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const setAuth = useAuthStore((s) => s.setAuth)
-  const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
+  const [displayName, setDisplayName] = usePersistedState<string>('register:displayName', '')
+  const [email, setEmail] = usePersistedState<string>('register:email', '')
   const [password, setPassword] = useState('')
-  const [isCarrier, setIsCarrier] = useState(false)
+  const [isCarrier, setIsCarrier] = usePersistedState<boolean>('register:isCarrier', false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 

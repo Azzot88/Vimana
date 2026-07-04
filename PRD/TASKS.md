@@ -174,20 +174,17 @@
 - [x] Backend-тесты: `test_create_invite_ttl_is_14_days`, `test_list_my_invites_returns_pending_status`, `test_list_my_invites_reflects_accepted`, `test_list_my_invites_empty_for_new_user`.
 **Acceptance:** в ЛК видно список выданных инвайтов со статусом и обратным отсчётом «3д 4ч»; можно создать новый инвайт; после принятия статус меняется на «Принят» с именем принявшего; ссылка копируется. ✅
 
-### T1.15 — UX-полишинг: формы, логин, логотип
-- [ ] **Персистентность форм в браузере** (localStorage):
-  - `LoginPage`: сохранять `login` (email/phone) при вводе, восстанавливать при монтаже. **Пароль НЕ сохранять.**
-  - `RegisterPage`: сохранять `display_name`, `email`, `phone`, `is_carrier`. **Пароль НЕ сохранять.**
-  - `TripsPage`: сохранять фильтры `origin`, `destination`, `date`.
-  - Универсальный хук `usePersistedState(key, initialValue)` — в `frontend/src/hooks/`.
-- [ ] **Логин case-insensitive**:
-  - Фронт: у input `login` добавить `autoCapitalize="none"`, `autoCorrect="off"`, `spellCheck={false}`.
-  - Бэк: в `POST /api/auth/login` сравнивать email через `LOWER(email) = LOWER(:login)`; при регистрации сохранять email в lowercase.
-  - Пароль остаётся case-sensitive (bcrypt как есть).
-- [ ] **Кликабельный логотип «Vimana»** — во всех разделах ведёт на `/`:
-  - В `Navbar.tsx`: обернуть `<span>Vimana</span>` в `<Link to="/">`.
-  - На `LoginPage` / `RegisterPage`: логотип остаётся декоративным `<h1>` (уже на публичной странице, некуда вести).
-**Acceptance:** повторный вход не требует набирать email заново; логин работает независимо от регистра; клик по логотипу в любой аутентифицированной странице возвращает на Dashboard.
+### T1.15 — UX-полишинг: формы, логин, логотип ✅
+- [x] **Персистентность форм в браузере** через универсальный хук `usePersistedState(key, initial)` в `frontend/src/hooks/`:
+  - `LoginPage`: `loginVal` (email/phone) сохраняется в `localStorage['login:login']`. Пароль **не** сохраняется.
+  - `RegisterPage`: `displayName`, `email`, `isCarrier` сохраняются (`register:*`). Пароль **не** сохраняется.
+  - `TripsPage`: фильтры `origin`, `destination`, `date` сохраняются (`trips:filter:*`).
+- [x] **Логин case-insensitive**:
+  - Фронт: input `login` уже с `autoCapitalize="none"`, `autoCorrect="off"`, `spellCheck={false}` (сделано в T1.11 для email/login).
+  - Бэк: при регистрации email нормализуется в lowercase; при логине сравнение через `.strip().lower()`. Whitespace обрезается. Пароль остаётся case-sensitive.
+- [x] **Кликабельный логотип «Vimana»** — в `Navbar.tsx` обёрнут в `<Link to="/">` с hover-состоянием (сделано в T1.12). На публичных LoginPage/RegisterPage остаётся декоративный `<h1>`.
+- [x] Backend-тесты: `test_register_normalizes_email_lowercase`, `test_login_is_case_insensitive_for_email`, `test_login_trims_whitespace`.
+**Acceptance:** повторный вход не требует набирать email заново; логин работает независимо от регистра и лишних пробелов; клик по логотипу возвращает на Dashboard. ✅
 
 ### T1.8 — Staging-деплой, домен и smoke test V1
 - [ ] Поднять VPS / облачный сервер (Ubuntu 22+ или Debian 12), установить Docker + Docker Compose.

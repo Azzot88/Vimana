@@ -5,6 +5,7 @@ import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
 import MonoText from '../components/MonoText'
+import { usePersistedState } from '../hooks/usePersistedState'
 
 const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics', 'other']
 
@@ -13,9 +14,9 @@ export default function TripsPage() {
   const { t, i18n } = useTranslation()
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
-  const [origin, setOrigin] = useState('')
-  const [destination, setDestination] = useState('')
-  const [date, setDate] = useState('')
+  const [origin, setOrigin] = usePersistedState<string>('trips:filter:origin', '')
+  const [destination, setDestination] = usePersistedState<string>('trips:filter:destination', '')
+  const [date, setDate] = usePersistedState<string>('trips:filter:date', '')
   const [orderTripId, setOrderTripId] = useState<string | null>(null)
   const [cargoDesc, setCargoDesc] = useState('')
   const [cargoCategory, setCargoCategory] = useState('other')

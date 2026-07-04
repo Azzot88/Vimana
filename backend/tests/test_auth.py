@@ -107,3 +107,48 @@ async def test_register_without_phone_succeeds(client):
     )
     assert resp.status_code == 201
     assert resp.json()["phone"] is None
+
+
+async def test_register_normalizes_email_lowercase(client):
+    raw_email = f"MixedCase-{uuid.uuid4().hex[:6]}@Vimana.Test"
+    resp = await client.post(
+        "/api/auth/register",
+        json={
+            "email": raw_email,
+            "password": "test-password-1",
+            "display_name": "Case User",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["email"] == raw_email.lower()
+
+
+async def test_login_is_case_insensitive_for_email(client):
+    raw_email = f"Case-Login-{uuid.uuid4().hex[:6]}@Vimana.Test"
+    password = "test-password-1"
+    reg = await client.post(
+        "/api/auth/register",
+        json={"email": raw_email, "password": password, "display_name": "CI Login"},
+    )
+    assert reg.status_code == 201
+
+    for variant in (raw_email, raw_email.lower(), raw_email.upper()):
+        resp = await client.post(
+            "/api/auth/login", json={"login": variant, "password": password}
+        )
+        assert resp.status_code == 200, f"failed for variant {variant!r}"
+        assert "access_token" in resp.json()
+
+
+async def test_login_trims_whitespace(client):
+    email = unique_email("trim")
+    password = "test-password-1"
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": password, "display_name": "Trim"},
+    )
+    resp = await client.post(
+        "/api/auth/login",
+        json={"login": f"  {email.upper()}  ", "password": password},
+    )
+    assert resp.status_code == 200
