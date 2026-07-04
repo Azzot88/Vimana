@@ -9,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import settings
 from app.core.database import Base, get_db
 from app.core.security import hash_password
 from app.main import app
@@ -16,10 +17,16 @@ from app.models.deal import Deal, DealStatus
 from app.models.marketplace import Order, OrderCategory, OrderStatus, Trip, TripStatus
 from app.models.user import User
 
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test",
-)
+
+def _derive_test_url() -> str:
+    explicit = os.getenv("TEST_DATABASE_URL")
+    if explicit:
+        return explicit
+    base, _, _ = settings.DATABASE_URL.rpartition("/")
+    return f"{base}/vimana_test"
+
+
+TEST_DATABASE_URL = _derive_test_url()
 
 SEED_CARRIER_EMAIL = "seed-carrier@vimana.test"
 SEED_SENDER_EMAIL = "seed-sender@vimana.test"
