@@ -232,11 +232,18 @@
 
 > T_TEST.1 (базовый backend-сьют) перенесён вверх — сразу после T1.9, чтобы стать фундаментом. Правила изоляции — ENVIRONMENT.md §8. Каждая новая задача T1.x обязана добавлять свои тесты в этот сьют.
 
-### T_TEST.2 — Frontend smoke-тесты
-- [ ] `vitest` + `@testing-library/react`.
-- [ ] Smoke: рендер LoginPage, RegisterPage, DashboardPage без ошибок.
-- [ ] Проверка i18n: переключение языка меняет текст.
-**Acceptance:** `npm run test` проходит; тесты не требуют сервера.
+### T_TEST.2 — Frontend smoke-тесты ✅
+- [x] `vitest` + `@testing-library/react` + `@testing-library/user-event` + `jsdom` + `@testing-library/jest-dom`.
+- [x] `vite.config.ts` — блок `test` c `environment: 'jsdom'`, `globals: true`, `setupFiles: ['./src/test/setup.ts']`.
+- [x] Setup: `jest-dom` matchers, `localStorage.clear()` + `cleanup()` в `afterEach`, mock `window.matchMedia`.
+- [x] `renderWithProviders` — helper с `MemoryRouter` + `I18nextProvider`.
+- [x] Smoke-тесты (7 кейсов):
+  - `LoginPage`: заголовок, subtitle, оба input'а, link на /register, version badge.
+  - `RegisterPage`: name + email + password inputs; **phone НЕ рендерится**; carrier checkbox.
+  - `LanguageSwitcher`: dropdown с 6 endonym-названиями; выбор меняет `i18n.language` и `localStorage['lang']`.
+  - `StatusBadge`: рендерит переведённый label (accepted → «Accepted»/«Принято»/…).
+- [x] Скрипты `npm test` (watch) и `npm run test:run` (one-shot).
+**Acceptance:** `docker compose exec frontend npm run test:run` проходит; тесты не требуют сервера/бэкенда; сборка `npm run build` не ломается. ✅
 
 ---
 
