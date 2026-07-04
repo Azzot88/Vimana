@@ -12,6 +12,7 @@
 
 ## Записи
 
+- **2026-07-04 · PRD** · Добавлены задачи Фазы 1: T1.13 (локализация UK→UA, +RU — итого 6 языков), T1.14 (раздел «Инвайты» в ЛК с трекингом статусов и обратным отсчётом), T1.15 (UX-полишинг: персистентность форм в localStorage, case-insensitive логин + no-autocapitalize, кликабельный логотип) · TASKS §T1.13–T1.15, IMPLEMENTATIONPLAN §1.4.
 - **2026-07-04 · FIX** · VITE_API_URL захардкоженный на старый IP ломал логин после смены EC2 IP; переменная убрана — фронт шлёт запросы на текущий origin через nginx-прокси; `.env.example` документирован · `.env.example`, `frontend/src/api/client.ts` (fallback `?? ''`).
 - **2026-07-04 · INFRA** · `.dockerignore` для backend/frontend (убирает `node_modules`, `__pycache__` из build context); ротация Docker-логов через YAML anchor `x-logging` (10MB × 3 файла на сервис); EBS root расширен 6.7→30GB gp3; cron еженедельной чистки `docker system prune` · `frontend/.dockerignore`, `backend/.dockerignore`, `docker-compose.dev.yml`.
 - **2026-07-04 · FEATURE** · T1.9: i18n (react-i18next) — 5 языков (EN/UK/PL/FR/ES), namespace nav/auth/common/dashboard/trips/deals/profile; LanguageSwitcher в Navbar; выбор в localStorage; даты через `i18n.language` · `frontend/src/i18n/`, `frontend/src/components/LanguageSwitcher.tsx`, все страницы.

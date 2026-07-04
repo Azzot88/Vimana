@@ -121,6 +121,40 @@
 - [ ] Проверить на viewport 375px (iPhone SE) и 390px (iPhone 14).
 **Acceptance:** все ключевые флоу (регистрация, публикация рейса, сделка, DealVault) проходятся на мобильном экране без горизонтального скролла и мелких тач-целей.
 
+### T1.13 — Локализация: UK→UA, добавить RU
+- [ ] Переименовать `frontend/src/i18n/locales/uk.json` → `ua.json`; обновить импорты в `frontend/src/i18n/index.ts` (`uk: {...}` → `ua: {...}`).
+- [ ] `LanguageSwitcher.tsx`: код `'uk'` → `'ua'`, label `'UK'` → `'UA'`. Правило: Ukraine всегда сокращается до **UA** (не UK — во избежание конфликта с United Kingdom).
+- [ ] Миграция localStorage: при старте, если `localStorage.getItem('lang') === 'uk'` → заменить на `'ua'`.
+- [ ] Создать `frontend/src/i18n/locales/ru.json` со всеми ключами из `en.json` (nav, auth, common, dashboard, trips, deals, profile).
+- [ ] Добавить `ru` в `i18n/index.ts` и в `LANGS` в `LanguageSwitcher`. Итого 6 языков: EN / UA / RU / PL / FR / ES.
+- [ ] Обновить упоминания UK в PRD-файлах (уже сделано в этой задаче).
+**Acceptance:** переключатель показывает 6 языков (EN / UA / RU / PL / FR / ES); UA выводит украинский, RU — русский; старые пользователи с `lang=uk` в localStorage автоматически переезжают на `ua` без потери выбора.
+
+### T1.14 — Раздел «Инвайты» в личном кабинете
+- [ ] Бэкенд: `GET /api/invites/mine` — список инвайтов, созданных текущим юзером; поля: `token`, `recipient_contact`, `created_at`, `expires_at`, `status` ∈ {`pending`, `accepted`, `expired`}, `accepted_by_display_name` (nullable).
+- [ ] Статус вычисляется на бэке: `accepted` если есть Connection по этому инвайту; `expired` если `expires_at < now()`; иначе `pending`.
+- [ ] В `ProfilePage` добавить секцию «Мои инвайты» между «Контактами» и «Уведомлениями»:
+  - Кнопка «+ Создать инвайт» (открывает `InvitePage` или inline-форму с полем `recipient_contact`).
+  - Список выданных инвайтов: `recipient_contact`, статус (бейдж), для `pending` — мелким текстом «истекает через 3д 4ч» (dynamic countdown из `expires_at`).
+- [ ] Срок жизни инвайта остаётся **7 дней** (уже задан в T1.3, не менять).
+- [ ] i18n-ключи: `profile.invites`, `profile.inviteCreate`, `profile.inviteExpiresIn`, `profile.inviteStatus.{pending,accepted,expired}`.
+**Acceptance:** в ЛК видно список выданных инвайтов со статусом и обратным отсчётом; можно создать новый инвайт из ЛК; после принятия статус меняется на «Принят».
+
+### T1.15 — UX-полишинг: формы, логин, логотип
+- [ ] **Персистентность форм в браузере** (localStorage):
+  - `LoginPage`: сохранять `login` (email/phone) при вводе, восстанавливать при монтаже. **Пароль НЕ сохранять.**
+  - `RegisterPage`: сохранять `display_name`, `email`, `phone`, `is_carrier`. **Пароль НЕ сохранять.**
+  - `TripsPage`: сохранять фильтры `origin`, `destination`, `date`.
+  - Универсальный хук `usePersistedState(key, initialValue)` — в `frontend/src/hooks/`.
+- [ ] **Логин case-insensitive**:
+  - Фронт: у input `login` добавить `autoCapitalize="none"`, `autoCorrect="off"`, `spellCheck={false}`.
+  - Бэк: в `POST /api/auth/login` сравнивать email через `LOWER(email) = LOWER(:login)`; при регистрации сохранять email в lowercase.
+  - Пароль остаётся case-sensitive (bcrypt как есть).
+- [ ] **Кликабельный логотип «Vimana»** — во всех разделах ведёт на `/`:
+  - В `Navbar.tsx`: обернуть `<span>Vimana</span>` в `<Link to="/">`.
+  - На `LoginPage` / `RegisterPage`: логотип остаётся декоративным `<h1>` (уже на публичной странице, некуда вести).
+**Acceptance:** повторный вход не требует набирать email заново; логин работает независимо от регистра; клик по логотипу в любой аутентифицированной странице возвращает на Dashboard.
+
 ### T1.8 — Staging-деплой, домен и smoke test V1
 - [ ] Поднять VPS / облачный сервер (Ubuntu 22+ или Debian 12), установить Docker + Docker Compose.
 - [ ] Клонировать репо, скопировать `.env.example` → `.env`, заполнить production-значения.
