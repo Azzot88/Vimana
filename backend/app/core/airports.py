@@ -181,3 +181,20 @@ def airports_in_city(country_iso: str, city: str) -> list[Airport]:
         a for a in _AIRPORTS
         if a.country_iso == iso and a.city.lower() == city_lower
     ]
+
+
+def search_cities(query: str, limit: int = 8) -> list[dict]:
+    q = query.strip().lower()
+    if not q:
+        return []
+    matches: dict[tuple[str, str], int] = {}
+    for a in _AIRPORTS:
+        if not a.country_iso:
+            continue
+        if q in a.city.lower():
+            key = (a.country_iso, a.city)
+            matches[key] = matches.get(key, 0) + 1
+    return sorted(
+        [{"iso": iso, "city": city, "count": c} for (iso, city), c in matches.items()],
+        key=lambda x: (-x["count"], x["city"]),
+    )[:limit]

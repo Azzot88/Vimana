@@ -38,10 +38,12 @@
     "search": "Пошук…"
   },
   "airports": {
-    "notWorking": "Не працює? Країна → місто",
-    "selectCountry": "Оберіть країну",
-    "selectCity": "Оберіть місто",
-    "selectAirport": "Оберіть аеропорт"
+    "typeCountryCityIata": "Країна / місто / IATA",
+    "typeCity": "Місто",
+    "typeIata": "IATA",
+    "groupCountries": "Країни",
+    "groupCities": "Міста",
+    "groupAirports": "Аеропорти"
   },
   "dashboard": {
     "welcome": "Ласкаво просимо, {{name}}",

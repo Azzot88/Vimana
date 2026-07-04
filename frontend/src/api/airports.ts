@@ -19,6 +19,17 @@ export interface CityCount {
   count: number
 }
 
+export interface CityMatch {
+  iso: string
+  city: string
+  count: number
+}
+
+export interface LookupResult {
+  cities: CityMatch[]
+  airports: Airport[]
+}
+
 export const searchAirports = (q: string) =>
   api.get<Airport[]>('/api/airports', { params: { q } })
 
@@ -33,3 +44,6 @@ export const listCitiesInCountry = (countryIso: string) =>
 
 export const airportsInCity = (countryIso: string, city: string) =>
   api.get<Airport[]>('/api/airports/by-city', { params: { country: countryIso, city } })
+
+export const lookupAirports = (q: string) =>
+  api.get<LookupResult>('/api/airports/lookup', { params: { q } })

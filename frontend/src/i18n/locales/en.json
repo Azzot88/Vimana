@@ -38,10 +38,12 @@
     "search": "Search…"
   },
   "airports": {
-    "notWorking": "Not working? Pick country → city",
-    "selectCountry": "Select country",
-    "selectCity": "Select city",
-    "selectAirport": "Select airport"
+    "typeCountryCityIata": "Country / city / IATA",
+    "typeCity": "City",
+    "typeIata": "IATA",
+    "groupCountries": "Countries",
+    "groupCities": "Cities",
+    "groupAirports": "Airports"
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",

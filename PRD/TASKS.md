@@ -192,11 +192,14 @@
   - `GET /api/airports/countries` — `[{iso, count}]`, сортировка по количеству desc.
   - `GET /api/airports/cities?country=XX` — `[{city, count}]`, сортировка по количеству desc.
   - `GET /api/airports/by-city?country=XX&city=Y` — список аэропортов; 404 если пусто.
-- [x] Frontend: `AirportCascadeModal` — full-screen на мобильном, `sm:max-w-md` на десктопе, 3 шага с кнопкой ←; интегрирован в `AirportSelect` через ссылку «Not working?».
-  - Страны — локализованы через `Intl.DisplayNames(i18n.language, {type:'region'})`; поиск по substring на UI-языке **и** английском одновременно.
-  - Города — из датасета (английский); поиск по substring.
-  - Аэропорты — IATA + city; если в городе один аэропорт, выбирается автоматически.
-- [x] Backend-тесты (5): `test_countries_returns_iso_codes`, `test_cities_by_country_ae`, `test_by_city_dubai_ae`, `test_by_city_unknown_returns_404`, `test_country_iso_populated_for_dxb`.
+- [x] Frontend: `AirportSelect` переработан как **unified search + subtitle** (вариант A):
+  - Одно поле input; dropdown группирован по 3 секциям — Countries / Cities / Airports.
+  - Страны — локализованы через `Intl.DisplayNames(i18n.language, {type:'region'})`; поиск на UI-языке **и** английском.
+  - Клик по стране → dropdown фильтруется по стране, чип-подзаголовок 🇦🇪 UAE появляется над полем мелким жирным шрифтом.
+  - Клик по городу → чип 🇦🇪 UAE · Dubai, dropdown показывает аэропорты города.
+  - Клик по аэропорту → в поле IATA, чип остаётся; кнопка «×» очищает.
+  - Backend endpoint `GET /api/airports/lookup?q=` возвращает cities + airports одним запросом.
+- [x] Backend-тесты (7): countries, cities, by-city (positive/404), country_iso, lookup positive/empty.
 - [x] i18n-ключи `airports.{notWorking,selectCountry,selectCity,selectAirport}` + `common.search` — во всех 6 локалях.
 **Acceptance:** пользователь без геолокации через 3 клика (страна → город → аэропорт) выбирает нужный аэропорт; названия стран локализованы на 6 языков; поиск страны работает и на английском, и на языке UI. ✅
 

@@ -25,6 +25,17 @@ class CityOut(BaseModel):
     count: int
 
 
+class CityMatch(BaseModel):
+    iso: str
+    city: str
+    count: int
+
+
+class LookupOut(BaseModel):
+    cities: list[CityMatch]
+    airports: list[AirportOut]
+
+
 def _to_out(a: airports_module.Airport) -> AirportOut:
     return AirportOut(
         iata=a.iata,
@@ -53,6 +64,16 @@ async def nearest_airports(
 @router.get("/countries", response_model=list[CountryOut])
 async def countries():
     return airports_module.list_countries()
+
+
+@router.get("/lookup", response_model=LookupOut)
+async def lookup(q: str = Query("", min_length=0, max_length=100)):
+    if not q.strip():
+        return LookupOut(cities=[], airports=[])
+    return LookupOut(
+        cities=[CityMatch(**c) for c in airports_module.search_cities(q, limit=8)],
+        airports=[_to_out(a) for a in airports_module.search(q, limit=8)],
+    )
 
 
 @router.get("/cities", response_model=list[CityOut])

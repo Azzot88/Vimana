@@ -90,3 +90,17 @@ async def test_country_iso_populated_for_dxb(client):
     body = resp.json()
     dxb = next(a for a in body if a["iata"] == "DXB")
     assert dxb["country_iso"] == "AE"
+
+
+async def test_lookup_returns_cities_and_airports(client):
+    resp = await client.get("/api/airports/lookup", params={"q": "dubai"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert any(c["city"] == "Dubai" and c["iso"] == "AE" for c in body["cities"])
+    assert any(a["iata"] == "DXB" for a in body["airports"])
+
+
+async def test_lookup_empty_query_returns_empty(client):
+    resp = await client.get("/api/airports/lookup", params={"q": ""})
+    assert resp.status_code == 200
+    assert resp.json() == {"cities": [], "airports": []}
