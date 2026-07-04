@@ -12,6 +12,10 @@
 
 ## Записи
 
+- **2026-07-04 · FIX** · VITE_API_URL захардкоженный на старый IP ломал логин после смены EC2 IP; переменная убрана — фронт шлёт запросы на текущий origin через nginx-прокси; `.env.example` документирован · `.env.example`, `frontend/src/api/client.ts` (fallback `?? ''`).
+- **2026-07-04 · INFRA** · `.dockerignore` для backend/frontend (убирает `node_modules`, `__pycache__` из build context); ротация Docker-логов через YAML anchor `x-logging` (10MB × 3 файла на сервис); EBS root расширен 6.7→30GB gp3; cron еженедельной чистки `docker system prune` · `frontend/.dockerignore`, `backend/.dockerignore`, `docker-compose.dev.yml`.
+- **2026-07-04 · FEATURE** · T1.9: i18n (react-i18next) — 5 языков (EN/UK/PL/FR/ES), namespace nav/auth/common/dashboard/trips/deals/profile; LanguageSwitcher в Navbar; выбор в localStorage; даты через `i18n.language` · `frontend/src/i18n/`, `frontend/src/components/LanguageSwitcher.tsx`, все страницы.
+- **2026-07-04 · FEATURE** · T1.7: Celery уведомления — email (smtplib), Telegram (Bot API), WhatsApp (Twilio); beat schedule для проверки дедлайнов; тумблеры в профиле; линкинг Telegram через `/start {token}` · `backend/app/worker.py`, `backend/app/tasks/notifications.py`, `backend/app/core/{email,telegram,whatsapp}.py`, `backend/app/api/telegram.py`, миграция `0002_notification_fields`.
 - **2026-06-28 · PRD** · T1.10 уточнён: OpenFlights в память, Haversine (D11), кнопка геолокации, дропдаун 3+прокрутка; добавлен T1.12 (мобильная версия); D11 зафиксирован в Decision Log · TASKS §T1.10 T1.12, IMPLEMENTATIONPLAN §1.4, TECHSTATE §1 §2.
 - **2026-06-28 · PRD** · Добавлены задачи Фазы 1: T1.9 (i18n, 5 языков), T1.10 (база аэропортов + autocomplete), T1.11 (телефон в профиль); T1.7 расширен — Telegram + WhatsApp каналы уведомлений · TASKS §T1.7–T1.11, IMPLEMENTATIONPLAN §1.4–1.5, TECHSTATE §1.
 - **2026-06-28 · FIX** · Auth: login URL `/api/auth/token` → `/api/auth/login`; me URL `/api/me` → `/api/auth/me`; OAuth2 form → JSON body; токен сохраняется в localStorage до вызова me() · `frontend/src/api/auth.ts`, `frontend/src/pages/LoginPage.tsx`, `frontend/src/pages/RegisterPage.tsx`, `backend/app/api/auth.py`.
