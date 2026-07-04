@@ -46,7 +46,7 @@ export default function BottomNav() {
     }`
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-navy/10 flex">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-navy/10 flex pb-[env(safe-area-inset-bottom)]">
       <NavLink to="/" end className={linkClass}>
         <IconHome />
         <span>{t('nav.dashboard')}</span>
