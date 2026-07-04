@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { register, login, me } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import { APP_VERSION } from '../version'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
@@ -19,7 +21,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     if (!email && !phone) {
-      setError('Укажите email или телефон')
+      setError(t('auth.errorCredentials'))
       return
     }
     setLoading(true)
@@ -40,9 +42,9 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 409) {
-        setError('Пользователь с таким email или телефоном уже существует.')
+        setError(t('auth.errorDuplicate'))
       } else {
-        setError('Ошибка сервера. Попробуйте ещё раз.')
+        setError(t('auth.errorServer'))
       }
     } finally {
       setLoading(false)
@@ -53,13 +55,13 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-ivory flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
-          Vimana
+          {t('auth.title')}
         </h1>
-        <p className="text-center text-navy/50 text-sm font-body mb-8">Sacred Logistics</p>
+        <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              Имя
+              {t('auth.name')}
             </label>
             <input
               type="text"
@@ -67,12 +69,11 @@ export default function RegisterPage() {
               onChange={(e) => setDisplayName(e.target.value)}
               required
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-              placeholder="Иван Петров"
             />
           </div>
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              Email
+              {t('auth.email')}
             </label>
             <input
               type="email"
@@ -84,19 +85,19 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              Телефон
+              {t('auth.phone')}
             </label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-              placeholder="+7 999 000 00 00"
+              placeholder="+1 999 000 0000"
             />
           </div>
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              Пароль
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -114,7 +115,7 @@ export default function RegisterPage() {
               onChange={(e) => setIsCarrier(e.target.checked)}
               className="w-4 h-4 accent-cyan"
             />
-            <span className="text-sm font-body text-navy">Я перевозчик</span>
+            <span className="text-sm font-body text-navy">{t('auth.isCarrier')}</span>
           </label>
           {error && (
             <p className="text-xs font-mono text-orange-600">{error}</p>
@@ -124,14 +125,14 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-navy text-ivory font-display font-medium py-2.5 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
-            {loading ? 'Регистрация...' : 'Создать аккаунт'}
+            {loading ? t('auth.registering') : t('auth.register')}
           </button>
         </form>
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-navy/50">
-            Уже есть аккаунт?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link to="/login" className="text-cyan hover:underline">
-              Войти
+              {t('auth.signIn')}
             </Link>
           </p>
           <span className="font-mono text-xs text-navy/20">v{APP_VERSION}</span>

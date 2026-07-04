@@ -1,8 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
+import LanguageSwitcher from './LanguageSwitcher'
 
 export default function Navbar() {
   const { user, logout } = useAuthStore()
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -24,20 +27,21 @@ export default function Navbar() {
           </span>
           <div className="flex items-center gap-4">
             <NavLink to="/" end className={linkClass}>
-              Dashboard
+              {t('nav.dashboard')}
             </NavLink>
             <NavLink to="/trips" className={linkClass}>
-              Рейсы
+              {t('nav.trips')}
             </NavLink>
             <NavLink to="/deals" className={linkClass}>
-              Сделки
+              {t('nav.deals')}
             </NavLink>
             <NavLink to="/profile" className={linkClass}>
-              Профиль
+              {t('nav.profile')}
             </NavLink>
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           {user && (
             <span className="text-xs font-mono text-navy/50">
               {user.display_name}
@@ -47,7 +51,7 @@ export default function Navbar() {
             onClick={handleLogout}
             className="text-xs font-body text-navy/50 hover:text-navy transition-colors"
           >
-            Выйти
+            {t('nav.logout')}
           </button>
         </div>
       </div>

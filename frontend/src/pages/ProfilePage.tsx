@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { me, updateMe, getTelegramLink } from '../api/auth'
 import { listConnections, type Connection } from '../api/social'
@@ -8,6 +9,7 @@ import { APP_VERSION } from '../version'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
   const { user, token, setAuth, logout } = useAuthStore()
   const [connections, setConnections] = useState<Connection[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,7 +54,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg space-y-6">
-      <h1 className="font-display font-bold text-2xl text-navy">Профиль</h1>
+      <h1 className="font-display font-bold text-2xl text-navy">{t('profile.title')}</h1>
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <div className="flex items-center gap-4">
@@ -64,20 +66,20 @@ export default function ProfilePage() {
           <div>
             <p className="font-display font-semibold text-lg text-navy">{user?.display_name}</p>
             <p className="text-xs font-mono text-navy/40">
-              {user?.is_carrier ? 'Перевозчик' : 'Отправитель'}
+              {user?.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4 pt-2 border-t border-navy/10">
           {user?.email && (
             <div>
-              <p className="text-xs font-body font-medium text-navy/40 mb-0.5">Email</p>
+              <p className="text-xs font-body font-medium text-navy/40 mb-0.5">{t('profile.email')}</p>
               <MonoText className="text-sm text-navy">{user.email}</MonoText>
             </div>
           )}
           {user?.phone && (
             <div>
-              <p className="text-xs font-body font-medium text-navy/40 mb-0.5">Телефон</p>
+              <p className="text-xs font-body font-medium text-navy/40 mb-0.5">{t('auth.phone')}</p>
               <MonoText className="text-sm text-navy">{user.phone}</MonoText>
             </div>
           )}
@@ -85,28 +87,25 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-xl border border-navy/10 p-6">
-        <p className="text-xs font-body font-medium text-navy/40 mb-1 uppercase tracking-wider">Уровень Бизнес-Активности</p>
+        <p className="text-xs font-body font-medium text-navy/40 mb-1 uppercase tracking-wider">{t('profile.level')}</p>
         <div className="flex items-baseline gap-2 mt-2">
           <MonoText className="text-3xl font-medium text-navy">—</MonoText>
-          <span className="text-xs font-body text-navy/40">Фаза 3</span>
+          <span className="text-xs font-body text-navy/40">{t('profile.levelPhase')}</span>
         </div>
-        <p className="text-xs font-body text-navy/30 mt-2">Доступно в следующей фазе</p>
+        <p className="text-xs font-body text-navy/30 mt-2">{t('profile.levelNote')}</p>
       </div>
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-display font-semibold text-base text-navy">Контакты</h2>
-          <Link
-            to="/invite"
-            className="text-xs font-body text-cyan hover:underline"
-          >
-            + Пригласить
+          <h2 className="font-display font-semibold text-base text-navy">{t('profile.contacts')}</h2>
+          <Link to="/invite" className="text-xs font-body text-cyan hover:underline">
+            {t('profile.invite')}
           </Link>
         </div>
         {loading ? (
-          <MonoText className="text-xs text-navy/40">Загрузка...</MonoText>
+          <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
         ) : connections.length === 0 ? (
-          <p className="text-sm font-body text-navy/40">Нет контактов</p>
+          <p className="text-sm font-body text-navy/40">{t('profile.noContacts')}</p>
         ) : (
           <div className="space-y-2">
             {connections.map((conn) => (
@@ -119,11 +118,13 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-sm font-body text-navy">{conn.display_name}</p>
-                    <p className="text-xs font-mono text-navy/40">{conn.is_carrier ? 'Перевозчик' : 'Отправитель'}</p>
+                    <p className="text-xs font-mono text-navy/40">
+                      {conn.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
+                    </p>
                   </div>
                 </div>
                 <MonoText className="text-xs text-navy/30">
-                  {new Date(conn.connected_at).toLocaleDateString('ru-RU')}
+                  {new Date(conn.connected_at).toLocaleDateString(i18n.language)}
                 </MonoText>
               </div>
             ))}
@@ -132,12 +133,20 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
-        <h2 className="font-display font-semibold text-base text-navy">Уведомления</h2>
+        <h2 className="font-display font-semibold text-base text-navy">{t('profile.notifications')}</h2>
 
         {([
-          { key: 'notify_email' as const, label: 'Email', sub: user?.email ?? '—' },
-          { key: 'notify_telegram' as const, label: 'Telegram', sub: user?.telegram_chat_id ? 'подключён' : 'не подключён' },
-          { key: 'notify_whatsapp' as const, label: 'WhatsApp', sub: user?.whatsapp_number ?? 'не указан' },
+          { key: 'notify_email' as const, label: t('profile.email'), sub: user?.email ?? '—' },
+          {
+            key: 'notify_telegram' as const,
+            label: t('profile.telegram'),
+            sub: user?.telegram_chat_id ? t('profile.telegramConnected') : t('profile.telegramNotConnected'),
+          },
+          {
+            key: 'notify_whatsapp' as const,
+            label: t('profile.whatsapp'),
+            sub: user?.whatsapp_number ?? t('profile.whatsappNotSet'),
+          },
         ]).map(({ key, label, sub }) => (
           <div key={key} className="flex items-center justify-between">
             <div>
@@ -158,7 +167,7 @@ export default function ProfilePage() {
             onClick={handleConnectTelegram}
             className="w-full text-sm font-body text-cyan border border-cyan/30 rounded-lg py-2 hover:bg-cyan/5 transition-colors"
           >
-            Подключить Telegram →
+            {t('profile.connectTelegram')}
           </button>
         )}
       </div>
@@ -168,7 +177,7 @@ export default function ProfilePage() {
           onClick={handleLogout}
           className="text-sm font-body text-navy/40 hover:text-navy transition-colors"
         >
-          Выйти из аккаунта
+          {t('profile.logout')}
         </button>
         <MonoText className="text-xs text-navy/20">v{APP_VERSION}</MonoText>
       </div>

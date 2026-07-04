@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
@@ -8,6 +9,7 @@ const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics',
 
 export default function TripsPage() {
   const user = useAuthStore((s) => s.user)
+  const { t, i18n } = useTranslation()
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
   const [origin, setOrigin] = useState('')
@@ -68,7 +70,7 @@ export default function TripsPage() {
       setOrderSuccess(true)
       setOrderTripId(null)
     } catch {
-      setError('Не удалось создать заявку')
+      setError(t('trips.requestError'))
     } finally {
       setOrderLoading(false)
     }
@@ -76,31 +78,29 @@ export default function TripsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display font-bold text-2xl text-navy">Рейсы</h1>
+      <h1 className="font-display font-bold text-2xl text-navy">{t('trips.title')}</h1>
 
       <form onSubmit={handleSearch} className="bg-white rounded-xl border border-navy/10 p-4 flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">Откуда</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
           <input
             type="text"
             value={origin}
             onChange={(e) => setOrigin(e.target.value)}
             className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-            placeholder="Москва"
           />
         </div>
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">Куда</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
           <input
             type="text"
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
             className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-            placeholder="Дубай"
           />
         </div>
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">Дата</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>
           <input
             type="date"
             value={date}
@@ -112,23 +112,23 @@ export default function TripsPage() {
           type="submit"
           className="bg-navy text-ivory font-display font-medium px-5 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors"
         >
-          Найти
+          {t('trips.search')}
         </button>
       </form>
 
       {orderSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <p className="text-sm font-body text-green-700">Заявка отправлена. Ожидайте подтверждения перевозчика.</p>
+          <p className="text-sm font-body text-green-700">{t('trips.requestSent')}</p>
         </div>
       )}
 
       {loading ? (
         <div className="text-center py-12">
-          <MonoText className="text-navy/40 text-sm">Загрузка...</MonoText>
+          <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
         </div>
       ) : trips.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-sm font-body text-navy/40">Рейсы не найдены</p>
+          <p className="text-sm font-body text-navy/40">{t('trips.noTrips')}</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -140,9 +140,9 @@ export default function TripsPage() {
                     {trip.origin} → {trip.destination}
                   </MonoText>
                   <div className="flex items-center gap-4 text-xs font-body text-navy/50">
-                    <span>Перевозчик: <span className="text-navy font-medium">{trip.carrier_name}</span></span>
-                    <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString('ru-RU')}</MonoText>
-                    <span>Вместимость: <MonoText className="text-xs">{trip.capacity} кг</MonoText></span>
+                    <span>{t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span></span>
+                    <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
+                    <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} кг</MonoText></span>
                   </div>
                   {trip.allowed_categories.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -159,38 +159,36 @@ export default function TripsPage() {
                     onClick={() => { setOrderTripId(trip.id); setOrderSuccess(false) }}
                     className="bg-amber text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity shrink-0 ml-4"
                   >
-                    Отправить посылку
+                    {t('trips.sendPackage')}
                   </button>
                 )}
               </div>
 
               {orderTripId === trip.id && (
                 <form onSubmit={handleOrder} className="mt-4 pt-4 border-t border-navy/10 space-y-3">
-                  <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">Оформить заявку</p>
+                  <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">{t('trips.requestTitle')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Контакт получателя</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.recipientContact')}</label>
                       <input
                         type="text"
                         value={recipientContact}
                         onChange={(e) => setRecipientContact(e.target.value)}
                         required
                         className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-                        placeholder="+7 999 000 00 00"
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Описание груза</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.cargoDescription')}</label>
                       <input
                         type="text"
                         value={cargoDesc}
                         onChange={(e) => setCargoDesc(e.target.value)}
                         className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-                        placeholder="Документы, небольшая коробка"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Объявленная стоимость (USD)</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.declaredValue')}</label>
                       <input
                         type="number"
                         step="0.01"
@@ -203,7 +201,7 @@ export default function TripsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">Категория</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.category')}</label>
                       <select
                         value={cargoCategory}
                         onChange={(e) => setCargoCategory(e.target.value)}
@@ -222,14 +220,14 @@ export default function TripsPage() {
                       disabled={orderLoading}
                       className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
                     >
-                      {orderLoading ? 'Отправка...' : 'Отправить заявку'}
+                      {orderLoading ? t('trips.submitting') : t('trips.submit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setOrderTripId(null)}
                       className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3"
                     >
-                      Отмена
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </form>

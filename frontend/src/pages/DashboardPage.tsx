@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { me } from '../api/auth'
 import { listDeals, type Deal } from '../api/deals'
@@ -10,6 +11,7 @@ import { APP_VERSION } from '../version'
 
 export default function DashboardPage() {
   const { user, setAuth, token } = useAuthStore()
+  const { t, i18n } = useTranslation()
   const [deals, setDeals] = useState<Deal[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,7 +45,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <MonoText className="text-navy/40 text-sm">Загрузка...</MonoText>
+        <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
       </div>
     )
   }
@@ -53,10 +55,12 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display font-bold text-2xl text-navy">
-            {currentUser ? `Добро пожаловать, ${currentUser.display_name}` : 'Dashboard'}
+            {currentUser
+              ? t('dashboard.welcome', { name: currentUser.display_name })
+              : 'Dashboard'}
           </h1>
           <p className="text-sm font-body text-navy/50 mt-0.5">
-            {currentUser?.is_carrier ? 'Перевозчик' : 'Отправитель'}
+            {currentUser?.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
           </p>
         </div>
         {currentUser?.is_carrier && (
@@ -64,14 +68,14 @@ export default function DashboardPage() {
             to="/trips/new"
             className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors"
           >
-            + Опубликовать рейс
+            {t('dashboard.publishTrip')}
           </Link>
         )}
       </div>
 
       {activeDeals.length > 0 && (
         <section>
-          <h2 className="font-display font-semibold text-lg text-navy mb-3">Активные сделки</h2>
+          <h2 className="font-display font-semibold text-lg text-navy mb-3">{t('dashboard.activeDeals')}</h2>
           <div className="grid gap-3">
             {activeDeals.map((deal) => (
               <Link
@@ -84,7 +88,7 @@ export default function DashboardPage() {
                     {deal.origin} → {deal.destination}
                   </MonoText>
                   <p className="text-xs font-body text-navy/50">
-                    {deal.carrier_id === currentUser?.id ? 'Перевозчик' : 'Отправитель'} · {deal.cargo_description}
+                    {deal.carrier_id === currentUser?.id ? t('dashboard.carrier') : t('dashboard.sender')} · {deal.cargo_description}
                   </p>
                 </div>
                 <StatusBadge status={deal.status} />
@@ -97,19 +101,19 @@ export default function DashboardPage() {
       {currentUser?.is_carrier && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display font-semibold text-lg text-navy">Я везу</h2>
+            <h2 className="font-display font-semibold text-lg text-navy">{t('dashboard.iCarry')}</h2>
             <Link to="/trips" className="text-xs text-cyan hover:underline font-body">
-              Все рейсы →
+              {t('dashboard.allTrips')}
             </Link>
           </div>
           {myTrips.length === 0 ? (
             <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
-              <p className="text-sm font-body text-navy/40">Нет опубликованных рейсов</p>
+              <p className="text-sm font-body text-navy/40">{t('dashboard.noTrips')}</p>
               <Link
                 to="/trips/new"
                 className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
               >
-                Опубликовать рейс
+                {t('dashboard.publishFirst')}
               </Link>
             </div>
           ) : (
@@ -124,11 +128,11 @@ export default function DashboardPage() {
                       {trip.origin} → {trip.destination}
                     </MonoText>
                     <MonoText className="text-xs text-navy/50">
-                      {new Date(trip.depart_at).toLocaleDateString('ru-RU')}
+                      {new Date(trip.depart_at).toLocaleDateString(i18n.language)}
                     </MonoText>
                   </div>
                   <p className="text-xs font-body text-navy/50 mt-1">
-                    Вместимость: {trip.capacity} кг
+                    {t('trips.capacity')}: {trip.capacity} кг
                   </p>
                 </div>
               ))}
@@ -140,20 +144,20 @@ export default function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-semibold text-lg text-navy">
-            {currentUser?.is_carrier ? 'Мои грузы' : 'Мне везут'}
+            {currentUser?.is_carrier ? t('dashboard.myCargoCarrier') : t('dashboard.myCargoSender')}
           </h2>
           <Link to="/deals" className="text-xs text-cyan hover:underline font-body">
-            Все сделки →
+            {t('dashboard.allDeals')}
           </Link>
         </div>
         {asCarrierDeals.length === 0 && asSenderDeals.length === 0 ? (
           <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
-            <p className="text-sm font-body text-navy/40">Нет активных сделок</p>
+            <p className="text-sm font-body text-navy/40">{t('dashboard.noDeals')}</p>
             <Link
               to="/trips"
               className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
             >
-              Найти рейс
+              {t('dashboard.findTrip')}
             </Link>
           </div>
         ) : (
@@ -179,16 +183,16 @@ export default function DashboardPage() {
 
       {!currentUser?.is_carrier && (
         <section>
-          <h2 className="font-display font-semibold text-lg text-navy mb-3">Я отправляю</h2>
+          <h2 className="font-display font-semibold text-lg text-navy mb-3">{t('dashboard.iSend')}</h2>
           <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
             <p className="text-sm font-body text-navy/60 mb-4">
-              Найдите перевозчика и отправьте посылку
+              {t('dashboard.findCarrier')}
             </p>
             <Link
               to="/trips"
               className="inline-block bg-amber text-white font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
             >
-              Найти рейс
+              {t('dashboard.findTrip')}
             </Link>
           </div>
         </section>

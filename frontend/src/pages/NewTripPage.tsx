@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { createTrip } from '../api/trips'
 
@@ -7,6 +8,7 @@ const CATEGORIES = ['documents', 'electronics', 'clothing', 'food', 'cosmetics',
 
 export default function NewTripPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
@@ -19,7 +21,7 @@ export default function NewTripPage() {
   if (!user?.is_carrier) {
     return (
       <div className="text-center py-24">
-        <p className="text-sm font-body text-navy/40">Только перевозчики могут публиковать рейсы</p>
+        <p className="text-sm font-body text-navy/40">{t('trips.carriersOnly')}</p>
       </div>
     )
   }
@@ -44,7 +46,7 @@ export default function NewTripPage() {
       })
       navigate('/')
     } catch {
-      setError('Не удалось создать рейс')
+      setError(t('trips.publishError'))
     } finally {
       setLoading(false)
     }
@@ -52,34 +54,32 @@ export default function NewTripPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="font-display font-bold text-2xl text-navy mb-6">Новый рейс</h1>
+      <h1 className="font-display font-bold text-2xl text-navy mb-6">{t('trips.newTrip')}</h1>
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">Откуда</label>
+            <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
             <input
               type="text"
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               required
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-              placeholder="Москва"
             />
           </div>
           <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">Куда</label>
+            <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
             <input
               type="text"
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               required
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-              placeholder="Дубай"
             />
           </div>
         </div>
         <div>
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">Дата и время вылета</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.departureDate')}</label>
           <input
             type="datetime-local"
             value={departAt}
@@ -89,7 +89,7 @@ export default function NewTripPage() {
           />
         </div>
         <div>
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">Вместимость (кг)</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.capacityKg')}</label>
           <input
             type="number"
             step="0.5"
@@ -102,7 +102,7 @@ export default function NewTripPage() {
           />
         </div>
         <div>
-          <label className="block text-xs font-body font-medium text-navy/60 mb-2">Разрешённые категории</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-2">{t('trips.allowedCategories')}</label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
@@ -127,14 +127,14 @@ export default function NewTripPage() {
             disabled={loading}
             className="bg-navy text-ivory font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
-            {loading ? 'Сохранение...' : 'Опубликовать рейс'}
+            {loading ? t('common.loading') : t('trips.publish')}
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3"
           >
-            Отмена
+            {t('common.cancel')}
           </button>
         </div>
       </form>
