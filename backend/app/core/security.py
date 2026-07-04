@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
+import jwt
 from fastapi import HTTPException
-from jose import JWTError, jwt
 
 from app.core.config import settings
 
@@ -33,5 +33,5 @@ def decode_access_token(token: str) -> str:
         if sub is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return sub
-    except JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
