@@ -216,31 +216,28 @@
 - [x] Backend-тесты (5): defaults включают animal, `is_default` отмечен, поиск по префиксу, новая категория регистрируется при match, `usage_count` инкрементируется.
 **Acceptance:** в форме заявки/рейса пользователь видит autocomplete со всеми категориями (включая animal); может ввести свою (например, «drone»); категория появляется в общей базе и доступна другим. ✅
 
-### T1.18 — Лендинг + Waitlist: главная страница и сбор email-адресов
+### T1.18 — Лендинг + Waitlist: главная страница и сбор email-адресов ✅
 
-**Контекст:** `landing.html` уже создан как публичная главная страница проекта. Нужно подключить форму к бэкенду и настроить отправку подтверждений через почтовый SMTP-сервер пользователя.
+**Контекст:** `LandingPage.tsx` (React, ~486 строк, bento-дизайн) стал публичной главной страницей `/`. Аутентифицированное приложение переехало на `/dashboard`. Уведомления админу пошли через **Telegram** (SMTP-подтверждение пользователю отложено — см. ниже).
 
-- [ ] **Модель:** `WaitlistEntry(id, email, name, created_at, notified_at)` — миграция `0004_waitlist.py`.
-- [ ] **Backend endpoints:**
-  - `POST /api/waitlist` — принять `{email, name}`; если email уже есть → `409 Conflict`; иначе → `201 Created` + запустить Celery-задачу `send_waitlist_confirmation`.
-  - `GET /api/admin/waitlist` — список всех заявок (bearer-токен из `ADMIN_SECRET_KEY` в env); возвращает `[{id, email, name, created_at}]`.
-- [ ] **SMTP-интеграция (через почтовый сервер пользователя):**
-  - Добавить в `.env.example`: `SMTP_HOST`, `SMTP_PORT` (465/587), `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_STARTTLS` (bool).
-  - Celery-задача `send_waitlist_confirmation(email, name)` — отправляет письмо через `aiosmtplib` (или `smtplib` если sync).
-  - Тема письма: `"Vimana · You're on the list"`.
-  - Тело: текстовый + HTML вариант; тон — спокойный, авиационный (см. DESIGNGUIDELINES §9). Обязательно: имя получателя, суть проекта в 1 предложении, «Safe skies» в подписи.
-  - Отправка идемпотентна: повторный `POST /api/waitlist` с тем же email возвращает 409 и не шлёт письмо повторно.
-- [ ] **Frontend:** `landing.html` уже содержит модаль и вызов `POST /api/waitlist`. При 409 — показать успех («Вы уже в списке»). При сетевой ошибке — показать «Попробуйте ещё раз» без скрытия формы.
-- [ ] **Backend-тесты:**
-  - `test_waitlist_create_success` — 201, запись создана.
-  - `test_waitlist_duplicate_returns_409` — повторный email → 409.
-  - `test_waitlist_invalid_email_422` — нет `@` → 422.
-  - `test_waitlist_admin_list_requires_auth` — без заголовка → 401.
-  - `test_waitlist_admin_list_returns_entries` — с заголовком → список.
-  - `send_waitlist_confirmation` замокан в тестах (не требует реального SMTP).
-- [ ] Обновить `.env.example`; документировать SMTP-переменные в `ENVIRONMENT.md §3`.
+- [x] **Модель:** `WaitlistEntry(id, email, name, source, created_at)` — миграция `0004_waitlist.py`. Поле `notified_at` отложено вместе с SMTP.
+- [x] **Backend endpoints:**
+  - `POST /api/waitlist` — принять `{email, name?, source?}`; email нормализуется (`.strip().lower()`); дубликат → `409 Conflict`; невалид → `422`; иначе `201 Created` + Telegram-уведомление админам через `send_telegram` в цикле по `ADMIN_TELEGRAM_CHAT_IDS`.
+  - `GET /api/waitlist` — список всех заявок; защита через header `X-Admin-Token` (сравнивается с env `ADMIN_API_TOKEN`); отсутствие/несовпадение → `403`.
+- [x] **Уведомления админу через Telegram** (вместо SMTP на этом этапе):
+  - Используется существующий `send_telegram` из T1.7 (bot token уже настроен).
+  - Сообщение: `Vimana · Waitlist +1\n{email}\n{name?}\nsource: {source?}`.
+- [x] **Frontend `LandingPage.tsx`:** модалка + `POST /api/waitlist` (source `'landing'`); ошибочные ответы больше не показываются как успех — рендерится `submitError` под кнопкой; сбрасывается при `closeModal`. При 409 всё равно считается успехом («Вы уже в списке»).
+- [x] **Роутинг:** `/` → `LandingPage` (публичный); `/dashboard` → `DashboardPage` (protected); `Navbar` логотип и Dashboard-линк ведут на `/dashboard`. Аутентифицированный пользователь на `/` автоматически редиректится на `/dashboard`.
+- [x] **Backend-тесты (7):** success (201), нормализация email (upper→lower + trim), duplicate (409), invalid email (422), list без токена (403), list с неверным токеном (403), list с правильным токеном (200 + запись присутствует).
+- [x] `.env.example` дополнен: `ADMIN_API_TOKEN`, `ADMIN_TELEGRAM_CHAT_IDS`.
 
-**Acceptance:** форма на лендинге отправляет email → запись в БД → письмо-подтверждение приходит на почту; повторная попытка с тем же email → 409 без дублирования; admin-эндпоинт отдаёт список; все тесты зелёные.
+**Acceptance:** форма на лендинге сохраняет email в БД; админу приходит Telegram-уведомление; повторная попытка с тем же email → 409 без дублирования; список доступен по admin-токену; все тесты зелёные. ✅
+
+**Отложено на потом (не блокирует V1):**
+- SMTP-подтверждение пользователю с текстом «Vimana · You're on the list» + «Safe skies».
+- Поле `notified_at` в модели для отслеживания отправки писем.
+- Отдельная Celery-задача `send_waitlist_confirmation`.
 
 ### T1.8 — Staging-деплой, домен и smoke test V1
 - [ ] Поднять VPS / облачный сервер (Ubuntu 22+ или Debian 12), установить Docker + Docker Compose.
