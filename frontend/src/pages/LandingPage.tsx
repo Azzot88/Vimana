@@ -182,6 +182,7 @@ export default function LandingPage() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [successEmail, setSuccessEmail] = useState('')
+  const [submitError, setSubmitError] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -196,6 +197,7 @@ export default function LandingPage() {
   const closeModal = () => {
     setModalOpen(false)
     setSubmitted(false)
+    setSubmitError('')
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -204,21 +206,24 @@ export default function LandingPage() {
     const email = (form.elements.namedItem('email') as HTMLInputElement).value.trim()
     const name = (form.elements.namedItem('name') as HTMLInputElement).value.trim()
     setSubmitting(true)
+    setSubmitError('')
     try {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, source: 'landing' }),
       })
       if (res.ok || res.status === 409) {
         setSuccessEmail(email)
         setSubmitted(true)
       } else {
-        setSubmitting(false)
+        const detail = await res.json().catch(() => ({ detail: 'Something went wrong' }))
+        setSubmitError(detail?.detail || 'Something went wrong')
       }
     } catch {
-      setSuccessEmail(email)
-      setSubmitted(true)
+      setSubmitError('Network error. Please try again.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -471,6 +476,11 @@ export default function LandingPage() {
                     <label>{t('landing.modalEmail')} *</label>
                     <input name="email" type="email" placeholder={t('landing.modalEmailPh')} required autoComplete="email" />
                   </div>
+                  {submitError && (
+                    <div style={{ color: 'var(--lp-amber)', fontSize: '12px', fontFamily: "'IBM Plex Mono',monospace", marginBottom: '10px' }}>
+                      {submitError}
+                    </div>
+                  )}
                   <button type="submit" className="lp-msubmit" disabled={submitting}>
                     {submitting ? t('landing.modalSending') : t('landing.modalSubmit')}
                   </button>

@@ -11,6 +11,7 @@ from app.api.deals import router as deals_router
 from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
+from app.api.waitlist import router as waitlist_router
 
 app = FastAPI(title="Vimana")
 
@@ -32,6 +33,7 @@ app.include_router(dealvault_router, prefix="/api/deals", tags=["dealvault"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
 app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
+app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
 
 
 @app.get("/health")
