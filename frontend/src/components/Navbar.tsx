@@ -23,13 +23,13 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         <div className="flex items-center gap-6">
           <Link
-            to="/"
+            to="/dashboard"
             className="font-display font-bold text-navy text-lg tracking-tight hover:text-cyan transition-colors"
           >
             Vimana
           </Link>
           <div className="hidden md:flex items-center gap-4">
-            <NavLink to="/" end className={linkClass}>
+            <NavLink to="/dashboard" end className={linkClass}>
               {t('nav.dashboard')}
             </NavLink>
             <NavLink to="/trips" className={linkClass}>
