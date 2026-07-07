@@ -3,6 +3,7 @@ import os
 import uuid
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -85,10 +86,10 @@ async def _http_exception_handler(request: Request, exc: StarletteHTTPException)
 async def _validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
-        content={
+        content=jsonable_encoder({
             "detail": exc.errors(),
             "request_id": _req_id(request),
-        },
+        }),
     )
 
 
