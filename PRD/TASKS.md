@@ -286,6 +286,59 @@
 
 **Acceptance:** конкурентные запросы не создают дубликатов и не роняют 500; upload не жрёт RAM и валидирует MIME; брутфорс `/login` блокируется на 6-м запросе; списки поддерживают пагинацию; unhandled exceptions логируются и возвращают стандартный JSON. Все тесты зелёные (ожидаемо: 78 + ~15 новых).
 
+### T1.20 — Cloudflare R2 / S3 setup для DealVault-аттачей
+
+**Контекст:** сейчас `storage.py:16-26` работает в graceful-degradation режиме — если `R2_ENDPOINT` пуст, `upload_file` возвращает key без реальной записи, `get_presigned_url` возвращает `None`. Фотографии в DealVault и inquiry-чате не загружаются в UI.
+
+- [ ] Завести Cloudflare R2 (или AWS S3) bucket `vimana-dealvault-prod`.
+- [ ] Bucket policy: **private** (default), доступ только через presigned URL. Никаких public reads.
+- [ ] CORS на bucket: только `https://vimana.dealvault.club` для `GET`/`PUT`.
+- [ ] Создать API-ключ с минимальными правами (`s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` только на этом bucket).
+- [ ] Заполнить `.env` prod: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT` (например `https://<account_id>.r2.cloudflarestorage.com`).
+- [ ] Проверить: `curl -X POST https://vimana.dealvault.club/api/deals/{id}/dealvault/messages/{mid}/attachments -F "file=@photo.jpg" -F "kind=handoff_photo"` — возвращает `201` с валидным `url`.
+- [ ] Фронтенд: рендер `<img src={url}>` — картинка отображается.
+- [ ] Мониторинг расходов: R2 — 10 ГБ бесплатно/мес, egress = $0.
+
+**Acceptance:** пользователь может загрузить фото в DealVault через UI; фото открывается по presigned URL; в логах нет ошибок storage; расходы в пределах free tier.
+
+### T1.21 — At-rest шифрование сообщений DealVault + InquiryMessage (Фаза 1, переходное)
+
+**Контекст:** до появления Nostr-keypair (T2.2) и threshold-encryption (T2.3) сообщения должны быть **не в открытом виде** в БД. Реализуем symmetric AES-256-GCM с server-side ключом из env — защищает от утечки БД и любопытного read-only админа. Сервер расшифровать может (не e2e), но это честно позиционируется как «encrypted at rest».
+
+- [ ] Env: `MESSAGE_ENCRYPTION_KEY` — 32 байта (`openssl rand -base64 32`); отсутствие ключа в prod → падение при старте (fail-loud).
+- [ ] `app/core/crypto.py`: `encrypt(plaintext: str) → (nonce_b64, ciphertext_b64)`, `decrypt(nonce_b64, ciphertext_b64) → plaintext`. AES-256-GCM через `cryptography` (уже в deps).
+- [ ] `DealVaultMessage`: колонки `text_ciphertext: bytes`, `text_nonce: bytes`; удалить `text` (или оставить null для backfill'а `text_ciphertext` из существующих).
+- [ ] Миграция `0006_encrypt_messages.py`: добавить новые колонки; **backfill script** зашифровывает существующие `text` → `text_ciphertext` + `text_nonce`; удаляет старую `text`.
+- [ ] `_build_message_out` (`dealvault.py:33`) расшифровывает на лету перед отдачей клиенту.
+- [ ] Аналогично для новой модели `InquiryMessage` (см. T1.22).
+- [ ] Backend-тесты: сохранение → в БД видим bytes, не plaintext; чтение → расшифровано; корректный round-trip; отсутствие ключа → 500 + логирование.
+- [ ] Прямой SQL `SELECT text_ciphertext FROM deal_vault_messages LIMIT 1` — bytes, не читается глазом.
+
+**Acceptance:** сообщения хранятся в шифрованном виде; API отдаёт plaintext (сервер расшифровывает); dump БД без ключа = мусор; тесты зелёные. Явное указание в UI/лендинге: «encrypted at rest, full end-to-end coming in V2» (не обманываем).
+
+### T1.22 — Right-side inquiry chat panel + модель `TripInquiry`
+
+**Контекст:** пользователь хочет чат «до сделки» — sender открывает опубликованный рейс, справа появляется панель для общения с carrier'ом. Начинает заявку — панель остаётся. После `match_deal` — история переносится в DealVault (или ссылается на неё). Все сообщения — через `InquiryMessage` с at-rest шифрованием из T1.21.
+
+- [ ] Модели:
+  - `TripInquiry(id, trip_id, sender_id, carrier_id, deal_id nullable, created_at)` — один тред на пару `(trip_id, sender_id)` — UNIQUE constraint.
+  - `InquiryMessage(id, inquiry_id, sender_id, text_ciphertext, text_nonce, created_at)` — те же поля что у зашифрованного DealVaultMessage.
+- [ ] Миграция `0007_inquiry.py`.
+- [ ] Endpoints:
+  - `POST /api/trips/{trip_id}/inquiry` — идемпотентно создаёт (или возвращает существующий) `TripInquiry` для текущего sender'а + carrier рейса.
+  - `GET /api/inquiries/{id}/messages` — cursor pagination, ASC порядок.
+  - `POST /api/inquiries/{id}/messages` — новое сообщение; проверка что user ∈ {sender, carrier}.
+- [ ] При `POST /deals/match` — если `TripInquiry` для этой (trip, sender) есть → `inquiry.deal_id = new_deal.id`. Опция: перенос сообщений в DealVault (либо просто `GET /api/deals/{id}/dealvault` возвращает объединённое: inquiry.messages + dealvault.messages).
+- [ ] Frontend:
+  - Компонент `InquiryPanel` — sticky справа `md:w-1/4 md:min-w-[320px] md:max-w-[420px]`. На мобильном — drawer/full-screen overlay (не занимает 25% — иначе неюзабельно).
+  - Автоматически открывается на `TripsPage` при клике на карточку рейса, на `NewOrderPage`.
+  - Формат чата: как DealVault — сообщение, аватар инициала, время. Кнопка «Отправить».
+  - Индикатор «зашифровано at-rest» мелким шрифтом внизу панели.
+- [ ] Backend-тесты: create/idempotent, participants only, encrypted round-trip, cursor pagination.
+- [ ] i18n: `inquiry.*` в 6 локалях.
+
+**Acceptance:** sender видит рейс → справа появляется чат; отправляет сообщение → carrier видит; после оформления заявки чат сохраняется и виден в контексте сделки; сообщения зашифрованы в БД; на мобильном — drawer.
+
 ---
 
 ## 🧪 ТЕСТИРОВАНИЕ — Расширение сьюта
@@ -327,6 +380,50 @@
 - [ ] `POST /api/me/keypair/import` — импортировать существующий npub; `key_self_custody = True`.
 - [ ] Frontend: определение `window.nostr` (NIP-07); если есть — предложить подпись через extension; сервер принимает pre-signed event и верифицирует.
 **Acceptance:** новый аккаунт автоматически получает keypair; DealVault-события подписаны и верифицируемы по `npub` без обращения к платформе; export/claim/import работают; NIP-07 extension перехватывает подпись если обнаружен.
+
+### T2.3 — Threshold-encryption 2-of-3 для DealVault / Inquiry чатов (V2 замена at-rest)
+
+**Контекст:** T1.21 (at-rest AES с server-side ключом) был переходным — сервер видит plaintext. В V2 переходим на **истинный end-to-end** с threshold: расшифровать могут **любые 2 из 3** участников `{sender, carrier, arbiter}`. Один — не может, даже арбитр. Схема — Shamir's Secret Sharing (SSS) над сессионным ключом сообщения. Зависит от T2.2 (Nostr secp256k1 keypair участников).
+
+- [ ] Библиотеки:
+  - Python: `sslib` (Shamir), `cryptography` (AES-GCM), `coincurve` (secp256k1 ECIES).
+  - JS/TS клиент: `shamir-secret-sharing`, `@noble/ciphers` (AES-GCM), `@noble/curves/secp256k1` (ECIES).
+- [ ] Роль **арбитра**: `User` с ролью `Operator` (Фаза 3, T3.2) либо системный ключ платформы. Хранение приватного ключа арбитра — env/KMS/HSM.
+- [ ] **Формат сообщения** (замена схемы из T1.21):
+  ```
+  {
+    ciphertext: bytes,         // AES-256-GCM(session_key, plaintext)
+    nonce: bytes,
+    wrapped_shares: {
+      sender:  ECIES(pubkey_sender,  share_sender),
+      carrier: ECIES(pubkey_carrier, share_carrier),
+      arbiter: ECIES(pubkey_arbiter, share_arbiter),
+    }
+  }
+  ```
+- [ ] Отправка (клиент):
+  1. Сгенерировать random `session_key` (32 байта).
+  2. `ciphertext = AES-GCM(session_key, plaintext)`.
+  3. `shares = SSS.split(session_key, threshold=2, count=3)`.
+  4. Обернуть каждую share под pubkey соответствующего участника через ECIES (NIP-44 стиль).
+  5. Отправить пакет на сервер — сервер **не знает** plaintext, хранит blob.
+- [ ] Чтение (клиент):
+  1. Клиент запрашивает своё сообщение + `wrapped_shares.self`.
+  2. Расшифровывает свою share своим приватным ключом.
+  3. Запрашивает share у второй стороны (либо у арбитра при споре).
+  4. `session_key = SSS.combine(share1, share2)`.
+  5. `plaintext = AES-GCM.decrypt(session_key, nonce, ciphertext)`.
+- [ ] Endpoints:
+  - `POST /api/messages/{id}/reveal-share` — возвращает `wrapped_shares.self`, требует владения приватным ключом (подпись challenge).
+  - `POST /api/disputes/{deal_id}/arbiter-share` — арбитр раскрывает свою share при открытии спора; событие пишется в `DealEvent` как `arbiter_share_revealed` (append-only).
+- [ ] Миграция `0008_threshold_encryption.py`: новые колонки `ciphertext`, `nonce`, `wrapped_shares` (JSONB); backfill из T1.21 колонок через wrapping под текущие pubkey участников; удаление старых `text_ciphertext`/`text_nonce`.
+- [ ] UI (клиент):
+  - Нормальный флоу: расшифровка прозрачна — user видит plaintext.
+  - Спор: экран «попросить арбитра расшифровать» → confirm → фронт отправляет свою share.
+  - Аудит: карточка «арбитр раскрыл share для спора» в timeline сделки.
+- [ ] Backend-тесты: пакет с корректными 3 shares → шифруется; сервер не может recover session_key без 2 shares; audit trail при arbiter reveal; NIP-44 совместимость (event проверяем в Nostr-клиенте).
+
+**Acceptance:** сообщения не могут быть прочитаны сервером даже с полным доступом к БД; в нормальном флоу sender+carrier видят чат прозрачно; при споре арбитр + одна сторона расшифровывают вместе; все `arbiter_share_revealed` события append-only в `DealEvent`.
 
 ---
 
