@@ -1,5 +1,10 @@
 """T1.19 block 4: global exception handler, logging, request_id."""
 import logging
+import uuid
+
+
+def uuid_hex() -> str:
+    return uuid.uuid4().hex[:8]
 
 
 async def test_health_response_has_request_id_header(client):
@@ -24,9 +29,14 @@ async def test_http_exception_response_includes_request_id(client):
 
 
 async def test_validation_error_response_includes_request_id(client):
+    # Password < 8 chars triggers Pydantic field_validator → 422 with list-shaped detail
     resp = await client.post(
         "/api/auth/register",
-        json={"password": "too-short", "display_name": "X"},
+        json={
+            "email": f"val-{uuid_hex()}@vimana.test",
+            "password": "short",
+            "display_name": "V",
+        },
     )
     assert resp.status_code == 422
     body = resp.json()
@@ -34,25 +44,30 @@ async def test_validation_error_response_includes_request_id(client):
     assert "request_id" in body
 
 
-async def test_unhandled_exception_returns_stable_shape_and_logs(client, caplog):
-    from app.main import app
+async def test_unhandled_exception_handler_returns_stable_shape_and_logs(caplog):
+    """The handler is invoked by ASGI directly in production (uvicorn catches
+    Exception). httpx.ASGITransport wraps the raise in an ExceptionGroup, so we
+    invoke the handler function directly with a mocked Request."""
+    from types import SimpleNamespace
 
-    @app.get("/__boom__")
-    async def _boom():
-        raise RuntimeError("kaboom")
+    from app.main import _unhandled_exception_handler
+
+    request = SimpleNamespace(
+        method="GET",
+        url=SimpleNamespace(path="/__boom__"),
+        state=SimpleNamespace(request_id="test-req-id-abc"),
+    )
 
     with caplog.at_level(logging.ERROR, logger="app.main"):
-        resp = await client.get("/__boom__")
+        resp = await _unhandled_exception_handler(request, RuntimeError("kaboom"))
 
     assert resp.status_code == 500
-    body = resp.json()
+    import json
+    body = json.loads(resp.body.decode())
     assert body["error"]["code"] == "internal_error"
     assert body["error"]["message"] == "Internal server error"
-    assert body["error"]["request_id"]
+    assert body["error"]["request_id"] == "test-req-id-abc"
     assert any("Unhandled exception" in rec.message for rec in caplog.records)
-
-    # Cleanup: remove the injected route so it doesn't leak into other tests
-    app.router.routes = [r for r in app.router.routes if getattr(r, "path", None) != "/__boom__"]
 
 
 async def test_silent_telegram_send_logs_failure(monkeypatch, caplog):
