@@ -33,7 +33,7 @@ export default function TripsPage() {
         destination: destination || undefined,
         date: date || undefined,
       })
-      setTrips(data)
+      setTrips(data.items)
     } catch {
     } finally {
       setLoading(false)

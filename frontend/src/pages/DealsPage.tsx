@@ -14,7 +14,7 @@ export default function DealsPage() {
 
   useEffect(() => {
     listDeals()
-      .then((r) => setDeals(r.data))
+      .then((r) => setDeals(r.data.items))
       .finally(() => setLoading(false))
   }, [])
 

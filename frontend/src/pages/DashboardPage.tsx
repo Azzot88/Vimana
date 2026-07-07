@@ -24,8 +24,8 @@ export default function DashboardPage() {
           setAuth(userData, token)
         }
         const [dealsRes, tripsRes] = await Promise.all([listDeals(), listTrips()])
-        setDeals(dealsRes.data)
-        setTrips(tripsRes.data)
+        setDeals(dealsRes.data.items)
+        setTrips(tripsRes.data.items)
       } catch {
       } finally {
         setLoading(false)

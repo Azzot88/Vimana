@@ -17,7 +17,7 @@ export default function DealVaultPage() {
     if (!dealId) return
     try {
       const { data } = await listMessages(dealId)
-      setMessages(data)
+      setMessages(data.items)
     } finally {
       setLoading(false)
     }

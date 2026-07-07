@@ -1,4 +1,5 @@
 import api from './client'
+import type { Page } from './pagination'
 
 export type DealStatus =
   | 'draft'
@@ -70,8 +71,13 @@ export const addEvent = (dealId: string, event_type: string, note?: string) =>
 export const confirmDeal = (dealId: string) =>
   api.post<Deal>(`/api/deals/${dealId}/confirm`)
 
-export const listDeals = () =>
-  api.get<Deal[]>('/api/deals')
+export interface DealListParams {
+  after?: string
+  limit?: number
+}
+
+export const listDeals = (params?: DealListParams) =>
+  api.get<Page<Deal>>('/api/deals', { params })
 
 export const getDeal = (dealId: string) =>
   api.get<DealDetail>(`/api/deals/${dealId}`)

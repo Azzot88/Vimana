@@ -1,4 +1,5 @@
 import api from './client'
+import type { Page } from './pagination'
 
 export interface Trip {
   id: string
@@ -25,10 +26,12 @@ export interface TripFilters {
   origin?: string
   destination?: string
   date?: string
+  after?: string
+  limit?: number
 }
 
 export const createTrip = (payload: CreateTripPayload) =>
   api.post<Trip>('/api/trips', payload)
 
 export const listTrips = (filters?: TripFilters) =>
-  api.get<Trip[]>('/api/trips', { params: filters })
+  api.get<Page<Trip>>('/api/trips', { params: filters })

@@ -1,4 +1,5 @@
 import api from './client'
+import type { Page } from './pagination'
 
 export interface VaultMessage {
   id: string
@@ -17,8 +18,13 @@ export interface CreateMessagePayload {
   body: string
 }
 
-export const listMessages = (dealId: string) =>
-  api.get<VaultMessage[]>(`/api/deals/${dealId}/vault`)
+export interface MessageListParams {
+  after?: string
+  limit?: number
+}
+
+export const listMessages = (dealId: string, params?: MessageListParams) =>
+  api.get<Page<VaultMessage>>(`/api/deals/${dealId}/vault`, { params })
 
 export const createMessage = (dealId: string, payload: CreateMessagePayload) =>
   api.post<VaultMessage>(`/api/deals/${dealId}/vault`, payload)
