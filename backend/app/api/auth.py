@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserLogin, UserOut, UserUpdate
@@ -12,7 +13,8 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
-async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register(request: Request, body: UserCreate, db: AsyncSession = Depends(get_db)):
     if not body.email and not body.phone:
         raise HTTPException(status_code=422, detail="email or phone is required")
 
@@ -43,7 +45,8 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(body: UserLogin, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db)):
     user: User | None = None
     login_val = body.login.strip()
 

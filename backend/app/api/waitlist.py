@@ -5,13 +5,14 @@ import secrets
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.core.telegram import send_telegram
 from app.models.waitlist import WaitlistEntry
 
@@ -54,7 +55,8 @@ async def require_admin_token(x_admin_token: str = Header(default="")):
 
 
 @router.post("", response_model=WaitlistOut, status_code=201)
-async def join_waitlist(body: WaitlistCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def join_waitlist(request: Request, body: WaitlistCreate, db: AsyncSession = Depends(get_db)):
     email = body.email.strip().lower()
     name = (body.name or "").strip() or None
     source = (body.source or "").strip() or None

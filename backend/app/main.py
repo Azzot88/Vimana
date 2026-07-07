@@ -2,6 +2,9 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.responses import JSONResponse
 
 from app.api.airports import router as airports_router
 from app.api.auth import router as auth_router
@@ -12,18 +15,33 @@ from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
 from app.api.waitlist import router as waitlist_router
+from app.core.rate_limit import limiter
 
 app = FastAPI(title="Vimana")
+app.state.limiter = limiter
 
-origins = os.getenv("CORS_ORIGINS", "*").split(",")
+origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+# CORS spec: cannot combine `*` with credentials
+allow_credentials = origins != ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please slow down."},
+    )
+
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(social_router, prefix="/api", tags=["social"])

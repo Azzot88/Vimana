@@ -1,7 +1,8 @@
+import os
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +39,14 @@ async def get_connect_link(
 async def telegram_webhook(
     update: TelegramUpdate,
     db: AsyncSession = Depends(get_db),
+    x_telegram_bot_api_secret_token: str = Header(default=""),
 ) -> dict[str, str]:
+    expected = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+    if expected and not secrets.compare_digest(
+        x_telegram_bot_api_secret_token, expected
+    ):
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+
     msg = update.message
     if not msg:
         return {"ok": "no message"}

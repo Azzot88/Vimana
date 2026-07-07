@@ -25,6 +25,9 @@ coincurve==20.0.0
 # Sync DB driver (Celery tasks)
 psycopg2-binary==2.9.10
 
+# Rate limiting
+slowapi==0.1.9
+
 # Notifications
 twilio==9.4.0
 

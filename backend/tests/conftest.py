@@ -2,6 +2,9 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
+# Disable rate limiting before importing app modules that read the env at import time.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+
 import psycopg2
 import pytest
 import pytest_asyncio
