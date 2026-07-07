@@ -92,12 +92,25 @@ async def test_confirm_closes_deal(client, carrier_headers, sender_headers):
 
 
 async def test_list_deals_includes_seed(client, sender_headers, seed_deal):
-    resp = await client.get("/api/deals", headers=sender_headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    ids = {d["id"] for d in body["items"]}
-    assert str(seed_deal.id) in ids
-    assert "next_cursor" in body
+    # Seed deal is old; walk through all pages via cursor until found
+    seed_id = str(seed_deal.id)
+    cursor: str | None = None
+    seen: set[str] = set()
+    for _ in range(50):  # safety cap
+        params: dict[str, str | int] = {"limit": 100}
+        if cursor:
+            params["after"] = cursor
+        resp = await client.get("/api/deals", headers=sender_headers, params=params)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "next_cursor" in body
+        seen.update(d["id"] for d in body["items"])
+        if seed_id in seen:
+            break
+        cursor = body["next_cursor"]
+        if not cursor:
+            break
+    assert seed_id in seen
 
 
 async def test_get_deal_forbidden_for_outsider(client, carrier_headers, sender_headers):

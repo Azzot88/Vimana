@@ -82,15 +82,25 @@ async def test_dealvault_pagination_ascending_by_created_at(client, sender_heade
         assert r.status_code == 201
         created_ids.append(r.json()["id"])
 
-    # Fetch all and verify ASC order (oldest first)
-    resp = await client.get(
-        f"/api/deals/{seed_deal.id}/dealvault",
-        headers=sender_headers,
-        params={"limit": 100},
-    )
-    body = resp.json()
-    ordered_ids = [m["id"] for m in body["items"]]
-    # Our created_ids in original order should appear in the same relative order
+    # Walk all pages (ASC) collecting ids in order
+    ordered_ids: list[str] = []
+    cursor: str | None = None
+    for _ in range(200):
+        params: dict = {"limit": 100}
+        if cursor:
+            params["after"] = cursor
+        r = await client.get(
+            f"/api/deals/{seed_deal.id}/dealvault",
+            headers=sender_headers,
+            params=params,
+        )
+        body = r.json()
+        ordered_ids.extend(m["id"] for m in body["items"])
+        cursor = body["next_cursor"]
+        if not cursor:
+            break
+
+    # Our 3 messages must appear (in the ASC-sorted list) in the order created
     positions = [ordered_ids.index(cid) for cid in created_ids]
     assert positions == sorted(positions)
 

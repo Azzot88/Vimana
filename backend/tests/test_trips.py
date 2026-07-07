@@ -35,7 +35,8 @@ async def test_create_trip_forbidden_for_sender(client, sender_headers):
 
 
 async def test_list_trips_returns_seed(client, seed_trip):
-    resp = await client.get("/api/trips")
+    # Filter by seed origin to guarantee it's on the first page
+    resp = await client.get("/api/trips", params={"origin": "SEED-ORIGIN"})
     assert resp.status_code == 200
     trip_ids = {t["id"] for t in resp.json()["items"]}
     assert str(seed_trip.id) in trip_ids
