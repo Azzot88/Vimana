@@ -1,4 +1,8 @@
+import logging
+
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def send_whatsapp(to: str, body: str) -> None:
@@ -13,4 +17,4 @@ def send_whatsapp(to: str, body: str) -> None:
             body=body,
         )
     except Exception:
-        pass
+        logger.exception("Twilio WhatsApp send failed to=%s", to)

@@ -1,6 +1,10 @@
+import logging
+
 import httpx
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def send_telegram(chat_id: str, text: str) -> None:
@@ -10,7 +14,7 @@ def send_telegram(chat_id: str, text: str) -> None:
     try:
         httpx.post(url, json={"chat_id": chat_id, "text": text}, timeout=10)
     except Exception:
-        pass
+        logger.exception("Telegram sendMessage failed for chat_id=%s", chat_id)
 
 
 def set_webhook(webhook_url: str) -> dict:

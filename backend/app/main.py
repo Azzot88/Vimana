@@ -1,9 +1,13 @@
+import logging
 import os
+import uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
 from app.api.airports import router as airports_router
@@ -15,7 +19,11 @@ from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
 from app.api.waitlist import router as waitlist_router
+from app.core.logging_setup import configure_logging
 from app.core.rate_limit import limiter
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Vimana")
 app.state.limiter = limiter
@@ -35,11 +43,71 @@ app.add_middleware(
 app.add_middleware(SlowAPIMiddleware)
 
 
+@app.middleware("http")
+async def _request_id_middleware(request: Request, call_next):
+    request.state.request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request.state.request_id
+    return response
+
+
+def _req_id(request: Request) -> str:
+    return getattr(request.state, "request_id", "")
+
+
 @app.exception_handler(RateLimitExceeded)
-async def _rate_limit_handler(request, exc):
+async def _rate_limit_handler(request: Request, exc):
     return JSONResponse(
         status_code=429,
-        content={"detail": "Too many requests. Please slow down."},
+        content={
+            "error": {
+                "code": "rate_limited",
+                "message": "Too many requests. Please slow down.",
+                "request_id": _req_id(request),
+            }
+        },
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "request_id": _req_id(request),
+        },
+        headers=getattr(exc, "headers", None) or {},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": exc.errors(),
+            "request_id": _req_id(request),
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    rid = _req_id(request)
+    logger.exception(
+        "Unhandled exception on %s %s (request_id=%s)",
+        request.method, request.url.path, rid,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "internal_error",
+                "message": "Internal server error",
+                "request_id": rid,
+            }
+        },
     )
 
 
