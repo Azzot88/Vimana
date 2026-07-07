@@ -5,7 +5,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -95,18 +96,20 @@ async def accept_invite(
         raise HTTPException(status_code=404, detail="Invite not found")
     if invite.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=410, detail="Invite expired")
-    if invite.used_by is not None:
-        raise HTTPException(status_code=409, detail="Invite already used")
     if invite.creator_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot accept your own invite")
 
-    existing = await db.execute(
-        select(Connection).where(
-            Connection.user_id == current_user.id,
-            Connection.connected_user_id == invite.creator_id,
-        )
+    # Atomic claim: only unclaimed invite can be updated
+    claim = await db.execute(
+        update(InviteLink)
+        .where(InviteLink.token == token, InviteLink.used_by.is_(None))
+        .values(used_by=current_user.id)
     )
-    if existing.scalar_one_or_none() is None:
+    if claim.rowcount == 0:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Invite already used")
+
+    try:
         db.add(Connection(
             user_id=invite.creator_id,
             connected_user_id=current_user.id,
@@ -117,9 +120,9 @@ async def accept_invite(
             connected_user_id=invite.creator_id,
             invite_token=token,
         ))
-
-    invite.used_by = current_user.id
-    await db.commit()
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
     return {"ok": True}
 
 

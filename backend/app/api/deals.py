@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -42,13 +43,15 @@ async def match_deal(
     if not category_key or len(category_key) > 50:
         raise HTTPException(status_code=422, detail="Invalid category")
 
-    existing = await db.execute(select(Category).where(Category.name_key == category_key))
-    cat = existing.scalar_one_or_none()
-    if cat is None:
-        cat = Category(name_key=category_key, is_default=False, usage_count=1)
-        db.add(cat)
-    else:
-        cat.usage_count += 1
+    # Atomic UPSERT — prevents race between concurrent matches with same new category
+    stmt = pg_insert(Category).values(
+        name_key=category_key, is_default=False, usage_count=1
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["name_key"],
+        set_={"usage_count": Category.__table__.c.usage_count + 1},
+    )
+    await db.execute(stmt)
 
     order = Order(
         sender_id=current_user.id,

@@ -1,16 +1,21 @@
+import logging
 import os
 import re
+import secrets
 import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.telegram import send_telegram
 from app.models.waitlist import WaitlistEntry
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -44,7 +49,7 @@ def _admin_chat_ids() -> list[str]:
 
 async def require_admin_token(x_admin_token: str = Header(default="")):
     expected = os.getenv("ADMIN_API_TOKEN", "")
-    if not expected or x_admin_token != expected:
+    if not expected or not secrets.compare_digest(x_admin_token, expected):
         raise HTTPException(status_code=403, detail="Admin token required")
 
 
@@ -57,13 +62,13 @@ async def join_waitlist(body: WaitlistCreate, db: AsyncSession = Depends(get_db)
     if not EMAIL_RE.match(email):
         raise HTTPException(status_code=422, detail="Invalid email")
 
-    existing = await db.execute(select(WaitlistEntry).where(WaitlistEntry.email == email))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Already on the waitlist")
-
     entry = WaitlistEntry(email=email, name=name, source=source)
     db.add(entry)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Already on the waitlist")
     await db.refresh(entry)
 
     msg = f"Vimana · Waitlist +1\n{email}"
@@ -75,7 +80,7 @@ async def join_waitlist(body: WaitlistCreate, db: AsyncSession = Depends(get_db)
         try:
             send_telegram(chat_id, msg)
         except Exception:
-            pass
+            logger.exception("Failed to send Telegram notification to %s", chat_id)
 
     return entry
 

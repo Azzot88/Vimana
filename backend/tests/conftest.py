@@ -88,6 +88,33 @@ async def _migrate_orders_category_to_string(engine) -> None:
             await conn.execute(text("DROP TYPE IF EXISTS ordercategory"))
 
 
+async def _ensure_connections_unique(engine) -> None:
+    """T1.19 schema fix: UNIQUE(user_id, connected_user_id) on connections. Idempotent."""
+    async with engine.begin() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM pg_constraint "
+                    "WHERE conname = 'uq_connections_user_connected'"
+                )
+            )
+        ).fetchone()
+        if not row:
+            await conn.execute(
+                text(
+                    "DELETE FROM connections a USING connections b "
+                    "WHERE a.id > b.id AND a.user_id = b.user_id "
+                    "AND a.connected_user_id = b.connected_user_id"
+                )
+            )
+            await conn.execute(
+                text(
+                    "ALTER TABLE connections ADD CONSTRAINT uq_connections_user_connected "
+                    "UNIQUE (user_id, connected_user_id)"
+                )
+            )
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     _ensure_test_database()
@@ -95,6 +122,7 @@ async def test_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_orders_category_to_string(engine)
+    await _ensure_connections_unique(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
