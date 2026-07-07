@@ -172,6 +172,79 @@ const LP_CSS = `
 .lp-msuccess .lp-check { font-size:44px; margin-bottom:14px; }
 .lp-msuccess h3 { font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:var(--lp-navy); margin-bottom:8px; }
 .lp-msuccess p { font-size:14px; color:var(--lp-mid); line-height:1.55; }
+
+/* ─── RESPONSIVE — TABLET (≤1024px): 6-column grid, bento cells regroup ─── */
+@media (max-width: 1024px) {
+  .lp-nav { padding: 16px 28px; }
+  .lp-hero { padding: 56px 28px 32px; }
+  .lp-sub { max-width: 100%; }
+
+  .lp-bento {
+    padding: 0 28px 64px;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: 90px;
+    gap: 10px;
+  }
+  .lp-s74 { grid-column: span 6; grid-row: span 4; }
+  .lp-s54 { grid-column: span 6; grid-row: span 4; }
+  .lp-s73 { grid-column: span 6; grid-row: span 3; }
+  .lp-s53 { grid-column: span 6; grid-row: span 3; }
+  .lp-s72 { grid-column: span 6; grid-row: span 2; }
+  .lp-s52 { grid-column: span 6; grid-row: span 2; }
+  .lp-s43 { grid-column: span 3; grid-row: span 3; }
+  .lp-s42 { grid-column: span 3; grid-row: span 2; }
+
+  .lp-footer { padding: 24px 28px; }
+}
+
+/* ─── RESPONSIVE — MOBILE (≤640px): single column, auto height ─── */
+@media (max-width: 640px) {
+  .lp-nav { padding: 14px 18px; gap: 10px; }
+  .lp-nav-tag { display: none; }
+
+  .lp-hero { padding: 40px 18px 24px; }
+  .lp-h1 { letter-spacing: -1.2px; line-height: 1.05; }
+  .lp-sub { font-size: 15px; }
+
+  .lp-bento {
+    padding: 0 18px 56px;
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 14px;
+  }
+  .lp-s74, .lp-s54, .lp-s73, .lp-s53,
+  .lp-s72, .lp-s52, .lp-s43, .lp-s42 {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 180px;
+  }
+
+  .lp-cell { padding: 22px; }
+  .lp-cell:hover { transform: none; }
+
+  .lp-iata { font-size: 36px; }
+  .lp-route-row { flex-wrap: wrap; row-gap: 8px; }
+  .lp-rmeta-row { flex-wrap: wrap; gap: 16px; }
+
+  .lp-bp-route { font-size: 22px; }
+  .lp-bp-fields { gap: 10px; }
+
+  .lp-trust-score { font-size: 32px; }
+
+  .lp-tagline { font-size: 19px; }
+
+  .lp-net-canvas { height: 100px; }
+
+  .lp-footer {
+    padding: 24px 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .lp-modal { padding: 28px 22px; border-radius: 20px; margin: 12px; }
+  .lp-mtitle { font-size: 22px; }
+}
 `
 
 export default function LandingPage() {
