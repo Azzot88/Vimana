@@ -249,6 +249,39 @@
 
 > **Финиш V1** достигается после T1.8 (см. критерий ниже).
 
+### T1.19 — Pre-production hardening (перед открытием для реальных пользователей)
+
+> **Контекст:** глубокое ревью кодовой базы (2026-07-06) обнаружило 5 групп критичных проблем, которые не блокируют staging, но обязательны до открытия для внешних пользователей.
+
+- [ ] **Race conditions — атомарные upsert'ы:**
+  - `Category` в `POST /deals/match` (`api/deals.py:44-51`): заменить read-modify-write на Postgres `INSERT ... ON CONFLICT (name_key) DO UPDATE SET usage_count = categories.usage_count + 1 RETURNING *`.
+  - `InviteLink accept` в `api/social.py:86-123`: добавить `UNIQUE(user_id, connected_user_id)` на `Connection`; условный `UPDATE invite_links SET used_by = :uid WHERE token = :t AND used_by IS NULL` — 0 rows → 409.
+  - `WaitlistEntry`: обернуть `db.add(...)` в `try/except IntegrityError → 409` (сейчас race → 500).
+  - `Trip.status` при `match_deal`: `SELECT ... FOR UPDATE` + перевод в `matched` (если бизнес-правило — один груз на рейс).
+- [ ] **Upload attachment безопасность** (`api/dealvault.py:113-161`):
+  - Лимит размера `MAX_UPLOAD_SIZE = 10MB` (config), проверка через заголовок `Content-Length` до чтения.
+  - Стриминг SHA-256 + upload в R2 через `iter_chunks(65536)` вместо `file.read()` целиком.
+  - Whitelist MIME по `kind`: `image/{jpeg,png,heic,webp}` для `handoff_photo`/`receipt_photo`, `application/pdf` + images для `doc`.
+  - Санитизация extension: только whitelist, ключ `r2_key` без пользовательских частей (только uuid).
+- [ ] **CORS + rate limiting + admin token:**
+  - `CORS_ORIGINS` — жёсткий whitelist в prod (`vimana.dealvault.club`), убрать `*`.
+  - `slowapi` (или nginx `limit_req`): `/api/auth/login` — 5/минуту/IP; `/api/waitlist` — 3/минуту/IP; `/api/dealvault/.../attachments` — 20/минуту/user.
+  - Admin token comparison через `secrets.compare_digest` вместо `!=` (`api/waitlist.py:47`).
+  - Telegram webhook: секретный path (`/api/telegram/webhook/{TELEGRAM_WEBHOOK_SECRET}`) или Telegram `secret_token` header.
+- [ ] **Pagination:**
+  - Cursor-based (`?after=<uuid>&limit=50`) для `GET /deals`, `GET /trips`, `GET /deals/{id}/dealvault`, `GET /waitlist`.
+  - Ответ формата `{items: [...], next_cursor: "..."}` для всех коллекций.
+  - Обновить frontend: infinite-scroll или «Загрузить ещё» для длинных списков.
+- [ ] **Error handling + logging + JWT rotation:**
+  - Global exception handler в `main.py`: `@app.exception_handler(Exception)` → `{error: {code, message, request_id}}` + `logging.exception(...)`.
+  - Заменить все `except Exception: pass` (в `core/telegram.py:10-13`, `core/whatsapp.py:15-16`, `api/waitlist.py:75-78`, frontend `catch { /* silent */ }`) на `logger.exception(...)` (backend) / user-facing error (frontend).
+  - JWT rotation: короткий `access_token` (15 мин) + `refresh_token` (30 дней) с полем `User.token_version`; endpoint `POST /api/auth/refresh`.
+- [ ] **Обязательно перед V1.1:**
+  - Обновить `dependency_overrides` в `conftest.py` для новых зависимостей (rate limit, exception handler).
+  - Новые backend-тесты: concurrent upsert категорий (`asyncio.gather`), upload > 10MB → 413, wrong MIME → 415, rate limit trigger 429, admin timing-safe compare, pagination cursor.
+
+**Acceptance:** конкурентные запросы не создают дубликатов и не роняют 500; upload не жрёт RAM и валидирует MIME; брутфорс `/login` блокируется на 6-м запросе; списки поддерживают пагинацию; unhandled exceptions логируются и возвращают стандартный JSON. Все тесты зелёные (ожидаемо: 78 + ~15 новых).
+
 ---
 
 ## 🧪 ТЕСТИРОВАНИЕ — Расширение сьюта
