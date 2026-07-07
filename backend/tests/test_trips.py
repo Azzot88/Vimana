@@ -37,17 +37,19 @@ async def test_create_trip_forbidden_for_sender(client, sender_headers):
 async def test_list_trips_returns_seed(client, seed_trip):
     resp = await client.get("/api/trips")
     assert resp.status_code == 200
-    trip_ids = {t["id"] for t in resp.json()}
+    trip_ids = {t["id"] for t in resp.json()["items"]}
     assert str(seed_trip.id) in trip_ids
 
 
 async def test_list_trips_filter_by_origin(client, seed_trip):
     resp = await client.get("/api/trips", params={"origin": "SEED-ORIGIN"})
     assert resp.status_code == 200
-    assert any(t["id"] == str(seed_trip.id) for t in resp.json())
+    assert any(t["id"] == str(seed_trip.id) for t in resp.json()["items"])
 
 
 async def test_list_trips_filter_no_match(client):
     resp = await client.get("/api/trips", params={"origin": "NONEXISTENT-ZZZ"})
     assert resp.status_code == 200
-    assert resp.json() == []
+    body = resp.json()
+    assert body["items"] == []
+    assert body["next_cursor"] is None

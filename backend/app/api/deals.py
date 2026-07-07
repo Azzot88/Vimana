@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
 from app.models.marketplace import Category, Order, OrderStatus, Trip, TripStatus
@@ -240,13 +241,15 @@ async def get_deal(
     )
 
 
-@router.get("", response_model=list[DealOut])
+@router.get("", response_model=Page[DealOut])
 async def list_deals(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    after: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
 ):
-    stmt = select(Deal).where(
+    base = select(Deal).where(
         or_(Deal.sender_id == current_user.id, Deal.carrier_id == current_user.id)
     )
-    result = await db.execute(stmt)
-    return result.scalars().all()
+    items, next_cursor = await paginate_desc(db, base, Deal, after, clamp_limit(limit))
+    return Page(items=items, next_cursor=next_cursor)

@@ -94,8 +94,10 @@ async def test_confirm_closes_deal(client, carrier_headers, sender_headers):
 async def test_list_deals_includes_seed(client, sender_headers, seed_deal):
     resp = await client.get("/api/deals", headers=sender_headers)
     assert resp.status_code == 200
-    ids = {d["id"] for d in resp.json()}
+    body = resp.json()
+    ids = {d["id"] for d in body["items"]}
     assert str(seed_deal.id) in ids
+    assert "next_cursor" in body
 
 
 async def test_get_deal_forbidden_for_outsider(client, carrier_headers, sender_headers):

@@ -54,5 +54,7 @@ async def test_list_waitlist_with_correct_token(client, monkeypatch):
         "/api/waitlist", headers={"X-Admin-Token": "test-admin-secret"}
     )
     assert resp.status_code == 200
-    emails = {e["email"] for e in resp.json()}
+    body = resp.json()
+    emails = {e["email"] for e in body["items"]}
     assert email in emails
+    assert "next_cursor" in body

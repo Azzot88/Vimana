@@ -117,4 +117,4 @@ async def test_list_my_invites_empty_for_new_user(client):
     headers = await _register_and_login(client, unique_email("inv-empty"))
     resp = await client.get("/api/invites/mine", headers=headers)
     assert resp.status_code == 200
-    assert resp.json() == []
+    assert resp.json() == []  # kept as list for backwards-compat, small bounded set

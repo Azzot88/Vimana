@@ -5,13 +5,14 @@ import secrets
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import desc, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.rate_limit import limiter
 from app.core.telegram import send_telegram
 from app.models.waitlist import WaitlistEntry
@@ -87,9 +88,14 @@ async def join_waitlist(request: Request, body: WaitlistCreate, db: AsyncSession
     return entry
 
 
-@router.get("", response_model=list[WaitlistOut], dependencies=[Depends(require_admin_token)])
-async def list_waitlist(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(WaitlistEntry).order_by(desc(WaitlistEntry.created_at))
+@router.get("", response_model=Page[WaitlistOut], dependencies=[Depends(require_admin_token)])
+async def list_waitlist(
+    db: AsyncSession = Depends(get_db),
+    after: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    base = select(WaitlistEntry)
+    items, next_cursor = await paginate_desc(
+        db, base, WaitlistEntry, after, clamp_limit(limit)
     )
-    return list(result.scalars().all())
+    return Page(items=items, next_cursor=next_cursor)

@@ -1,14 +1,16 @@
 async def test_list_messages_empty_seed(client, sender_headers, seed_deal):
     resp = await client.get(f"/api/deals/{seed_deal.id}/dealvault", headers=sender_headers)
     assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
+    body = resp.json()
+    assert isinstance(body["items"], list)
+    assert "next_cursor" in body
 
 
 async def test_create_message_appends(client, sender_headers, seed_deal):
     before = await client.get(
         f"/api/deals/{seed_deal.id}/dealvault", headers=sender_headers
     )
-    before_count = len(before.json())
+    before_count = len(before.json()["items"])
 
     resp = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages",
@@ -21,7 +23,7 @@ async def test_create_message_appends(client, sender_headers, seed_deal):
     after = await client.get(
         f"/api/deals/{seed_deal.id}/dealvault", headers=sender_headers
     )
-    assert len(after.json()) == before_count + 1
+    assert len(after.json()["items"]) == before_count + 1
 
 
 async def test_dealvault_forbidden_for_outsider(client, seed_deal):

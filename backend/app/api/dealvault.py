@@ -2,13 +2,14 @@ import hashlib
 import io
 import uuid
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.storage import get_presigned_url, upload_file
 from app.models.deal import Attachment, AttachmentKind, Deal, DealVaultMessage
 from app.models.user import User
@@ -78,23 +79,25 @@ def _build_message_out(msg: DealVaultMessage) -> MessageOut:
     )
 
 
-@router.get("/{deal_id}/dealvault", response_model=list[MessageOut])
+@router.get("/{deal_id}/dealvault", response_model=Page[MessageOut])
 async def list_messages(
     deal_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    after: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
 ):
     await _get_deal_as_participant(deal_id, current_user, db)
 
-    stmt = (
+    base = (
         select(DealVaultMessage)
         .where(DealVaultMessage.deal_id == deal_id)
         .options(selectinload(DealVaultMessage.attachments))
-        .order_by(DealVaultMessage.created_at.asc())
     )
-    result = await db.execute(stmt)
-    messages = result.scalars().all()
-    return [_build_message_out(m) for m in messages]
+    items, next_cursor = await paginate_asc(
+        db, base, DealVaultMessage, after, clamp_limit(limit)
+    )
+    return Page(items=[_build_message_out(m) for m in items], next_cursor=next_cursor)
 
 
 @router.post("/{deal_id}/dealvault/messages", response_model=MessageOut, status_code=201)

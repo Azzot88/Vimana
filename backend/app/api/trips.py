@@ -1,12 +1,13 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, cast, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.models.marketplace import Trip, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import TripCreate, TripOut
@@ -38,12 +39,14 @@ async def create_trip(
     return trip
 
 
-@router.get("", response_model=list[TripOut])
+@router.get("", response_model=Page[TripOut])
 async def list_trips(
     origin: str | None = None,
     destination: str | None = None,
     date: date | None = None,
     db: AsyncSession = Depends(get_db),
+    after: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
 ):
     stmt = select(Trip).where(Trip.status == TripStatus.open)
 
@@ -54,5 +57,5 @@ async def list_trips(
     if date:
         stmt = stmt.where(cast(Trip.depart_at, Date) == date)
 
-    result = await db.execute(stmt)
-    return result.scalars().all()
+    items, next_cursor = await paginate_desc(db, stmt, Trip, after, clamp_limit(limit))
+    return Page(items=items, next_cursor=next_cursor)
