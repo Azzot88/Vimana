@@ -1,8 +1,8 @@
 import hashlib
-import os
+import io
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -15,6 +15,28 @@ from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
 
 router = APIRouter()
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+CHUNK_SIZE = 64 * 1024  # 64 KB
+
+_PHOTO_MIME = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
+_DOC_MIME = _PHOTO_MIME | {"application/pdf"}
+
+ALLOWED_MIME_BY_KIND: dict[AttachmentKind, set[str]] = {
+    AttachmentKind.handoff_photo: _PHOTO_MIME,
+    AttachmentKind.receipt_photo: _PHOTO_MIME,
+    AttachmentKind.doc: _DOC_MIME,
+    AttachmentKind.payment_receipt: _DOC_MIME,
+}
+
+MIME_TO_EXT: dict[str, str] = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/heic": ".heic",
+    "image/heif": ".heif",
+    "application/pdf": ".pdf",
+}
 
 
 async def _get_deal_as_participant(
@@ -113,6 +135,7 @@ async def create_message(
 async def upload_attachment(
     deal_id: uuid.UUID,
     message_id: uuid.UUID,
+    request: Request,
     file: UploadFile,
     kind: str = Form(...),
     current_user: User = Depends(get_current_user),
@@ -129,15 +152,45 @@ async def upload_attachment(
     except ValueError:
         raise HTTPException(status_code=422, detail=f"Invalid kind: {kind}")
 
-    file_bytes = await file.read()
-    file_hash = hashlib.sha256(file_bytes).hexdigest()
+    # Early rejection via Content-Length before reading bytes
+    declared_length = request.headers.get("content-length")
+    if declared_length and int(declared_length) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
+        )
 
-    filename = file.filename or ""
-    _, ext = os.path.splitext(filename)
-    r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4()}{ext}"
+    content_type = (file.content_type or "").lower()
+    allowed = ALLOWED_MIME_BY_KIND.get(attachment_kind, set())
+    if content_type not in allowed:
+        raise HTTPException(
+            status_code=415,
+            detail=f"MIME '{content_type}' not allowed for kind '{kind}'",
+        )
 
-    content_type = file.content_type or "application/octet-stream"
-    upload_file(file_bytes, r2_key, content_type)
+    # Streaming SHA-256 + size limit while reading chunks
+    hasher = hashlib.sha256()
+    total = 0
+    buffer = io.BytesIO()
+    while True:
+        chunk = await file.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
+            )
+        hasher.update(chunk)
+        buffer.write(chunk)
+
+    file_hash = hasher.hexdigest()
+    # Extension derived from MIME (whitelisted), never from user-supplied filename
+    ext = MIME_TO_EXT.get(content_type, "")
+    r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
+
+    upload_file(buffer.getvalue(), r2_key, content_type)
 
     attachment = Attachment(
         message_id=message_id,
