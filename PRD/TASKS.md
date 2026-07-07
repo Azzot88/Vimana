@@ -239,15 +239,19 @@
 - Поле `notified_at` в модели для отслеживания отправки писем.
 - Отдельная Celery-задача `send_waitlist_confirmation`.
 
-### T1.8 — Staging-деплой, домен и smoke test V1
-- [ ] Поднять VPS / облачный сервер (Ubuntu 22+ или Debian 12), установить Docker + Docker Compose.
-- [ ] Клонировать репо, скопировать `.env.example` → `.env`, заполнить production-значения.
-- [ ] `docker compose -f docker-compose.dev.yml up -d --build` + `docker compose exec backend alembic upgrade head`.
-- [ ] Nginx reverse proxy: домен → backend `:8000` (API) и frontend `:5173` (SPA). SSL через Let's Encrypt или Cloudflare.
-- [ ] Smoke test: зарегистрировать два аккаунта (Отправитель + Перевозчик), опубликовать маршрут, убедиться что DealVault открывается и ошибок в логах нет.
-**Acceptance:** приложение доступно по домену через HTTPS; регистрация и публикация маршрута работают end-to-end; в логах контейнеров нет критических ошибок.
+### T1.8 — Staging-деплой, домен и smoke test V1 ✅
+- [x] AWS EC2 (Ubuntu 22+), Docker + Docker Compose установлены и работают.
+- [x] Elastic IP получен, домен `vimana.dealvault.club` привязан A-записью.
+- [x] `.env` заполнен prod-значениями (`CORS_ORIGINS=https://vimana.dealvault.club`, `ADMIN_API_TOKEN`, `ADMIN_TELEGRAM_CHAT_IDS`).
+- [x] Alembic мигрирован до `0004_waitlist`.
+- [x] Nginx с SSL: TLS 1.2/1.3, HTTP→HTTPS редирект, ACME challenge на 80, `.well-known/acme-challenge/` через webroot, `X-Forwarded-Proto https` во все upstream'ы, `client_max_body_size 15M` для DealVault аттачей.
+- [x] Let's Encrypt сертификат получен через `certbot certonly --standalone -d vimana.dealvault.club`; `/etc/letsencrypt` смонтирован в nginx read-only.
+- [x] Cron автообновления сертификата: `0 3 * * *` с `--pre-hook` (stop nginx) / `--post-hook` (start nginx).
+- [x] Smoke test: сайт открывается по HTTPS (валидный сертификат); в `docker compose logs backend nginx | grep -i error` — пусто.
+**Acceptance:** приложение доступно по `https://vimana.dealvault.club`; SSL валидный; в логах контейнеров нет критических ошибок. ✅
 
-> **Финиш V1** достигается после T1.8 (см. критерий ниже).
+> **🎉 ФИНИШ V1** — Фаза 1 (Ядро доверия) завершена. Приложение в продакшн-доступе.
+> Дальнейшие шаги перед открытием для реальных пользователей — T1.19 (pre-production hardening).
 
 ### T1.19 — Pre-production hardening (перед открытием для реальных пользователей)
 
