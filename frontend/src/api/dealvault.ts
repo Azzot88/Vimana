@@ -1,21 +1,27 @@
 import api from './client'
 import type { Page } from './pagination'
 
-export interface VaultMessage {
+export type AttachmentKind = 'handoff_photo' | 'receipt_photo' | 'doc' | 'payment_receipt'
+
+export interface Attachment {
   id: string
-  deal_id: string
-  sender_id: string
-  sender_name: string
-  kind: 'text' | 'handoff_photo' | 'receipt_photo' | 'system'
-  body: string
-  attachment_url: string | null
-  sha256: string
+  message_id: string
+  r2_key: string
+  file_hash: string
+  ipfs_cid: string | null
+  kind: AttachmentKind
+  url: string | null
   created_at: string
 }
 
-export interface CreateMessagePayload {
-  kind: 'text' | 'handoff_photo' | 'receipt_photo'
-  body: string
+export interface VaultMessage {
+  id: string
+  deal_id: string
+  sender_id: string | null
+  text: string | null
+  is_system: boolean
+  attachments: Attachment[]
+  created_at: string
 }
 
 export interface MessageListParams {
@@ -24,16 +30,43 @@ export interface MessageListParams {
 }
 
 export const listMessages = (dealId: string, params?: MessageListParams) =>
-  api.get<Page<VaultMessage>>(`/api/deals/${dealId}/vault`, { params })
+  api.get<Page<VaultMessage>>(`/api/deals/${dealId}/dealvault`, { params })
 
-export const createMessage = (dealId: string, payload: CreateMessagePayload) =>
-  api.post<VaultMessage>(`/api/deals/${dealId}/vault`, payload)
+export const createMessage = (dealId: string, text: string, isSystem = false) =>
+  api.post<VaultMessage>(`/api/deals/${dealId}/dealvault/messages`, {
+    text,
+    is_system: isSystem,
+  })
 
-export const uploadAttachment = (dealId: string, file: File, kind: 'handoff_photo' | 'receipt_photo') => {
+export const uploadAttachment = (
+  dealId: string,
+  messageId: string,
+  file: File,
+  kind: AttachmentKind,
+) => {
   const form = new FormData()
   form.append('file', file)
   form.append('kind', kind)
-  return api.post<VaultMessage>(`/api/deals/${dealId}/vault/upload`, form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  return api.post<Attachment>(
+    `/api/deals/${dealId}/dealvault/messages/${messageId}/attachments`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+}
+
+/**
+ * High-level helper: creates a placeholder message and attaches the file.
+ * Returns the reloaded message (with attachment) for the UI to insert.
+ */
+export const sendPhotoMessage = async (
+  dealId: string,
+  file: File,
+  kind: AttachmentKind,
+): Promise<VaultMessage> => {
+  const { data: msg } = await createMessage(dealId, '', false)
+  await uploadAttachment(dealId, msg.id, file, kind)
+  // Re-fetch a single-page window that contains this message id.
+  const { data: page } = await listMessages(dealId, { limit: 100 })
+  const fresh = page.items.find((m) => m.id === msg.id)
+  return fresh ?? msg
 }
