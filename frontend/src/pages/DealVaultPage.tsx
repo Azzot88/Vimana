@@ -7,6 +7,7 @@ import {
   type AttachmentKind,
   type VaultMessage,
 } from '../api/dealvault'
+import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 
 const KIND_LABEL: Record<AttachmentKind, string> = {
@@ -24,6 +25,7 @@ export default function DealVaultPage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>('')
   const [uploadKind, setUploadKind] = useState<AttachmentKind>('handoff_photo')
+  const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -100,7 +102,12 @@ export default function DealVaultPage() {
         </div>
 
         {att && att.url && (
-          <div className="rounded-lg overflow-hidden border border-navy/10 max-w-xs">
+          <button
+            type="button"
+            onClick={() => setPreview({ url: att.url!, alt: KIND_LABEL[att.kind] ?? att.kind })}
+            className="rounded-lg overflow-hidden border border-navy/10 max-w-xs cursor-zoom-in hover:border-cyan/40 transition-colors block"
+            aria-label="Открыть в полный экран"
+          >
             <img
               src={att.url}
               alt={KIND_LABEL[att.kind] ?? att.kind}
@@ -109,7 +116,7 @@ export default function DealVaultPage() {
                 (e.target as HTMLImageElement).style.display = 'none'
               }}
             />
-          </div>
+          </button>
         )}
 
         {msg.text && (
@@ -206,6 +213,14 @@ export default function DealVaultPage() {
           </form>
         </div>
       </div>
+
+      {preview && (
+        <ImageLightbox
+          src={preview.url}
+          alt={preview.alt}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   )
 }
