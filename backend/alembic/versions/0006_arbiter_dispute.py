@@ -3,6 +3,14 @@
 Revision ID: 0006
 Revises: 0005
 Create Date: 2026-07-07
+
+Notes on idempotency:
+- Every DDL step guards for prior partial application so the migration can be
+  re-run after a mid-flight failure without manual DB cleanup.
+- `sa.Enum(create_type=False)` is intentionally NOT used — `sa.Enum` does not
+  propagate `create_type` to `postgresql.ENUM`, and `op.create_table` will
+  still dispatch `_on_table_create` on the enum type. We build the `disputes`
+  table with raw SQL that references `disputestatus` by name.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -14,7 +22,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Idempotent column adds — retries after partial failure won't crash.
+    bind = op.get_bind()
+
+    # 1) Boolean flags on users — idempotent.
     op.execute(
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superuser BOOLEAN "
         "NOT NULL DEFAULT false"
@@ -24,55 +34,54 @@ def upgrade() -> None:
         "NOT NULL DEFAULT false"
     )
 
-    # Extend the DealEventType enum (needs to be outside a transaction on some PG versions)
+    # 2) Extend DealEventType enum. ALTER TYPE ... ADD VALUE cannot run inside
+    # a transaction, hence the autocommit block. `IF NOT EXISTS` handles retries.
     with op.get_context().autocommit_block():
         op.execute("ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'dispute_opened'")
         op.execute("ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'arbiter_opened'")
         op.execute("ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'dispute_resolved'")
 
-    # Create the enum type explicitly; use create_type=False in the column below
-    # so create_table doesn't try to re-CREATE it.
-    dispute_status = sa.Enum("open", "claimed", "resolved", name="disputestatus")
-    dispute_status.create(op.get_bind(), checkfirst=True)
+    # 3) DisputeStatus enum — guard by pg_type existence check.
+    has_type = bind.execute(
+        sa.text("SELECT 1 FROM pg_type WHERE typname = 'disputestatus'")
+    ).fetchone()
+    if not has_type:
+        op.execute("CREATE TYPE disputestatus AS ENUM ('open', 'claimed', 'resolved')")
 
-    bind = op.get_bind()
-    has_disputes = bind.execute(
+    # 4) disputes table — raw SQL to avoid SQLAlchemy's `_on_table_create`
+    # trying to re-create the enum type.
+    has_table = bind.execute(
         sa.text(
-            "SELECT 1 FROM information_schema.tables "
-            "WHERE table_name = 'disputes'"
+            "SELECT 1 FROM information_schema.tables WHERE table_name = 'disputes'"
         )
     ).fetchone()
-    if not has_disputes:
-        op.create_table(
-            "disputes",
-            sa.Column("id", sa.UUID(as_uuid=True), primary_key=True),
-            sa.Column("deal_id", sa.UUID(as_uuid=True), sa.ForeignKey("deals.id"), nullable=False),
-            sa.Column("opened_by", sa.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
-            sa.Column("arbiter_id", sa.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
-            sa.Column("reason", sa.Text(), nullable=False),
-            sa.Column(
-                "status",
-                sa.Enum(
-                    "open", "claimed", "resolved",
-                    name="disputestatus", create_type=False,
-                ),
-                server_default="open",
-                nullable=False,
-            ),
-            sa.Column("verdict", sa.Text(), nullable=True),
-            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-            sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),
-            sa.UniqueConstraint("deal_id", name="uq_disputes_deal_id"),
+    if not has_table:
+        op.execute(
+            """
+            CREATE TABLE disputes (
+                id UUID PRIMARY KEY,
+                deal_id UUID NOT NULL REFERENCES deals(id),
+                opened_by UUID NOT NULL REFERENCES users(id),
+                arbiter_id UUID REFERENCES users(id),
+                reason TEXT NOT NULL,
+                status disputestatus NOT NULL DEFAULT 'open',
+                verdict TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                resolved_at TIMESTAMPTZ,
+                CONSTRAINT uq_disputes_deal_id UNIQUE (deal_id)
+            )
+            """
         )
 
-    # Promote User Zero if present (idempotent)
+    # 5) Promote User Zero (idempotent — no-op if user missing or already superuser).
     op.execute(
-        "UPDATE users SET is_superuser = true WHERE email = 'nyxter@dealvault.club'"
+        "UPDATE users SET is_superuser = true "
+        "WHERE email = 'nyxter@dealvault.club' AND is_superuser = false"
     )
 
 
 def downgrade() -> None:
-    op.drop_table("disputes")
-    sa.Enum(name="disputestatus").drop(op.get_bind(), checkfirst=True)
-    op.drop_column("users", "is_arbiter")
-    op.drop_column("users", "is_superuser")
+    op.execute("DROP TABLE IF EXISTS disputes")
+    op.execute("DROP TYPE IF EXISTS disputestatus")
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS is_arbiter")
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS is_superuser")
