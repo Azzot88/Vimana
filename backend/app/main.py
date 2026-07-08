@@ -126,3 +126,11 @@ app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/health/storage")
+async def health_storage():
+    from app.core.storage import check_storage
+    result = check_storage()
+    status_code = 200 if result.get("reachable") else 503
+    return JSONResponse(status_code=status_code, content=result)
