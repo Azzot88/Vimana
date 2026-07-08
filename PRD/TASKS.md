@@ -339,6 +339,75 @@
 
 **Acceptance:** sender видит рейс → справа появляется чат; отправляет сообщение → carrier видит; после оформления заявки чат сохраняется и виден в контексте сделки; сообщения зашифрованы в БД; на мобильном — drawer.
 
+### T1.23 — User Zero + роль arbiter + модель Dispute (invite-only доступ)
+
+**Контекст:** нужен супер-юзер с правом видеть всех пользователей и назначать арбитров, плюс отдельная роль арбитра. Арбитр читает переписку **только по приглашению** (через `Dispute`), когда один из участников не выходит на связь при незавершённой перевозке. Открытие переписки арбитром **явно** пишется в чат (`DealEvent.arbiter_opened` + автосообщение в DealVault) — обе стороны видят. Полноценный threshold-decryption придёт в T2.3; пока — заглушка доступа при валидном Dispute.
+
+- [ ] **User Zero:**
+  - `User.is_superuser: bool` (миграция, default false).
+  - Идемпотентный fixture при старте приложения (`app/core/superuser.py`): если пользователь `nyxter@dealvault.club` существует и `is_superuser=false` → выставить `is_superuser=true`. Единственный владелец.
+  - **User Zero автоматически имеет права арбитра** без явного `is_arbiter=true`.
+- [ ] **Роль arbiter:**
+  - `User.is_arbiter: bool` (та же миграция, default false).
+  - Один пользователь может быть одновременно sender / carrier / arbiter — роли не взаимоисключают.
+  - Арбитр **не может** судить собственную сделку — check `deal.sender_id != arbiter.id && deal.carrier_id != arbiter.id`.
+- [ ] **Модель `Dispute`:** `id, deal_id, opened_by, arbiter_id nullable, reason, status ∈ {open, claimed, resolved}, created_at, resolved_at, verdict nullable`. Уникальность `(deal_id)` — один активный dispute на сделку.
+- [ ] **Endpoints:**
+  - `POST /api/deals/{id}/dispute` — участник (sender/carrier) открывает спор с `{reason}`; статус deal переходит в `disputed`.
+  - `GET /api/admin/disputes` — только для `is_arbiter or is_superuser`; список open+claimed disputes с cursor pagination.
+  - `POST /api/disputes/{id}/claim` — арбитр берёт спор себе (`arbiter_id = me.id`, `status = claimed`).
+  - `GET /api/admin/deals/{deal_id}/vault` — доступен арбитру **только если** у него есть claimed Dispute на эту сделку и `arbiter_id == me.id`. При каждом чтении:
+    1. Пишется `DealEvent(event_type=arbiter_opened, actor_id=arbiter, payload={dispute_id, snapshot_at})`.
+    2. Пишется system-message в DealVault: «⚖️ Арбитр открыл переписку по спору #{dispute_id}» (`is_system=true`).
+  - `POST /api/disputes/{id}/resolve` — арбитр выносит вердикт `{verdict, closes_deal: bool}`; `deal.status = closed` или возврат в предыдущий статус.
+  - `GET /api/admin/users` — только `is_superuser`; список всех с cursor pagination.
+  - `POST /api/admin/users/{id}/promote-arbiter` — только `is_superuser`; toggle `is_arbiter`.
+- [ ] **Deps:** `get_arbiter_user` (или `is_superuser`), `get_superuser`.
+- [ ] **Скрипт `scripts/make_arbiter.py <email>`** — прямой SQL для локального использования (backup путь если User Zero потеряет доступ).
+- [ ] **Frontend:**
+  - На `DealPage` при статусе `in_transit`/`accepted` → кнопка «Открыть спор» → модалка с полем `reason`.
+  - На чате DealVault при `arbiter_opened` событии — красный баннер + system-message с временем и именем арбитра.
+  - Новый раздел `/admin/disputes` (виден только `is_arbiter` или `is_superuser` — auth store флаги).
+  - Раздел `/admin/users` (только `is_superuser`) — список + toggle «Сделать арбитром».
+- [ ] Backend-тесты: dispute create, claim (не свой), arbiter_opened event пишется, чужой arbiter не читает vault, User Zero видит всё, promote-arbiter только superuser'ом.
+
+**Acceptance:** User Zero (`nyxter@dealvault.club`) видит всех пользователей и назначает арбитров. Арбитр открывает переписку только через claimed Dispute; при открытии — запись в `DealEvent` + system-message в чате. Один аккаунт может быть sender/carrier/arbiter одновременно. Никто, включая User Zero, не может читать чужой чат без открытого dispute.
+
+### T1.24 — Dual role + explicit mode switcher (Send / Deliver)
+
+**Контекст:** сейчас `User.is_carrier: bool` — один из двух. Реальные пользователи могут и везти, и отправлять — платформа должна разрешать оба режима без пересоздания аккаунта. UI режимов **явно разный** (визуально), но текущий режим **не подписывается** — понимание идёт из контекста. Кнопка переключения показывает **противоположный** режим: «Switch to Deliver» когда ты sender, «Switch to Send» когда ты carrier.
+
+- [ ] **Миграция `0006_dual_role`:**
+  - Добавить `User.can_carry: bool default true`, `User.can_send: bool default true`, `User.active_mode: varchar(10) default 'sender'`.
+  - Backfill: `can_carry = is_carrier`, `active_mode = 'carrier' if is_carrier else 'sender'`.
+  - **Удалить колонку `is_carrier`** в этой же миграции (backward-compat не нужен — платформа ещё не открыта широко).
+- [ ] Обновить все места где используется `is_carrier`:
+  - `POST /api/trips` — `if not current_user.can_carry: raise 403 "Not a carrier"` (право = capability, не mode).
+  - `UserOut` schema: убрать `is_carrier`, добавить `can_carry`, `can_send`, `active_mode`.
+  - `PATCH /api/auth/me` принимает `active_mode`, `can_carry`, `can_send`.
+  - Все места в `deals.py`, `social.py`, `conftest.py`, `test_*.py` — заменить `is_carrier` на `can_carry` / `active_mode == 'carrier'` по смыслу.
+- [ ] **Frontend — auth store:**
+  - `User.active_mode`, `can_carry`, `can_send`.
+  - `switchMode()` — вызывает `PATCH /me` + обновляет store.
+- [ ] **Компонент `ModeSwitcher`:**
+  - Кнопка в Navbar (справа, заметная, ~40×40+).
+  - Текст: `t('mode.switchToDeliver')` = «Switch to Deliver» если mode == 'sender'; наоборот для carrier.
+  - Иконка: 📤/`send` icon для «Switch to Send», ✈️/`plane` для «Switch to Deliver».
+  - Клик → confirm-diff анимация + switch.
+  - **Не пишет текущий режим текстом** — это должно быть очевидно из UI.
+- [ ] **Разный UI по режимам** (визуально разный, не только показ/скрытие):
+  - `DashboardPage` → рендерит `<SenderDashboard/>` или `<CarrierDashboard/>` по `active_mode`.
+    - **SenderDashboard:** доминанта amber (посылка, движение); секции «Мои посылки», «История отправлений», «Найти рейс».
+    - **CarrierDashboard:** доминанта cyan (небо, полёт); секции «Мои рейсы», «Входящие заявки», «+ Опубликовать рейс», простая статистика доходов.
+  - `TripsPage`:
+    - Sender mode: список чужих рейсов + CTA «Заказать доставку».
+    - Carrier mode: переключатель «мои / все» + CTA «+ Опубликовать рейс».
+  - `BottomNav` (мобилка) — иконки одинаковые, но color-accent разный.
+- [ ] i18n ключи `mode.switchToSend`, `mode.switchToDeliver` в 6 языках.
+- [ ] Backend-тесты: PATCH active_mode, `can_carry=false` → 403 на trips; список UserOut без `is_carrier`.
+
+**Acceptance:** пользователь видит явную кнопку переключения (текст противоположного режима); клик меняет визуальный дизайн Dashboard/Trips; в mode `sender` не публикует рейсы (кнопка спрятана, а backend вернёт 403 если `can_carry=false`); backend-схема без `is_carrier`; тесты зелёные.
+
 ---
 
 ## 🧪 ТЕСТИРОВАНИЕ — Расширение сьюта
