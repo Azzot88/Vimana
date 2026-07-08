@@ -29,3 +29,7 @@ class User(Base):
     telegram_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     telegram_link_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     whatsapp_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
+    # Roles (T1.23). is_superuser = User Zero (nyxter@dealvault.club).
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_arbiter: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

@@ -39,6 +39,8 @@ class UserOut(BaseModel):
     phone: str | None
     display_name: str
     is_carrier: bool
+    is_superuser: bool = False
+    is_arbiter: bool = False
     nostr_pubkey: str | None
     business_activity_level: float | None
     notify_email: bool

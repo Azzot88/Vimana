@@ -20,3 +20,16 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
+
+
+async def get_superuser(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Superuser access required")
+    return current_user
+
+
+async def get_arbiter(current_user: User = Depends(get_current_user)) -> User:
+    """Superuser also counts as arbiter."""
+    if not (current_user.is_arbiter or current_user.is_superuser):
+        raise HTTPException(status_code=403, detail="Arbiter access required")
+    return current_user

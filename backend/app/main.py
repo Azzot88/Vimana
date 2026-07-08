@@ -11,6 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
+from app.api.admin import router as admin_router
 from app.api.airports import router as airports_router
 from app.api.auth import router as auth_router
 from app.api.categories import router as categories_router
@@ -20,8 +21,10 @@ from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
 from app.api.waitlist import router as waitlist_router
+from app.core.database import AsyncSessionLocal
 from app.core.logging_setup import configure_logging
 from app.core.rate_limit import limiter
+from app.core.superuser import ensure_user_zero
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -121,6 +124,16 @@ app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
 app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
 app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
+app.include_router(admin_router, prefix="/api", tags=["admin"])
+
+
+@app.on_event("startup")
+async def _promote_user_zero() -> None:
+    try:
+        async with AsyncSessionLocal() as db:
+            await ensure_user_zero(db)
+    except Exception:
+        logger.exception("User Zero promotion failed on startup")
 
 
 @app.get("/health")
