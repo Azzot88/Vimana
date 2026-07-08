@@ -30,12 +30,11 @@ async def superuser_headers(client, session_maker, seed_carrier):
 @pytest_asyncio.fixture
 async def arbiter_user(client, session_maker):
     """Register a fresh arbiter — not a participant of the seed deal."""
-    from tests.conftest import _login, unique_email
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
     email = unique_email("arbiter")
-    password = "arbiter-pw-1"
     reg = await client.post(
         "/api/auth/register",
-        json={"email": email, "password": password, "display_name": "Arbiter"},
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "Arbiter"},
     )
     assert reg.status_code == 201
     user_id = uuidlib.UUID(reg.json()["id"])
@@ -92,11 +91,11 @@ async def test_dispute_open_by_participant(client, carrier_headers, sender_heade
 
 async def test_dispute_open_by_outsider_forbidden(client, carrier_headers, sender_headers):
     deal_id = await _make_active_deal(client, carrier_headers, sender_headers)
-    from tests.conftest import _login, unique_email
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
     email = unique_email("outsider")
     await client.post(
         "/api/auth/register",
-        json={"email": email, "password": "out-pw-1", "display_name": "O"},
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "O"},
     )
     token = await _login(client, email)
     outsider = {"Authorization": f"Bearer {token}"}
