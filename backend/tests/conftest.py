@@ -118,6 +118,36 @@ async def _ensure_connections_unique(engine) -> None:
             )
 
 
+async def _ensure_arbiter_columns(engine) -> None:
+    """T1.23 schema fix: users.is_superuser / users.is_arbiter. Idempotent."""
+    async with engine.begin() as conn:
+        for column in ("is_superuser", "is_arbiter"):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='users' AND column_name='{column}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE users ADD COLUMN {column} BOOLEAN "
+                        f"NOT NULL DEFAULT false"
+                    )
+                )
+
+
+async def _ensure_dealevent_types(engine) -> None:
+    """T1.23: extend DealEventType enum with dispute/arbiter values. Idempotent."""
+    async with engine.begin() as conn:
+        for value in ("dispute_opened", "arbiter_opened", "dispute_resolved"):
+            await conn.execute(
+                text(f"ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS '{value}'")
+            )
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     _ensure_test_database()
@@ -126,6 +156,8 @@ async def test_engine():
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
+    await _ensure_arbiter_columns(engine)
+    await _ensure_dealevent_types(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
