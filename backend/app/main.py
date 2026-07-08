@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
@@ -29,7 +30,18 @@ from app.core.superuser import ensure_user_zero
 configure_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Vimana")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        async with AsyncSessionLocal() as db:
+            await ensure_user_zero(db)
+    except Exception:
+        logger.exception("User Zero promotion failed on startup")
+    yield
+
+
+app = FastAPI(title="Vimana", lifespan=lifespan)
 app.state.limiter = limiter
 
 origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
@@ -125,15 +137,6 @@ app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
 app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
-
-
-@app.on_event("startup")
-async def _promote_user_zero() -> None:
-    try:
-        async with AsyncSessionLocal() as db:
-            await ensure_user_zero(db)
-    except Exception:
-        logger.exception("User Zero promotion failed on startup")
 
 
 @app.get("/health")
