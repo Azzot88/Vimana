@@ -1,9 +1,15 @@
+import base64
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
 # Disable rate limiting before importing app modules that read the env at import time.
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+# Deterministic AES-256 key for tests. Prod value must be set via env.
+os.environ.setdefault(
+    "MESSAGE_ENCRYPTION_KEY",
+    base64.b64encode(b"vimana-test-key-32-bytes-length!").decode(),
+)
 
 import psycopg2
 import pytest
@@ -139,6 +145,38 @@ async def _ensure_arbiter_columns(engine) -> None:
                 )
 
 
+async def _ensure_encrypted_messages(engine) -> None:
+    """T1.21 schema fix: drop legacy `text` column, ensure BYTEA pair exists."""
+    async with engine.begin() as conn:
+        for col in ("text_ciphertext", "text_nonce"):
+            check = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='deal_vault_messages' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not check:
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE deal_vault_messages ADD COLUMN {col} BYTEA"
+                    )
+                )
+        legacy = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='deal_vault_messages' AND column_name='text'"
+                )
+            )
+        ).fetchone()
+        if legacy:
+            await conn.execute(
+                text("ALTER TABLE deal_vault_messages DROP COLUMN text")
+            )
+
+
 async def _ensure_dealevent_types(engine) -> None:
     """T1.23: extend DealEventType enum with dispute/arbiter values. Idempotent."""
     async with engine.begin() as conn:
@@ -158,6 +196,7 @@ async def test_engine():
     await _ensure_connections_unique(engine)
     await _ensure_arbiter_columns(engine)
     await _ensure_dealevent_types(engine)
+    await _ensure_encrypted_messages(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

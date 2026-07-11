@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -81,13 +81,34 @@ class DealVaultMessage(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
     sender_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # T1.21: text is stored AES-256-GCM encrypted. `text` property below wraps
+    # these two columns so callers keep using `msg.text` transparently.
+    text_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    text_nonce: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
     nostr_sig: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     attachments: Mapped[list["Attachment"]] = relationship("Attachment", back_populates="message", lazy="raise")
+
+    @property
+    def text(self) -> str | None:
+        if self.text_ciphertext is None or self.text_nonce is None:
+            return None
+        from app.core.crypto import decrypt
+        return decrypt(bytes(self.text_nonce), bytes(self.text_ciphertext))
+
+    @text.setter
+    def text(self, value: str | None) -> None:
+        if value is None:
+            self.text_ciphertext = None
+            self.text_nonce = None
+            return
+        from app.core.crypto import encrypt
+        nonce, ct = encrypt(value)
+        self.text_nonce = nonce
+        self.text_ciphertext = ct
 
 
 class Dispute(Base):

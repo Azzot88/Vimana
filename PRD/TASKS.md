@@ -286,20 +286,20 @@
 
 **Acceptance:** конкурентные запросы не создают дубликатов и не роняют 500; upload не жрёт RAM и валидирует MIME; брутфорс `/login` блокируется на 6-м запросе; списки поддерживают пагинацию; unhandled exceptions логируются и возвращают стандартный JSON. Все тесты зелёные (ожидаемо: 78 + ~15 новых).
 
-### T1.20 — Cloudflare R2 / S3 setup для DealVault-аттачей
+### T1.20 — Cloudflare R2 / S3 setup для DealVault-аттачей ✅
 
 **Контекст:** сейчас `storage.py:16-26` работает в graceful-degradation режиме — если `R2_ENDPOINT` пуст, `upload_file` возвращает key без реальной записи, `get_presigned_url` возвращает `None`. Фотографии в DealVault и inquiry-чате не загружаются в UI.
 
-- [ ] Завести Cloudflare R2 (или AWS S3) bucket `vimana-dealvault-prod`.
-- [ ] Bucket policy: **private** (default), доступ только через presigned URL. Никаких public reads.
-- [ ] CORS на bucket: только `https://vimana.dealvault.club` для `GET`/`PUT`.
-- [ ] Создать API-ключ с минимальными правами (`s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` только на этом bucket).
-- [ ] Заполнить `.env` prod: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT` (например `https://<account_id>.r2.cloudflarestorage.com`).
-- [ ] Проверить: `curl -X POST https://vimana.dealvault.club/api/deals/{id}/dealvault/messages/{mid}/attachments -F "file=@photo.jpg" -F "kind=handoff_photo"` — возвращает `201` с валидным `url`.
-- [ ] Фронтенд: рендер `<img src={url}>` — картинка отображается.
-- [ ] Мониторинг расходов: R2 — 10 ГБ бесплатно/мес, egress = $0.
+- [x] Заведён Cloudflare R2 bucket `vimana` (endpoint `https://1742351dcc4d64320934d6659abdef6f.r2.cloudflarestorage.com/vimana`).
+- [x] Bucket policy: **private** (default), доступ только через presigned URL.
+- [x] CORS: разрешён домен приложения.
+- [x] API-ключ с правами PutObject/GetObject/DeleteObject.
+- [x] `.env` prod: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`.
+- [x] Проверено: `POST /api/deals/{id}/dealvault/messages/{mid}/attachments` → 201 с валидным `url`; `GET /health/storage` → 200 reachable.
+- [x] Фронтенд рендерит `<img>` из presigned URL; лайтбокс открывает полноразмер.
+- [x] Мониторинг расходов: R2 — 10 ГБ бесплатно/мес, egress = $0.
 
-**Acceptance:** пользователь может загрузить фото в DealVault через UI; фото открывается по presigned URL; в логах нет ошибок storage; расходы в пределах free tier.
+**Acceptance:** пользователь может загрузить фото в DealVault через UI; фото открывается по presigned URL; в логах нет ошибок storage; расходы в пределах free tier. ✅
 
 ### T1.21 — At-rest шифрование сообщений DealVault + InquiryMessage (Фаза 1, переходное)
 

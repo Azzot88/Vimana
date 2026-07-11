@@ -19,7 +19,8 @@ redis==5.2.0
 # Storage (R2/S3)
 boto3==1.35.77
 
-# Cryptography (Phase 2 — Nostr keypair)
+# Cryptography (T1.21 at-rest AES-GCM + Phase 2 Nostr keypair)
+cryptography==44.0.0
 coincurve==20.0.0
 
 # Sync DB driver (Celery tasks)
