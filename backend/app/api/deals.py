@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
-from app.models.marketplace import Category, Order, OrderStatus, Trip, TripStatus
+from app.models.marketplace import Category, Order, OrderStatus, Trip, TripInquiry, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
 
@@ -89,6 +89,18 @@ async def match_deal(
         payload={"trip_id": str(trip.id), "order_id": str(order.id)},
     )
     db.add(event)
+
+    # T1.22: link existing inquiry thread (if any) to the new deal so pre-deal
+    # chat history is scoped to the deal afterwards.
+    inquiry_result = await db.execute(
+        select(TripInquiry).where(
+            TripInquiry.trip_id == trip.id,
+            TripInquiry.sender_id == current_user.id,
+        )
+    )
+    inquiry = inquiry_result.scalar_one_or_none()
+    if inquiry and inquiry.deal_id is None:
+        inquiry.deal_id = deal.id
 
     await db.commit()
     await db.refresh(deal)

@@ -18,6 +18,7 @@ from app.api.auth import router as auth_router
 from app.api.categories import router as categories_router
 from app.api.dealvault import router as dealvault_router
 from app.api.deals import router as deals_router
+from app.api.inquiries import router as inquiries_router
 from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
@@ -137,6 +138,7 @@ app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
 app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
+app.include_router(inquiries_router, prefix="/api", tags=["inquiries"])
 
 
 @app.get("/health")

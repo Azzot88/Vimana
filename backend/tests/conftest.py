@@ -145,6 +145,52 @@ async def _ensure_arbiter_columns(engine) -> None:
                 )
 
 
+async def _ensure_inquiry_tables(engine) -> None:
+    """T1.22 schema fix: trip_inquiries + inquiry_messages. Idempotent."""
+    async with engine.begin() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name = 'trip_inquiries'"
+                )
+            )
+        ).fetchone()
+        if not row:
+            await conn.execute(
+                text(
+                    "CREATE TABLE trip_inquiries ("
+                    "id UUID PRIMARY KEY, "
+                    "trip_id UUID NOT NULL REFERENCES trips(id), "
+                    "sender_id UUID NOT NULL REFERENCES users(id), "
+                    "carrier_id UUID NOT NULL REFERENCES users(id), "
+                    "deal_id UUID REFERENCES deals(id), "
+                    "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
+                    "CONSTRAINT uq_trip_inquiries_trip_sender UNIQUE (trip_id, sender_id))"
+                )
+            )
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name = 'inquiry_messages'"
+                )
+            )
+        ).fetchone()
+        if not row:
+            await conn.execute(
+                text(
+                    "CREATE TABLE inquiry_messages ("
+                    "id UUID PRIMARY KEY, "
+                    "inquiry_id UUID NOT NULL REFERENCES trip_inquiries(id), "
+                    "sender_id UUID NOT NULL REFERENCES users(id), "
+                    "text_ciphertext BYTEA, "
+                    "text_nonce BYTEA, "
+                    "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"
+                )
+            )
+
+
 async def _ensure_encrypted_messages(engine) -> None:
     """T1.21 schema fix: drop legacy `text` column, ensure BYTEA pair exists."""
     async with engine.begin() as conn:
@@ -197,6 +243,7 @@ async def test_engine():
     await _ensure_arbiter_columns(engine)
     await _ensure_dealevent_types(engine)
     await _ensure_encrypted_messages(engine)
+    await _ensure_inquiry_tables(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

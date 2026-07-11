@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, JSON, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -73,3 +73,55 @@ class Order(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class TripInquiry(Base):
+    """T1.22: pre-deal chat thread between a sender and the trip's carrier.
+    Unique per (trip_id, sender_id) — reuse the same thread if sender re-opens."""
+    __tablename__ = "trip_inquiries"
+    __table_args__ = (
+        UniqueConstraint("trip_id", "sender_id", name="uq_trip_inquiries_trip_sender"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id"))
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    carrier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    deal_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("deals.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class InquiryMessage(Base):
+    """T1.22: encrypted messages inside a TripInquiry thread. Same at-rest
+    scheme as DealVaultMessage (T1.21) — `text` is a property that wraps the
+    ciphertext/nonce columns."""
+    __tablename__ = "inquiry_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    inquiry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trip_inquiries.id"))
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    text_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    text_nonce: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    @property
+    def text(self) -> str | None:
+        if self.text_ciphertext is None or self.text_nonce is None:
+            return None
+        from app.core.crypto import decrypt
+        return decrypt(bytes(self.text_nonce), bytes(self.text_ciphertext))
+
+    @text.setter
+    def text(self, value: str | None) -> None:
+        if value is None:
+            self.text_ciphertext = None
+            self.text_nonce = None
+            return
+        from app.core.crypto import encrypt
+        nonce, ct = encrypt(value)
+        self.text_nonce = nonce
+        self.text_ciphertext = ct

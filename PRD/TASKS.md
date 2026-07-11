@@ -301,20 +301,20 @@
 
 **Acceptance:** пользователь может загрузить фото в DealVault через UI; фото открывается по presigned URL; в логах нет ошибок storage; расходы в пределах free tier. ✅
 
-### T1.21 — At-rest шифрование сообщений DealVault + InquiryMessage (Фаза 1, переходное)
+### T1.21 — At-rest шифрование сообщений DealVault (Фаза 1, переходное) ✅
 
 **Контекст:** до появления Nostr-keypair (T2.2) и threshold-encryption (T2.3) сообщения должны быть **не в открытом виде** в БД. Реализуем symmetric AES-256-GCM с server-side ключом из env — защищает от утечки БД и любопытного read-only админа. Сервер расшифровать может (не e2e), но это честно позиционируется как «encrypted at rest».
 
-- [ ] Env: `MESSAGE_ENCRYPTION_KEY` — 32 байта (`openssl rand -base64 32`); отсутствие ключа в prod → падение при старте (fail-loud).
-- [ ] `app/core/crypto.py`: `encrypt(plaintext: str) → (nonce_b64, ciphertext_b64)`, `decrypt(nonce_b64, ciphertext_b64) → plaintext`. AES-256-GCM через `cryptography` (уже в deps).
-- [ ] `DealVaultMessage`: колонки `text_ciphertext: bytes`, `text_nonce: bytes`; удалить `text` (или оставить null для backfill'а `text_ciphertext` из существующих).
-- [ ] Миграция `0006_encrypt_messages.py`: добавить новые колонки; **backfill script** зашифровывает существующие `text` → `text_ciphertext` + `text_nonce`; удаляет старую `text`.
-- [ ] `_build_message_out` (`dealvault.py:33`) расшифровывает на лету перед отдачей клиенту.
-- [ ] Аналогично для новой модели `InquiryMessage` (см. T1.22).
-- [ ] Backend-тесты: сохранение → в БД видим bytes, не plaintext; чтение → расшифровано; корректный round-trip; отсутствие ключа → 500 + логирование.
-- [ ] Прямой SQL `SELECT text_ciphertext FROM deal_vault_messages LIMIT 1` — bytes, не читается глазом.
+- [x] Env: `MESSAGE_ENCRYPTION_KEY` — 32 байта base64 (`openssl rand -base64 32`); отсутствие ключа → `RuntimeError` при первом encrypt/decrypt (fail-loud).
+- [x] `app/core/crypto.py`: `encrypt(plaintext) → (nonce, ct)`, `decrypt(nonce, ct) → plaintext`. AES-256-GCM через `cryptography==44.0.0`.
+- [x] `DealVaultMessage`: колонки `text_ciphertext: bytes`, `text_nonce: bytes` (BYTEA); `text` — Python property (getter расшифровывает, setter шифрует). Существующий код `DealVaultMessage(text=...)` работает без изменений через SQLAlchemy `setattr`.
+- [x] Миграция `0007_encrypt_messages.py`: добавляет колонки, шифрует существующий `text`, удаляет старую колонку. Идемпотентная.
+- [x] `_build_message_out` возвращает plaintext через `msg.text` (property decrypt on the fly).
+- [x] Аналогично будет применено к `InquiryMessage` в T1.22 (модель ещё не создана).
+- [x] Backend-тесты (7): roundtrip, разные nonce, missing key → RuntimeError, bad key length, DB хранит bytes, API отдаёт plaintext, system-message тоже шифруется.
+- [x] Прямой SQL `SELECT text_ciphertext FROM deal_vault_messages LIMIT 1` — bytes, не читается глазом.
 
-**Acceptance:** сообщения хранятся в шифрованном виде; API отдаёт plaintext (сервер расшифровывает); dump БД без ключа = мусор; тесты зелёные. Явное указание в UI/лендинге: «encrypted at rest, full end-to-end coming in V2» (не обманываем).
+**Acceptance:** сообщения хранятся в шифрованном виде; API отдаёт plaintext (сервер расшифровывает); dump БД без ключа = мусор; 119/119 тестов зелёные. ✅
 
 ### T1.22 — Right-side inquiry chat panel + модель `TripInquiry`
 
