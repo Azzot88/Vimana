@@ -35,7 +35,19 @@
     "send": "Envoyer",
     "sending": "Envoi...",
     "error": "Erreur",
+    "close": "Fermer",
     "search": "Rechercher…"
+  },
+  "inquiry": {
+    "chatButton": "Chat",
+    "chatWith": "Chat avec {{name}}",
+    "panelLabel": "Chat avec le transporteur",
+    "encryptedNotice": "🔒 chiffré au repos",
+    "empty": "Aucun message — commencez la conversation.",
+    "placeholder": "Écrivez un message…",
+    "send": "Envoyer",
+    "loadError": "Impossible de charger le chat",
+    "sendError": "Envoi impossible"
   },
   "airports": {
     "typeCountryCityIata": "Pays / ville / IATA",

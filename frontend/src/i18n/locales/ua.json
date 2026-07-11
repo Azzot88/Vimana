@@ -35,7 +35,19 @@
     "send": "Надіслати",
     "sending": "Надсилання...",
     "error": "Помилка",
+    "close": "Закрити",
     "search": "Пошук…"
+  },
+  "inquiry": {
+    "chatButton": "Чат",
+    "chatWith": "Чат із {{name}}",
+    "panelLabel": "Чат із перевізником",
+    "encryptedNotice": "🔒 зашифровано на сервері",
+    "empty": "Повідомлень поки немає — розпочніть розмову.",
+    "placeholder": "Введіть повідомлення…",
+    "send": "Надіслати",
+    "loadError": "Не вдалося завантажити чат",
+    "sendError": "Не вдалося надіслати"
   },
   "airports": {
     "typeCountryCityIata": "Країна / місто / IATA",

@@ -5,6 +5,7 @@ import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
+import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import { usePersistedState } from '../hooks/usePersistedState'
 
@@ -17,6 +18,7 @@ export default function TripsPage() {
   const [destination, setDestination] = usePersistedState<string>('trips:filter:destination', '')
   const [date, setDate] = usePersistedState<string>('trips:filter:date', '')
   const [orderTripId, setOrderTripId] = useState<string | null>(null)
+  const [chatTrip, setChatTrip] = useState<{ id: string; carrierName: string } | null>(null)
   const [cargoDesc, setCargoDesc] = useState('')
   const [cargoCategory, setCargoCategory] = useState('other')
   const [declaredValue, setDeclaredValue] = useState('')
@@ -146,12 +148,21 @@ export default function TripsPage() {
                   )}
                 </div>
                 {!user?.is_carrier && trip.carrier_id !== user?.id && (
-                  <button
-                    onClick={() => { setOrderTripId(trip.id); setOrderSuccess(false) }}
-                    className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity shrink-0 w-full sm:w-auto sm:ml-4"
-                  >
-                    {t('trips.sendPackage')}
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto sm:ml-4">
+                    <button
+                      onClick={() => setChatTrip({ id: trip.id, carrierName: trip.carrier_name })}
+                      className="border border-navy/20 text-navy font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-ivory transition-colors"
+                      aria-label={t('inquiry.chatWith', { name: trip.carrier_name }) as string}
+                    >
+                      {t('inquiry.chatButton')}
+                    </button>
+                    <button
+                      onClick={() => { setOrderTripId(trip.id); setOrderSuccess(false) }}
+                      className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity"
+                    >
+                      {t('trips.sendPackage')}
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -218,6 +229,14 @@ export default function TripsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {chatTrip && (
+        <InquiryPanel
+          tripId={chatTrip.id}
+          carrierName={chatTrip.carrierName}
+          onClose={() => setChatTrip(null)}
+        />
       )}
     </div>
   )

@@ -35,7 +35,19 @@
     "send": "Отправить",
     "sending": "Отправка...",
     "error": "Ошибка",
+    "close": "Закрыть",
     "search": "Поиск…"
+  },
+  "inquiry": {
+    "chatButton": "Чат",
+    "chatWith": "Чат с {{name}}",
+    "panelLabel": "Чат с перевозчиком",
+    "encryptedNotice": "🔒 зашифровано на сервере",
+    "empty": "Сообщений пока нет — начните разговор.",
+    "placeholder": "Введите сообщение…",
+    "send": "Отправить",
+    "loadError": "Не удалось загрузить чат",
+    "sendError": "Не удалось отправить"
   },
   "airports": {
     "typeCountryCityIata": "Страна / город / IATA",

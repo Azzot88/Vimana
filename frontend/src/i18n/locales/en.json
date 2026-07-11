@@ -35,7 +35,19 @@
     "send": "Send",
     "sending": "Sending...",
     "error": "Error",
+    "close": "Close",
     "search": "Search…"
+  },
+  "inquiry": {
+    "chatButton": "Chat",
+    "chatWith": "Chat with {{name}}",
+    "panelLabel": "Chat with carrier",
+    "encryptedNotice": "🔒 encrypted at rest",
+    "empty": "No messages yet — start the conversation.",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "loadError": "Failed to load chat",
+    "sendError": "Failed to send"
   },
   "airports": {
     "typeCountryCityIata": "Country / city / IATA",

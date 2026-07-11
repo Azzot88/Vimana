@@ -35,7 +35,19 @@
     "send": "Wyślij",
     "sending": "Wysyłanie...",
     "error": "Błąd",
+    "close": "Zamknij",
     "search": "Szukaj…"
+  },
+  "inquiry": {
+    "chatButton": "Czat",
+    "chatWith": "Czat z {{name}}",
+    "panelLabel": "Czat z kurierem",
+    "encryptedNotice": "🔒 zaszyfrowane na serwerze",
+    "empty": "Brak wiadomości — rozpocznij rozmowę.",
+    "placeholder": "Wpisz wiadomość…",
+    "send": "Wyślij",
+    "loadError": "Nie udało się wczytać czatu",
+    "sendError": "Nie udało się wysłać"
   },
   "airports": {
     "typeCountryCityIata": "Kraj / miasto / IATA",
