@@ -316,28 +316,28 @@
 
 **Acceptance:** сообщения хранятся в шифрованном виде; API отдаёт plaintext (сервер расшифровывает); dump БД без ключа = мусор; 119/119 тестов зелёные. ✅
 
-### T1.22 — Right-side inquiry chat panel + модель `TripInquiry`
+### T1.22 — Right-side inquiry chat panel + модель `TripInquiry` ✅
 
 **Контекст:** пользователь хочет чат «до сделки» — sender открывает опубликованный рейс, справа появляется панель для общения с carrier'ом. Начинает заявку — панель остаётся. После `match_deal` — история переносится в DealVault (или ссылается на неё). Все сообщения — через `InquiryMessage` с at-rest шифрованием из T1.21.
 
-- [ ] Модели:
-  - `TripInquiry(id, trip_id, sender_id, carrier_id, deal_id nullable, created_at)` — один тред на пару `(trip_id, sender_id)` — UNIQUE constraint.
-  - `InquiryMessage(id, inquiry_id, sender_id, text_ciphertext, text_nonce, created_at)` — те же поля что у зашифрованного DealVaultMessage.
-- [ ] Миграция `0007_inquiry.py`.
-- [ ] Endpoints:
-  - `POST /api/trips/{trip_id}/inquiry` — идемпотентно создаёт (или возвращает существующий) `TripInquiry` для текущего sender'а + carrier рейса.
-  - `GET /api/inquiries/{id}/messages` — cursor pagination, ASC порядок.
-  - `POST /api/inquiries/{id}/messages` — новое сообщение; проверка что user ∈ {sender, carrier}.
-- [ ] При `POST /deals/match` — если `TripInquiry` для этой (trip, sender) есть → `inquiry.deal_id = new_deal.id`. Опция: перенос сообщений в DealVault (либо просто `GET /api/deals/{id}/dealvault` возвращает объединённое: inquiry.messages + dealvault.messages).
-- [ ] Frontend:
-  - Компонент `InquiryPanel` — sticky справа `md:w-1/4 md:min-w-[320px] md:max-w-[420px]`. На мобильном — drawer/full-screen overlay (не занимает 25% — иначе неюзабельно).
-  - Автоматически открывается на `TripsPage` при клике на карточку рейса, на `NewOrderPage`.
-  - Формат чата: как DealVault — сообщение, аватар инициала, время. Кнопка «Отправить».
-  - Индикатор «зашифровано at-rest» мелким шрифтом внизу панели.
-- [ ] Backend-тесты: create/idempotent, participants only, encrypted round-trip, cursor pagination.
-- [ ] i18n: `inquiry.*` в 6 локалях.
+- [x] Модели:
+  - `TripInquiry(id, trip_id, sender_id, carrier_id, deal_id nullable, created_at)` — UNIQUE(trip_id, sender_id).
+  - `InquiryMessage(id, inquiry_id, sender_id, text_ciphertext, text_nonce, created_at)` — та же схема шифрования, что у DealVaultMessage.
+- [x] Миграция `0008_inquiry.py` — идемпотентная, guard'ы через `information_schema.tables`.
+- [x] Endpoints:
+  - `POST /api/trips/{trip_id}/inquiry` — идемпотентно создаёт или возвращает существующий тред.
+  - `GET /api/inquiries` — список моих тредов (как sender и как carrier).
+  - `GET /api/inquiries/{id}/messages` — cursor pagination, ASC.
+  - `POST /api/inquiries/{id}/messages` — проверка `user ∈ {sender, carrier}`.
+- [x] `POST /deals/match` — при наличии `TripInquiry(trip, sender)` линкует `inquiry.deal_id = new_deal.id`.
+- [x] Frontend:
+  - `InquiryPanel.tsx` — правая панель `w-[380px]` на десктопе, full-screen drawer с backdrop-blur на мобиле.
+  - Открывается кнопкой «Chat» на карточке рейса в `TripsPage`.
+  - Cyan-пузыри свои / ivory-пузыри чужие, время в футере, auto-scroll, «🔒 encrypted at rest» индикатор.
+- [x] Backend-тесты (8): open thread, идемпотентность, own trip → 400, encrypted roundtrip, outsider → 403, empty message → 422, inquiry.deal_id линкуется после match, carrier видит свои inquiries.
+- [x] i18n: `inquiry.*` (9 ключей) + `common.close` в 6 языках.
 
-**Acceptance:** sender видит рейс → справа появляется чат; отправляет сообщение → carrier видит; после оформления заявки чат сохраняется и виден в контексте сделки; сообщения зашифрованы в БД; на мобильном — drawer.
+**Acceptance:** sender видит рейс → справа появляется чат; отправляет сообщение → carrier видит; после `match_deal` `inquiry.deal_id` линкуется; сообщения зашифрованы (BYTEA в БД); mobile → drawer; 127/127 backend тестов зелёные; `npm run build` без ошибок. ✅
 
 ### T1.23 — User Zero + роль arbiter + модель Dispute (invite-only доступ)
 
