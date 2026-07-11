@@ -21,8 +21,8 @@ async def create_trip(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not current_user.is_carrier:
-        raise HTTPException(status_code=403, detail="Carrier account required")
+    if not current_user.can_carry:
+        raise HTTPException(status_code=403, detail="Carrier capability required")
 
     trip = Trip(
         carrier_id=current_user.id,

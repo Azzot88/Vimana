@@ -9,13 +9,23 @@ class UserCreate(BaseModel):
     phone: str | None = None
     password: str
     display_name: str
-    is_carrier: bool = False
+    # T1.24: capability + initial mode. Everyone can both by default.
+    can_carry: bool = True
+    can_send: bool = True
+    active_mode: str = "sender"
 
     @field_validator("password")
     @classmethod
     def password_min_length(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
+        return v
+
+    @field_validator("active_mode")
+    @classmethod
+    def active_mode_valid(cls, v: str) -> str:
+        if v not in ("sender", "carrier"):
+            raise ValueError("active_mode must be 'sender' or 'carrier'")
         return v
 
 
@@ -31,6 +41,17 @@ class UserUpdate(BaseModel):
     notify_telegram: bool | None = None
     notify_whatsapp: bool | None = None
     whatsapp_number: str | None = None
+    # T1.24 mode switching + capability updates
+    active_mode: str | None = None
+    can_carry: bool | None = None
+    can_send: bool | None = None
+
+    @field_validator("active_mode")
+    @classmethod
+    def active_mode_valid(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("sender", "carrier"):
+            raise ValueError("active_mode must be 'sender' or 'carrier'")
+        return v
 
 
 class UserOut(BaseModel):
@@ -38,7 +59,9 @@ class UserOut(BaseModel):
     email: str | None
     phone: str | None
     display_name: str
-    is_carrier: bool
+    can_carry: bool = True
+    can_send: bool = True
+    active_mode: str = "sender"
     is_superuser: bool = False
     is_arbiter: bool = False
     nostr_pubkey: str | None

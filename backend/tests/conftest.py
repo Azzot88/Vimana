@@ -145,6 +145,44 @@ async def _ensure_arbiter_columns(engine) -> None:
                 )
 
 
+async def _ensure_dual_role(engine) -> None:
+    """T1.24 schema fix: can_carry / can_send / active_mode; drop legacy is_carrier."""
+    async with engine.begin() as conn:
+        for col, ddl in (
+            ("can_carry", "ALTER TABLE users ADD COLUMN can_carry BOOLEAN NOT NULL DEFAULT true"),
+            ("can_send", "ALTER TABLE users ADD COLUMN can_send BOOLEAN NOT NULL DEFAULT true"),
+            ("active_mode", "ALTER TABLE users ADD COLUMN active_mode VARCHAR(10) NOT NULL DEFAULT 'sender'"),
+        ):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='users' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(text(ddl))
+
+        legacy = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='users' AND column_name='is_carrier'"
+                )
+            )
+        ).fetchone()
+        if legacy:
+            await conn.execute(
+                text(
+                    "UPDATE users SET can_carry = is_carrier, "
+                    "active_mode = CASE WHEN is_carrier THEN 'carrier' ELSE 'sender' END "
+                    "WHERE active_mode = 'sender'"
+                )
+            )
+            await conn.execute(text("ALTER TABLE users DROP COLUMN is_carrier"))
+
+
 async def _ensure_inquiry_tables(engine) -> None:
     """T1.22 schema fix: trip_inquiries + inquiry_messages. Idempotent."""
     async with engine.begin() as conn:
@@ -244,6 +282,7 @@ async def test_engine():
     await _ensure_dealevent_types(engine)
     await _ensure_encrypted_messages(engine)
     await _ensure_inquiry_tables(engine)
+    await _ensure_dual_role(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
@@ -276,7 +315,15 @@ def _mute_celery(monkeypatch):
     monkeypatch.setattr(deals_module, "notify_deal_status", _NoopTask())
 
 
-async def _get_or_create_user(db: AsyncSession, *, email: str, display_name: str, is_carrier: bool) -> User:
+async def _get_or_create_user(
+    db: AsyncSession,
+    *,
+    email: str,
+    display_name: str,
+    can_carry: bool = True,
+    can_send: bool = True,
+    active_mode: str = "sender",
+) -> User:
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user:
@@ -285,7 +332,9 @@ async def _get_or_create_user(db: AsyncSession, *, email: str, display_name: str
         email=email,
         password_hash=hash_password(SEED_PASSWORD),
         display_name=display_name,
-        is_carrier=is_carrier,
+        can_carry=can_carry,
+        can_send=can_send,
+        active_mode=active_mode,
     )
     db.add(user)
     await db.commit()
@@ -297,7 +346,11 @@ async def _get_or_create_user(db: AsyncSession, *, email: str, display_name: str
 async def seed_carrier(session_maker) -> User:
     async with session_maker() as db:
         return await _get_or_create_user(
-            db, email=SEED_CARRIER_EMAIL, display_name="Seed Carrier", is_carrier=True
+            db,
+            email=SEED_CARRIER_EMAIL,
+            display_name="Seed Carrier",
+            can_carry=True,
+            active_mode="carrier",
         )
 
 
@@ -305,7 +358,11 @@ async def seed_carrier(session_maker) -> User:
 async def seed_sender(session_maker) -> User:
     async with session_maker() as db:
         return await _get_or_create_user(
-            db, email=SEED_SENDER_EMAIL, display_name="Seed Sender", is_carrier=False
+            db,
+            email=SEED_SENDER_EMAIL,
+            display_name="Seed Sender",
+            can_carry=False,
+            active_mode="sender",
         )
 
 

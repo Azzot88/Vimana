@@ -339,39 +339,21 @@
 
 **Acceptance:** sender видит рейс → справа появляется чат; отправляет сообщение → carrier видит; после `match_deal` `inquiry.deal_id` линкуется; сообщения зашифрованы (BYTEA в БД); mobile → drawer; 127/127 backend тестов зелёные; `npm run build` без ошибок. ✅
 
-### T1.23 — User Zero + роль arbiter + модель Dispute (invite-only доступ)
+### T1.23 — User Zero + роль arbiter + модель Dispute (invite-only доступ) ✅
 
 **Контекст:** нужен супер-юзер с правом видеть всех пользователей и назначать арбитров, плюс отдельная роль арбитра. Арбитр читает переписку **только по приглашению** (через `Dispute`), когда один из участников не выходит на связь при незавершённой перевозке. Открытие переписки арбитром **явно** пишется в чат (`DealEvent.arbiter_opened` + автосообщение в DealVault) — обе стороны видят. Полноценный threshold-decryption придёт в T2.3; пока — заглушка доступа при валидном Dispute.
 
-- [ ] **User Zero:**
-  - `User.is_superuser: bool` (миграция, default false).
-  - Идемпотентный fixture при старте приложения (`app/core/superuser.py`): если пользователь `nyxter@dealvault.club` существует и `is_superuser=false` → выставить `is_superuser=true`. Единственный владелец.
-  - **User Zero автоматически имеет права арбитра** без явного `is_arbiter=true`.
-- [ ] **Роль arbiter:**
-  - `User.is_arbiter: bool` (та же миграция, default false).
-  - Один пользователь может быть одновременно sender / carrier / arbiter — роли не взаимоисключают.
-  - Арбитр **не может** судить собственную сделку — check `deal.sender_id != arbiter.id && deal.carrier_id != arbiter.id`.
-- [ ] **Модель `Dispute`:** `id, deal_id, opened_by, arbiter_id nullable, reason, status ∈ {open, claimed, resolved}, created_at, resolved_at, verdict nullable`. Уникальность `(deal_id)` — один активный dispute на сделку.
-- [ ] **Endpoints:**
-  - `POST /api/deals/{id}/dispute` — участник (sender/carrier) открывает спор с `{reason}`; статус deal переходит в `disputed`.
-  - `GET /api/admin/disputes` — только для `is_arbiter or is_superuser`; список open+claimed disputes с cursor pagination.
-  - `POST /api/disputes/{id}/claim` — арбитр берёт спор себе (`arbiter_id = me.id`, `status = claimed`).
-  - `GET /api/admin/deals/{deal_id}/vault` — доступен арбитру **только если** у него есть claimed Dispute на эту сделку и `arbiter_id == me.id`. При каждом чтении:
-    1. Пишется `DealEvent(event_type=arbiter_opened, actor_id=arbiter, payload={dispute_id, snapshot_at})`.
-    2. Пишется system-message в DealVault: «⚖️ Арбитр открыл переписку по спору #{dispute_id}» (`is_system=true`).
-  - `POST /api/disputes/{id}/resolve` — арбитр выносит вердикт `{verdict, closes_deal: bool}`; `deal.status = closed` или возврат в предыдущий статус.
-  - `GET /api/admin/users` — только `is_superuser`; список всех с cursor pagination.
-  - `POST /api/admin/users/{id}/promote-arbiter` — только `is_superuser`; toggle `is_arbiter`.
-- [ ] **Deps:** `get_arbiter_user` (или `is_superuser`), `get_superuser`.
-- [ ] **Скрипт `scripts/make_arbiter.py <email>`** — прямой SQL для локального использования (backup путь если User Zero потеряет доступ).
-- [ ] **Frontend:**
-  - На `DealPage` при статусе `in_transit`/`accepted` → кнопка «Открыть спор» → модалка с полем `reason`.
-  - На чате DealVault при `arbiter_opened` событии — красный баннер + system-message с временем и именем арбитра.
-  - Новый раздел `/admin/disputes` (виден только `is_arbiter` или `is_superuser` — auth store флаги).
-  - Раздел `/admin/users` (только `is_superuser`) — список + toggle «Сделать арбитром».
-- [ ] Backend-тесты: dispute create, claim (не свой), arbiter_opened event пишется, чужой arbiter не читает vault, User Zero видит всё, promote-arbiter только superuser'ом.
+- [x] **User Zero:** `User.is_superuser: bool`, миграция 0006 промоутит `nyxter@dealvault.club`; startup-hook `ensure_user_zero()` идемпотентный. Superuser автоматически имеет все права арбитра.
+- [x] **Роль arbiter:** `User.is_arbiter: bool`; один аккаунт может быть sender+carrier+arbiter одновременно; арбитр не может судить свою сделку (403).
+- [x] **Модель `Dispute`:** `id, deal_id, opened_by, arbiter_id nullable, reason, status ∈ {open, claimed, resolved}, verdict nullable, created_at, resolved_at`. UNIQUE(deal_id).
+- [x] **Endpoints:** `POST /api/deals/{id}/dispute`, `GET /api/admin/disputes`, `POST /api/disputes/{id}/claim`, `GET /api/admin/deals/{id}/vault` (с audit trail: `DealEvent(arbiter_opened)` + system-message), `POST /api/disputes/{id}/resolve`, `GET /api/admin/users`, `POST /api/admin/users/{id}/promote-arbiter`.
+- [x] **Deps:** `get_arbiter`, `get_superuser` в `app/api/deps.py`.
+- [x] **Скрипт `scripts/make_arbiter.py <email> [--off]`** — backup путь для superuser'а.
+- [x] **Frontend:** DealPage — кнопка «Open dispute» + модалка с textarea; DealVaultPage — красный баннер при arbiter_opened system-message; `/admin/disputes` (арбитр/superuser) с claim/resolve/view; `/admin/users` (superuser) с toggle «Make/Revoke arbiter»; `/admin/deals/{id}/vault` — вид арбитра с audit-notice; Navbar показывает Disputes/Users только флажным.
+- [x] Backend-тесты (9): open by participant/outsider/duplicate, arbiter cannot claim own deal, vault access without claim → 403, with claim → 200 + audit, admin users requires superuser, promote-arbiter only by superuser.
+- [x] i18n `dispute.*`, `admin.*`, `nav.disputes/users` в 6 языках.
 
-**Acceptance:** User Zero (`nyxter@dealvault.club`) видит всех пользователей и назначает арбитров. Арбитр открывает переписку только через claimed Dispute; при открытии — запись в `DealEvent` + system-message в чате. Один аккаунт может быть sender/carrier/arbiter одновременно. Никто, включая User Zero, не может читать чужой чат без открытого dispute.
+**Acceptance:** User Zero (`nyxter@dealvault.club`) видит всех пользователей и назначает арбитров. Арбитр открывает переписку только через claimed Dispute; при открытии — запись в `DealEvent` + system-message в чате. Один аккаунт может быть sender/carrier/arbiter одновременно. 127/127 backend + чистый `npm run build`. ✅
 
 ### T1.24 — Dual role + explicit mode switcher (Send / Deliver)
 

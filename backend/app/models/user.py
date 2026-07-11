@@ -15,7 +15,12 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(50), unique=True, index=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     display_name: Mapped[str] = mapped_column(String(100))
-    is_carrier: Mapped[bool] = mapped_column(Boolean, default=False)
+    # T1.24 dual role: capability flags (can this user do X?) + active UI mode.
+    # Everyone can both carry and send by default — mode is a UI preference,
+    # authorization is by capability. `active_mode` ∈ {'sender', 'carrier'}.
+    can_carry: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    can_send: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    active_mode: Mapped[str] = mapped_column(String(10), default="sender", server_default="sender")
     nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
     business_activity_level: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

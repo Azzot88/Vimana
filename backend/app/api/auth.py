@@ -36,7 +36,9 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
         phone=phone,
         password_hash=hash_password(body.password),
         display_name=body.display_name,
-        is_carrier=body.is_carrier,
+        can_carry=body.can_carry,
+        can_send=body.can_send,
+        active_mode=body.active_mode,
     )
     db.add(user)
     await db.commit()

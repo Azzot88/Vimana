@@ -11,14 +11,16 @@ async def test_register_new_user(client):
             "email": email,
             "password": "test-password-1",
             "display_name": "Reg User",
-            "is_carrier": False,
+            "can_carry": False,
         },
     )
     assert resp.status_code == 201
     body = resp.json()
     assert body["email"] == email
     assert body["display_name"] == "Reg User"
-    assert body["is_carrier"] is False
+    assert body["can_carry"] is False
+    assert body["can_send"] is True
+    assert body["active_mode"] == "sender"
 
 
 async def test_register_duplicate_email(client, seed_carrier):
