@@ -33,14 +33,14 @@ export default function DealPage() {
     setError('')
     try {
       if (action === 'accept') {
-        const { data } = await acceptDeal(dealId)
-        setDeal(data)
+        await acceptDeal(dealId)
+        await load()
       } else if (action === 'handoff') {
         await addEvent(dealId, 'handoff', 'Груз передан перевозчику')
         await load()
       } else if (action === 'confirm') {
-        const { data } = await confirmDeal(dealId)
-        setDeal(data)
+        await confirmDeal(dealId)
+        await load()
       }
     } catch {
       setError('Действие не выполнено')

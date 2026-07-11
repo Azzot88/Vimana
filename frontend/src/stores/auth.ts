@@ -1,14 +1,5 @@
 import { create } from 'zustand'
-
-interface User {
-  id: string
-  display_name: string
-  email: string | null
-  phone: string | null
-  is_carrier: boolean
-  nostr_pubkey: string | null
-  business_activity_level: number | null
-}
+import type { User } from '../api/auth'
 
 interface AuthStore {
   user: User | null

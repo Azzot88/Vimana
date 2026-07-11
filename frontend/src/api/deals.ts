@@ -20,6 +20,11 @@ export interface Deal {
   recipient_id: string | null
   status: DealStatus
   created_at: string
+  // Optional enrichment fields — populated when the backend joins trip+order
+  // (e.g. via a future list-detail endpoint). Absent on the raw DealOut list.
+  origin?: string
+  destination?: string
+  cargo_description?: string
 }
 
 export interface DealDetail extends Deal {
