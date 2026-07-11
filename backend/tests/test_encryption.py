@@ -87,7 +87,9 @@ async def test_message_stored_encrypted_in_db(
 async def test_message_roundtrip_via_api(
     client, carrier_headers, sender_headers, seed_deal
 ):
-    """POST + GET returns the same plaintext to authorised participants."""
+    """POST + GET returns the same plaintext. Walks pagination — seed_deal
+    accumulates messages across the suite, so the new message can be past
+    the first page (ASC-ordered)."""
     plaintext = "Привет, курьер! Готов к передаче."
     post = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages",
@@ -97,11 +99,19 @@ async def test_message_roundtrip_via_api(
     assert post.status_code == 201
     assert post.json()["text"] == plaintext
 
-    got = await client.get(
-        f"/api/deals/{seed_deal.id}/dealvault", headers=carrier_headers
-    )
-    assert got.status_code == 200
-    texts = [m["text"] for m in got.json()["items"] if m["text"]]
+    texts: list[str] = []
+    cursor: str | None = None
+    for _ in range(50):  # generous cap for cursor walking
+        url = f"/api/deals/{seed_deal.id}/dealvault?limit=100"
+        if cursor:
+            url += f"&after={cursor}"
+        got = await client.get(url, headers=carrier_headers)
+        assert got.status_code == 200
+        body = got.json()
+        texts.extend(m["text"] for m in body["items"] if m["text"])
+        cursor = body.get("next_cursor")
+        if not cursor:
+            break
     assert plaintext in texts
 
 
