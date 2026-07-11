@@ -4,7 +4,52 @@
     "trips": "Vols",
     "deals": "Transactions",
     "profile": "Profil",
+    "disputes": "Litiges",
+    "users": "Utilisateurs",
     "logout": "Déconnexion"
+  },
+  "dispute": {
+    "openButton": "Ouvrir un litige",
+    "modalTitle": "Ouvrir un litige",
+    "modalHint": "Décrivez ce qui s'est mal passé. L'autre partie verra la raison et un arbitre pourra consulter le chat.",
+    "reasonPlaceholder": "Raison…",
+    "submit": "Ouvrir un litige",
+    "openError": "Impossible d'ouvrir le litige",
+    "createdNotice": "Litige ouvert. En attente d'un arbitre."
+  },
+  "admin": {
+    "disputesTitle": "Litiges",
+    "usersTitle": "Utilisateurs",
+    "disputesEmpty": "Aucun litige à examiner.",
+    "loadError": "Échec du chargement",
+    "claimError": "Impossible de prendre en charge",
+    "resolveError": "Impossible de trancher",
+    "promoteError": "Impossible de mettre à jour le rôle",
+    "vaultError": "Impossible d'ouvrir le chat",
+    "claim": "Prendre",
+    "resolve": "Trancher",
+    "submitVerdict": "Enregistrer le verdict",
+    "verdictPlaceholder": "Verdict…",
+    "verdictLabel": "Verdict",
+    "closeDeal": "Clore le contrat après verdict",
+    "viewDeal": "Voir le contrat",
+    "viewVault": "Voir le chat",
+    "backToDisputes": "Retour aux litiges",
+    "arbiterAudit": "Chaque ouverture est enregistrée dans le chat des deux parties.",
+    "systemMessage": "système",
+    "makeArbiter": "Nommer arbitre",
+    "revokeArbiter": "Révoquer l'arbitre",
+    "status": {
+      "open": "Ouvert",
+      "claimed": "Pris en charge",
+      "resolved": "Tranché"
+    },
+    "userCol": {
+      "name": "Nom",
+      "email": "Email / téléphone",
+      "roles": "Rôles",
+      "actions": "Actions"
+    }
   },
   "auth": {
     "title": "Vimana",

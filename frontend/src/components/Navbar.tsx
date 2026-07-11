@@ -41,6 +41,16 @@ export default function Navbar() {
             <NavLink to="/profile" className={linkClass}>
               {t('nav.profile')}
             </NavLink>
+            {(user?.is_arbiter || user?.is_superuser) && (
+              <NavLink to="/admin/disputes" className={linkClass}>
+                {t('nav.disputes')}
+              </NavLink>
+            )}
+            {user?.is_superuser && (
+              <NavLink to="/admin/users" className={linkClass}>
+                {t('nav.users')}
+              </NavLink>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3">

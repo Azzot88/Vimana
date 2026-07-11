@@ -4,7 +4,52 @@
     "trips": "Loty",
     "deals": "Transakcje",
     "profile": "Profil",
+    "disputes": "Spory",
+    "users": "Użytkownicy",
     "logout": "Wyloguj"
+  },
+  "dispute": {
+    "openButton": "Otwórz spór",
+    "modalTitle": "Otwórz spór",
+    "modalHint": "Opisz, co poszło nie tak. Druga strona zobaczy powód, arbiter będzie mógł otworzyć czat.",
+    "reasonPlaceholder": "Powód…",
+    "submit": "Otwórz spór",
+    "openError": "Nie udało się otworzyć sporu",
+    "createdNotice": "Spór otwarty. Czekamy na arbitra."
+  },
+  "admin": {
+    "disputesTitle": "Spory",
+    "usersTitle": "Użytkownicy",
+    "disputesEmpty": "Brak sporów do rozpatrzenia.",
+    "loadError": "Nie udało się załadować",
+    "claimError": "Nie udało się przejąć",
+    "resolveError": "Nie udało się rozstrzygnąć",
+    "promoteError": "Nie udało się zaktualizować roli",
+    "vaultError": "Nie udało się otworzyć czatu",
+    "claim": "Przejmij",
+    "resolve": "Rozstrzygnij",
+    "submitVerdict": "Zapisz werdykt",
+    "verdictPlaceholder": "Werdykt…",
+    "verdictLabel": "Werdykt",
+    "closeDeal": "Zamknij zlecenie po werdykcie",
+    "viewDeal": "Otwórz zlecenie",
+    "viewVault": "Otwórz czat",
+    "backToDisputes": "Do sporów",
+    "arbiterAudit": "Każde otwarcie jest odnotowane w czacie dla obu stron.",
+    "systemMessage": "system",
+    "makeArbiter": "Uczyń arbitrem",
+    "revokeArbiter": "Odbierz arbitra",
+    "status": {
+      "open": "Otwarty",
+      "claimed": "Przejęty",
+      "resolved": "Rozstrzygnięty"
+    },
+    "userCol": {
+      "name": "Nazwa",
+      "email": "Email / telefon",
+      "roles": "Role",
+      "actions": "Akcje"
+    }
   },
   "auth": {
     "title": "Vimana",

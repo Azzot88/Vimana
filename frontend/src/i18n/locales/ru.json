@@ -4,7 +4,52 @@
     "trips": "Рейсы",
     "deals": "Сделки",
     "profile": "Профиль",
+    "disputes": "Споры",
+    "users": "Пользователи",
     "logout": "Выйти"
+  },
+  "dispute": {
+    "openButton": "Открыть спор",
+    "modalTitle": "Открыть спор",
+    "modalHint": "Опишите, что пошло не так. Вторая сторона увидит эту причину, а арбитр сможет открыть переписку.",
+    "reasonPlaceholder": "Причина…",
+    "submit": "Открыть спор",
+    "openError": "Не удалось открыть спор",
+    "createdNotice": "Спор открыт. Ждём арбитра."
+  },
+  "admin": {
+    "disputesTitle": "Споры",
+    "usersTitle": "Пользователи",
+    "disputesEmpty": "Нет споров на разбор.",
+    "loadError": "Не удалось загрузить",
+    "claimError": "Не удалось взять спор",
+    "resolveError": "Не удалось закрыть спор",
+    "promoteError": "Не удалось обновить роль",
+    "vaultError": "Не удалось открыть переписку",
+    "claim": "Взять",
+    "resolve": "Вынести вердикт",
+    "submitVerdict": "Сохранить вердикт",
+    "verdictPlaceholder": "Вердикт…",
+    "verdictLabel": "Вердикт",
+    "closeDeal": "Закрыть сделку после вердикта",
+    "viewDeal": "Открыть сделку",
+    "viewVault": "Открыть чат",
+    "backToDisputes": "К спорам",
+    "arbiterAudit": "Каждое открытие фиксируется в чате обеим сторонам.",
+    "systemMessage": "система",
+    "makeArbiter": "Назначить арбитром",
+    "revokeArbiter": "Снять с арбитра",
+    "status": {
+      "open": "Открыт",
+      "claimed": "Взят в работу",
+      "resolved": "Закрыт"
+    },
+    "userCol": {
+      "name": "Имя",
+      "email": "Email / телефон",
+      "roles": "Роли",
+      "actions": "Действия"
+    }
   },
   "auth": {
     "title": "Vimana",

@@ -4,7 +4,52 @@
     "trips": "Trips",
     "deals": "Deals",
     "profile": "Profile",
+    "disputes": "Disputes",
+    "users": "Users",
     "logout": "Sign out"
+  },
+  "dispute": {
+    "openButton": "Open dispute",
+    "modalTitle": "Open dispute",
+    "modalHint": "Describe what went wrong. The other party will see this reason and an arbiter will be able to review the chat.",
+    "reasonPlaceholder": "Reason…",
+    "submit": "Open dispute",
+    "openError": "Failed to open dispute",
+    "createdNotice": "Dispute opened. Waiting for an arbiter to claim it."
+  },
+  "admin": {
+    "disputesTitle": "Disputes",
+    "usersTitle": "Users",
+    "disputesEmpty": "No disputes to review.",
+    "loadError": "Failed to load",
+    "claimError": "Failed to claim",
+    "resolveError": "Failed to resolve",
+    "promoteError": "Failed to update role",
+    "vaultError": "Failed to open vault",
+    "claim": "Claim",
+    "resolve": "Resolve",
+    "submitVerdict": "Save verdict",
+    "verdictPlaceholder": "Verdict…",
+    "verdictLabel": "Verdict",
+    "closeDeal": "Close the deal after verdict",
+    "viewDeal": "View deal",
+    "viewVault": "View chat",
+    "backToDisputes": "Back to disputes",
+    "arbiterAudit": "Every read is logged and announced in the chat to both parties.",
+    "systemMessage": "system",
+    "makeArbiter": "Make arbiter",
+    "revokeArbiter": "Revoke arbiter",
+    "status": {
+      "open": "Open",
+      "claimed": "Claimed",
+      "resolved": "Resolved"
+    },
+    "userCol": {
+      "name": "Name",
+      "email": "Email / phone",
+      "roles": "Roles",
+      "actions": "Actions"
+    }
   },
   "auth": {
     "title": "Vimana",

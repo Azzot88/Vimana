@@ -148,6 +148,14 @@ export default function DealVaultPage() {
         <MonoText className="text-xs text-navy/60">Иммутабельно · SHA-256</MonoText>
       </div>
 
+      {messages.some((m) => m.is_system && (m.text ?? '').includes('Arbiter')) && (
+        <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 mb-3 shrink-0">
+          <p className="text-xs font-body text-red-700">
+            ⚖️ Арбитр открыл переписку по спору. Обе стороны видят это уведомление.
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 bg-white rounded-xl border border-navy/10 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (

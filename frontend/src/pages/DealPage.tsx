@@ -1,17 +1,42 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
+import { openDispute } from '../api/admin'
 import { getDeal, acceptDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
 
 export default function DealPage() {
+  const { t } = useTranslation()
   const { dealId } = useParams<{ dealId: string }>()
   const user = useAuthStore((s) => s.user)
   const [deal, setDeal] = useState<DealDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
+  const [disputeOpen, setDisputeOpen] = useState(false)
+  const [disputeReason, setDisputeReason] = useState('')
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false)
+  const [disputeError, setDisputeError] = useState('')
+  const [disputeCreated, setDisputeCreated] = useState(false)
+
+  const handleDispute = async () => {
+    if (!dealId || !disputeReason.trim()) return
+    setDisputeSubmitting(true)
+    setDisputeError('')
+    try {
+      await openDispute(dealId, disputeReason.trim())
+      setDisputeCreated(true)
+      setDisputeOpen(false)
+      setDisputeReason('')
+      await load()
+    } catch {
+      setDisputeError(t('dispute.openError'))
+    } finally {
+      setDisputeSubmitting(false)
+    }
+  }
 
   const load = async () => {
     if (!dealId) return
@@ -155,8 +180,68 @@ export default function DealPage() {
           >
             DealVault →
           </Link>
+          {(isCarrier || isSender) &&
+            ['accepted', 'in_transit', 'delivered'].includes(deal.status) &&
+            deal.status !== 'disputed' && (
+              <button
+                onClick={() => setDisputeOpen(true)}
+                className="border border-red-300 text-red-600 font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-red-50 transition-colors"
+              >
+                {t('dispute.openButton')}
+              </button>
+            )}
         </div>
       </div>
+
+      {disputeCreated && (
+        <div className="bg-amber/10 border border-amber/40 rounded-xl p-4">
+          <p className="text-sm font-body text-navy">{t('dispute.createdNotice')}</p>
+        </div>
+      )}
+
+      {disputeOpen && (
+        <div
+          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setDisputeOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+          >
+            <h2 className="font-display font-semibold text-lg text-navy">
+              {t('dispute.modalTitle')}
+            </h2>
+            <p className="text-sm font-body text-navy/60">
+              {t('dispute.modalHint')}
+            </p>
+            <textarea
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              rows={4}
+              placeholder={t('dispute.reasonPlaceholder') as string}
+              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            />
+            {disputeError && (
+              <p className="text-xs font-mono text-red-600">{disputeError}</p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDisputeOpen(false)}
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleDispute}
+                disabled={disputeSubmitting || !disputeReason.trim()}
+                className="bg-red-600 text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {disputeSubmitting ? '…' : t('dispute.submit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

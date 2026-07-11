@@ -24,6 +24,8 @@ export interface User {
   email: string | null
   phone: string | null
   is_carrier: boolean
+  is_superuser?: boolean
+  is_arbiter?: boolean
   nostr_pubkey: string | null
   business_activity_level: number | null
   notify_email: boolean
@@ -31,6 +33,7 @@ export interface User {
   notify_whatsapp: boolean
   telegram_chat_id: string | null
   whatsapp_number: string | null
+  created_at?: string
 }
 
 export interface UserUpdate {

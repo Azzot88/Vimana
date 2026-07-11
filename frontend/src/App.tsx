@@ -13,6 +13,9 @@ import DealVaultPage from './pages/DealVaultPage'
 import ProfilePage from './pages/ProfilePage'
 import InvitePage from './pages/InvitePage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
+import AdminDisputesPage from './pages/AdminDisputesPage'
+import AdminUsersPage from './pages/AdminUsersPage'
+import AdminVaultPage from './pages/AdminVaultPage'
 
 function ProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -38,6 +41,9 @@ export default function App() {
             <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/invite" element={<InvitePage />} />
+            <Route path="/admin/disputes" element={<AdminDisputesPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/deals/:dealId/vault" element={<AdminVaultPage />} />
           </Route>
         </Route>
       </Routes>

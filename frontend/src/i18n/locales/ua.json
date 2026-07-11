@@ -4,7 +4,52 @@
     "trips": "Рейси",
     "deals": "Угоди",
     "profile": "Профіль",
+    "disputes": "Спори",
+    "users": "Користувачі",
     "logout": "Вийти"
+  },
+  "dispute": {
+    "openButton": "Відкрити спір",
+    "modalTitle": "Відкрити спір",
+    "modalHint": "Опишіть, що пішло не так. Друга сторона побачить причину, арбітр зможе відкрити листування.",
+    "reasonPlaceholder": "Причина…",
+    "submit": "Відкрити спір",
+    "openError": "Не вдалося відкрити спір",
+    "createdNotice": "Спір відкрито. Очікуємо на арбітра."
+  },
+  "admin": {
+    "disputesTitle": "Спори",
+    "usersTitle": "Користувачі",
+    "disputesEmpty": "Немає спорів для розгляду.",
+    "loadError": "Не вдалося завантажити",
+    "claimError": "Не вдалося взяти спір",
+    "resolveError": "Не вдалося закрити спір",
+    "promoteError": "Не вдалося оновити роль",
+    "vaultError": "Не вдалося відкрити листування",
+    "claim": "Взяти",
+    "resolve": "Винести вердикт",
+    "submitVerdict": "Зберегти вердикт",
+    "verdictPlaceholder": "Вердикт…",
+    "verdictLabel": "Вердикт",
+    "closeDeal": "Закрити угоду після вердикту",
+    "viewDeal": "Відкрити угоду",
+    "viewVault": "Відкрити чат",
+    "backToDisputes": "До спорів",
+    "arbiterAudit": "Кожне відкриття фіксується в чаті для обох сторін.",
+    "systemMessage": "система",
+    "makeArbiter": "Призначити арбітром",
+    "revokeArbiter": "Зняти з арбітра",
+    "status": {
+      "open": "Відкритий",
+      "claimed": "Взятий у роботу",
+      "resolved": "Закритий"
+    },
+    "userCol": {
+      "name": "Ім'я",
+      "email": "Email / телефон",
+      "roles": "Ролі",
+      "actions": "Дії"
+    }
   },
   "auth": {
     "title": "Vimana",

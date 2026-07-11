@@ -4,7 +4,52 @@
     "trips": "Vuelos",
     "deals": "Acuerdos",
     "profile": "Perfil",
+    "disputes": "Disputas",
+    "users": "Usuarios",
     "logout": "Cerrar sesión"
+  },
+  "dispute": {
+    "openButton": "Abrir disputa",
+    "modalTitle": "Abrir disputa",
+    "modalHint": "Describe qué salió mal. La otra parte verá el motivo y un árbitro podrá revisar el chat.",
+    "reasonPlaceholder": "Motivo…",
+    "submit": "Abrir disputa",
+    "openError": "No se pudo abrir la disputa",
+    "createdNotice": "Disputa abierta. Esperando un árbitro."
+  },
+  "admin": {
+    "disputesTitle": "Disputas",
+    "usersTitle": "Usuarios",
+    "disputesEmpty": "No hay disputas para revisar.",
+    "loadError": "No se pudo cargar",
+    "claimError": "No se pudo tomar",
+    "resolveError": "No se pudo resolver",
+    "promoteError": "No se pudo actualizar el rol",
+    "vaultError": "No se pudo abrir el chat",
+    "claim": "Tomar",
+    "resolve": "Resolver",
+    "submitVerdict": "Guardar veredicto",
+    "verdictPlaceholder": "Veredicto…",
+    "verdictLabel": "Veredicto",
+    "closeDeal": "Cerrar el encargo tras el veredicto",
+    "viewDeal": "Ver encargo",
+    "viewVault": "Ver chat",
+    "backToDisputes": "Volver a disputas",
+    "arbiterAudit": "Cada apertura queda registrada en el chat para ambas partes.",
+    "systemMessage": "sistema",
+    "makeArbiter": "Nombrar árbitro",
+    "revokeArbiter": "Revocar árbitro",
+    "status": {
+      "open": "Abierta",
+      "claimed": "En trámite",
+      "resolved": "Resuelta"
+    },
+    "userCol": {
+      "name": "Nombre",
+      "email": "Email / teléfono",
+      "roles": "Roles",
+      "actions": "Acciones"
+    }
   },
   "auth": {
     "title": "Vimana",
