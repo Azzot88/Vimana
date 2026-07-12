@@ -15,9 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_arbiter, get_current_user, get_superuser
+from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
+from app.core.permissions import Permission, require_perm
 from app.models.deal import (
     Deal,
     DealEvent,
@@ -101,14 +102,14 @@ async def open_dispute(
 
 @router.get("/admin/disputes", response_model=Page[DisputeOut])
 async def list_disputes(
-    current_user: User = Depends(get_arbiter),
+    current_user: User = Depends(require_perm(Permission.DISPUTE_LIST_ADMIN)),
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
 ):
     base = select(Dispute)
     # Non-superuser arbiter sees only unclaimed disputes and their own claimed ones
-    if not current_user.is_superuser:
+    if not is_superuser(current_user):
         from sqlalchemy import or_
         base = base.where(
             or_(
@@ -123,7 +124,7 @@ async def list_disputes(
 @router.post("/disputes/{dispute_id}/claim", response_model=DisputeOut)
 async def claim_dispute(
     dispute_id: uuid.UUID,
-    current_user: User = Depends(get_arbiter),
+    current_user: User = Depends(require_perm(Permission.DISPUTE_CLAIM)),
     db: AsyncSession = Depends(get_db),
 ):
     dispute = await db.get(Dispute, dispute_id)
@@ -149,13 +150,13 @@ async def claim_dispute(
 async def resolve_dispute(
     dispute_id: uuid.UUID,
     body: ResolveBody,
-    current_user: User = Depends(get_arbiter),
+    current_user: User = Depends(require_perm(Permission.DISPUTE_RESOLVE)),
     db: AsyncSession = Depends(get_db),
 ):
     dispute = await db.get(Dispute, dispute_id)
     if not dispute:
         raise HTTPException(status_code=404, detail="Dispute not found")
-    if dispute.arbiter_id != current_user.id and not current_user.is_superuser:
+    if dispute.arbiter_id != current_user.id and not is_superuser(current_user):
         raise HTTPException(status_code=403, detail="You didn't claim this dispute")
 
     dispute.status = DisputeStatus.resolved
@@ -186,7 +187,7 @@ async def resolve_dispute(
 @router.get("/admin/deals/{deal_id}/vault", response_model=Page[MessageOut])
 async def arbiter_read_vault(
     deal_id: uuid.UUID,
-    current_user: User = Depends(get_arbiter),
+    current_user: User = Depends(require_perm(Permission.VAULT_READ_AS_ARBITER)),
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=100),
@@ -197,7 +198,7 @@ async def arbiter_read_vault(
     dispute = dispute_result.scalar_one_or_none()
 
     # Access requires a claimed dispute by this arbiter (superuser bypasses)
-    if not current_user.is_superuser:
+    if not is_superuser(current_user):
         if not dispute:
             raise HTTPException(status_code=403, detail="No dispute for this deal")
         if dispute.arbiter_id != current_user.id:
@@ -242,7 +243,7 @@ async def arbiter_read_vault(
 
 @router.get("/admin/users", response_model=Page[UserOut])
 async def list_users(
-    _: User = Depends(get_superuser),
+    _: User = Depends(require_perm(Permission.USERS_MANAGE)),
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
@@ -261,13 +262,15 @@ class PromoteBody(BaseModel):
 async def promote_arbiter(
     user_id: uuid.UUID,
     body: PromoteBody,
-    _: User = Depends(get_superuser),
+    _: User = Depends(require_perm(Permission.ARBITER_ASSIGN)),
     db: AsyncSession = Depends(get_db),
 ):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user.is_arbiter = body.is_arbiter
+    if user.role == "superuser":
+        raise HTTPException(status_code=400, detail="Cannot demote superuser")
+    user.role = "arbiter" if body.is_arbiter else "user"
     await db.commit()
     await db.refresh(user)
     return user

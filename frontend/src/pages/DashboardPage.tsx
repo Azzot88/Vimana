@@ -60,10 +60,10 @@ export default function DashboardPage() {
               : 'Dashboard'}
           </h1>
           <p className="text-sm font-body text-navy/50 mt-0.5">
-            {currentUser?.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
+            {(currentUser?.active_mode === 'carrier') ? t('dashboard.carrier') : t('dashboard.sender')}
           </p>
         </div>
-        {currentUser?.is_carrier && (
+        {(currentUser?.active_mode === 'carrier') && (
           <Link
             to="/trips/new"
             className="bg-navy text-ivory font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors flex items-center"
@@ -98,7 +98,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {currentUser?.is_carrier && (
+      {(currentUser?.active_mode === 'carrier') && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display font-semibold text-lg text-navy">{t('dashboard.iCarry')}</h2>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-semibold text-lg text-navy">
-            {currentUser?.is_carrier ? t('dashboard.myCargoCarrier') : t('dashboard.myCargoSender')}
+            {(currentUser?.active_mode === 'carrier') ? t('dashboard.myCargoCarrier') : t('dashboard.myCargoSender')}
           </h2>
           <Link to="/deals" className="text-xs text-cyan hover:underline font-body">
             {t('dashboard.allDeals')}
@@ -181,7 +181,7 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {!currentUser?.is_carrier && (
+      {!(currentUser?.active_mode === 'carrier') && (
         <section>
           <h2 className="font-display font-semibold text-lg text-navy mb-3">{t('dashboard.iSend')}</h2>
           <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">

@@ -18,7 +18,7 @@ export default function NewTripPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (!user?.is_carrier) {
+  if (!user?.can_carry) {
     return (
       <div className="text-center py-24">
         <p className="text-sm font-body text-navy/40">{t('trips.carriersOnly')}</p>

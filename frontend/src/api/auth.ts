@@ -5,7 +5,9 @@ export interface RegisterPayload {
   email?: string
   phone?: string
   password: string
-  is_carrier: boolean
+  can_carry?: boolean
+  can_send?: boolean
+  active_mode?: 'sender' | 'carrier'
 }
 
 export interface LoginPayload {
@@ -18,14 +20,17 @@ export interface TokenResponse {
   token_type: string
 }
 
+export type UserRole = 'user' | 'arbiter' | 'superuser'
+
 export interface User {
   id: string
   display_name: string
   email: string | null
   phone: string | null
-  is_carrier: boolean
-  is_superuser?: boolean
-  is_arbiter?: boolean
+  can_carry: boolean
+  can_send: boolean
+  active_mode: 'sender' | 'carrier'
+  role: UserRole
   nostr_pubkey: string | null
   business_activity_level: number | null
   notify_email: boolean

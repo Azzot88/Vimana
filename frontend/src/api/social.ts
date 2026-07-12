@@ -11,7 +11,8 @@ export interface Invite {
 export interface Connection {
   id: string
   display_name: string
-  is_carrier: boolean
+  // Legacy field left for UI display; backend now returns `connected_user.active_mode`.
+  is_carrier?: boolean
   connected_at: string
 }
 

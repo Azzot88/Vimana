@@ -35,6 +35,6 @@ class User(Base):
     telegram_link_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     whatsapp_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
-    # Roles (T1.23). is_superuser = User Zero (nyxter@dealvault.club).
-    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    is_arbiter: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # T1.24 pt.1 — single role column, permissions derived via app.core.permissions.
+    # Values: 'user' | 'arbiter' | 'superuser'. Superuser = User Zero.
+    role: Mapped[str] = mapped_column(String(20), default="user", server_default="user")

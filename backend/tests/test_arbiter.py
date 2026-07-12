@@ -14,7 +14,7 @@ async def superuser_headers(client, session_maker, seed_carrier):
     """Promote seed_carrier to superuser for the scope of these tests."""
     async with session_maker() as db:
         u = await db.get(User, seed_carrier.id)
-        u.is_superuser = True
+        u.role = "superuser"
         await db.commit()
     try:
         from tests.conftest import _login
@@ -23,7 +23,7 @@ async def superuser_headers(client, session_maker, seed_carrier):
     finally:
         async with session_maker() as db:
             u = await db.get(User, seed_carrier.id)
-            u.is_superuser = False
+            u.role = "user"
             await db.commit()
 
 
@@ -41,7 +41,7 @@ async def arbiter_user(client, session_maker):
 
     async with session_maker() as db:
         u = await db.get(User, user_id)
-        u.is_arbiter = True
+        u.role = "arbiter"
         await db.commit()
 
     token = await _login(client, email)
@@ -174,7 +174,7 @@ async def test_arbiter_cannot_claim_own_deal(client, carrier_headers, sender_hea
     sender_id = uuidlib.UUID(me.json()["id"])
     async with session_maker() as db:
         u = await db.get(User, sender_id)
-        u.is_arbiter = True
+        u.role = "arbiter"
         await db.commit()
 
     try:
@@ -192,7 +192,7 @@ async def test_arbiter_cannot_claim_own_deal(client, carrier_headers, sender_hea
     finally:
         async with session_maker() as db:
             u = await db.get(User, sender_id)
-            u.is_arbiter = False
+            u.role = "user"
             await db.commit()
 
 
@@ -225,7 +225,7 @@ async def test_promote_arbiter_only_by_superuser(client, superuser_headers, send
         json={"is_arbiter": True},
     )
     assert ok.status_code == 200
-    assert ok.json()["is_arbiter"] is True
+    assert ok.json()["role"] == "arbiter"
 
     # Revert
     revert = await client.post(
@@ -234,4 +234,4 @@ async def test_promote_arbiter_only_by_superuser(client, superuser_headers, send
         json={"is_arbiter": False},
     )
     assert revert.status_code == 200
-    assert revert.json()["is_arbiter"] is False
+    assert revert.json()["role"] == "user"

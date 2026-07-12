@@ -62,8 +62,7 @@ class UserOut(BaseModel):
     can_carry: bool = True
     can_send: bool = True
     active_mode: str = "sender"
-    is_superuser: bool = False
-    is_arbiter: bool = False
+    role: str = "user"
     nostr_pubkey: str | None
     business_activity_level: float | None
     notify_email: bool

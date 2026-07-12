@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vimana — Sacred Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0A1626;
+    color: #F8F7F4;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    padding: 28px 0;
+  }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    width: 1200px;
+    padding: 28px;
+    gap: 6px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    grid-template-areas:
+      "hero   route    trust    vault"
+      "hero   corridor escrow   vault"
+      "phase1 phase2   phase3   highlight"
+      "quote  quote    quote    quote";
+    aspect-ratio: 52 / 25;
+  }
+
+  /* ── CARD BASE ── */
+  .card {
+    background: #0F1E32;
+    border-radius: 20px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    color: #6B7280;
+    line-height: 1.25;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+
+  /* ── HERO ── */
+  .card-hero {
+    grid-area: hero;
+    align-self: stretch;
+    background: linear-gradient(145deg, #0F2240, #0A1626);
+    padding: 32px;
+  }
+
+  .card-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #FF7A2F, #58B0D9, #FF7A2F);
+    border-radius: 20px 20px 0 0;
+  }
+
+  .hero-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #FF7A2F;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 16px;
+  }
+
+  .hero-tagline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: #F8F7F4;
+    letter-spacing: -0.03em;
+    line-height: 1.0;
+  }
+
+  .hero-sub {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: #58B0D9;
+    letter-spacing: -0.03em;
+    line-height: 1.0;
+  }
+
+  .hero-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    color: #374151;
+    margin-top: 16px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ROUTE CARD ── */
+  .card-route {
+    grid-area: route;
+    background: linear-gradient(145deg, #0F2240, #0A1626);
+  }
+
+  .card-route::after {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(88,176,217,0.08) 0%, transparent 70%);
+  }
+
+  .route-iata {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 36px;
+    font-weight: 500;
+    color: #F8F7F4;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  .route-connector {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 18px;
+    color: #FF7A2F;
+    margin: 2px 0;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── TRUST CARD ── */
+  .card-trust {
+    grid-area: trust;
+    background: linear-gradient(145deg, #1A0F00, #0F1E32);
+  }
+
+  .card-trust::after {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,122,47,0.06) 0%, transparent 70%);
+  }
+
+  /* ── VAULT CARD ── */
+  .card-vault {
+    grid-area: vault;
+    align-self: stretch;
+    background: linear-gradient(145deg, #060F1C, #0A1626);
+    border: 1px solid rgba(88,176,217,0.1);
+    padding: 24px;
+  }
+
+  .vault-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: #58B0D9;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .vault-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #F8F7F4;
+    margin-bottom: 14px;
+  }
+
+  .vrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(88,176,217,0.05);
+    border-radius: 8px;
+    padding: 7px 10px;
+    margin-bottom: 5px;
+    font-size: 11px;
+  }
+
+  .vrow.ok {
+    background: rgba(22,163,74,0.07);
+  }
+
+  .vtext { flex: 1; color: #D1D5DB; }
+  .vtime {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: #58B0D9;
+    white-space: nowrap;
+  }
+
+  .vrow.ok .vtext { color: #4ADE80; }
+  .vrow.ok .vtime { color: #4ADE80; }
+
+  .vault-stamp {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: #58B0D9;
+    background: rgba(88,176,217,0.08);
+    border: 1px solid rgba(88,176,217,0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── CORRIDOR CARD ── */
+  .card-corridor {
+    grid-area: corridor;
+    background: linear-gradient(145deg, #0F2240, #0A1626);
+  }
+
+  /* ── ESCROW CARD ── */
+  .card-escrow {
+    grid-area: escrow;
+    background: linear-gradient(145deg, #050F0A, #0F1E32);
+    border: 1px solid rgba(22,163,74,0.12);
+  }
+
+  /* ── PHASE CARDS ── */
+  .card-phase1 { grid-area: phase1; background: linear-gradient(145deg, #0F1A2E, #0F1E32); padding: 20px 22px; }
+  .card-phase2 { grid-area: phase2; background: linear-gradient(145deg, #1A1A1A, #0F1E32); padding: 20px 22px; }
+  .card-phase3 { grid-area: phase3; background: linear-gradient(145deg, #1A1A1A, #0F1E32); padding: 20px 22px; }
+
+  .category-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 3px;
+  }
+
+  .category-focus {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #D1D5DB;
+    margin-bottom: 8px;
+  }
+
+  .pills-wrap { display: flex; flex-wrap: wrap; gap: 0; }
+
+  .pill {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    color: #6B7280;
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    padding: 3px 9px;
+    margin: 2px 2px 2px 0;
+    white-space: nowrap;
+  }
+
+  /* ── HIGHLIGHT ── */
+  .card-highlight {
+    grid-area: highlight;
+    background: linear-gradient(145deg, #7A2F00, #FF7A2F 60%, #FF9A5C 100%);
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    align-self: stretch;
+    padding: 28px;
+  }
+
+  .card-highlight .num {
+    font-size: 52px;
+    color: #0A1626;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .card-highlight .label {
+    font-size: 13px;
+    color: rgba(10,22,38,0.65);
+    font-weight: 600;
+  }
+
+  .card-highlight .sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: rgba(10,22,38,0.5);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── QUOTE ── */
+  .card-quote {
+    grid-area: quote;
+    background: linear-gradient(135deg, #04111F, #0A1626);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 60px;
+  }
+
+  .quote-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: #F8F7F4;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  .quote-text .q { color: #374151; }
+  .quote-text em { color: #FF7A2F; font-style: normal; }
+
+  /* ── INLINE ROW ── */
+  .inline-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .inline-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .inline-lbl {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: #6B7280;
+  }
+
+  .inline-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: #374151;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="grid">
+
+  <!-- HERO — spans 2 rows -->
+  <div class="card card-hero">
+    <div>
+      <div class="hero-eyebrow">✦ Peer-to-Air · Phase 1</div>
+      <div class="hero-tagline">Sacred</div>
+      <div class="hero-tagline">Logistics.</div>
+      <div class="hero-sub">Trust Takes</div>
+      <div class="hero-sub">Flight.</div>
+    </div>
+    <div class="hero-date">V0.01.6 · UAE ↔ USA · 2026</div>
+  </div>
+
+  <!-- ROUTE -->
+  <div class="card card-route">
+    <div>
+      <div class="label" style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px">Active Route</div>
+      <div class="route-iata">DXB</div>
+      <div class="route-connector">→</div>
+      <div class="route-iata">JFK</div>
+    </div>
+    <div>
+      <div class="inline-row">
+        <div class="inline-num" style="color:#58B0D9; font-size:20px">02:35</div>
+        <div class="inline-lbl">14 JUL · EK201</div>
+      </div>
+      <div class="inline-sub">2.5 kg capacity remaining</div>
+    </div>
+  </div>
+
+  <!-- TRUST -->
+  <div class="card card-trust">
+    <div>
+      <div class="label" style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px">Trust Score · УБА</div>
+      <div class="num" style="font-size:56px; color:#FF7A2F">731</div>
+    </div>
+    <div>
+      <div class="inline-sub" style="margin-bottom:6px">Доверенный carrier · top 12%</div>
+      <span class="badge" style="background:rgba(255,122,47,0.12); color:#FF7A2F">✦ Trusted</span>
+    </div>
+  </div>
+
+  <!-- VAULT — spans 2 rows -->
+  <div class="card card-vault">
+    <div>
+      <div class="vault-label">DealVault™</div>
+      <div class="vault-title">Immutable Record</div>
+      <div class="vrow"><span>📦</span><span class="vtext">Handoff photo confirmed</span><span class="vtime">14:22</span></div>
+      <div class="vrow"><span>✈️</span><span class="vtext">In transit · EK201</span><span class="vtime">02:35</span></div>
+      <div class="vrow"><span>📸</span><span class="vtext">Receipt photo uploaded</span><span class="vtime">11:07</span></div>
+      <div class="vrow ok"><span>✅</span><span class="vtext">Delivery confirmed · Closed</span><span class="vtime">11:09</span></div>
+    </div>
+    <div class="vault-stamp">APPEND-ONLY · SHA-256</div>
+  </div>
+
+  <!-- CORRIDOR -->
+  <div class="card card-corridor">
+    <div>
+      <div class="label" style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px">Launch Corridor</div>
+      <div class="num" style="font-size:40px; color:#58B0D9">UAE</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:16px; color:#FF7A2F; margin:2px 0">↔</div>
+      <div class="num" style="font-size:40px; color:#F8F7F4">USA</div>
+    </div>
+    <div class="inline-sub">P2P · No platform courier</div>
+  </div>
+
+  <!-- ESCROW -->
+  <div class="card card-escrow">
+    <div>
+      <div class="label" style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px">Escrow</div>
+      <div class="num" style="font-size:32px; color:#16A34A; margin-bottom:4px">2-of-3</div>
+      <div class="label" style="font-size:12px; line-height:1.4">BTC Multisig · non-custodial</div>
+    </div>
+    <div>
+      <span class="badge" style="background:rgba(22,163,74,0.12); color:#4ADE80">Arbiter key only</span>
+    </div>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="card card-phase1">
+    <div>
+      <div class="category-name" style="color:#58B0D9">Phase 1 · Active</div>
+      <div class="category-focus">Core Trust + Marketplace</div>
+    </div>
+    <div class="pills-wrap">
+      <span class="pill">Auth</span>
+      <span class="pill">Trips</span>
+      <span class="pill">Deals</span>
+      <span class="pill">DealVault</span>
+      <span class="pill">Social Graph</span>
+      <span class="pill">УБА Score</span>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="card card-phase2">
+    <div>
+      <div class="category-name" style="color:#6B7280">Phase 2 · Next</div>
+      <div class="category-focus">KYC + Keypair Identity</div>
+    </div>
+    <div class="pills-wrap">
+      <span class="pill">Nostr keypair</span>
+      <span class="pill">secp256k1</span>
+      <span class="pill">KYC</span>
+      <span class="pill">NIP-07</span>
+    </div>
+  </div>
+
+  <!-- PHASE 3+ -->
+  <div class="card card-phase3">
+    <div>
+      <div class="category-name" style="color:#374151">Phase 5–7 · Planned</div>
+      <div class="category-focus">BTC Escrow · Missions</div>
+    </div>
+    <div class="pills-wrap">
+      <span class="pill">Multisig</span>
+      <span class="pill">Missions</span>
+      <span class="pill">Passport Engine</span>
+      <span class="pill">Mobile</span>
+    </div>
+  </div>
+
+  <!-- HIGHLIGHT -->
+  <div class="card card-highlight">
+    <div class="num">EXP</div>
+    <div class="label">Missions</div>
+    <div class="sub">Phase 7 · Experimental</div>
+  </div>
+
+  <!-- QUOTE — full width -->
+  <div class="card card-quote">
+    <div class="quote-text">
+      <span class="q">"</span>
+      Trips are <em>planned.</em>
+      Missions are <em>earned.</em>
+      <span class="q">"</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

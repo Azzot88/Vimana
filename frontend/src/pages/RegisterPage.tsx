@@ -26,7 +26,8 @@ export default function RegisterPage() {
         display_name: displayName,
         email,
         password,
-        is_carrier: isCarrier,
+        can_carry: isCarrier,
+        active_mode: isCarrier ? 'carrier' : 'sender',
       })
       const { data: tokenData } = await login({ login: email, password })
       localStorage.setItem('token', tokenData.access_token)

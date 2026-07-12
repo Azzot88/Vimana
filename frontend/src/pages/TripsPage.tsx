@@ -147,7 +147,7 @@ export default function TripsPage() {
                     </div>
                   )}
                 </div>
-                {!user?.is_carrier && trip.carrier_id !== user?.id && (
+                {user?.active_mode !== 'carrier' && trip.carrier_id !== user?.id && (
                   <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto sm:ml-4">
                     <button
                       onClick={() => setChatTrip({ id: trip.id, carrierName: trip.carrier_name })}

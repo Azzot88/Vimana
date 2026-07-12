@@ -22,10 +22,12 @@ async def main(email: str, off: bool) -> int:
         if not user:
             print(f"User not found: {email}")
             return 1
-        user.is_arbiter = not off
+        if user.role == "superuser":
+            print(f"{email} is superuser — cannot change via this script")
+            return 2
+        user.role = "user" if off else "arbiter"
         await db.commit()
-        state = "OFF" if off else "ON"
-        print(f"{email}: is_arbiter = {state}")
+        print(f"{email}: role = {user.role}")
         return 0
 
 

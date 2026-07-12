@@ -135,7 +135,7 @@ export default function ProfilePage() {
           <div>
             <p className="font-display font-semibold text-lg text-navy">{user?.display_name}</p>
             <p className="text-xs font-mono text-navy/40">
-              {user?.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
+              {user?.active_mode === 'carrier' ? t('dashboard.carrier') : t('dashboard.sender')}
             </p>
           </div>
         </div>

@@ -20,7 +20,7 @@ export default function AdminDisputesPage() {
   const [closesDeal, setClosesDeal] = useState(false)
   const [error, setError] = useState('')
 
-  const canView = user?.is_arbiter || user?.is_superuser
+  const canView = user?.role === 'arbiter' || user?.role === 'superuser'
   if (!canView) return <Navigate to="/dashboard" replace />
 
   const load = async () => {
@@ -86,7 +86,7 @@ export default function AdminDisputesPage() {
           {disputes.map((d) => {
             const mine = d.arbiter_id === user?.id
             const canClaim = d.status === 'open'
-            const canResolve = d.status === 'claimed' && (mine || user?.is_superuser)
+            const canResolve = d.status === 'claimed' && (mine || user?.role === 'superuser')
             return (
               <div
                 key={d.id}

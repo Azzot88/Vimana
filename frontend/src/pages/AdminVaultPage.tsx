@@ -14,7 +14,7 @@ export default function AdminVaultPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  if (!user?.is_arbiter && !user?.is_superuser) {
+  if (user?.role !== 'arbiter' && user?.role !== 'superuser') {
     return <Navigate to="/dashboard" replace />
   }
 

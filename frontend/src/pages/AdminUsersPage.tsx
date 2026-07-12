@@ -13,7 +13,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  if (!me?.is_superuser) return <Navigate to="/dashboard" replace />
+  if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
 
   const load = async () => {
     setLoading(true)
@@ -36,7 +36,9 @@ export default function AdminUsersPage() {
     try {
       await promoteArbiter(userId, !current)
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, is_arbiter: !current } : u)),
+        prev.map((u) =>
+          u.id === userId ? { ...u, role: current ? 'user' : 'arbiter' } : u,
+        ),
       )
     } catch {
       setError(t('admin.promoteError'))
@@ -86,17 +88,17 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {u.is_superuser && (
+                      {u.role === 'superuser' && (
                         <span className="text-xs font-mono bg-navy text-ivory px-2 py-0.5 rounded">
                           superuser
                         </span>
                       )}
-                      {u.is_arbiter && (
+                      {u.role === 'arbiter' && (
                         <span className="text-xs font-mono bg-amber/20 text-amber px-2 py-0.5 rounded">
                           arbiter
                         </span>
                       )}
-                      {u.is_carrier && (
+                      {u.can_carry && (
                         <span className="text-xs font-mono bg-cyan/20 text-navy px-2 py-0.5 rounded">
                           carrier
                         </span>
@@ -104,16 +106,16 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {u.id !== me.id && !u.is_superuser && (
+                    {u.id !== me.id && u.role !== 'superuser' && (
                       <button
-                        onClick={() => handleToggle(u.id, !!u.is_arbiter)}
+                        onClick={() => handleToggle(u.id, u.role === 'arbiter')}
                         className={`text-xs font-display font-medium px-3 py-1 rounded-lg ${
-                          u.is_arbiter
+                          u.role === 'arbiter'
                             ? 'bg-navy/10 text-navy hover:bg-navy/20'
                             : 'bg-amber text-white hover:opacity-90'
                         }`}
                       >
-                        {u.is_arbiter
+                        {u.role === 'arbiter'
                           ? t('admin.revokeArbiter')
                           : t('admin.makeArbiter')}
                       </button>

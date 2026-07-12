@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vimana — Sacred Logistics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #EDE8DC;
+      --card:       #FFFFFF;
+      --card-warm:  #FBF8F2;
+      --card-sky:   #EEF5FA;
+      --card-gold:  #FDF8ED;
+      --navy:       #1C3252;
+      --navy-mid:   #2D4D70;
+      --gold:       #A86E08;
+      --gold-warm:  #C98E18;
+      --sky:        #3D80B8;
+      --amber:      #C8621A;
+      --success:    #1D6B40;
+      --text-mid:   #4D6278;
+      --text-muted: #7A8E9E;
+      --border:     rgba(28,50,82,0.10);
+      --shadow:     0 1px 10px rgba(28,50,82,0.08);
+      --display:    'Space Grotesk', sans-serif;
+      --body:       'Inter', sans-serif;
+      --mono:       'IBM Plex Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--navy);
+      font-family: var(--body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(237,232,220,0.90);
+    }
+
+    .wordmark { font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: -0.4px; color: var(--navy); }
+    .wordmark span { color: var(--amber); }
+
+    .nav-tag { font-family: var(--mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.08em; }
+
+    .nav-cta {
+      background: var(--navy);
+      color: #F8F7F4;
+      font-family: var(--display);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.15s;
+    }
+    .nav-cta:hover { background: var(--navy-mid); }
+
+    /* ── HERO ── */
+    .hero { max-width: 1200px; margin: 0 auto; padding: 72px 48px 40px; }
+
+    .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 20px; }
+
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(48px, 6.5vw, 84px);
+      font-weight: 700;
+      line-height: 1.0;
+      letter-spacing: -2.5px;
+      color: var(--navy);
+      margin-bottom: 22px;
+    }
+    h1 em { font-style: normal; color: var(--sky); }
+
+    .hero-sub { font-size: 17px; line-height: 1.65; color: var(--text-mid); max-width: 540px; margin-bottom: 40px; }
+
+    /* ── BENTO ── */
+    .bento {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px 80px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: 90px;
+      gap: 10px;
+    }
+
+    .cell {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 26px;
+      overflow: hidden;
+      position: relative;
+      transition: box-shadow 0.18s, transform 0.18s;
+      box-shadow: var(--shadow);
+    }
+    .cell:hover { box-shadow: 0 4px 20px rgba(28,50,82,0.12); transform: translateY(-2px); }
+
+    .s-7-4 { grid-column: span 7; grid-row: span 4; }
+    .s-5-4 { grid-column: span 5; grid-row: span 4; }
+    .s-7-3 { grid-column: span 7; grid-row: span 3; }
+    .s-5-3 { grid-column: span 5; grid-row: span 3; }
+    .s-4-3 { grid-column: span 4; grid-row: span 3; }
+    .s-4-2 { grid-column: span 4; grid-row: span 2; }
+    .s-5-2 { grid-column: span 5; grid-row: span 2; }
+    .s-7-2 { grid-column: span 7; grid-row: span 2; }
+
+    .clabel { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+    .ctitle { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--navy); }
+
+    /* ROUTE */
+    .c-route { background: var(--card); }
+    .c-route::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--amber), var(--sky));
+      border-radius: 20px 20px 0 0;
+    }
+
+    .iata { font-family: var(--mono); font-size: 46px; font-weight: 500; color: var(--navy); letter-spacing: -1px; line-height: 1; }
+    .iata-city { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+    .route-row { display: flex; align-items: center; gap: 12px; margin: 14px 0 18px; }
+
+    .route-arrow { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--amber); font-size: 22px; }
+    .route-arrow::before, .route-arrow::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--amber), rgba(200,98,26,0.1)); }
+    .route-arrow::after { background: linear-gradient(90deg, rgba(200,98,26,0.1), var(--amber)); }
+
+    .route-meta-row { display: flex; gap: 24px; }
+    .rmeta label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .rmeta span { font-family: var(--mono); font-size: 12px; color: var(--navy); }
+
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
+    .tag { font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 100px; background: rgba(61,128,184,0.08); border: 1px solid rgba(61,128,184,0.18); color: var(--sky); }
+
+    /* VAULT */
+    .c-vault { background: var(--card-sky); border-color: rgba(61,128,184,0.15); }
+    .vrow { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.75); border-radius: 8px; padding: 7px 11px; font-size: 11px; margin-bottom: 6px; }
+    .vrow.ok { background: rgba(29,107,64,0.06); border: 1px solid rgba(29,107,64,0.15); }
+    .vtext { flex: 1; color: var(--navy); }
+    .vtime { font-family: var(--mono); font-size: 10px; color: var(--sky); white-space: nowrap; }
+    .vrow.ok .vtext { color: var(--success); }
+    .vrow.ok .vtime { color: var(--success); }
+    .vault-badge { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--sky); background: rgba(61,128,184,0.08); border: 1px solid rgba(61,128,184,0.2); padding: 4px 9px; border-radius: 5px; display: inline-block; margin-top: 10px; }
+
+    /* BOARDING PASS */
+    .c-boarding { background: var(--card-warm); }
+    .bp-inner { border: 1.5px dashed rgba(28,50,82,0.18); border-radius: 12px; padding: 16px 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+    .bp-brand { font-family: var(--display); font-size: 11px; font-weight: 600; color: var(--navy); letter-spacing: 0.05em; }
+    .bp-id { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+    .bp-route { font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--navy); letter-spacing: -0.5px; margin: 6px 0; }
+    .bp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .bpf label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; display: block; }
+    .bpf span { font-family: var(--mono); font-size: 12px; color: var(--navy); font-weight: 500; }
+    .sdot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-right: 4px; }
+
+    /* TRUST */
+    .c-trust { background: var(--card-gold); border-color: rgba(168,110,8,0.12); }
+    .trust-score { font-family: var(--display); font-size: 38px; font-weight: 700; color: var(--gold); line-height: 1; margin: 6px 0 2px; }
+    .trust-bar { height: 3px; background: rgba(168,110,8,0.1); border-radius: 2px; margin: 10px 0; }
+    .trust-fill { height: 100%; width: 73%; background: linear-gradient(90deg, var(--gold), var(--sky)); border-radius: 2px; }
+    .tiers { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tier { font-family: var(--mono); font-size: 9px; padding: 3px 7px; border-radius: 4px; border: 1px solid var(--border); color: var(--text-muted); }
+    .tier.on { border-color: var(--gold); color: var(--gold); background: rgba(168,110,8,0.06); }
+
+    /* TAGLINE */
+    .c-tagline { background: var(--navy); border-color: transparent; }
+    .tagline { font-family: var(--display); font-size: 21px; font-weight: 700; color: #F8F7F4; line-height: 1.2; letter-spacing: -0.5px; margin-top: 10px; }
+    .tagline em { font-style: normal; color: var(--gold-warm); }
+
+    /* ESCROW */
+    .c-escrow { background: var(--card); border-color: rgba(29,107,64,0.15); }
+    .escrow-row { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+    .epty { flex: 1; text-align: center; }
+    .eicon { width: 34px; height: 34px; border-radius: 50%; background: rgba(28,50,82,0.05); border: 1px solid var(--border); margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .elabel { font-family: var(--mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0.05em; }
+    .elock { font-size: 20px; color: var(--text-muted); }
+    .noncust { font-family: var(--mono); font-size: 10px; color: var(--success); margin-top: 6px; }
+
+    /* NETWORK */
+    .c-network { background: var(--card); }
+    .net-canvas { position: relative; height: 86px; margin: 10px 0 4px; }
+    .nnode { position: absolute; width: 28px; height: 28px; border-radius: 50%; background: rgba(61,128,184,0.10); border: 1px solid rgba(61,128,184,0.25); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .nline { position: absolute; height: 1px; background: rgba(61,128,184,0.2); transform-origin: left center; }
+
+    /* CORRIDOR */
+    .c-corridor { background: var(--card-sky); }
+    .big-stat { font-family: var(--display); font-size: 36px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+
+    /* MISSIONS */
+    .c-mission { background: var(--card-gold); border-color: rgba(168,110,8,0.15); }
+    .mission-desc { font-size: 12px; color: var(--text-mid); line-height: 1.55; margin: 8px 0 12px; max-width: 320px; }
+    .mission-tag { font-family: var(--mono); font-size: 11px; color: var(--gold); font-style: italic; }
+
+    /* PROGRESS */
+    .prow { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+    .prow:last-child { border-bottom: none; }
+    .pdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .pname { font-size: 12px; flex: 1; }
+    .pname.dim { color: var(--text-muted); }
+    .pver { font-family: var(--mono); font-size: 10px; color: var(--sky); }
+    .pver.dim { color: var(--text-muted); }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 28px 48px; max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    .fmono { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(28,50,82,0.40);
+      backdrop-filter: blur(8px);
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--card-warm);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%; max-width: 440px;
+      box-shadow: 0 24px 64px rgba(28,50,82,0.16);
+      position: relative;
+      transform: translateY(14px);
+      transition: transform 0.22s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-close { position: absolute; top: 16px; right: 18px; background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; line-height: 1; padding: 4px; }
+    .modal-close:hover { color: var(--navy); }
+
+    .modal-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--amber); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 10px; }
+
+    .modal h2 { font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--navy); letter-spacing: -0.5px; margin-bottom: 8px; }
+    .modal-sub { font-size: 14px; color: var(--text-mid); line-height: 1.55; margin-bottom: 28px; }
+
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+    .modal-field input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-family: var(--body); font-size: 14px; color: var(--navy); outline: none; transition: border-color 0.15s; }
+    .modal-field input::placeholder { color: var(--text-muted); }
+    .modal-field input:focus { border-color: var(--sky); }
+
+    .modal-submit { width: 100%; background: var(--navy); color: #F8F7F4; font-family: var(--display); font-weight: 600; font-size: 15px; padding: 13px; border-radius: 10px; border: none; cursor: pointer; margin-top: 6px; transition: background 0.15s; }
+    .modal-submit:hover { background: var(--navy-mid); }
+    .modal-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .modal-success { text-align: center; display: none; }
+    .modal-success .check { font-size: 44px; margin-bottom: 14px; }
+    .modal-success h3 { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .modal-success p { font-size: 14px; color: var(--text-mid); line-height: 1.55; }
+
+    .modal-fine { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 14px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="wordmark">Vimana<span>.</span></div>
+  <div class="nav-tag">SACRED LOGISTICS · V0.01.17 · PHASE 1</div>
+  <button class="nav-cta" onclick="openModal()">Request Early Access</button>
+</nav>
+
+<section class="hero">
+  <p class="eyebrow">✦ Peer-to-Air · Trust as Infrastructure</p>
+  <h1>Your parcel flies<br>in someone's <em>free</em><br>carry-on.</h1>
+  <p class="hero-sub">Vimana connects senders with travelers who are already flying the right route. Every delivery is documented in an immutable vault — trust is built by deed, not promise.</p>
+</section>
+
+<div class="bento">
+
+  <!-- ROUTE 7×4 -->
+  <div class="cell s-7-4 c-route">
+    <div class="clabel">Active Route</div>
+    <div class="route-row">
+      <div><div class="iata">DXB</div><div class="iata-city">Dubai International</div></div>
+      <div class="route-arrow">✈</div>
+      <div><div class="iata">JFK</div><div class="iata-city">New York Kennedy</div></div>
+    </div>
+    <div class="route-meta-row">
+      <div class="rmeta"><label>Carrier</label><span>Anastasia K.</span></div>
+      <div class="rmeta"><label>Departs</label><span style="color:var(--sky)">14 JUL · 02:35</span></div>
+      <div class="rmeta"><label>Capacity</label><span style="color:var(--amber)">2.5 kg free</span></div>
+      <div class="rmeta"><label>Trust</label><span style="color:var(--gold)">УБА 731 ✦</span></div>
+    </div>
+    <div class="tags">
+      <span class="tag">document</span>
+      <span class="tag">medicine</span>
+      <span class="tag">gift</span>
+      <span class="tag">electronics</span>
+      <span class="tag">animal</span>
+    </div>
+  </div>
+
+  <!-- VAULT 5×4 -->
+  <div class="cell s-5-4 c-vault">
+    <div class="clabel">DealVault™</div>
+    <div class="ctitle" style="margin-bottom:14px">Immutable Record</div>
+    <div class="vrow"><span>📦</span><span class="vtext">Handoff photo confirmed</span><span class="vtime">14:22 UTC</span></div>
+    <div class="vrow"><span>✈️</span><span class="vtext">In transit · EK201</span><span class="vtime">02:35 UTC</span></div>
+    <div class="vrow"><span>📸</span><span class="vtext">Receipt photo uploaded</span><span class="vtime">11:07 UTC</span></div>
+    <div class="vrow ok"><span>✅</span><span class="vtext">Delivery confirmed · Closed</span><span class="vtime">11:09 UTC</span></div>
+    <div class="vault-badge">APPEND-ONLY · SHA-256 VERIFIED</div>
+  </div>
+
+  <!-- BOARDING PASS 7×3 -->
+  <div class="cell s-7-3 c-boarding">
+    <div class="bp-inner">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="bp-brand">VIMANA · BOARDING PASS</div>
+        <div class="bp-id">VMN-2026-07841</div>
+      </div>
+      <div class="bp-route">DXB → JFK</div>
+      <div class="bp-fields">
+        <div class="bpf"><label>Sender</label><span>Mikhail O.</span></div>
+        <div class="bpf"><label>Carrier</label><span>Anastasia K.</span></div>
+        <div class="bpf"><label>Cargo</label><span>Document · 0.4 kg</span></div>
+        <div class="bpf"><label>Status</label><span><span class="sdot"></span>Confirmed</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUST 5×3 -->
+  <div class="cell s-5-3 c-trust">
+    <div class="clabel">Business Activity Level · УБА</div>
+    <div class="trust-score">731</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">Доверенный carrier · top 12%</div>
+    <div class="trust-bar"><div class="trust-fill"></div></div>
+    <div class="tiers">
+      <span class="tier">Новичок</span>
+      <span class="tier">Проверенный</span>
+      <span class="tier">Надёжный</span>
+      <span class="tier on">Доверенный ✦</span>
+      <span class="tier">Элита</span>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:12px">F × Q × V × D_factor · rolling 90d</div>
+  </div>
+
+  <!-- TAGLINE 4×3 -->
+  <div class="cell s-4-3 c-tagline">
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.15em;color:rgba(248,247,244,0.28);text-transform:uppercase">Peer-to-Air</div>
+    <div class="tagline">Wings of<br><em>Trust.</em><br>Trust Takes<br><em>Flight.</em></div>
+  </div>
+
+  <!-- ESCROW 4×3 -->
+  <div class="cell s-4-3 c-escrow">
+    <div class="clabel">Non-Custodial Escrow</div>
+    <div class="ctitle" style="margin-bottom:4px">BTC 2-of-3 Multisig</div>
+    <div class="escrow-row">
+      <div class="epty"><div class="eicon">📤</div><div class="elabel">Sender</div></div>
+      <div class="elock">🔐</div>
+      <div class="epty"><div class="eicon">✈️</div><div class="elabel">Carrier</div></div>
+      <div style="font-size:16px;color:var(--text-muted)">⚖️</div>
+      <div class="epty"><div class="eicon" style="border-color:rgba(168,110,8,0.2)">🏛️</div><div class="elabel">Arbiter</div></div>
+    </div>
+    <div class="noncust">✓ Platform holds only arbiter key · never funds</div>
+  </div>
+
+  <!-- NETWORK 4×3 -->
+  <div class="cell s-4-3 c-network">
+    <div class="clabel">Trust Network</div>
+    <div class="ctitle" style="margin-bottom:4px">Invite-only graph</div>
+    <div class="net-canvas">
+      <div class="nline" style="left:54px;top:20px;width:68px;transform:rotate(18deg)"></div>
+      <div class="nline" style="left:122px;top:14px;width:66px;transform:rotate(32deg)"></div>
+      <div class="nline" style="left:54px;top:20px;width:88px;transform:rotate(58deg)"></div>
+      <div class="nline" style="left:122px;top:48px;width:62px;transform:rotate(-15deg)"></div>
+      <div class="nnode" style="left:26px;top:6px">👤</div>
+      <div class="nnode" style="left:94px;top:0px">👤</div>
+      <div class="nnode" style="left:60px;top:46px">👤</div>
+      <div class="nnode" style="left:162px;top:28px">👤</div>
+      <div class="nnode" style="left:180px;top:60px">👤</div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">Connections visible in profile · DealVault shared</div>
+  </div>
+
+  <!-- CORRIDOR 4×2 -->
+  <div class="cell s-4-2 c-corridor">
+    <div class="clabel">Launch Corridor · Phase 1</div>
+    <div style="display:flex;gap:20px;margin-top:10px;align-items:flex-end">
+      <div><div class="big-stat" style="color:var(--sky)">UAE</div><div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:2px">Origin</div></div>
+      <div style="color:var(--amber);font-size:20px;padding-bottom:4px">↔</div>
+      <div><div class="big-stat" style="color:var(--navy)">USA</div><div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:2px">Destination</div></div>
+    </div>
+  </div>
+
+  <!-- NOSTR 4×2 -->
+  <div class="cell s-4-2" style="background:var(--card-sky);border-color:rgba(61,128,184,0.12)">
+    <div class="clabel" style="color:var(--sky)">Phase 2 · Keypair</div>
+    <div class="ctitle" style="margin-bottom:6px">Nostr-compatible Identity</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);line-height:1.7">
+      secp256k1 keypair per user<br>
+      DealVault events signed · verifiable<br>
+      <span style="color:var(--sky)">npub</span> · self-custody path · NIP-07
+    </div>
+  </div>
+
+  <!-- PROGRESS 4×2 -->
+  <div class="cell s-4-2">
+    <div class="clabel">Build Progress</div>
+    <div class="prow"><div class="pdot" style="background:var(--success)"></div><div class="pname">Phase 1 · Core Trust + Marketplace</div><div class="pver">v0.01.17</div></div>
+    <div class="prow"><div class="pdot" style="background:var(--border)"></div><div class="pname dim">Phase 2 · KYC + Keypair</div><div class="pver dim">next</div></div>
+    <div class="prow" style="border:none"><div class="pdot" style="background:var(--border)"></div><div class="pname dim">Phase 5 · BTC Escrow</div><div class="pver dim">planned</div></div>
+  </div>
+
+  <!-- MISSIONS 7×2 -->
+  <div class="cell s-7-2 c-mission">
+    <div class="clabel" style="color:var(--gold)">Coming · Phase 7</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-family:var(--display);font-size:22px;font-weight:700;color:var(--navy)">Missions</div>
+        <div class="mission-desc">Premium delivery requests — rewards large enough to motivate a trusted carrier to book a dedicated flight for a single delivery.</div>
+        <div class="mission-tag">Trips are planned. Missions are earned.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:24px">
+        <span style="font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:5px;background:rgba(168,110,8,0.08);border:1px solid rgba(168,110,8,0.18);color:var(--gold)">Urgent</span>
+        <span style="font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:5px;background:rgba(168,110,8,0.08);border:1px solid rgba(168,110,8,0.18);color:var(--gold)">Premium</span>
+        <span style="font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:5px;background:rgba(168,110,8,0.08);border:1px solid rgba(168,110,8,0.18);color:var(--gold)">High Trust</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLATFORM NOTE 5×2 -->
+  <div class="cell s-5-2" style="background:var(--card-warm)">
+    <div class="clabel">Platform Principle</div>
+    <div style="font-family:var(--display);font-size:16px;font-weight:600;color:var(--navy);margin:6px 0;line-height:1.3">Vimana is an information<br>and escrow layer.</div>
+    <div style="font-size:12px;color:var(--text-mid);line-height:1.6">Not a courier. Delivery risk stays with participants.<br>Platform holds <span style="color:var(--sky)">only the arbiter key</span> — never funds.</div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="fmono">VIMANA · SACRED LOGISTICS · © 2026</div>
+  <div class="fmono">Peer-to-Air · Trust as Infrastructure · People Are the Network</div>
+  <div class="fmono" style="color:var(--amber)">DXB ↔ JFK · Phase 1</div>
+</footer>
+
+<!-- EMAIL MODAL -->
+<div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+
+    <div id="modal-form-wrap">
+      <div class="modal-eyebrow">✦ Early Access</div>
+      <h2>Join the Waitlist</h2>
+      <p class="modal-sub">Be among the first to fly something valuable with Vimana. We'll notify you when we open the next corridor.</p>
+
+      <form id="waitlist-form" onsubmit="handleSubmit(event)">
+        <div class="modal-field">
+          <label>Your name</label>
+          <input type="text" id="field-name" placeholder="Anastasia" autocomplete="name">
+        </div>
+        <div class="modal-field">
+          <label>Email address *</label>
+          <input type="email" id="field-email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <button type="submit" class="modal-submit" id="submit-btn">Get Early Access →</button>
+      </form>
+      <div class="modal-fine">No spam. We'll only write when there's something worth flying.</div>
+    </div>
+
+    <div class="modal-success" id="modal-success">
+      <div class="check">✈️</div>
+      <h3>You're on the list.</h3>
+      <p>We'll reach out to <strong id="success-email"></strong> when we open the next corridor. Safe skies.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal() {
+    document.getElementById('modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('field-name').focus(), 220);
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modal')) closeModal();
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('field-email').value.trim();
+    const name  = document.getElementById('field-name').value.trim();
+    const btn   = document.getElementById('submit-btn');
+
+    btn.textContent = 'Sending…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name })
+      });
+      if (res.ok || res.status === 409) {
+        showSuccess(email);
+      } else {
+        btn.textContent = 'Try again';
+        btn.disabled = false;
+      }
+    } catch (_) {
+      // offline / local preview — show success
+      showSuccess(email);
+    }
+  }
+
+  function showSuccess(email) {
+    document.getElementById('modal-form-wrap').style.display = 'none';
+    const s = document.getElementById('modal-success');
+    s.style.display = 'block';
+    document.getElementById('success-email').textContent = email;
+  }
+</script>
+
+</body>
+</html>

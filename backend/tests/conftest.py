@@ -124,24 +124,46 @@ async def _ensure_connections_unique(engine) -> None:
             )
 
 
-async def _ensure_arbiter_columns(engine) -> None:
-    """T1.23 schema fix: users.is_superuser / users.is_arbiter. Idempotent."""
+async def _ensure_role_column(engine) -> None:
+    """T1.24 pt.1 schema fix: users.role varchar; drop legacy booleans."""
     async with engine.begin() as conn:
-        for column in ("is_superuser", "is_arbiter"):
-            row = (
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='users' AND column_name='role'"
+                )
+            )
+        ).fetchone()
+        if not row:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN role VARCHAR(20) "
+                    "NOT NULL DEFAULT 'user'"
+                )
+            )
+
+        for legacy_col, role_value in (
+            ("is_arbiter", "arbiter"),
+            ("is_superuser", "superuser"),
+        ):
+            exists = (
                 await conn.execute(
                     text(
                         f"SELECT 1 FROM information_schema.columns "
-                        f"WHERE table_name='users' AND column_name='{column}'"
+                        f"WHERE table_name='users' AND column_name='{legacy_col}'"
                     )
                 )
             ).fetchone()
-            if not row:
+            if exists:
                 await conn.execute(
                     text(
-                        f"ALTER TABLE users ADD COLUMN {column} BOOLEAN "
-                        f"NOT NULL DEFAULT false"
+                        f"UPDATE users SET role = '{role_value}' "
+                        f"WHERE {legacy_col} = true AND role = 'user'"
                     )
+                )
+                await conn.execute(
+                    text(f"ALTER TABLE users DROP COLUMN {legacy_col}")
                 )
 
 
@@ -278,7 +300,7 @@ async def test_engine():
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
-    await _ensure_arbiter_columns(engine)
+    await _ensure_role_column(engine)
     await _ensure_dealevent_types(engine)
     await _ensure_encrypted_messages(engine)
     await _ensure_inquiry_tables(engine)
