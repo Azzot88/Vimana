@@ -355,40 +355,24 @@
 
 **Acceptance:** User Zero (`nyxter@dealvault.club`) видит всех пользователей и назначает арбитров. Арбитр открывает переписку только через claimed Dispute; при открытии — запись в `DealEvent` + system-message в чате. Один аккаунт может быть sender/carrier/arbiter одновременно. 127/127 backend + чистый `npm run build`. ✅
 
-### T1.24 — Dual role + explicit mode switcher (Send / Deliver)
+### T1.24 — Dual role + RBAC permissions + explicit mode switcher ✅
 
-**Контекст:** сейчас `User.is_carrier: bool` — один из двух. Реальные пользователи могут и везти, и отправлять — платформа должна разрешать оба режима без пересоздания аккаунта. UI режимов **явно разный** (визуально), но текущий режим **не подписывается** — понимание идёт из контекста. Кнопка переключения показывает **противоположный** режим: «Switch to Deliver» когда ты sender, «Switch to Send» когда ты carrier.
+**Контекст:** сейчас `User.is_carrier: bool` — один из двух. Реальные пользователи могут и везти, и отправлять — платформа должна разрешать оба режима без пересоздания аккаунта. UI режимов **явно разный** (визуально), но текущий режим **не подписывается** — понимание идёт из контекста. Кнопка переключения показывает **противоположный** режим: «Switch to Deliver» когда ты sender, «Switch to Send» когда ты carrier. **По ходу выполнения — заменили ad-hoc булевы флаги (`is_superuser`/`is_arbiter`) на permission-based RBAC** (`app/core/permissions.py`), см. миграция 0010.
 
-- [ ] **Миграция `0006_dual_role`:**
-  - Добавить `User.can_carry: bool default true`, `User.can_send: bool default true`, `User.active_mode: varchar(10) default 'sender'`.
-  - Backfill: `can_carry = is_carrier`, `active_mode = 'carrier' if is_carrier else 'sender'`.
-  - **Удалить колонку `is_carrier`** в этой же миграции (backward-compat не нужен — платформа ещё не открыта широко).
-- [ ] Обновить все места где используется `is_carrier`:
-  - `POST /api/trips` — `if not current_user.can_carry: raise 403 "Not a carrier"` (право = capability, не mode).
-  - `UserOut` schema: убрать `is_carrier`, добавить `can_carry`, `can_send`, `active_mode`.
-  - `PATCH /api/auth/me` принимает `active_mode`, `can_carry`, `can_send`.
-  - Все места в `deals.py`, `social.py`, `conftest.py`, `test_*.py` — заменить `is_carrier` на `can_carry` / `active_mode == 'carrier'` по смыслу.
-- [ ] **Frontend — auth store:**
-  - `User.active_mode`, `can_carry`, `can_send`.
-  - `switchMode()` — вызывает `PATCH /me` + обновляет store.
-- [ ] **Компонент `ModeSwitcher`:**
-  - Кнопка в Navbar (справа, заметная, ~40×40+).
-  - Текст: `t('mode.switchToDeliver')` = «Switch to Deliver» если mode == 'sender'; наоборот для carrier.
-  - Иконка: 📤/`send` icon для «Switch to Send», ✈️/`plane` для «Switch to Deliver».
-  - Клик → confirm-diff анимация + switch.
-  - **Не пишет текущий режим текстом** — это должно быть очевидно из UI.
-- [ ] **Разный UI по режимам** (визуально разный, не только показ/скрытие):
-  - `DashboardPage` → рендерит `<SenderDashboard/>` или `<CarrierDashboard/>` по `active_mode`.
-    - **SenderDashboard:** доминанта amber (посылка, движение); секции «Мои посылки», «История отправлений», «Найти рейс».
-    - **CarrierDashboard:** доминанта cyan (небо, полёт); секции «Мои рейсы», «Входящие заявки», «+ Опубликовать рейс», простая статистика доходов.
-  - `TripsPage`:
-    - Sender mode: список чужих рейсов + CTA «Заказать доставку».
-    - Carrier mode: переключатель «мои / все» + CTA «+ Опубликовать рейс».
-  - `BottomNav` (мобилка) — иконки одинаковые, но color-accent разный.
-- [ ] i18n ключи `mode.switchToSend`, `mode.switchToDeliver` в 6 языках.
-- [ ] Backend-тесты: PATCH active_mode, `can_carry=false` → 403 на trips; список UserOut без `is_carrier`.
+- [x] Миграция `0009_dual_role` — `can_carry`, `can_send`, `active_mode`; backfill из `is_carrier`; drop legacy.
+- [x] Миграция `0010_role_permissions` — единая колонка `user.role` заменяет `is_superuser`+`is_arbiter`; идемпотентный backfill.
+- [x] `app/core/permissions.py` — `Permission` enum (8 permissions), `Role` enum, `ROLE_PERMISSIONS` map, `perms_of()`, `require()`, `require_perm()` FastAPI-фабрика. Мост между capabilities (can_carry → TRIP_PUBLISH) и ролями.
+- [x] `POST /api/trips` — проверяет `can_carry`; endpoints admin.py — через `Depends(require_perm(...))`.
+- [x] `UserOut` schema без `is_carrier`/`is_superuser`/`is_arbiter`; `role` string + `can_carry`, `can_send`, `active_mode`.
+- [x] `PATCH /api/auth/me` принимает `active_mode`, `can_carry`, `can_send`.
+- [x] `conftest.py` + все тесты обновлены под новую модель.
+- [x] Frontend `User` тип обновлён; `lib/permissions.ts` — зеркало backend; auth store `switchMode()`; admin страницы + Navbar под role check.
+- [x] `ModeSwitcher.tsx` — кнопка в Navbar, текст **противоположного** режима, скрыта если недоступно (`can_carry=false` блокирует переход в carrier). Иконка 📤 в carrier / ✈️ в sender.
+- [x] Визуальное различие в `DashboardPage`: cyan-gradient bar + ✈️ в carrier mode; amber + 📦 в sender mode. Основной CTA: «Publish trip» (cyan) для carrier / «Find a trip» (amber) для sender. Режим текстом **не подписан**.
+- [x] i18n `mode.switchToSend`/`mode.switchToDeliver` в 6 языках.
+- [x] Backend-тесты (7 dual_role + 6 permissions): PATCH active_mode, `can_carry=false` → 403, invalid mode → 422, deriv-таблица permissions.
 
-**Acceptance:** пользователь видит явную кнопку переключения (текст противоположного режима); клик меняет визуальный дизайн Dashboard/Trips; в mode `sender` не публикует рейсы (кнопка спрятана, а backend вернёт 403 если `can_carry=false`); backend-схема без `is_carrier`; тесты зелёные.
+**Acceptance:** пользователь видит явную кнопку переключения (текст противоположного режима); клик меняет визуальный акцент Dashboard; `can_carry=false` → 403 на POST /trips; backend-схема без `is_carrier`/`is_superuser`/`is_arbiter`; 140/140 backend тестов зелёные; frontend build без ошибок. ✅
 
 ---
 

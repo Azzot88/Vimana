@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import LanguageSwitcher from './LanguageSwitcher'
+import ModeSwitcher from './ModeSwitcher'
 
 export default function Navbar() {
   const { user, logout } = useAuthStore()
@@ -54,6 +55,7 @@ export default function Navbar() {
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
+          <ModeSwitcher />
           <LanguageSwitcher />
           {user && (
             <span className="hidden md:inline text-xs font-mono text-navy/50">

@@ -83,6 +83,10 @@
     "close": "Закрыть",
     "search": "Поиск…"
   },
+  "mode": {
+    "switchToSend": "Переключиться в отправку",
+    "switchToDeliver": "Переключиться в доставку"
+  },
   "inquiry": {
     "chatButton": "Чат",
     "chatWith": "Чат с {{name}}",

@@ -50,25 +50,40 @@ export default function DashboardPage() {
     )
   }
 
+  const isCarrier = currentUser?.active_mode === 'carrier'
+  // T1.24 — visual mode signal without labelling the mode. Cyan sky for carrier,
+  // amber runway for sender. The mode itself is understood from context, not text.
+  const accentBar = isCarrier
+    ? 'bg-gradient-to-r from-cyan/40 via-cyan/20 to-transparent'
+    : 'bg-gradient-to-r from-amber/40 via-amber/20 to-transparent'
+  const modeIcon = isCarrier ? '✈️' : '📦'
+
   return (
     <div className="space-y-8">
+      <div className={`h-1.5 rounded-full ${accentBar}`} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="text-2xl">{modeIcon}</span>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-navy">
             {currentUser
               ? t('dashboard.welcome', { name: currentUser.display_name })
               : 'Dashboard'}
           </h1>
-          <p className="text-sm font-body text-navy/50 mt-0.5">
-            {(currentUser?.active_mode === 'carrier') ? t('dashboard.carrier') : t('dashboard.sender')}
-          </p>
         </div>
-        {(currentUser?.active_mode === 'carrier') && (
+        {isCarrier && currentUser?.can_carry && (
           <Link
             to="/trips/new"
-            className="bg-navy text-ivory font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors flex items-center"
+            className="bg-cyan text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity flex items-center"
           >
             {t('dashboard.publishTrip')}
+          </Link>
+        )}
+        {!isCarrier && (
+          <Link
+            to="/trips"
+            className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity flex items-center"
+          >
+            {t('dashboard.findTrip')}
           </Link>
         )}
       </div>

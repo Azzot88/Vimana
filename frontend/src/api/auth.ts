@@ -47,6 +47,9 @@ export interface UserUpdate {
   notify_email?: boolean
   notify_telegram?: boolean
   notify_whatsapp?: boolean
+  active_mode?: 'sender' | 'carrier'
+  can_carry?: boolean
+  can_send?: boolean
   whatsapp_number?: string
 }
 

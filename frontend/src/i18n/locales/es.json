@@ -83,6 +83,10 @@
     "close": "Cerrar",
     "search": "Buscar…"
   },
+  "mode": {
+    "switchToSend": "Cambiar a envío",
+    "switchToDeliver": "Cambiar a entrega"
+  },
   "inquiry": {
     "chatButton": "Chat",
     "chatWith": "Chat con {{name}}",

@@ -83,6 +83,10 @@
     "close": "Закрити",
     "search": "Пошук…"
   },
+  "mode": {
+    "switchToSend": "Перейти в режим відправки",
+    "switchToDeliver": "Перейти в режим доставки"
+  },
   "inquiry": {
     "chatButton": "Чат",
     "chatWith": "Чат із {{name}}",
