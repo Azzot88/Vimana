@@ -26,10 +26,13 @@
 | База аэропортов + геолокация (Haversine) | 1 | ⬜ не начато |
 | Мобильная версия (responsive) | 1 | ⬜ не начато |
 | Телефон в профиль (убран из регистрации) | 1 | ⬜ не начато |
-| KYC + Комплаенс | 2 | ⬜ не начато |
+| Peer Identity Verification (P2P KYC) | 2 | ⬜ не начато |
+| Trust Graph (Web-of-Trust) | 2 | ⬜ не начато |
 | Keypair + Nostr-совместимость | 2 | ⬜ не начато |
 | Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато |
-| Оператор-арбитр + Споры | 3 | ⬜ не начато |
+| Оператор-арбитр + Споры | 3 | ✅ готово (T1.23 backend + T1.24 RBAC) |
+| Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато |
+| Regulatory KYC/AML + Санкционный периметр | 4 | ⬜ не начато |
 | Карточные платежи | 4 | ⬜ не начато |
 | Эскроу BTC + Залог | 5 | ⬜ не начато |
 | USDT-эскроу | 5 | ⬜ не начато |
@@ -56,6 +59,8 @@
 | D9 (open) | Docker-only dev как жёсткое правило (да/нет) | Подтвердить владельцем; влияет на онбординг исполнителей | TBD |
 | D11 | **Геолокация аэропортов: Haversine в Python.** Датасет OpenFlights (~7 000 аэропортов) загружается в память при старте бэкенда. Расстояние до ближайших считается формулой Haversine без внешних API и без PostGIS | Датасет мал (< 1 МБ); Haversine даёт ответ за микросекунды; Redis GEO и PostGIS избыточны | 2026-06-28 |
 | D10 | **Nostr-совместимость: Вариант A + D.** Платформа генерирует secp256k1-keypair при регистрации и хранит зашифрованно. Пользователь «забирает» nsec в любой момент → платформа удаляет свою копию. Если обнаружен NIP-07 браузерный extension (Alby, nos2x) — Vimana использует его для подписи вместо custodial ключа | Масс-маркет онбординг без барьеров + поддержка существующей Nostr-идентичности для продвинутых пользователей | 2026-06-27 |
+| D-NOSTR-RELAY | **Vimana Nostr Relay = strfry** (C++ от hoytech, LMDB storage). Дeploy как отдельный контейнер `nostr-relay` в docker-compose. Event kind для trip = **NIP-99 30402** (Classified Listing, replaceable per `d`-tag) — совместим с существующими Nostr-клиентами. Federation = **whitelist friendly relays** (publish only, subscribe отложен до Фазы 4+). Auth NIP-42, rate-limit 30 events/hour per pubkey, WoT-gate из T2.4 | strfry — production-ready, лёгкий (~50 MB idle), нативная поддержка нужных NIP-ов; NIP-99 = стандартный marketplace-формат (уже понят damus/amethyst/coracle); publish-only федерация — предсказуемее subscribe с точки зрения spam/moderation | 2026-07-12 |
+| D-NOSTR-FEDERATION (open) | Конкретный whitelist friendly relays (env `NOSTR_FRIENDLY_RELAYS`) | Стартовый набор: damus.io, nostr.wine, relay.nostr.band. Ревизия каждые 3-6 месяцев по популярности и uptime | TBD (Фаза 3.5) |
 
 ---
 

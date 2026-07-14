@@ -374,6 +374,30 @@
 
 **Acceptance:** пользователь видит явную кнопку переключения (текст противоположного режима); клик меняет визуальный акцент Dashboard; `can_carry=false` → 403 на POST /trips; backend-схема без `is_carrier`/`is_superuser`/`is_arbiter`; 140/140 backend тестов зелёные; frontend build без ошибок. ✅
 
+### T1.25 — NewTripPage redesign (главное окно создания рейса, hook-points для EXP)
+
+**Контекст:** сейчас `NewTripPage.tsx` — линейная форма с 6 полями. По мере роста платформы это становится главным touch-point'ом для перевозчика (создание рейса — самая частая операция после логина). Redesign — превратить в **основное окно рейса**: Bento-компоновка (по BENTO_DESIGN_SKILL) с яркими зонами (карта маршрута, категории, capacity, preview). Одновременно **закладываем hook-points** для будущих экспериментов из MASTERPLAN §10: `EXP-03` Voice Input, `EXP-04` Ticket Scan — оба лягут на этот же экран.
+
+- [ ] **Bento layout** (`md:grid md:grid-cols-3 md:gap-4`, ячейки 1×1, 2×1, 1×2):
+  - **Route cell (2×1)** — origin/destination AirportSelect в единой карточке с большой моно-типографикой между ними («DXB → JFK»).
+  - **Date & Time cell (1×1)** — календарь + время вылета.
+  - **Capacity cell (1×1)** — слайдер kg (0.5 – 20 кг) с визуальным indicator.
+  - **Categories cell (1×2)** — checkboxes с иконками (document/medicine/electronics/…) + free-text override.
+  - **Preview cell (2×1, sticky bottom)** — «карточка рейса как она будет выглядеть в ленте» — real-time preview с той же типографикой что и в списке TripsPage. Photo of route line if API есть, иначе схематичный рисунок.
+  - **Publish cell (1×1)** — большая амбер-кнопка «Publish trip» + маленькая опция «также как Nostr-event» (checkbox, включён по умолчанию после T3.5).
+- [ ] **Hook-points для экспериментов (feature-flagged sockets)**:
+  - Верхний ряд карточки-заголовка — три иконки в углу: `🎤` (Voice, `EXP_VOICE_INPUT`), `📷` (Scan ticket, `EXP_TICKET_SCAN`), `⌨️` (обычный ввод, default). Клик по 🎤/📷 при выключенном флаге — tooltip «coming soon».
+  - Флаги читаются из `import.meta.env.VITE_EXP_*` (build-time) или из user-настроек в профиле (runtime).
+- [ ] **UX улучшения:**
+  - Автосохранение draft в localStorage (`trips:draft`) — если пользователь закрыл вкладку, при возврате форма prefilled.
+  - Клавиатурный shortcut `Cmd+Enter` для publish.
+  - Валидация: не даём отправить с прошедшей датой; предупреждение если capacity > 15 кг (unusual).
+- [ ] Frontend-тесты (vitest): все 6 ячеек рендерятся, submit собирает валидный JSON, hook-icons показывают tooltip если флаги off.
+- [ ] Backend без изменений — API `POST /api/trips` уже готов из T1.4.
+- [ ] Обновить `frontend/src/version.ts` до `0.01.25`.
+
+**Acceptance:** перевозчик открывает `/trips/new`, видит красивую Bento-сетку с preview снизу; publish создаёт рейс; форма запоминается при перезагрузке; иконки hook-points видны и готовы принять EXP-03/EXP-04 без переработки layout'а.
+
 ---
 
 ## 🧪 ТЕСТИРОВАНИЕ — Расширение сьюта
@@ -565,6 +589,49 @@
 - [ ] `Dispute`, `OperatorAccessGrant` (доступ к DealVault по запросу стороны).
 - [ ] Вердикт фиксируется в `DealEvent`; при наличии эскроу (Фаза 5) — разблокировка.
 **Acceptance:** спор открывается, оператор изучает DealVault, выносит вердикт; всё в логе.
+
+---
+
+## 📡 ЭТАП 3.5 — Vimana Nostr Relay + Federation (Фаза 3.5)
+
+### T3.5 — strfry-relay + publish trip-events + whitelist federation
+
+**Контекст:** Vimana идёт по «Nostr-slope» (см. MASTERPLAN §7). Фаза 2 дала пользователям keypair, Фаза 3 закрыла арбитраж. Теперь запускаем **собственный Nostr-relay** и делаем каждый trip Nostr-событием: наши рейсы становятся видимыми в любом стандартном Nostr-клиенте (damus, amethyst, coracle), а пользователи получают точку внешней децентрализации своих данных. Subscribe (чтение чужих events) откладываем до Фазы 4+ — сначала осваиваем publish-стек и spam-protection.
+
+- [ ] **Relay-runtime:** **strfry** — production-ready C++ relay от hoytech (LMDB storage, ~50 MB idle). Docker-контейнер `nostr-relay` в compose. NIP-01, NIP-11 (relay info), NIP-42 (auth), NIP-99 (classified listings).
+- [ ] **Событийная модель trip:**
+  - Kind: **30402** (NIP-99 Classified Listing, replaceable per `d`-tag).
+  - Tags: `["d", trip_id]`, `["l", origin_iata]`, `["l", destination_iata]`, `["t", "vimana"]`, `["t", "trip"]`, `["published_at", ts]`, `["expires_at", depart_at]`, `["capacity", "kg"]`, для каждой allowed_category — отдельный `["t", cat]`.
+  - Content: JSON `{origin, destination, depart_at, capacity, allowed_categories, carrier_pubkey, platform_url}`.
+  - Подписывается **user's nsec** (из T2.2) — не платформенным ключом.
+- [ ] **Publish bridge:**
+  - При `POST /api/trips` (после Postgres commit) отправляется в Celery task `publish_trip_to_nostr(trip_id)`.
+  - Task формирует Nostr event, подписывает user's nsec (через `decrypt_nsec` из T2.2 или через NIP-07 pre-signed event с фронта), публикует в свой relay + broadcast в **whitelist friendly relays**.
+  - Идемпотентность через `Trip.nostr_event_id` (unique) — повторный publish обновляет replaceable event.
+  - При `DELETE trip` (или status → cancelled) — публикуется event kind 5 (deletion request).
+- [ ] **Whitelist friendly relays** (конфиг):
+  - `NOSTR_FRIENDLY_RELAYS=wss://relay.damus.io,wss://nostr.wine,wss://relay.nostr.band` — Env variable, comma-separated.
+  - Фиксируется список в TECHSTATE D-NOSTR-FEDERATION с обновлением каждые 3-6 мес по популярности.
+- [ ] **Auth & abuse prevention (наш relay):**
+  - NIP-42 auth: только зарегистрированные Vimana-npub могут писать.
+  - Rate-limit: 30 events/hour per pubkey (strfry native).
+  - WoT-gate: события от npub не в T2.4 trust-graph — read-only permission на наш relay.
+- [ ] **Env:**
+  - `NOSTR_RELAY_URL` (наш публичный wss endpoint).
+  - `NOSTR_RELAY_PRIVKEY` — служебный ключ для admin-событий (NIP-42 challenges, deletion).
+  - `NOSTR_FRIENDLY_RELAYS` — whitelist.
+- [ ] **Модель:** `Trip.nostr_event_id: str | None` (unique index), `Trip.nostr_published_at: datetime | None`.
+- [ ] **Endpoints:**
+  - `GET /api/trips/{id}/nostr-event` — возвращает Nostr event JSON (для верификации / экспорта).
+  - `POST /api/nostr/republish` (admin) — force-republish в случае разрыва.
+- [ ] **Мониторинг:** metric `nostr_publish_success_count`, `nostr_publish_error_count`, healthcheck `/health/nostr` — connectivity to friendly relays.
+- [ ] **Frontend:**
+  - На `TripsPage`, `NewTripPage` — маленький badge «📡 Also on Nostr · npub…» с копированием event ID.
+  - В профиле — секция «Nostr identity» с npub, ссылкой на relay, кнопкой export.
+- [ ] Backend-тесты: publish → event попадает в наш relay (запрос через WebSocket subscriber); подпись валидна для user's npub; deletion event публикуется при cancelled; rate-limit срабатывает после 30 events.
+- [ ] i18n `nostr.*` в 6 языках.
+
+**Acceptance:** после `POST /api/trips` — рейс появляется как kind 30402 event в нашем relay и минимум в 2 из friendly relays; любой Nostr-клиент, подписанный на `#t: vimana`, видит новые рейсы; deletion event корректно обрабатывается. Vimana становится **видима в глобальной Nostr-сети**.
 
 ---
 
