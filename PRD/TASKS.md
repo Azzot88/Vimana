@@ -397,11 +397,62 @@
 
 ## 🪪 ЭТАП 2 — Идентификация и ключи (Фаза 2)
 
-### T2.1 — KYC и комплаенс
-- [ ] `KycRecord`, интеграция KYC-провайдера.
-- [ ] `ComplianceAck` (версионируемое подтверждение запрещёнки/ответственности).
-- [ ] Санкционный периметр коридора, строгий ToS.
-**Acceptance:** пользователь проходит KYC; подтверждение запрещёнки зафиксировано; стороны проверяются по периметру.
+### T2.1 — Peer Identity Verification (P2P KYC)
+
+**Контекст:** классический regulatory KYC/AML уезжает в Фазу 4 (T4.1) — до того как через платформу пойдут деньги, у нас нет обязательств перед регулятором раскрывать identity пользователей. Вместо этого в Фазе 2 вводим **P2P-верификацию**: перевозчик в момент передачи товара может попросить документы. Идея — сеть сама подтверждает своих участников, а платформа хранит **зашифрованный контейнер** (владелец получает ключ через T2.2 Nostr-keypair). Перевозчик не обязан раскрывать свою идентичность — он отвечает депозитом (Фаза 5) и историей.
+
+- [ ] **Модели:**
+  - `VerificationRequest(id, deal_id, requested_by_id, status ∈ {pending, upload, later_in_person, declined, verified, escalated}, created_at, resolved_at)`.
+  - `IdentityContainer(id, owner_id, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status, created_at)` — encrypted at rest, ключ = owner's Nostr nsec из T2.2. **Один пользователь может иметь несколько контейнеров** (multi-doc).
+  - `PeerVerification(id, subject_id, verified_by_id, container_ref_id, in_deal_id, method ∈ {app_ocr, in_person_photo, in_person_visual}, created_at, revoked_at)` — append-only событие сети.
+  - Индекс `(subject_id, revoked_at IS NULL)` для быстрого подсчёта активных верификаций.
+- [ ] **Три варианта ответа отправителя на VerificationRequest:**
+  1. `later_in_person` → «Покажу лично при встрече». В момент передачи перевозчик через приложение фотографирует (OCR) **или** визуально проверяет (`method=in_person_visual`, без загрузки — только запись факта).
+  2. `declined` → «Не готов показывать». Deal получает пометку `verification_declined`, перевозчик вправе отказаться (`deal.status → cancelled`). У отправителя на профиле — badge «declined verification N times».
+  3. `upload` → «Показать сейчас». Открывается окно загрузки → фото на бэкенд → OCR + санкционный чек + шифрование → контейнер + запись в чат DealVault.
+- [ ] **Multi-document подтверждение** (по принципу US DMV):
+  - Если у перевозчика есть сомнения → `POST /verification/{id}/request-additional` — просит второй документ (тип на выбор: паспорт / driver license / national ID / bank card).
+  - Отправитель загружает через тот же флоу; несколько `IdentityContainer` привязываются к одной `PeerVerification`.
+  - Порог верификации — параметр (например: 1 паспорт **или** 2 non-passport документа + facematch).
+- [ ] **Escalation при подозрении на фальшивку:**
+  - Перевозчик жмёт `POST /verification/{id}/escalate` с `reason` → создаётся `Dispute` (из T1.23) с типом `identity_fraud`, `deal.status → disputed`, чат замораживается для новых сообщений.
+  - Арбитр видит и чат, и контейнеры (через уже существующий `require_perm(VAULT_READ_AS_ARBITER)` + новый `IDENTITY_CONTAINER_READ`).
+  - **UX-открытый вопрос:** заморозка чата = read-only или полностью locked. Уточнить на этапе UI-дизайна T2.1.
+- [ ] **OCR — локальный, без внешних API:**
+  - **PaddleOCR** (лучше tesseract для MRZ-строк паспортов) как основной; tesseract как fallback.
+  - Post-processing MRZ: парсим `<<` разделители, извлекаем name / dob / doc_number / issuing_country / expiry.
+  - Для non-passport (driver license, bank card) — универсальный OCR по regex-паттернам страны.
+  - Docker image: `paddleocr` + `tesseract` + модельки в `backend/models/ocr/`; ~1.5 GB, добавляется отдельный worker `ocr-worker` в docker-compose.
+- [ ] **Санкционные списки — публичные CSV:**
+  - **OFAC SDN** от treasury.gov — скачиваем ежедневно Celery-beat'ом, кешируем в Redis + Postgres таблица `sanctions_list(source, name_normalized, dob, country, added_at)`.
+  - **EU consolidated financial sanctions list** — analog.
+  - `POST /verification/{id}/check-sanctions` — сравнение по normalized name + dob (fuzzy match на level Levenshtein < 2). Результат в `IdentityContainer.sanctions_check_status ∈ {clean, match, review_needed}`.
+- [ ] **Endpoints:**
+  - `POST /api/deals/{id}/verification` — перевозчик создаёт запрос; в чат уходит system-message «⚠️ Carrier requested identity verification».
+  - `POST /api/deals/{id}/verification/{req_id}/respond` — отправитель отвечает одним из трёх вариантов; `later_in_person` записывает намерение, `upload` открывает channel для файла, `declined` завершает.
+  - `POST /api/deals/{id}/verification/{req_id}/submit-document` — загрузка файла (multipart, MAX_UPLOAD_SIZE из T1.19).
+  - `POST /api/deals/{id}/verification/{req_id}/request-additional` — multi-doc branch.
+  - `POST /api/deals/{id}/verification/{req_id}/escalate` — вызов арбитра.
+  - `GET /api/users/{id}/verifications` — публичный список verifications (без раскрытия документов — только count, тип, дата, verifier).
+- [ ] **Permissions (расширение T1.24 RBAC):**
+  - `IDENTITY_REQUEST` — участник сделки может создать VerificationRequest.
+  - `IDENTITY_CONTAINER_READ_OWN` — базовое право владельца читать свой контейнер.
+  - `IDENTITY_CONTAINER_READ` — арбитр читает через escalation.
+- [ ] **Frontend:**
+  - На `DealPage` у перевозчика в статусах `accepted`/`in_transit` — кнопка «Ask for ID».
+  - Модалка у отправителя с тремя кнопками (later / decline / upload сейчас).
+  - Профиль (`ProfilePage`): секция «Identity» — badge «Verified by N carriers, first at DATE», список типов документов (без деталей).
+  - Профиль перевозчика — счётчик «Verified N senders».
+- [ ] **Backend-тесты:**
+  - Create/respond/submit флоу для трёх вариантов ответа.
+  - Multi-doc: два контейнера привязаны к одному PeerVerification.
+  - Escalate → Dispute создаётся, deal.status = disputed.
+  - Sanctions list match → `IdentityContainer.sanctions_check_status = 'match'`.
+  - OCR extraction MRZ smoke-test (детерминированное тестовое фото).
+  - Owner расшифровывает container, чужой user не может.
+- [ ] **i18n**: `verification.*` в 6 языках.
+
+**Acceptance:** перевозчик в чате может запросить документы; отправитель выбирает один из трёх ответов; при upload — файл проходит OCR + санкции + шифруется в контейнер; multi-doc branch работает; escalation вызывает арбитра из T1.23; профиль показывает счётчик verifications без раскрытия содержимого. Regulatory KYC отсутствует — это Фаза 4.
 
 ### T2.2 — Keypair + Nostr-совместимость (D10: Вариант A + D)
 - [ ] При регистрации: генерация secp256k1-keypair; `nsec` хранится зашифрованно (AES-256-GCM, ключ в env/KMS); `npub` → `User.nostr_pubkey`.
@@ -460,6 +511,37 @@
 
 **Acceptance:** сообщения не могут быть прочитаны сервером даже с полным доступом к БД; в нормальном флоу sender+carrier видят чат прозрачно; при споре арбитр + одна сторона расшифровывают вместе; все `arbiter_share_revealed` события append-only в `DealEvent`.
 
+### T2.4 — Trust Graph (Web-of-Trust) — круги доверия
+
+**Контекст:** T2.1 создаёт **атомарные** `PeerVerification` записи. T2.4 превращает их в граф — «круги доверия». Первый круг = кого лично подтвердил; второй = кого подтвердили те, кого подтвердил я; N-й круг = глубина сети. Модель — транзитивный граф в духе Nostr WoT / PGP web-of-trust. Идёт **после T2.3**, потому что там уже все события подписаны Nostr-ключами и граф honest.
+
+- [ ] **Модели:**
+  - `TrustEdge(id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight FLOAT, source_ref, created_at, revoked_at)`.
+  - `peer_verified` — из T2.1 PeerVerification (weight = 1.0).
+  - `dealt_with` — есть закрытая сделка между парой (weight = 0.5) — не так сильно как явная верификация, но всё равно сигнал.
+  - `invited` — из T1.3 Connection (weight = 0.2) — самый слабый сигнал.
+  - Индексы `(from_user_id, kind)`, `(to_user_id, kind)` для быстрых BFS.
+- [ ] **Sybil-заглушка (базовая):**
+  - Edge `peer_verified` валиден только если между verifier и subject **есть закрытая сделка** (`DealStatus.closed`) — предотвращает конвейер фальшивых аккаунтов. Формально: перед `INSERT` в `TrustEdge` проверка `SELECT 1 FROM deals WHERE (sender_id, carrier_id) MATCHES AND status='closed'`.
+  - Пометка «unverified sybil-risk» для аккаунтов моложе 30 дней с > N verifications выданных.
+- [ ] **Endpoints:**
+  - `GET /api/me/trust-circle?depth=N&kind=peer_verified` — BFS от текущего user до глубины N (max 6), возвращает `{depth: 1, users: [...]}, {depth: 2, users: [...]}, ...`. Пагинация внутри уровня.
+  - `GET /api/users/{id}/trust-metrics` — публичные метрики: `verifications_issued_count`, `verifications_received_count`, `dealt_with_count`, `first_verified_at`.
+- [ ] **Кеш:**
+  - Целевые метрики (verifications issued / received) — денормализованные Postgres-колонки в `User`, обновляемые Celery-task'ом раз в час или триггером на `TrustEdge` INSERT.
+  - Trust-circle сам — считаем на лету с cursor pagination, кешируем в Redis TTL 5 мин по ключу `(user_id, depth, kind)`.
+- [ ] **Frontend:**
+  - Секция «Circles» на `ProfilePage`:
+    - «Verified by you: N» (кого я подтвердил).
+    - «In your first circle: M» (подтверждённые мной).
+    - «Reach at depth 3: K» (косвенная сеть).
+  - На карточке чужого пользователя (`UserBadge`): «You know them through 2 hops» или «Directly verified by you» — быстрый indicator.
+  - Раздел `/me/trust` — визуализация графа (простая тепловая матрица кругов, без force-layout — экономнее).
+- [ ] i18n `trust.*` в 6 языках.
+- [ ] Backend-тесты: BFS корректность, Sybil-guard (edge без closed deal → 400), метрики счётчиков, revoked edges не идут в BFS.
+
+**Acceptance:** пользователь видит в своём профиле, сколько человек он подтвердил, сколько подтвердили его, и в каком круге относительно него находится любой другой аккаунт. Верификации без закрытых сделок отклоняются. Метрики публично видны в карточке.
+
 ---
 
 ## 📈 ЭТАП 3 — УБА и арбитраж (Фаза 3)
@@ -486,12 +568,31 @@
 
 ---
 
-## 💳 ЭТАП 4 — Карточные платежи (Фаза 4)
+## 💳 ЭТАП 4 — Карточные платежи + Regulatory KYC (Фаза 4)
 
-### T4.1 — Платежи на платформе (карта)
+### T4.1 — Классический regulatory KYC / AML
+
+**Контекст:** до Фазы 4 через платформу не идут деньги — P2P-верификации (T2.1) достаточно для доверия между участниками. Перед вводом карточных платежей (T4.2) регулятор требует **формальный KYC** и санкционный скрининг: kyc-провайдер интегрируется, `KycRecord` привязывается к аккаунту, санкционный периметр коридоров становится жёстким блоком.
+
+- [ ] Выбор провайдера — фиксируется в TECHSTATE Decision Log. Варианты:
+  - **Sumsub** — популярный на СНГ/EU, ~€1.5/verification, поддержка 220+ стран.
+  - **Onfido** — UK/EU/US, ~$1.5, лидер по SDK-качеству.
+  - **Jumio** — enterprise, дороже, максимум коридоров.
+- [ ] `KycRecord(id, user_id, provider, external_id, status ∈ {pending, verified, rejected, expired}, verified_at, expires_at, level)` — уровень зависит от suma/paйect (basic / enhanced).
+- [ ] `ComplianceAck(id, user_id, doc_version, category, acknowledged_at)` — версионируемое подтверждение запрещёнки и ответственности.
+- [ ] Санкционный периметр коридора: `CorridorRestriction(origin_country, destination_country, requires_kyc_level, blocked)` — таблица правил. При `POST /api/trips`, `POST /api/deals/match` — проверка.
+- [ ] Webhook от провайдера → обновляет `KycRecord.status` → триггерит evaluation прав.
+- [ ] Frontend: onboarding-модалка при первой попытке карточной оплаты; SDK провайдера в iframe/webview.
+- [ ] Permissions (расширение RBAC): `PLATFORM_PAYMENT_INITIATE` — требует `KycRecord.status = verified`.
+- [ ] Backend-тесты: user без KYC не может создать `Payment`; webhook меняет статус; санкционный чек блокирует match.
+
+**Acceptance:** пользователь проходит formal KYC перед первой карточной оплатой; санкционный периметр коридоров блокирует запрещённые пары стран; ComplianceAck обязателен на каждую версию условий.
+
+### T4.2 — Платежи на платформе (карта)
 - [ ] `Payment` (card), комиссия платформы.
 - [ ] Интеграция карточного процессинга.
 - [ ] Все транзакции пишут событие в `DealEvent`.
+- [ ] **Зависит от T4.1** — пользователь без verified KYC не может инициировать платёж.
 **Acceptance:** карточная оплата проходит на платформе, событие фиксируется, берётся комиссия.
 
 ---
@@ -529,6 +630,21 @@
 - [ ] Аккаунт совместим с Nostr-клиентами: npub идентифицирует, события проверяемы.
 - [ ] Решение по операторской/админ-панели зафиксировано в Decision Log TECHSTATE.
 **Acceptance:** пакет данных экспортируется и верифицируется; аккаунт работает в Nostr-клиенте.
+
+### T6.4 — ZK-Proof of Verification
+
+**Контекст:** T2.1 хранит фото документов в encrypted-контейнере (доступен владельцу и через escalation арбитру). T6.4 добавляет **более сильную приватность**: пользователь может доказать «у меня есть валидный verified passport» **не раскрывая сам документ и не полагаясь на платформу** как посредника. Настоящий ZK-SNARK: доказательство генерируется на клиенте, проверяется криптографически без обращения к серверу с документом. Зависит от T2.1 (есть контейнер) и T2.2 (есть keypair как identity anchor). Задача исследовательская — вероятно нужен приглашённый cryptographer.
+
+- [ ] **Circuit** (Circom/halo2): доказательство `∃ passport : owner_pubkey = derive(passport.private_hash) AND passport.expiry > NOW AND hash(passport) ∈ set_of_verified_passport_hashes`.
+- [ ] Merkle tree of verified passport hashes — обновляется on-chain-style Nostr event'ами; клиент строит proof membership.
+- [ ] Runtime: **snarkjs** (Circom) или **halo2-wasm** для генерации proof в браузере (5-30 сек на mobile).
+- [ ] Event формат: новый Nostr NIP (уточнить номер / propose upstream) — «verified identity proof», содержит только proof + npub.
+- [ ] Endpoint `POST /api/verifications/proof` — верифицирует proof и записывает соотв. факт (без пересохранения identity).
+- [ ] **UX:** переключатель в профиле «Reveal encrypted identity to platform» ↔ «Prove verification via ZK-proof». Для параноидальных пользователей — путь без хранения фото у платформы вообще.
+- [ ] Совместимость: старая (T2.1) и новая (T6.4) системы работают параллельно; арбитр через escalation в T2.1 работает как раньше, но пользователи ZK-режима остаются приватными.
+- [ ] Возможно: приглашение cryptographer'а для audit'а circuit'а — фиксируется в TECHSTATE.
+
+**Acceptance:** пользователь генерирует ZK-proof в браузере; платформа принимает его без раскрытия документа; badge «Verified» на профиле показывается без хранения фото на сервере.
 
 ---
 

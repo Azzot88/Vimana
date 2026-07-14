@@ -32,7 +32,8 @@
 - **Nginx** — reverse proxy и SSL termination (либо Cloudflare перед origin).
 
 ### Идентификация, эскроу, платежи (Фазы 2–3)
-- **KYC-провайдер** — выбирается в Фазе 2 (фиксируется в TECHSTATE Decision Log).
+- **Peer identity verification (Фаза 2)** — локальный OCR-стек: **PaddleOCR** для MRZ-строк паспортов (fallback tesseract), санкционные списки OFAC SDN + EU consolidated (публичные CSV, обновляются ежедневно). Внешние KYC-API **не используются** в Фазе 2 — верификация силами сети (T2.1).
+- **KYC-провайдер (Фаза 4)** — выбирается перед вводом карточных платежей (Sumsub / Onfido / Jumio; фиксируется в TECHSTATE Decision Log D-KYC). Требуется для regulator-compliance.
 - **BTC-эскроу** — 2-of-3 multisig по образцу HodlHodl; платформа держит **только ключ арбитра**.
 - **Некастодиальный кошелёк** — для возвратов.
 - **Карточный процессинг + крипто-платежи** — Фаза 3.
