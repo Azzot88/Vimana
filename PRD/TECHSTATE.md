@@ -21,24 +21,34 @@
 | Сделка (lifecycle + DealEvent) | 1 | ✅ готово |
 | DealVault (чат + фото + лог, IPFS-ready) | 1 | ✅ готово |
 | Frontend SPA (React + Vite + Tailwind) | 1 | ✅ готово |
-| Уведомления (email + Telegram + WhatsApp) | 1 | ⬜ не начато |
-| Интернационализация (i18n, 5 языков) | 1 | ⬜ не начато |
-| База аэропортов + геолокация (Haversine) | 1 | ⬜ не начато |
-| Мобильная версия (responsive) | 1 | ⬜ не начато |
-| Телефон в профиль (убран из регистрации) | 1 | ⬜ не начато |
-| Peer Identity Verification (P2P KYC) | 2 | ⬜ не начато |
-| Trust Graph (Web-of-Trust) | 2 | ⬜ не начато |
-| Keypair + Nostr-совместимость | 2 | ⬜ не начато |
-| Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато |
-| Оператор-арбитр + Споры | 3 | ✅ готово (T1.23 backend + T1.24 RBAC) |
-| Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато |
-| Regulatory KYC/AML + Санкционный периметр | 4 | ⬜ не начато |
-| Карточные платежи | 4 | ⬜ не начато |
+| Уведомления (email + Telegram + WhatsApp) | 1 | ✅ готово (T1.7) |
+| Интернационализация (i18n, 6 языков EN/UA/RU/PL/FR/ES) | 1 | ✅ готово (T1.9, T1.13) |
+| База аэропортов + геолокация (Haversine, D11) | 1 | ✅ готово (T1.10, T1.16) |
+| Мобильная версия (responsive + BottomNav) | 1 | ✅ готово (T1.12) |
+| Телефон в профиль (убран из регистрации) | 1 | ✅ готово (T1.11) |
+| Расширяемые категории (Category модель + autocomplete) | 1 | ✅ готово (T1.17) |
+| Waitlist + публичный Landing | 1 | ✅ готово (T1.18) |
+| SSL / HTTPS / staging deploy | 1 | ✅ готово (T1.8) |
+| Pre-production hardening (race conditions, upload security, rate-limit, exception handler, cursor pagination) | 1 | ✅ готово (T1.19) |
+| Cloudflare R2 / S3 storage для DealVault-аттачей | 1 | ✅ готово (T1.20) |
+| At-rest AES-256-GCM шифрование DealVault-сообщений | 1 | ✅ готово (T1.21, переходно к T2.3) |
+| Inquiry chat panel (TripInquiry + InquiryMessage) | 1 | ✅ готово (T1.22) |
+| User Zero + Arbiter role + Dispute model (базовая механика) | 1→3 | ✅ готово (T1.23; полная Фаза 3 — позже) |
+| Dual role (can_carry/can_send/active_mode) + RBAC (Permission enum + Role) | 1 | ✅ готово (T1.24) |
+| Peer Identity Verification (P2P KYC) | 2 | ⬜ не начато (T2.1) |
+| Trust Graph (Web-of-Trust) | 2 | ⬜ не начато (T2.4) |
+| Keypair + Nostr-совместимость (D10: A+D) | 2 | ⬜ не начато (T2.2) |
+| Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ⬜ не начато (T2.3) |
+| Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато (T3.1) |
+| Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато (T3.5) |
+| Regulatory KYC/AML + Санкционный периметр коридоров | 4 | ⬜ не начато (T4.1) |
+| Карточные платежи | 4 | ⬜ не начато (T4.2) |
 | Эскроу BTC + Залог | 5 | ⬜ не начато |
 | USDT-эскроу | 5 | ⬜ не начато |
 | Премиум | 6 | ⬜ не начато |
 | DealVault → IPFS | 6 | ⬜ не начато |
 | Полная Nostr + IPFS портативность | 6 | ⬜ не начато |
+| ZK-Proof of Verification | 6 | ⬜ не начато (T6.4) |
 
 *(Обновлять по мере выполнения: ⬜ → 🟨 в работе → ✅ готово.)*
 
@@ -101,51 +111,89 @@
 
 | Механика | Где реализовано (файлы) |
 |---|---|
-| FastAPI app + /health + CORS + роутеры | `backend/app/main.py` |
+| FastAPI app + /health + CORS + роутеры + lifespan (User Zero promote) | `backend/app/main.py` |
 | Настройки (pydantic-settings) | `backend/app/core/config.py` |
 | JWT (HS256, 30д), bcrypt | `backend/app/core/security.py` |
-| get_current_user dependency | `backend/app/api/deps.py` |
-| Auth API: register/login/me | `backend/app/api/auth.py` |
-| Invite + Connection API | `backend/app/api/social.py` |
-| Trips API (POST/GET + фильтры) | `backend/app/api/trips.py` |
-| Deals API (match/accept/event/confirm) + DealEvent append-only | `backend/app/api/deals.py` |
-| DealVault API (чат + загрузка файлов + SHA-256) | `backend/app/api/dealvault.py` |
-| R2/S3 клиент (graceful без R2_ENDPOINT) | `backend/app/core/storage.py` |
-| Frontend SPA — 11 страниц, design system | `frontend/src/` |
-| GET /api/deals/{id} — DealDetailOut (trip+order+users) | `backend/app/api/deals.py` |
+| get_current_user dependency + is_superuser helper | `backend/app/api/deps.py` |
+| Auth API: register/login/me + normalize/case-insensitive/trim (T1.15) | `backend/app/api/auth.py` |
+| Invite + Connection API + /me/invites (T1.14) | `backend/app/api/social.py` |
+| Trips API (POST/GET + фильтры) — `can_carry` check (T1.24) | `backend/app/api/trips.py` |
+| Deals API (match/accept/event/confirm) + DealEvent append-only + inquiry.deal_id linking (T1.22) | `backend/app/api/deals.py` |
+| DealVault API (чат + upload) — MAX 10MB, streaming SHA-256, MIME whitelist (T1.19) | `backend/app/api/dealvault.py` |
+| Inquiry API (TripInquiry + InquiryMessage) | `backend/app/api/inquiries.py` |
+| Admin API (Dispute + Vault access + Users) — все через require_perm() | `backend/app/api/admin.py` |
+| RBAC: Permission enum + Role + perms_of() + require_perm() FastAPI dep (T1.24 pt.1) | `backend/app/core/permissions.py` |
+| Waitlist API + Telegram admin notify (T1.18) | `backend/app/api/waitlist.py` |
+| Categories API (search + auto-create on match, T1.17) | `backend/app/api/categories.py` |
+| Airports API (search + nearest + cascade country→city→airport, T1.10/T1.16) | `backend/app/api/airports.py`, `backend/app/core/airports.py` |
+| Telegram bot webhook + linking через /start {token} (T1.7) | `backend/app/api/telegram.py`, `backend/app/core/telegram.py` |
+| R2/S3 клиент + health check (T1.20) | `backend/app/core/storage.py` |
+| AES-256-GCM at-rest шифрование (T1.21) — property-facade `text` на модели | `backend/app/core/crypto.py`, `backend/app/models/deal.py` |
+| Cursor pagination utils Page[T] (T1.19) | `backend/app/core/pagination.py` |
+| slowapi rate-limit + X-Forwarded-For key (T1.19) | `backend/app/core/rate_limit.py` |
+| Global exception handler + X-Request-ID middleware + jsonable_encoder fix (T1.19) | `backend/app/main.py`, `backend/app/core/logging_setup.py` |
+| Email + WhatsApp (Twilio) notifications | `backend/app/core/email.py`, `backend/app/core/whatsapp.py` |
+| Celery worker + beat (notifications, dispute checks) | `backend/app/worker.py`, `backend/app/tasks/notifications.py` |
+| Superuser (User Zero) startup promotion — idempotent | `backend/app/core/superuser.py` |
+| Boarding pass PDF (WeasyPrint) | *(планируется, слот под T6.1)* |
 | Async SQLAlchemy engine + Base + get_db() | `backend/app/core/database.py` |
-| Alembic async migrations | `backend/alembic/env.py` |
-| Все доменные модели (9 таблиц) | `backend/app/models/` |
-| Первая миграция (все таблицы + enum-ы + FK) | `backend/alembic/versions/0001_initial_models.py` |
+| Alembic async migrations (0001–0010) | `backend/alembic/env.py`, `backend/alembic/versions/` |
+| Все доменные модели (13 таблиц) | `backend/app/models/` |
+| Изолированная тестовая БД `vimana_test` + идемпотентные seed-фикстуры | `backend/tests/conftest.py` |
+| 140 backend-тестов (auth, trips, deals, dealvault, dealvault_attachments, arbiter, dual_role, permissions, hardening_block3/4/5, encryption, inquiry, notifications, race_conditions, social, telegram, waitlist, categories, airports) | `backend/tests/` |
+| Frontend SPA — React 18 + Vite + TypeScript + Tailwind + i18n 6 языков | `frontend/src/` |
+| Frontend RBAC: hasPerm() + Permission enum mirror | `frontend/src/lib/permissions.ts` |
+| ModeSwitcher в Navbar (T1.24) + разный визуал Dashboard | `frontend/src/components/ModeSwitcher.tsx`, `pages/DashboardPage.tsx` |
+| InquiryPanel — right-side drawer/panel с encrypted-at-rest badge | `frontend/src/components/InquiryPanel.tsx` |
+| ImageLightbox — full-screen preview с Esc/click-outside close | `frontend/src/components/ImageLightbox.tsx` |
+| Admin pages (`/admin/disputes`, `/admin/users`, `/admin/deals/:id/vault`) | `frontend/src/pages/Admin*.tsx` |
+| Landing + Waitlist public route (T1.18) | `frontend/src/pages/LandingPage.tsx` |
+| Frontend smoke-тесты (7 кейсов через vitest) | `frontend/src/test/`, `frontend/src/**/*.test.tsx` |
+| Docker compose dev с nginx dynamic DNS resolver + SSL termination | `docker-compose.dev.yml`, `nginx/default.conf` |
 
 ---
 
 ## 4. Ключевые модели данных / контракты (целевые)
 
-**Фаза 1**
-- `User(id, email/phone, password_hash, display_name, is_carrier, nostr_pubkey nullable, business_activity_level, created_at)`
-- `InviteLink(id, creator_id→User, token, expires_at, used_by→User?)`
-- `Connection(id, user_id→User, connected_user_id→User, created_at)` — двусторонняя запись
-- `Trip(id, carrier_id→User, origin, destination, depart_at, capacity, allowed_categories, status)`
-- `Order(id, sender_id→User, recipient_contact, origin, destination, category, declared_value, currency, description, deadline, status, trip_id→Trip?)`
-- `Deal(id, order_id→Order, trip_id→Trip, sender_id, carrier_id, recipient_id?, status, created_at)`
-- `DealEvent(id, deal_id→Deal, event_type, payload JSON, actor_id, nostr_sig nullable, timestamp)` — **append-only**
-- `DealVaultMessage(id, deal_id→Deal, sender_id, text, is_system, nostr_sig nullable, created_at)` — **иммутабельно**
-- `Attachment(id, message_id→DealVaultMessage, r2_key, file_hash SHA-256, ipfs_cid nullable, kind, created_at)` — **иммутабельно**
+**Фаза 1 (в prod)**
+- `User(id, email?/phone?, password_hash?, display_name, can_carry, can_send, active_mode ∈ {sender, carrier}, role ∈ {user, arbiter, superuser}, nostr_pubkey?, business_activity_level?, notify_email/telegram/whatsapp, telegram_chat_id?, telegram_link_token?, whatsapp_number?, created_at)` — колонки `is_carrier`/`is_superuser`/`is_arbiter` удалены миграциями 0009/0010
+- `InviteLink(id, creator_id→User, token, expires_at 14д, used_by→User?)`
+- `Connection(id, user_id→User, connected_user_id→User, created_at)` — двусторонняя запись, UNIQUE(user_id, connected_user_id) из T1.19
+- `Trip(id, carrier_id→User, origin, destination, depart_at, capacity, allowed_categories JSON, status)`
+- `Order(id, sender_id→User, recipient_contact, origin, destination, category VARCHAR(50), declared_value, currency, description, deadline?, status, trip_id→Trip?)`
+- `Deal(id, order_id→Order, trip_id→Trip, sender_id, carrier_id, recipient_id?, status ∈ {draft, matched, accepted, in_transit, delivered, confirmed, closed, disputed}, created_at)`
+- `DealEvent(id, deal_id→Deal, event_type ∈ {…, dispute_opened, arbiter_opened, dispute_resolved}, payload JSON, actor_id, nostr_sig?, timestamp)` — **append-only**
+- `DealVaultMessage(id, deal_id→Deal, sender_id?, text_ciphertext BYTEA, text_nonce BYTEA, is_system, nostr_sig?, created_at)` — **иммутабельно**, at-rest AES-256-GCM из T1.21; property `text` decrypt on access
+- `Attachment(id, message_id→DealVaultMessage, r2_key, file_hash SHA-256, ipfs_cid?, kind ∈ {handoff_photo, receipt_photo, doc, payment_receipt}, created_at)` — **иммутабельно**
+- `Category(id, name_key UNIQUE, is_default, usage_count, created_at)` — T1.17
+- `TripInquiry(id, trip_id→Trip, sender_id, carrier_id, deal_id?, created_at)` — UNIQUE(trip_id, sender_id), T1.22
+- `InquiryMessage(id, inquiry_id→TripInquiry, sender_id, text_ciphertext, text_nonce, created_at)` — at-rest шифрование, T1.22
+- `Dispute(id, deal_id→Deal UNIQUE, opened_by, arbiter_id?, reason, status ∈ {open, claimed, resolved}, verdict?, created_at, resolved_at?)` — T1.23
+- `WaitlistEntry(id, email UNIQUE, name?, source, created_at)` — T1.18
 
-**Фаза 2**
-- `KycRecord(id, user_id, provider, status, verified_at)`
-- `ComplianceAck(id, user_id, version, accepted_at)`
-- *(User.nostr_pubkey заполняется; DealVaultMessage.nostr_sig и DealEvent.nostr_sig заполняются)*
+**Фаза 2 (планируется)**
+- `VerificationRequest(id, deal_id→Deal, requested_by_id, status ∈ {pending, upload, later_in_person, declined, verified, escalated}, created_at, resolved_at?)` — T2.1
+- `IdentityContainer(id, owner_id, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status ∈ {clean, match, review_needed}, created_at)` — ключ = owner's Nostr nsec, multi-doc allowed
+- `PeerVerification(id, subject_id, verified_by_id, container_ref_id→IdentityContainer, in_deal_id, method ∈ {app_ocr, in_person_photo, in_person_visual}, created_at, revoked_at?)` — T2.1
+- `TrustEdge(id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight FLOAT, source_ref, created_at, revoked_at?)` — T2.4
+- `SanctionsList(source, name_normalized, dob?, country?, added_at)` — daily refresh OFAC SDN + EU consolidated
+- *(User.nostr_pubkey заполняется; DealVaultMessage/DealEvent подписываются; T2.3 — threshold-encryption заменяет at-rest из T1.21)*
+- `User.key_self_custody: bool = False` — добавляется в T2.2
 
 **Фаза 3**
-- `Dispute(id, deal_id, opened_by, status, verdict)`
-- `OperatorAccessGrant(id, deal_id, operator_id, granted_by, granted_at)`
 - *(User.business_activity_level — заглушка Фазы 1 — заполняется реальным значением УБА; пересчёт Celery beat ежечасно)*
 - **УБА-формула:** `round(F_norm × Q_norm × V_norm × D_factor × 1000)`. F = рейсы/мес (rolling 90d), Q = сделки с двумя DealVault-фото (log), V = сумма declared_value USD (log), D_factor = бонус залога [1.0–1.5]. Детали: IMPLEMENTATIONPLAN §6 §3.1.
+- **Оператор-арбитр и Dispute уже реализованы в T1.23/T1.24** — Фаза 3 добавляет только УБА + расширенную консоль/аналитику.
+
+**Фаза 3.5**
+- `Trip.nostr_event_id?` (unique index), `Trip.nostr_published_at?` — T3.5
+- `SanctionsList` уже введена в Фазе 2
 
 **Фаза 4**
-- `Payment(id, deal_id, method=card, amount, platform_fee, status)`
+- `KycRecord(id, user_id, provider, external_id, status ∈ {pending, verified, rejected, expired}, verified_at, expires_at, level)` — T4.1
+- `ComplianceAck(id, user_id, doc_version, category, acknowledged_at)` — T4.1
+- `CorridorRestriction(origin_country, destination_country, requires_kyc_level, blocked)` — T4.1 санкционный периметр
+- `Payment(id, deal_id, method=card, amount, platform_fee, status)` — T4.2
 
 **Фаза 5**
 - `Escrow(id, deal_id, chain, type=multisig_2of3, lock_address, amount, arbiter_pubkey_ref, status)`

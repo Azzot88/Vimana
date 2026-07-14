@@ -31,18 +31,30 @@
 - **Docker & Docker Compose** — унификация dev/prod (см. §6).
 - **Nginx** — reverse proxy и SSL termination (либо Cloudflare перед origin).
 
-### Идентификация, эскроу, платежи (Фазы 2–3)
-- **Peer identity verification (Фаза 2)** — локальный OCR-стек: **PaddleOCR** для MRZ-строк паспортов (fallback tesseract), санкционные списки OFAC SDN + EU consolidated (публичные CSV, обновляются ежедневно). Внешние KYC-API **не используются** в Фазе 2 — верификация силами сети (T2.1).
-- **KYC-провайдер (Фаза 4)** — выбирается перед вводом карточных платежей (Sumsub / Onfido / Jumio; фиксируется в TECHSTATE Decision Log D-KYC). Требуется для regulator-compliance.
+### Идентификация (Фаза 2)
+- **Peer identity verification** — локальный OCR-стек: **PaddleOCR** для MRZ-строк паспортов (fallback tesseract), санкционные списки OFAC SDN + EU consolidated (публичные CSV, обновляются ежедневно). Внешние KYC-API **не используются** в Фазе 2 — верификация силами сети (T2.1).
+- **Trust Graph (T2.4)** — Postgres-таблица `trust_edges`, BFS в приложении с Redis-кешем.
+- **Nostr keypair (T2.2)** — `coincurve` для secp256k1; `nsec` шифруется AES-256-GCM (ключ в env).
+
+### Nostr Relay (Фаза 3.5)
+- **strfry** — production-ready C++ relay, отдельный контейнер `nostr-relay` в docker-compose. LMDB storage (~50 MB idle).
+- **Friendly relays whitelist** — env `NOSTR_FRIENDLY_RELAYS`; стартовый набор в TECHSTATE D-NOSTR-FEDERATION.
+- Event kind trip = NIP-99 30402 (см. D-NOSTR-RELAY).
+
+### Regulatory KYC + Платежи (Фаза 4)
+- **KYC-провайдер** — выбирается перед вводом карточных платежей (Sumsub / Onfido / Jumio; фиксируется в TECHSTATE Decision Log D-KYC). Требуется для regulator-compliance.
+- **Карточный процессинг** — конкретный процессор фиксируется в Decision Log при подходе к T4.2.
+
+### Эскроу (Фаза 5)
 - **BTC-эскроу** — 2-of-3 multisig по образцу HodlHodl; платформа держит **только ключ арбитра**.
 - **Некастодиальный кошелёк** — для возвратов.
-- **Карточный процессинг + крипто-платежи** — Фаза 3.
-
-### Премиум и портативность (Фаза 4)
 - **USDT-эскроу** — контрактный аналог не-кастодиальной 2-of-3.
-- **Nostr SDK** — идентичность/связи при отвязке данных.
+
+### Портативность (Фаза 6)
+- **Nostr SDK** — расширение существующего Nostr-стека для полного экспорта аккаунта.
 - **IPFS SDK** — контент-адресуемое дублирование (CID ↔ хеш вложений).
-- **Админ/операторская панель** — вариант на оценке (см. Decision Log в TECHSTATE).
+- **ZK-proof** (T6.4) — Circom / halo2, `snarkjs`/`halo2-wasm` в браузере.
+- **Админ/операторская панель** — вариант на оценке (см. Decision Log в TECHSTATE D6).
 
 ---
 
@@ -62,26 +74,50 @@
 
 Все ключи — строго в `.env` (в `.gitignore`).
 
-**Обязательные (шаблон):**
-- `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`
+**Обязательные (в prod уже используются):**
+- `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `DATABASE_URL`
+- `TEST_DATABASE_URL` (изолированная тестовая БД, ENVIRONMENT §8)
 - `SECRET_KEY` (подпись JWT)
-- `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_ENDPOINT` (вложения Чёрного ящика)
-- `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_HOST` (уведомления)
+- `MESSAGE_ENCRYPTION_KEY` (T1.21 at-rest AES-256-GCM для DealVault; **если пусто в prod — падение при первом encrypt/decrypt**)
+- `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_ENDPOINT` (вложения DealVault)
+- `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_HOST` / `SMTP_PORT` (email-уведомления)
 - `REDIS_URL` (Celery)
+- `CORS_ORIGINS` (T1.19 whitelist доменов)
+- `RATE_LIMIT_ENABLED` (T1.19 slowapi; в тестах = `false`)
 
-**Будущие (Фаза 2+):**
-- `KYC_PROVIDER_API_KEY`
+**Notifications (Фаза 1):**
+- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` / `TELEGRAM_WEBHOOK_SECRET` (T1.7 Telegram)
+- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` (T1.7 WhatsApp)
+
+**Admin (Фаза 1, T1.18):**
+- `ADMIN_API_TOKEN` (защита waitlist read endpoint)
+- `ADMIN_TELEGRAM_CHAT_IDS` (comma-separated chat_ids для уведомлений о новом waitlist)
+
+**Фаза 2:**
+- OCR/санкции — без API-ключей, всё локально (PaddleOCR + публичные CSV).
+
+**Фаза 3.5:**
+- `NOSTR_RELAY_URL` (наш публичный wss endpoint)
+- `NOSTR_RELAY_PRIVKEY` (служебный ключ для NIP-42 challenges + deletion events)
+- `NOSTR_FRIENDLY_RELAYS` (comma-separated whitelist wss:// адресов)
+
+**Фаза 4:**
+- `KYC_PROVIDER_API_KEY` (Sumsub / Onfido / Jumio — D-KYC)
+- `PAYMENT_PROVIDER_KEY` (карточный процессинг)
+
+**Фаза 5:**
 - `BTC_ESCROW_ARBITER_KEY_REF` (ссылка на защищённое хранилище ключа арбитра — не сам ключ)
-- `PAYMENT_PROVIDER_KEY` (Фаза 3)
-- `USDT_ESCROW_RPC_URL` (Фаза 4)
-- `NOSTR_RELAY_URL` / `IPFS_GATEWAY_URL` (Фаза 4)
+- `USDT_ESCROW_RPC_URL`
+
+**Фаза 6:**
+- `IPFS_GATEWAY_URL`
 
 ---
 
 ## 4. Правила работы с БД
 
 1. **Миграции обязательны** (`alembic revision --autogenerate` + `alembic upgrade head`). Никаких ручных правок схемы.
-2. Данные `deals`, `deal_events`, `black_box_messages`, `attachments` считаются критическими: **не удаляются** (только статусная архивация); append-only сохраняется на уровне приложения и ограничений.
+2. Данные `deals`, `deal_events`, `deal_vault_messages`, `attachments`, `disputes`, `peer_verifications`, `identity_containers` считаются критическими: **не удаляются** (только статусная архивация); append-only сохраняется на уровне приложения и ограничений.
 3. Вложения хешируются (SHA-256) при загрузке; хеш хранится в `Attachment`.
 
 ---
@@ -102,7 +138,7 @@
 
 ---
 
-## 8. Правила тестирования (ОБЯЗАТЕЛЬНО)
+## 7. Правила тестирования (ОБЯЗАТЕЛЬНО)
 
 ### Принципы
 1. **Отдельная тестовая БД** — `vimana_test`, изолирована от dev/prod. Никогда не запускать тесты против dev/prod-базы.
@@ -129,7 +165,7 @@ docker compose exec -w /app backend pytest -v
 
 ---
 
-## 7. Как запустить (сценарий)
+## 8. Как запустить (сценарий)
 
 ```bash
 git clone <repo-url> vimana && cd vimana

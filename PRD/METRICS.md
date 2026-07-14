@@ -28,7 +28,10 @@
 | **DealVault compliance** | сделок с фото передачи И получения / всех | ≥95% | 1 |
 | **Dispute rate** | споров / завершённых сделок | <3% | 3 |
 | **Dispute resolution time** | медиана: открытие → вердикт | падает | 3 |
-| **Verified-carrier share** | KYC-верифицированных перевозчиков / активных | растёт | 2 |
+| **Peer-verified sender share** | отправителей с ≥1 активной PeerVerification / активных отправителей | растёт | 2 |
+| **Trust-graph density** | среднее число verifications received на активного пользователя | растёт | 2 |
+| **Verification acceptance rate** | verified / всех VerificationRequest (исключая later_in_person) | ≥70% | 2 |
+| **Regulatory-KYC-verified share** | пользователей с `KycRecord.status=verified` / активных | растёт | 4 |
 
 ---
 
@@ -60,5 +63,17 @@
 
 | KPI | Формула / Источник | Цель | Фаза |
 |---|---|---|---|
-| **Compliance-ack coverage** | сделок с подтверждением запрещёнки / всех | 100% | 2 |
-| **Sanctions-screen coverage** | сделок, прошедших периметр / всех | 100% | 2 |
+| **Compliance-ack coverage** | сделок с подтверждением запрещёнки / всех | 100% | 4 |
+| **Sanctions-screen coverage** | сделок, прошедших periметр / всех | 100% | 4 |
+| **Peer-verification sanctions match rate** | контейнеров с `sanctions_check_status=match` / всех | должно быть 0% | 2 |
+| **Identity fraud escalation rate** | escalated verifications → arbiter / всех verifications | падает | 2 |
+
+---
+
+## 6. Nostr-слой (Фаза 3.5)
+
+| KPI | Формула / Источник | Цель | Фаза |
+|---|---|---|---|
+| **Nostr publish success rate** | successful publishes / total attempts | ≥99% | 3.5 |
+| **Federation reach** | среднее число friendly relays, принявших event | ≥2 из 3 whitelist | 3.5 |
+| **External Nostr client discovery** | trip-события, увиденные вне нашего relay (по логам friendly relays) | растёт | 3.5 |

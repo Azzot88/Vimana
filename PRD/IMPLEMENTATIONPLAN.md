@@ -42,11 +42,14 @@
 | **Сделка** | 1 | Lifecycle + append-only `DealEvent` |
 | **DealVault** | 1 | Иммутабельный чат + фото (R2/S3) + лог; SHA-256 → CID-совместимо с IPFS |
 | **Уведомления** | 1 | Email/push, мягкие напоминания |
-| **Идентификация и комплаенс** | 2 | KYC/AML, подтверждение запрещёнки, санкционный периметр |
+| **Peer Identity Verification (P2P KYC)** | 2 | Перевозчик просит документы отправителя; локальный OCR + публичные санкционные CSV; encrypted identity container (ключ владельца из T2.2) |
+| **Trust Graph (Web-of-Trust)** | 2 | Транзитивный граф `peer_verified`/`dealt_with`/`invited`; круги доверия |
 | **Keypair + Nostr** | 2 | secp256k1 keypair per user, подпись DealVault-событий, Nostr-совместимость |
 | **Уровень Бизнес-Активности (УБА)** | 3 | Частота × количество выполненных рейсов × оценочная стоимость × размер залога |
-| **Оператор-арбитр и споры** | 3 | Консоль, доступ к DealVault, вердикт |
-| **Карточные платежи** | 4 | Карта на платформе, комиссия. Без крипты |
+| **Оператор-арбитр и споры** | 3 | Консоль, доступ к DealVault, вердикт (базовая механика уже закрыта в T1.23/T1.24) |
+| **Vimana Nostr Relay + Federation** | 3.5 | strfry-контейнер; publish trip events (NIP-99 kind 30402) в whitelist friendly relays |
+| **Regulatory KYC/AML** | 4 | Провайдер (Sumsub/Onfido/Jumio); блокирует `PLATFORM_PAYMENT_INITIATE` без verified статуса |
+| **Карточные платежи** | 4 | Карта на платформе, комиссия. Без крипты. Требует Regulatory KYC |
 | **Эскроу BTC + Залог** | 5 | BTC 2-of-3 (HodlHodl-схема), ключ арбитра, некастодиальный кошелёк, залог |
 | **USDT-эскроу** | 5 | Аналог BTC-эскроу |
 | **Премиум** | 6 | Хранение документов + учёт |
@@ -133,12 +136,24 @@
 
 ## 5. Фаза 2 — Идентификация и ключи
 
-> **Цель:** верифицированные участники, keypair как основа портативности. Зависимость: Фаза 1 стабильна.
+> **Цель:** верифицированные силами сети участники, keypair как основа портативности. Regulatory KYC — Фаза 4. Зависимость: Фаза 1 стабильна.
 
-### 2.1 Идентификация и комплаенс
-1. `KycRecord` — id, user_id, provider, status, verified_at.
-2. `ComplianceAck` — подтверждение пользователем правил запрещёнки и ответственности (версионируется).
-3. Санкционный периметр коридора (проверки сторон); строгий ToS.
+### 2.1 Peer Identity Verification (P2P KYC)
+1. `VerificationRequest` — id, deal_id, requested_by, status ∈ {pending, upload, later_in_person, declined, verified, escalated}.
+2. `IdentityContainer` — id, owner_id, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status. Ключ шифрования = owner's Nostr nsec (из T2.2). Multi-doc: один пользователь → много контейнеров.
+3. `PeerVerification` — id, subject_id, verified_by_id, container_ref_id, in_deal_id, method ∈ {app_ocr, in_person_photo, in_person_visual}, created_at, revoked_at. Append-only событие сети.
+4. Три варианта ответа отправителя: `later_in_person` (позже при встрече) / `declined` (метка на профиль, перевозчик вправе отменить) / `upload` (сейчас через OCR).
+5. Multi-doc по принципу US DMV — если сомнения → запрос второго документа.
+6. Escalation при подозрении на фальшивку → создаётся `Dispute` из T1.23 с типом `identity_fraud`.
+7. Локальный OCR: PaddleOCR (fallback tesseract) — без внешних API.
+8. Санкционные списки: OFAC SDN + EU consolidated — публичные CSV, обновляются ежедневно.
+9. Перевозчик **не показывает свои документы** — отвечает депозитом (Фаза 5) и историей.
+
+### 2.1a Trust Graph (Web-of-Trust)
+1. `TrustEdge` — id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight, source_ref.
+2. Sybil-guard: `peer_verified` edge валиден только если между парой есть `DealStatus.closed`.
+3. `GET /api/me/trust-circle?depth=N` — BFS до глубины 6.
+4. Публичная метрика: `verifications_issued_count`, `verifications_received_count`.
 
 ### 2.2 Keypair + Nostr-совместимость (D10: Вариант A + D)
 1. При регистрации генерируется secp256k1-keypair. `nsec` хранится зашифрованно (AES-256-GCM; ключ шифрования в env/KMS, не в БД). `npub` → `User.nostr_pubkey`.
@@ -149,11 +164,16 @@
 6. **NIP-07 (Вариант D):** frontend обнаруживает `window.nostr` → запрашивает `getPublicKey()` → предлагает переключиться на extension-подпись → frontend передаёт pre-signed event, сервер верифицирует. Extension-подпись имеет приоритет над custodial.
 
 ### ✅ Phase 2 Integrity Check
-- [ ] KYC обязателен до операций, требующих верификации?
-- [ ] Подтверждение запрещёнки зафиксировано и версионировано?
-- [ ] Санкционный периметр проверяется до сделки?
+- [ ] Peer verification: три варианта ответа (later/decline/upload) все работают?
+- [ ] Multi-doc branch (первый паспорт + опциональный второй документ)?
+- [ ] Escalation → создаёт `Dispute` типа `identity_fraud`?
+- [ ] `IdentityContainer` расшифровывается только владельцем через nsec (никто третий, включая платформу)?
+- [ ] `PeerVerification` без closed deal между verifier и subject → 400 (Sybil-guard)?
+- [ ] Локальный OCR (PaddleOCR) работает без внешних API?
+- [ ] OFAC SDN список обновляется ежедневно?
 - [ ] Keypair хранится безопасно (вариант — TECHSTATE D10)?
 - [ ] DealVaultMessage подписаны и проверяемы без платформы?
+- [ ] **Regulatory KYC отсутствует** — переезжает в Фазу 4 (T4.1)?
 
 ---
 
@@ -217,19 +237,61 @@ D_factor = 1.0 + 0.5 × min(D / 5000, 1.0)               — диапазон [1
 
 ---
 
-## 7. Фаза 4 — Карточные платежи
+## 6.5 Фаза 3.5 — Vimana Nostr Relay + Federation
 
-> **Цель:** монетизация без крипты. Зависимость: Фаза 3 стабильна.
+> **Цель:** свой Nostr-relay в prod; каждый рейс = signed event в глобальной сети. Зависимость: Фаза 2 (keypair) + Фаза 3 (арбитраж, УБА).
 
-### 4.1 Платежи на платформе
+### 3.5.1 Relay-runtime + event model
+1. **strfry** как отдельный контейнер `nostr-relay` в docker-compose. LMDB storage, NIP-01/NIP-11/NIP-42/NIP-99.
+2. Trip event model: **kind 30402** (NIP-99 Classified Listing, replaceable per `d`-tag). Tags: `d`, `l` (locations IATA), `t` (categories), `published_at`, `expires_at`, `capacity`.
+3. Signed user's nsec (из T2.2) — не платформенным ключом.
+
+### 3.5.2 Publish bridge
+1. При `POST /api/trips` (после Postgres commit) — Celery task `publish_trip_to_nostr(trip_id)`.
+2. Publish в свой relay + broadcast в whitelist `NOSTR_FRIENDLY_RELAYS` (env, comma-separated).
+3. Идемпотентность через `Trip.nostr_event_id` (unique).
+4. При cancelled — event kind 5 (deletion request).
+
+### 3.5.3 Federation + auth
+1. Стартовый whitelist: damus.io, nostr.wine, relay.nostr.band (уточнить в TECHSTATE D-NOSTR-FEDERATION).
+2. NIP-42 auth: только Vimana-npub могут писать в наш relay.
+3. Rate-limit 30 events/hour per pubkey; WoT-gate из T2.4.
+4. **Subscribe (чтение чужих events) — отложено до Фазы 4+**.
+
+### ✅ Phase 3.5 Integrity Check
+- [ ] Event публикуется в наш relay и минимум 2 friendly relays?
+- [ ] Signed user's nsec (не платформенный ключ)?
+- [ ] Deletion event корректно обрабатывается при cancelled?
+- [ ] Rate-limit срабатывает после 30 events/hour?
+- [ ] Наш relay виден в damus/amethyst/coracle по тегу `#t: vimana`?
+
+---
+
+## 7. Фаза 4 — Карточные платежи + Regulatory KYC
+
+> **Цель:** монетизация без крипты. Появление реальных денег → появление regulator'а. Зависимость: Фаза 3.5 стабильна.
+
+### 4.1 Классический regulatory KYC / AML
+1. Выбор провайдера — TECHSTATE Decision Log D-KYC (варианты: Sumsub / Onfido / Jumio).
+2. `KycRecord` — id, user_id, provider, external_id, status ∈ {pending, verified, rejected, expired}, verified_at, expires_at, level.
+3. `ComplianceAck` — id, user_id, doc_version, category, acknowledged_at.
+4. `CorridorRestriction(origin_country, destination_country, requires_kyc_level, blocked)` — санкционный периметр коридоров.
+5. Webhook провайдера → обновляет `KycRecord.status` → триггерит evaluation прав.
+6. Permission `PLATFORM_PAYMENT_INITIATE` требует `KycRecord.status = verified`.
+
+### 4.2 Платежи на платформе
 1. `Payment` — id, deal_id, method [card], amount, platform_fee, status.
 2. Интеграция карточного процессинга. Комиссия платформы с каждой транзакции.
 3. Все платёжные события пишутся в `DealEvent`.
+4. **Зависит от T4.1** — пользователь без verified KYC → 403.
 
 ### ✅ Phase 4 Integrity Check
+- [ ] User без `KycRecord.status = verified` → 403 на `POST /payments`?
+- [ ] Санкционный периметр блокирует запрещённые пары стран на этапе match?
+- [ ] `ComplianceAck` версионируется и хранится по каждой версии условий?
 - [ ] Все карточные транзакции пишут событие в `DealEvent`?
 - [ ] Комиссия рассчитывается корректно?
-- [ ] Платформа не хранит карточные данные напрямую?
+- [ ] Платформа не хранит карточные данные напрямую (передача сразу процессору)?
 
 ---
 
@@ -251,7 +313,7 @@ D_factor = 1.0 + 0.5 × min(D / 5000, 1.0)               — диапазон [1
 ### ✅ Phase 5 Integrity Check
 - [ ] Платформа держит **только ключ арбитра**, никогда — средства?
 - [ ] Релиз требует 2 из 3 подписей; платформа подписывает только в споре?
-- [ ] KYC обязателен до операций с эскроу?
+- [ ] Regulatory KYC (Фаза 4) — обязателен до операций с эскроу?
 - [ ] USDT-эскроу сохраняет не-кастодиальную модель?
 
 ---
