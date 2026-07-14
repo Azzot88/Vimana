@@ -172,11 +172,13 @@
 - `WaitlistEntry(id, email UNIQUE, name?, source, created_at)` — T1.18
 
 **Фаза 2 (планируется)**
-- `VerificationRequest(id, deal_id→Deal, requested_by_id, status ∈ {pending, upload, later_in_person, declined, verified, escalated}, created_at, resolved_at?)` — T2.1
-- `IdentityContainer(id, owner_id, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status ∈ {clean, match, review_needed}, created_at)` — ключ = owner's Nostr nsec, multi-doc allowed
-- `PeerVerification(id, subject_id, verified_by_id, container_ref_id→IdentityContainer, in_deal_id, method ∈ {app_ocr, in_person_photo, in_person_visual}, created_at, revoked_at?)` — T2.1
+- `VerificationLevel` enum: `auto` / `peer` / `kyc` (порядок = сила trust).
+- `VerificationRequest(id, deal_id→Deal, requested_by_id, target_role ∈ {sender, carrier}, status ∈ {pending, upload, later_in_person, declined, declined_polite, verified, escalated}, created_at, resolved_at?)` — T2.1. `target_role=carrier` → допустимо `declined_polite` (без последствий).
+- `IdentityContainer(id, owner_id, owner_role ∈ {sender, carrier, both}, storage_mode ∈ {encrypted_blob, zk_snark}, blob_encrypted BYTEA?, doc_hash, doc_country, doc_type, sanctions_check_status ∈ {clean, match, review_needed}, created_at)` — ключ = owner's Nostr nsec, multi-doc allowed. `storage_mode=encrypted_blob` default в T2.1; `zk_snark` добавляется в T6.4.
+- `VerificationBadge(id, subject_id, level ∈ VerificationLevel, source ∈ {auto_ocr, peer, arbiter_review, kyc_provider}, container_ref_id→IdentityContainer, verified_by_id?, in_deal_id?, verified_at, expires_at?, revoked_at?)` — append-only. `verified_by_id` null для auto, user для peer, `KycRecord.id`-ref для kyc. Index `(subject_id, level, revoked_at IS NULL)`.
 - `TrustEdge(id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight FLOAT, source_ref, created_at, revoked_at?)` — T2.4
 - `SanctionsList(source, name_normalized, dob?, country?, added_at)` — daily refresh OFAC SDN + EU consolidated
+- `User.highest_verification_level: VerificationLevel | None` — денормализованное поле, обновляется при INSERT/revoke `VerificationBadge`. MAX по всем не-revoked.
 - *(User.nostr_pubkey заполняется; DealVaultMessage/DealEvent подписываются; T2.3 — threshold-encryption заменяет at-rest из T1.21)*
 - `User.key_self_custody: bool = False` — добавляется в T2.2
 
@@ -184,6 +186,10 @@
 - *(User.business_activity_level — заглушка Фазы 1 — заполняется реальным значением УБА; пересчёт Celery beat ежечасно)*
 - **УБА-формула:** `round(F_norm × Q_norm × V_norm × D_factor × 1000)`. F = рейсы/мес (rolling 90d), Q = сделки с двумя DealVault-фото (log), V = сумма declared_value USD (log), D_factor = бонус залога [1.0–1.5]. Детали: IMPLEMENTATIONPLAN §6 §3.1.
 - **Оператор-арбитр и Dispute уже реализованы в T1.23/T1.24** — Фаза 3 добавляет только УБА + расширенную консоль/аналитику.
+
+**Фаза 3**
+- `V_verify_factor` в формуле УБА — новый компонент из T2.1: множитель [1.0…1.3] по `User.highest_verification_level` (`auto → 1.05`, `peer → 1.15`, `kyc → 1.3`, `null → 1.0`). Формула становится: `УБА = round(F_norm × Q_norm × V_norm × D_factor × V_verify_factor × 1000 / V_verify_factor_max)` — нормализация чтобы диапазон остался [0…1000].
+- `Trip.carrier_verification_level: VerificationLevel | None` — денормализация от `Trip.carrier.highest_verification_level` для фильтров и chip'ов.
 
 **Фаза 3.5**
 - `Trip.nostr_event_id?` (unique index), `Trip.nostr_published_at?` — T3.5

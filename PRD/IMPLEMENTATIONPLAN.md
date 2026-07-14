@@ -138,16 +138,19 @@
 
 > **Цель:** верифицированные силами сети участники, keypair как основа портативности. Regulatory KYC — Фаза 4. Зависимость: Фаза 1 стабильна.
 
-### 2.1 Peer Identity Verification (P2P KYC)
-1. `VerificationRequest` — id, deal_id, requested_by, status ∈ {pending, upload, later_in_person, declined, verified, escalated}.
-2. `IdentityContainer` — id, owner_id, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status. Ключ шифрования = owner's Nostr nsec (из T2.2). Multi-doc: один пользователь → много контейнеров.
-3. `PeerVerification` — id, subject_id, verified_by_id, container_ref_id, in_deal_id, method ∈ {app_ocr, in_person_photo, in_person_visual}, created_at, revoked_at. Append-only событие сети.
-4. Три варианта ответа отправителя: `later_in_person` (позже при встрече) / `declined` (метка на профиль, перевозчик вправе отменить) / `upload` (сейчас через OCR).
-5. Multi-doc по принципу US DMV — если сомнения → запрос второго документа.
-6. Escalation при подозрении на фальшивку → создаётся `Dispute` из T1.23 с типом `identity_fraud`.
-7. Локальный OCR: PaddleOCR (fallback tesseract) — без внешних API.
-8. Санкционные списки: OFAC SDN + EU consolidated — публичные CSV, обновляются ежедневно.
-9. Перевозчик **не показывает свои документы** — отвечает депозитом (Фаза 5) и историей.
+### 2.1 Peer Identity Verification + Verification Levels (P2P KYC)
+1. `VerificationLevel` enum: `auto` / `peer` / `kyc`.
+2. `VerificationRequest` — id, deal_id, requested_by, `target_role ∈ {sender, carrier}`, status ∈ {pending, upload, later_in_person, declined, declined_polite, verified, escalated}.
+3. `IdentityContainer` — id, owner_id, `owner_role ∈ {sender, carrier, both}`, `storage_mode ∈ {encrypted_blob, zk_snark}` (default encrypted_blob; zk_snark добавляется в T6.4), blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status. Ключ шифрования = owner's Nostr nsec (из T2.2). Multi-doc: один пользователь → много контейнеров. **Owner_role=carrier** — опция для перевозчика получить badge.
+4. `VerificationBadge` — id, subject_id, level, source ∈ {auto_ocr, peer, arbiter_review, kyc_provider}, container_ref_id, verified_by_id?, in_deal_id?, verified_at, expires_at?, revoked_at?. Append-only.
+5. **Три варианта ответа отправителя** (target=sender): `later_in_person` / `declined` (метка + возможность cancel) / `upload`.
+6. **Три варианта ответа перевозчика** (target=carrier): `upload_now` / `later_in_person` / **`declined_polite`** — **без последствий**, в чате нейтрально-серое system-message «В целях собственной безопасности перевозчик решил не раскрывать своё имя. Отправитель вправе отменить сделку без штрафа.»
+7. **Асимметрия обоснована**: перевозчик пересекает границы, его identity — оперативный риск; sender передаёт ценное, его identity — гарантия другой стороне.
+8. Multi-doc по принципу US DMV — если сомнения → запрос второго документа.
+9. Escalation при подозрении на фальшивку → создаётся `Dispute` из T1.23 с типом `identity_fraud`.
+10. Локальный OCR: PaddleOCR (fallback tesseract) — без внешних API.
+11. Санкционные списки: OFAC SDN + EU consolidated — публичные CSV, обновляются ежедневно.
+12. **Trip.carrier_verification_level** денормализован — chip на карточке в TripsPage + фильтр `min_level`. Даёт бонус к УБА в Фазе 3 (`V_verify_factor`, множитель [1.0…1.3]).
 
 ### 2.1a Trust Graph (Web-of-Trust)
 1. `TrustEdge` — id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight, source_ref.
@@ -194,6 +197,7 @@ Recalculate: Celery beat, каждый час; кеш в `User.business_activity
 | Q — Качество | Подтверждённых доставок с фото | `Deal` с DealVault-фото передачи + получения |
 | V — Объём | Суммарная задекларированная стоимость (USD) | `SUM(Order.declared_value)` по closed deals |
 | D — Депозит | Пиковый размер активного залога | `MAX(Collateral.amount)`; 0 если не использовался |
+| **Vrf — Verification level** | Highest active `VerificationBadge.level` | `User.highest_verification_level` (T2.1) |
 
 **Формула**
 
@@ -202,9 +206,18 @@ F_norm   = min(F / 8,   1.0)                              — насыщение
 Q_norm   = min(log₁₀(Q + 1) / log₁₀(51),  1.0)          — насыщение при 50 сделках
 V_norm   = min(log₁₀(V + 1) / log₁₀(50001), 1.0)        — насыщение при $50 000
 
-D_factor = 1.0 + 0.5 × min(D / 5000, 1.0)               — диапазон [1.0 … 1.5]
+D_factor      = 1.0 + 0.5 × min(D / 5000, 1.0)          — диапазон [1.0 … 1.5]
 
-УБА = round(F_norm × Q_norm × V_norm × D_factor × 1000)  — диапазон [0 … 1000]
+V_verify_factor:                                          — бонус за уровень верификации
+  null → 1.00 (нейтральный)
+  auto → 1.05
+  peer → 1.15
+  kyc  → 1.30
+
+# Нормализация чтобы max УБА оставался 1000:
+V_verify_norm = V_verify_factor / 1.30                    — диапазон [~0.77 … 1.0]
+
+УБА = round(F_norm × Q_norm × V_norm × D_factor × V_verify_norm × 1000)  — диапазон [0 … ~1000]
 ```
 
 **Уровни**

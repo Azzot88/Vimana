@@ -110,7 +110,7 @@ Vimana — Sacred Logistics помогает:
 | **Сделка** (lifecycle + append-only события) | 1 | Жизненный цикл доставки от мэтча до закрытия |
 | **DealVault** | 1 | Иммутабельный чат + фото передачи/получения + лог событий. IPFS-ready с Фазы 1: SHA-256 → CID. Ядро Vimana и будущих проектов |
 | **Уведомления** | 1 | Мягкие напоминания о статусах и дедлайнах |
-| **Peer Identity Verification (P2P KYC)** | 2 | Перевозчик просит документы отправителя, локальный OCR + публичные санкционные CSV, encrypted identity container (T2.1). Regulatory KYC — Фаза 4. |
+| **Verification Levels (auto / peer / kyc)** | 2 | Симметричная опция для обеих сторон загрузить документы. 3 уровня: 🔓 auto (OCR+sanctions), 👤 peer (другой участник видел), 🛡️ kyc (Фаза 4). Асимметрия последствий: sender declined = badge/cancel; carrier polite decline = **без последствий**. См. T2.1 |
 | **Trust Graph (Web-of-Trust)** | 2 | Транзитивный граф `peer_verified`/`dealt_with`/`invited`; круги доверия (T2.4) |
 | **Keypair + Nostr-совместимость** | 2 | Каждый аккаунт получает secp256k1-keypair; DealVault-события подписываются; аккаунт совместим с Nostr (вариант — см. TECHSTATE D10) |
 | **Уровень Бизнес-Активности (УБА)** | 3 | Метрика: частота рейсов × количество сделок × оценочная стоимость × размер залога |

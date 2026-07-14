@@ -28,10 +28,13 @@
 | **DealVault compliance** | сделок с фото передачи И получения / всех | ≥95% | 1 |
 | **Dispute rate** | споров / завершённых сделок | <3% | 3 |
 | **Dispute resolution time** | медиана: открытие → вердикт | падает | 3 |
-| **Peer-verified sender share** | отправителей с ≥1 активной PeerVerification / активных отправителей | растёт | 2 |
+| **Auto-verified share** | пользователей с активной `VerificationBadge(level=auto)` / активных | растёт | 2 |
+| **Peer-verified share** | пользователей с ≥1 активной `VerificationBadge(level=peer)` / активных | растёт | 2 |
+| **Carrier-verified trips share** | trips с `carrier_verification_level != null` / всех активных trips | растёт | 2 |
+| **Carrier polite-decline rate** | polite-decline / всех carrier-directed VerificationRequest | нейтральная (мониторить, не таргетить) | 2 |
 | **Trust-graph density** | среднее число verifications received на активного пользователя | растёт | 2 |
-| **Verification acceptance rate** | verified / всех VerificationRequest (исключая later_in_person) | ≥70% | 2 |
-| **Regulatory-KYC-verified share** | пользователей с `KycRecord.status=verified` / активных | растёт | 4 |
+| **Verification acceptance rate** | verified / всех VerificationRequest (исключая later_in_person, polite_decline) | ≥70% | 2 |
+| **Regulatory-KYC-verified share** | пользователей с `KycRecord.status=verified` (badge level=kyc) / активных | растёт | 4 |
 
 ---
 
@@ -55,7 +58,7 @@
 | **УБА-распределение** | распределение Уровня Бизнес-Активности | здоровый «толстый» средний слой | 3 |
 | **MAU** | уникальные активные / мес | растёт | 1→ |
 
-> **УБА = round(F_norm × Q_norm × V_norm × D_factor × 1000)**, диапазон [0–1000]. F — частота рейсов/мес (насыщение при 8), Q — подтверждённые сделки с обоими DealVault-фото (log-шкала, насыщение при 50), V — суммарная стоимость доставок в USD (log-шкала, насыщение при $50 000), D_factor — бонус за активный залог [1.0–1.5]. Без залога factor = 1.0 (нейтральный, не штраф). Полная формула: IMPLEMENTATIONPLAN §6 §3.1.
+> **УБА = round(F_norm × Q_norm × V_norm × D_factor × V_verify_norm × 1000)**, диапазон [0–1000]. F — частота рейсов/мес (насыщение при 8), Q — подтверждённые сделки с обоими DealVault-фото (log-шкала, насыщение при 50), V — суммарная стоимость доставок в USD (log-шкала, насыщение при $50 000), D_factor — бонус за активный залог [1.0–1.5], **V_verify_norm — бонус за уровень верификации из T2.1** [`null→1.0` / `auto→1.05` / `peer→1.15` / `kyc→1.3` затем нормализация на 1.3]. Без залога/verification factor = 1.0 (нейтральный, не штраф). Полная формула: IMPLEMENTATIONPLAN §6 §3.1.
 
 ---
 

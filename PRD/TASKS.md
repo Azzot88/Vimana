@@ -421,19 +421,51 @@
 
 ## 🪪 ЭТАП 2 — Идентификация и ключи (Фаза 2)
 
-### T2.1 — Peer Identity Verification (P2P KYC)
+### T2.1 — Peer Identity Verification + Verification Levels (P2P KYC)
 
-**Контекст:** классический regulatory KYC/AML уезжает в Фазу 4 (T4.1) — до того как через платформу пойдут деньги, у нас нет обязательств перед регулятором раскрывать identity пользователей. Вместо этого в Фазе 2 вводим **P2P-верификацию**: перевозчик в момент передачи товара может попросить документы. Идея — сеть сама подтверждает своих участников, а платформа хранит **зашифрованный контейнер** (владелец получает ключ через T2.2 Nostr-keypair). Перевозчик не обязан раскрывать свою идентичность — он отвечает депозитом (Фаза 5) и историей.
+**Контекст:** классический regulatory KYC/AML уезжает в Фазу 4 (T4.1) — до того как через платформу пойдут деньги, у нас нет обязательств перед регулятором раскрывать identity пользователей. Вместо этого в Фазе 2 вводим **три уровня верификации** для любого пользователя:
+
+| Level | Название | Кто/чем проверяет | Trust weight | Стоимость |
+|---|---|---|---|---|
+| **1** | `auto` | Локальный OCR (PaddleOCR) + санкционный чек (OFAC SDN, EU) | Слабый (документ мог быть фальшивым) | Бесплатно |
+| **2** | `peer` | Другой участник платформы (sender подтверждает carrier или наоборот) в момент передачи | Сильный (человек видел документ) | Бесплатно, но требует встречи |
+| **3** | `kyc` | Regulatory KYC-провайдер (Sumsub/Onfido/Jumio) из Фазы 4 | Легальный вес (формальная валидация) | Платно (Фаза 4+) |
+
+**Идея:** сеть сама подтверждает своих участников — платформа хранит **зашифрованный контейнер** (владелец получает ключ через T2.2 Nostr-keypair), уровни накапливаются. **Перевозчик тоже может стать owner'ом** контейнера — по желанию, для получения verified-badge (см. §T2.1.3 ниже). При отказе перевозчика показывать документы — **никаких санкций**, в отличие от sender'а: чат получает уважительное системное сообщение «В целях собственной безопасности перевозчик решил не раскрывать своё имя».
 
 - [ ] **Модели:**
-  - `VerificationRequest(id, deal_id, requested_by_id, status ∈ {pending, upload, later_in_person, declined, verified, escalated}, created_at, resolved_at)`.
-  - `IdentityContainer(id, owner_id, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status, created_at)` — encrypted at rest, ключ = owner's Nostr nsec из T2.2. **Один пользователь может иметь несколько контейнеров** (multi-doc).
-  - `PeerVerification(id, subject_id, verified_by_id, container_ref_id, in_deal_id, method ∈ {app_ocr, in_person_photo, in_person_visual}, created_at, revoked_at)` — append-only событие сети.
-  - Индекс `(subject_id, revoked_at IS NULL)` для быстрого подсчёта активных верификаций.
-- [ ] **Три варианта ответа отправителя на VerificationRequest:**
+  - `VerificationLevel` enum: `auto` / `peer` / `kyc`. Порядок соответствует силе доверия.
+  - `VerificationRequest(id, deal_id, requested_by_id, target_role ∈ {sender, carrier}, status ∈ {pending, upload, later_in_person, declined, verified, escalated}, created_at, resolved_at)`. `target_role=carrier` для запросов перевозчику; asymmetric UX ниже.
+  - `IdentityContainer(id, owner_id, owner_role ∈ {sender, carrier, both}, blob_encrypted BYTEA, doc_hash, doc_country, doc_type, sanctions_check_status, created_at)` — encrypted at rest, ключ = owner's Nostr nsec из T2.2. **Роль владельца — sender ИЛИ carrier ИЛИ both** (пользователь в dual-role из T1.24 может использовать один контейнер в обоих режимах). Multi-doc allowed.
+  - `VerificationBadge(id, subject_id, level ∈ VerificationLevel, source ∈ {auto_ocr, peer, arbiter_review, kyc_provider}, container_ref_id, verified_by_id?, in_deal_id?, verified_at, expires_at?, revoked_at?)` — append-only событие сети. Замена `PeerVerification` — одна модель для всех trust-источников. `verified_by_id` nullable: для `auto` — null, для `peer` — user, для `kyc_provider` — reference на `KycRecord.id` в Фазе 4.
+  - Индекс `(subject_id, level, revoked_at IS NULL)` для быстрого получения highest active level.
+
+- [ ] **Уровневая логика:**
+  - `user.highest_verification_level: VerificationLevel | None` — денормализованное поле в User, обновляется при `VerificationBadge` INSERT (Celery hook или DB trigger). MAX по всем не-revoked badges.
+  - **Аккумуляция**: один пользователь может иметь одновременно и `auto`, и `peer`, и `kyc` — они не заменяют, а накапливаются. UI показывает highest, но detail view — все.
+  - **Expiry**: `kyc` badge со сроком `expires_at` (по данным провайдера); `peer` — бессрочно (пока не revoked); `auto` — 12 месяцев (санкционные списки обновляются, требуется re-check).
+  - **Revoke**: verifier может отозвать peer-verification в течение 30 дней (если понял что документ фальшивый); арбитр может revoke любую badge через escalation.
+- [ ] **Три варианта ответа отправителя на VerificationRequest (`target_role=sender`):**
   1. `later_in_person` → «Покажу лично при встрече». В момент передачи перевозчик через приложение фотографирует (OCR) **или** визуально проверяет (`method=in_person_visual`, без загрузки — только запись факта).
   2. `declined` → «Не готов показывать». Deal получает пометку `verification_declined`, перевозчик вправе отказаться (`deal.status → cancelled`). У отправителя на профиле — badge «declined verification N times».
-  3. `upload` → «Показать сейчас». Открывается окно загрузки → фото на бэкенд → OCR + санкционный чек + шифрование → контейнер + запись в чат DealVault.
+  3. `upload` → «Показать сейчас». Открывается окно загрузки → фото на бэкенд → OCR + санкционный чек + шифрование → контейнер + `VerificationBadge(level=auto)` + запись в чат DealVault.
+
+- [ ] **T2.1.3 — Carrier verification flow (симметричная опция, асимметричные последствия):**
+  - **Опциональный upload перевозчиком:** в профиле новая секция «Verify identity» → загрузка документа → OCR + sanctions → `IdentityContainer(owner_role=carrier)` + `VerificationBadge(level=auto, source=auto_ocr)`. Badge появляется в профиле и на карточке Trip.
+  - **Возможность peer-share:** sender может попросить carrier документы в момент передачи через `VerificationRequest(target_role=carrier)`. Три варианта ответа carrier'а:
+    1. `upload_now` — загружает если хочет → `VerificationBadge(level=peer, verified_by=sender)`.
+    2. `later_in_person` — показать в момент встречи, sender фото/визуально подтверждает.
+    3. **`declined_polite`** → **НЕТ пометки declined**, **НЕТ последствий**. В чат уходит system-message: *«В целях собственной безопасности перевозчик решил не раскрывать своё имя. Sender вправе отменить сделку без штрафа.»* Sender может cancel или продолжить.
+  - **Асимметрия обоснована**: перевозчик пересекает границы и его identity — оперативный риск для него, а не для sender'а; sender передаёт ценное — его identity нужна другой стороне как гарантия.
+- [ ] **Badge на карточке Trip и в поиске:**
+  - Endpoint `GET /api/trips` возвращает `carrier_verification_level: 'auto' | 'peer' | 'kyc' | null` (denormalized).
+  - Frontend `TripsPage` → chip на карточке: `🔓 auto-verified` / `👤 peer-verified` / `🛡️ KYC-verified`. Кликабельный — открывает detail модалку.
+  - Filter в поиске `?min_level=peer` — только рейсы от перевозчиков с ≥peer.
+  - Sorting boost — verified выше в фиде (soft signal, weight ~1.2× base ranking).
+- [ ] **Влияние на другие фазы:**
+  - **Фаза 3 T3.1 (УБА)**: новый бонус-компонент `V_verify_factor` в формуле — множитель [1.0…1.3] в зависимости от highest verification level. `auto → 1.05`, `peer → 1.15`, `kyc → 1.3`. Обновляется в TECHSTATE §4 Phase 3 + IMPLEMENTATIONPLAN §6 §3.1.
+  - **EXP-01 Missions**: `required_verification_level: VerificationLevel` — миссия видима только carrier'ам с ≥ указанного уровня.
+  - **T6.4 ZK-Proof**: заменяет encrypted-blob на ZK-native вариант хранения — тот же API, другой backend (см. T6.4 обновление ниже).
 - [ ] **Multi-document подтверждение** (по принципу US DMV):
   - Если у перевозчика есть сомнения → `POST /verification/{id}/request-additional` — просит второй документ (тип на выбор: паспорт / driver license / national ID / bank card).
   - Отправитель загружает через тот же флоу; несколько `IdentityContainer` привязываются к одной `PeerVerification`.
@@ -452,31 +484,53 @@
   - **EU consolidated financial sanctions list** — analog.
   - `POST /verification/{id}/check-sanctions` — сравнение по normalized name + dob (fuzzy match на level Levenshtein < 2). Результат в `IdentityContainer.sanctions_check_status ∈ {clean, match, review_needed}`.
 - [ ] **Endpoints:**
-  - `POST /api/deals/{id}/verification` — перевозчик создаёт запрос; в чат уходит system-message «⚠️ Carrier requested identity verification».
-  - `POST /api/deals/{id}/verification/{req_id}/respond` — отправитель отвечает одним из трёх вариантов; `later_in_person` записывает намерение, `upload` открывает channel для файла, `declined` завершает.
+  - `POST /api/deals/{id}/verification` — участник создаёт запрос, тело `{target_role: 'sender' | 'carrier'}`; в чат уходит system-message «⚠️ {actor} requested {target} identity verification».
+  - `POST /api/deals/{id}/verification/{req_id}/respond` — target отвечает; для sender — 3 варианта (later/decline/upload), для carrier — 3 варианта (upload_now/later/decline_polite).
   - `POST /api/deals/{id}/verification/{req_id}/submit-document` — загрузка файла (multipart, MAX_UPLOAD_SIZE из T1.19).
   - `POST /api/deals/{id}/verification/{req_id}/request-additional` — multi-doc branch.
   - `POST /api/deals/{id}/verification/{req_id}/escalate` — вызов арбитра.
-  - `GET /api/users/{id}/verifications` — публичный список verifications (без раскрытия документов — только count, тип, дата, verifier).
+  - `POST /api/me/verification/self-upload` — self-inited upload (не в контексте сделки, для profile-verify) → создаёт `VerificationBadge(level=auto)` сразу.
+  - `GET /api/users/{id}/verifications` — публичный список: highest level, breakdown по всем уровням (count по auto/peer/kyc), даты, verifiers для peer. **Без раскрытия документов.**
+  - `POST /api/verifications/{badge_id}/revoke` — verifier может revoke свою peer-badge в течение 30 дней; арбитр — любую.
 - [ ] **Permissions (расширение T1.24 RBAC):**
-  - `IDENTITY_REQUEST` — участник сделки может создать VerificationRequest.
+  - `IDENTITY_REQUEST` — участник сделки может создать VerificationRequest (в любую сторону).
+  - `IDENTITY_SELF_UPLOAD` — любой user может self-verify свои документы.
   - `IDENTITY_CONTAINER_READ_OWN` — базовое право владельца читать свой контейнер.
   - `IDENTITY_CONTAINER_READ` — арбитр читает через escalation.
+  - `VERIFICATION_REVOKE_OWN` — verifier revokes свою peer-badge в течение 30 дней.
+  - `VERIFICATION_REVOKE_ANY` — только арбитр (any badge, any time).
 - [ ] **Frontend:**
-  - На `DealPage` у перевозчика в статусах `accepted`/`in_transit` — кнопка «Ask for ID».
-  - Модалка у отправителя с тремя кнопками (later / decline / upload сейчас).
-  - Профиль (`ProfilePage`): секция «Identity» — badge «Verified by N carriers, first at DATE», список типов документов (без деталей).
-  - Профиль перевозчика — счётчик «Verified N senders».
+  - На `DealPage` в статусах `accepted`/`in_transit` — две кнопки: «Ask sender for ID» (для carrier), «Ask carrier for ID» (для sender). Обе доступны, вариант ответа определяется target_role.
+  - Модалка ответа: для sender — 3 кнопки (later/decline/upload); для carrier — 3 кнопки (upload/later/polite decline). Copy отличается.
+  - **Profile `Verify identity` section** (доступно всем): 3 tiles уровней — Auto (быстрый OCR self-upload) / Peer (get verified в момент передачи) / KYC (Фаза 4, disabled сейчас с надписью «coming with card payments»). Каждый tile показывает статус: not verified / verified at DATE / expired.
+  - **Trip card**: chip verification-level справа от carrier name — `🔓 auto` / `👤 peer` / `🛡️ KYC`. Отсутствие — просто нет chip'а.
+  - **Trip filter panel**: dropdown «Min verification level» с 4 опциями (any/auto+/peer+/kyc).
+  - Профиль перевозчика — блок «Verified as carrier by N senders»; полезно как social proof.
+  - При **polite decline** — красивое system-message в чате: «В целях собственной безопасности перевозчик решил не раскрывать своё имя. Отправитель вправе отменить сделку без штрафа.» — не красное, а нейтрально-серое; кнопка «Cancel deal» рядом.
 - [ ] **Backend-тесты:**
-  - Create/respond/submit флоу для трёх вариантов ответа.
-  - Multi-doc: два контейнера привязаны к одному PeerVerification.
+  - Create/respond/submit флоу для sender (3 варианта) и carrier (3 варианта).
+  - `polite decline` от carrier — system message появляется, deal НЕ помечен как cancelled, profile carrier'а НЕ получает `declined` badge.
+  - Multi-doc: два контейнера привязаны к одному VerificationBadge.
   - Escalate → Dispute создаётся, deal.status = disputed.
   - Sanctions list match → `IdentityContainer.sanctions_check_status = 'match'`.
   - OCR extraction MRZ smoke-test (детерминированное тестовое фото).
-  - Owner расшифровывает container, чужой user не может.
+  - Owner расшифровывает container, чужой user не может (owner-only decrypt).
+  - **Level aggregation**: user с auto + peer badges → `highest_verification_level = peer`; после revoke peer → снова `auto`.
+  - **Self-upload** flow: `POST /me/verification/self-upload` создаёт badge level=auto без Deal.
+  - **Peer revoke**: verifier revokes свою badge в течение 30 дней → OK; после 30 дней → 403 (только арбитр).
+  - **Trip API возвращает `carrier_verification_level`**: денормализация верна после INSERT/revoke badge.
 - [ ] **i18n**: `verification.*` в 6 языках.
 
-**Acceptance:** перевозчик в чате может запросить документы; отправитель выбирает один из трёх ответов; при upload — файл проходит OCR + санкции + шифруется в контейнер; multi-doc branch работает; escalation вызывает арбитра из T1.23; профиль показывает счётчик verifications без раскрытия содержимого. Regulatory KYC отсутствует — это Фаза 4.
+**Acceptance:**
+- Перевозчик в чате может запросить документы отправителя; отправитель выбирает 1 из 3 (later/decline/upload).
+- Отправитель в чате может запросить документы перевозчика; перевозчик выбирает 1 из 3 (upload/later/**polite decline без последствий**).
+- Любой user может self-verify в профиле (level=auto) без Deal-контекста.
+- При upload — файл проходит OCR + санкции + шифруется в контейнер, создаётся `VerificationBadge(level=auto)`.
+- Multi-doc branch работает; escalation вызывает арбитра из T1.23; профиль показывает счётчик verifications без раскрытия содержимого.
+- **Trip карточка показывает `carrier_verification_level` chip**; поисковый фильтр `min_level` работает.
+- **User.highest_verification_level** денормализован и обновляется при INSERT/revoke.
+- Regulatory KYC отсутствует — это Фаза 4 (level=kyc badge появляется тогда).
+- **Асимметрия соблюдена**: sender declined = badge + возможная cancel; carrier declined = нейтральное сообщение, никаких последствий.
 
 ### T2.2 — Keypair + Nostr-совместимость (D10: Вариант A + D)
 - [ ] При регистрации: генерация secp256k1-keypair; `nsec` хранится зашифрованно (AES-256-GCM, ключ в env/KMS); `npub` → `User.nostr_pubkey`.
@@ -698,9 +752,15 @@
 - [ ] Решение по операторской/админ-панели зафиксировано в Decision Log TECHSTATE.
 **Acceptance:** пакет данных экспортируется и верифицируется; аккаунт работает в Nostr-клиенте.
 
-### T6.4 — ZK-Proof of Verification
+### T6.4 — ZK-Proof of Verification (ZK-native migration for IdentityContainer)
 
-**Контекст:** T2.1 хранит фото документов в encrypted-контейнере (доступен владельцу и через escalation арбитру). T6.4 добавляет **более сильную приватность**: пользователь может доказать «у меня есть валидный verified passport» **не раскрывая сам документ и не полагаясь на платформу** как посредника. Настоящий ZK-SNARK: доказательство генерируется на клиенте, проверяется криптографически без обращения к серверу с документом. Зависит от T2.1 (есть контейнер) и T2.2 (есть keypair как identity anchor). Задача исследовательская — вероятно нужен приглашённый cryptographer.
+**Контекст:** T2.1 хранит фото документов в encrypted-контейнере (доступен владельцу и через escalation арбитру). T6.4 — это **эволюционный путь**, не переписывание: тот же API `IdentityContainer` / `VerificationBadge`, но backend хранения заменяется на ZK-native. Пользователь может доказать «у меня есть валидный verified document» **не раскрывая сам документ и не полагаясь на платформу** как посредника. Даже platform admin не видит содержимое. Настоящий ZK-SNARK: proof генерируется на клиенте, проверяется криптографически без обращения к серверу с документом. Зависит от T2.1 (есть контейнер и badge-механика), T2.2 (есть keypair как identity anchor), и T3.5 (Nostr relay для публикации merkle-root'ов). Задача исследовательская — вероятно нужен приглашённый cryptographer.
+
+**Стратегия миграции:**
+- T2.1 создаёт `IdentityContainer.storage_mode = 'encrypted_blob'` (default).
+- T6.4 добавляет `storage_mode = 'zk_snark'` — новые контейнеры пользователь может создать в ZK-native режиме.
+- Оба режима сосуществуют. Старые контейнеры можно мигрировать (client-side re-encrypt через новую схему), но не обязательно.
+- Все VerificationBadge остаются валидными между режимами — они ссылаются на container, а не на схему хранения.
 
 - [ ] **Circuit** (Circom/halo2): доказательство `∃ passport : owner_pubkey = derive(passport.private_hash) AND passport.expiry > NOW AND hash(passport) ∈ set_of_verified_passport_hashes`.
 - [ ] Merkle tree of verified passport hashes — обновляется on-chain-style Nostr event'ами; клиент строит proof membership.
