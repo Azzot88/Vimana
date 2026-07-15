@@ -38,6 +38,9 @@ export const createMessage = (dealId: string, text: string, isSystem = false) =>
     is_system: isSystem,
   })
 
+export const shareAddressInVault = (dealId: string) =>
+  api.post<VaultMessage>(`/api/deals/${dealId}/dealvault/messages/share-address`)
+
 export const uploadAttachment = (
   dealId: string,
   messageId: string,

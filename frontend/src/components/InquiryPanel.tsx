@@ -4,9 +4,11 @@ import {
   listInquiryMessages,
   openInquiry,
   postInquiryMessage,
+  shareAddressInInquiry,
   type InquiryMessage,
 } from '../api/inquiry'
 import { useAuthStore } from '../stores/auth'
+import AddressCard, { isAddressMessage } from './AddressCard'
 
 interface Props {
   tripId: string
@@ -111,26 +113,39 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
           ) : (
             messages.map((m) => {
               const mine = m.sender_id === user?.id
+              const isAddr = isAddressMessage(m.text)
               return (
                 <div
                   key={m.id}
                   className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm font-body ${
-                      mine
-                        ? 'bg-cyan/20 text-navy rounded-br-sm'
-                        : 'bg-ivory text-navy rounded-bl-sm'
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap break-words">{m.text}</p>
-                    <p className="text-[10px] font-mono text-navy/40 mt-1">
-                      {new Date(m.created_at).toLocaleTimeString(i18n.language, {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
+                  {isAddr && m.text ? (
+                    <div className="max-w-[85%]">
+                      <AddressCard text={m.text} />
+                      <p className="text-[10px] font-mono text-navy/40 mt-1 text-right">
+                        {new Date(m.created_at).toLocaleTimeString(i18n.language, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm font-body ${
+                        mine
+                          ? 'bg-cyan/20 text-navy rounded-br-sm'
+                          : 'bg-ivory text-navy rounded-bl-sm'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                      <p className="text-[10px] font-mono text-navy/40 mt-1">
+                        {new Date(m.created_at).toLocaleTimeString(i18n.language, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )
             })
@@ -142,9 +157,36 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
           <p className="px-4 pb-1 text-xs font-mono text-orange-600">{error}</p>
         )}
 
+        <div className="border-t border-navy/10 px-3 pt-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!inquiryId || !user?.receiving_country_iso) {
+                setError(t('chat.shareAddress.notSet'))
+                return
+              }
+              if (!window.confirm(t('chat.shareAddress.confirm') as string)) return
+              setSending(true)
+              setError('')
+              try {
+                const { data: msg } = await shareAddressInInquiry(inquiryId)
+                setMessages((prev) => [...prev, msg])
+              } catch {
+                setError(t('chat.shareAddress.error'))
+              } finally {
+                setSending(false)
+              }
+            }}
+            disabled={sending || !inquiryId}
+            className="text-xs font-body text-cyan hover:underline disabled:opacity-40"
+          >
+            📍 {t('chat.shareAddress.button')}
+          </button>
+        </div>
+
         <form
           onSubmit={handleSend}
-          className="border-t border-navy/10 px-3 py-2 flex gap-2"
+          className="px-3 py-2 flex gap-2"
         >
           <input
             type="text"

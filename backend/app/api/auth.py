@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.user import Token, UserCreate, UserLogin, UserOut, UserUpdate
+from app.schemas.user import MeOut, Token, UserCreate, UserLogin, UserOut, UserUpdate
 
 router = APIRouter()
 
@@ -67,18 +67,19 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
     return Token(access_token=token)
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me", response_model=MeOut)
 async def me(current_user: User = Depends(get_current_user)):
+    """Owner view — includes private `receiving_*` fields."""
     return current_user
 
 
-@router.patch("/me", response_model=UserOut)
+@router.patch("/me", response_model=MeOut)
 async def update_me(
     body: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    for field, value in body.model_dump(exclude_none=True).items():
+    for field, value in body.model_dump(exclude_unset=True).items():
         setattr(current_user, field, value)
     await db.commit()
     await db.refresh(current_user)

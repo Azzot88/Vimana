@@ -6,14 +6,16 @@ When sender creates a deal from the trip, `POST /api/deals/match` links
 """
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.address import AddressNotSetError, format_address_message
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_asc
+from app.core.rate_limit import limiter
 from app.models.marketplace import InquiryMessage, Trip, TripInquiry
 from app.models.user import User
 from app.schemas.inquiry import InquiryMessageCreate, InquiryMessageOut, InquiryOut
@@ -148,6 +150,44 @@ async def post_message(
         inquiry_id=inquiry_id,
         sender_id=current_user.id,
         text=body.text,
+    )
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+    return InquiryMessageOut(
+        id=msg.id,
+        inquiry_id=msg.inquiry_id,
+        sender_id=msg.sender_id,
+        text=msg.text,
+        created_at=msg.created_at,
+    )
+
+
+@router.post(
+    "/inquiries/{inquiry_id}/messages/share-address",
+    response_model=InquiryMessageOut,
+    status_code=201,
+)
+@limiter.limit("5/hour")
+async def share_address(
+    inquiry_id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T1.26 — share user's receiving address into the inquiry chat."""
+    await _get_inquiry_as_participant(inquiry_id, current_user, db)
+    try:
+        text = format_address_message(current_user)
+    except AddressNotSetError:
+        raise HTTPException(
+            status_code=422,
+            detail="Receiving address not set — fill it in your profile first",
+        )
+    msg = InquiryMessage(
+        inquiry_id=inquiry_id,
+        sender_id=current_user.id,
+        text=text,
     )
     db.add(msg)
     await db.commit()

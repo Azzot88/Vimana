@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import {
   createMessage,
   listMessages,
   sendPhotoMessage,
+  shareAddressInVault,
   type AttachmentKind,
   type VaultMessage,
 } from '../api/dealvault'
+import { useAuthStore } from '../stores/auth'
+import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 
@@ -18,6 +22,8 @@ const KIND_LABEL: Record<AttachmentKind, string> = {
 }
 
 export default function DealVaultPage() {
+  const { t } = useTranslation()
+  const user = useAuthStore((s) => s.user)
   const { dealId } = useParams<{ dealId: string }>()
   const [messages, setMessages] = useState<VaultMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -119,11 +125,13 @@ export default function DealVaultPage() {
           </button>
         )}
 
-        {msg.text && (
-          <p className="text-sm font-body text-navy/80 bg-ivory rounded-lg px-3 py-2 inline-block max-w-prose">
+        {msg.text && isAddressMessage(msg.text) ? (
+          <AddressCard text={msg.text} />
+        ) : msg.text ? (
+          <p className="text-sm font-body text-navy/80 bg-ivory rounded-lg px-3 py-2 inline-block max-w-prose whitespace-pre-wrap">
             {msg.text}
           </p>
-        )}
+        ) : null}
 
         {att && (
           <MonoText className="text-xs text-navy/20 block">
@@ -201,6 +209,30 @@ export default function DealVaultPage() {
                 disabled={sending}
               />
             </label>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!dealId || !user?.receiving_country_iso) {
+                  setError(t('chat.shareAddress.notSet'))
+                  return
+                }
+                if (!window.confirm(t('chat.shareAddress.confirm') as string)) return
+                setSending(true)
+                setError('')
+                try {
+                  const { data } = await shareAddressInVault(dealId)
+                  setMessages((prev) => [...prev, data])
+                } catch {
+                  setError(t('chat.shareAddress.error'))
+                } finally {
+                  setSending(false)
+                }
+              }}
+              disabled={sending}
+              className="border border-cyan/40 text-cyan rounded-lg px-3 py-2 min-h-[2.5rem] text-xs font-body hover:bg-cyan/10 transition-colors disabled:opacity-40"
+            >
+              📍 {t('chat.shareAddress.button')}
+            </button>
           </div>
           <form onSubmit={handleSend} className="flex gap-2">
             <input

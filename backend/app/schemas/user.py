@@ -45,6 +45,13 @@ class UserUpdate(BaseModel):
     active_mode: str | None = None
     can_carry: bool | None = None
     can_send: bool | None = None
+    # T1.26 receiving address (private, updated only via /me)
+    receiving_country_iso: str | None = None
+    receiving_city: str | None = None
+    receiving_city_geoname_id: int | None = None
+    receiving_street: str | None = None
+    receiving_postal_code: str | None = None
+    receiving_note: str | None = None
 
     @field_validator("active_mode")
     @classmethod
@@ -53,8 +60,21 @@ class UserUpdate(BaseModel):
             raise ValueError("active_mode must be 'sender' or 'carrier'")
         return v
 
+    @field_validator("receiving_country_iso")
+    @classmethod
+    def country_iso_upper(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip().upper()
+        if len(v) != 2:
+            raise ValueError("receiving_country_iso must be ISO 3166-1 alpha-2 (2 chars)")
+        return v
+
 
 class UserOut(BaseModel):
+    """Public user representation — DOES NOT include private fields.
+    `receiving_*` fields never appear here; use `MeOut` for the owner's view.
+    """
     id: uuid.UUID
     email: str | None
     phone: str | None
@@ -72,6 +92,16 @@ class UserOut(BaseModel):
     whatsapp_number: str | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class MeOut(UserOut):
+    """Owner-only view — includes private receiving address."""
+    receiving_country_iso: str | None = None
+    receiving_city: str | None = None
+    receiving_city_geoname_id: int | None = None
+    receiving_street: str | None = None
+    receiving_postal_code: str | None = None
+    receiving_note: str | None = None
 
 
 class Token(BaseModel):

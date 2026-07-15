@@ -87,6 +87,25 @@
     "switchToSend": "Przełącz na wysyłanie",
     "switchToDeliver": "Przełącz na dostawę"
   },
+  "chat": {
+    "shareAddress": {
+      "button": "Udostępnij adres",
+      "confirm": "Udostępnić zapisany adres? Druga strona go zobaczy.",
+      "notSet": "Najpierw uzupełnij adres w profilu.",
+      "error": "Nie udało się udostępnić adresu."
+    },
+    "addressCard": {
+      "title": "Adres dostawy",
+      "country": "Kraj",
+      "city": "Miasto",
+      "street": "Ulica",
+      "postal": "Kod pocztowy",
+      "note": "Notatka",
+      "copy": "Kopiuj",
+      "copied": "Skopiowano ✓",
+      "openMaps": "Otwórz w mapach"
+    }
+  },
   "inquiry": {
     "chatButton": "Czat",
     "chatWith": "Czat z {{name}}",
@@ -181,6 +200,18 @@
     "level": "Poziom Aktywności Biznesowej",
     "levelPhase": "Faza 3",
     "levelNote": "Dostępne w następnej fazie",
+    "address": {
+      "title": "Adres odbioru",
+      "privacyHint": "Prywatny — widoczny tylko dla Ciebie do momentu udostępnienia w czacie",
+      "country": "Kraj",
+      "city": "Miasto",
+      "cityPlaceholder": "Zacznij pisać…",
+      "street": "Ulica, budynek, mieszkanie",
+      "streetPlaceholder": "Marina Walk 12, m. 305",
+      "postal": "Kod pocztowy",
+      "note": "Notatka",
+      "notePlaceholder": "3 piętro, domofon 12, tylko w weekendy"
+    },
     "contacts": "Kontakty",
     "invite": "+ Zaproś",
     "noContacts": "Brak kontaktów",

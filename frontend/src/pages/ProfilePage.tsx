@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { parsePhoneNumberFromString, getCountryCallingCode } from 'libphonenumber-js/min'
 import type { CountryCode } from 'libphonenumber-js/min'
 import { useAuthStore } from '../stores/auth'
-import { me, updateMe, getTelegramLink } from '../api/auth'
+import { me, updateMe, getTelegramLink, type UserUpdate } from '../api/auth'
 import { createInvite, listConnections, listMyInvites, type Connection, type MyInvite } from '../api/social'
+import api from '../api/client'
+import AddressForm from '../components/AddressForm'
 import CountryCodeSelect from '../components/CountryCodeSelect'
 import MonoText from '../components/MonoText'
 import { APP_VERSION } from '../version'
@@ -29,6 +31,47 @@ export default function ProfilePage() {
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [creatingInvite, setCreatingInvite] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [countryOptions, setCountryOptions] = useState<Array<{ iso: string; name: string }>>([])
+  const [addressSaving, setAddressSaving] = useState(false)
+  const [addressSaved, setAddressSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadCountries = async () => {
+      try {
+        const { data } = await api.get<Array<{ iso: string; count: number }>>('/api/airports/countries')
+        if (cancelled) return
+        const display = new Intl.DisplayNames([i18n.language], { type: 'region' })
+        const enriched = data
+          .map((c) => ({ iso: c.iso, name: display.of(c.iso) || c.iso }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        setCountryOptions(enriched)
+      } catch {
+        // silent
+      }
+    }
+    loadCountries()
+    return () => {
+      cancelled = true
+    }
+  }, [i18n.language])
+
+  const handleAddressChange = async (patch: Partial<UserUpdate>) => {
+    if (!user) return
+    setAuth({ ...user, ...patch } as typeof user, token ?? '')
+    setAddressSaving(true)
+    setAddressSaved(false)
+    try {
+      const { data } = await updateMe(patch)
+      setAuth(data, token ?? '')
+      setAddressSaved(true)
+      setTimeout(() => setAddressSaved(false), 1500)
+    } catch {
+      // silent — user will notice via missing checkmark
+    } finally {
+      setAddressSaving(false)
+    }
+  }
 
   const loadInvites = async () => {
     setInvitesLoading(true)
@@ -215,6 +258,29 @@ export default function ProfilePage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display font-semibold text-base text-navy">
+            {t('profile.address.title')}
+          </h2>
+          <span className="text-xs font-mono text-navy/40">
+            {addressSaving ? '…' : addressSaved ? `✓ ${t('common.save')}` : ''}
+          </span>
+        </div>
+        <AddressForm
+          value={{
+            receiving_country_iso: user?.receiving_country_iso ?? null,
+            receiving_city: user?.receiving_city ?? null,
+            receiving_city_geoname_id: user?.receiving_city_geoname_id ?? null,
+            receiving_street: user?.receiving_street ?? null,
+            receiving_postal_code: user?.receiving_postal_code ?? null,
+            receiving_note: user?.receiving_note ?? null,
+          }}
+          onChange={handleAddressChange}
+          countryOptions={countryOptions}
+        />
       </div>
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">

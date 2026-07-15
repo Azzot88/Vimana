@@ -33,3 +33,6 @@ export const listInquiryMessages = (
 
 export const postInquiryMessage = (inquiryId: string, text: string) =>
   api.post<InquiryMessage>(`/api/inquiries/${inquiryId}/messages`, { text })
+
+export const shareAddressInInquiry = (inquiryId: string) =>
+  api.post<InquiryMessage>(`/api/inquiries/${inquiryId}/messages/share-address`)

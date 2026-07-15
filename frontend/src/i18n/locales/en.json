@@ -87,6 +87,25 @@
     "switchToSend": "Switch to Send",
     "switchToDeliver": "Switch to Deliver"
   },
+  "chat": {
+    "shareAddress": {
+      "button": "Share my address",
+      "confirm": "Share your saved address? The other party will see it.",
+      "notSet": "Set your receiving address in Profile first.",
+      "error": "Failed to share address."
+    },
+    "addressCard": {
+      "title": "Delivery address",
+      "country": "Country",
+      "city": "City",
+      "street": "Street",
+      "postal": "Postal",
+      "note": "Note",
+      "copy": "Copy",
+      "copied": "Copied ✓",
+      "openMaps": "Open in Maps"
+    }
+  },
   "inquiry": {
     "chatButton": "Chat",
     "chatWith": "Chat with {{name}}",
@@ -181,6 +200,18 @@
     "level": "Business Activity Level",
     "levelPhase": "Phase 3",
     "levelNote": "Available in next phase",
+    "address": {
+      "title": "Receiving address",
+      "privacyHint": "Private — visible only to you until you share it in a chat",
+      "country": "Country",
+      "city": "City",
+      "cityPlaceholder": "Type to search…",
+      "street": "Street, building, apartment",
+      "streetPlaceholder": "Marina Walk 12, apt 305",
+      "postal": "Postal code",
+      "note": "Note",
+      "notePlaceholder": "Floor 3, intercom 12, prefer weekends"
+    },
     "contacts": "Contacts",
     "invite": "+ Invite",
     "noContacts": "No contacts",

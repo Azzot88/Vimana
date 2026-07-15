@@ -8,8 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
+from app.core.address import AddressNotSetError, format_address_message
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_asc
+from app.core.rate_limit import limiter
 from app.core.storage import get_presigned_url, upload_file
 from app.models.deal import Attachment, AttachmentKind, Deal, DealVaultMessage
 from app.models.user import User
@@ -119,6 +121,48 @@ async def create_message(
     await db.commit()
     await db.refresh(msg)
 
+    return MessageOut(
+        id=msg.id,
+        deal_id=msg.deal_id,
+        sender_id=msg.sender_id,
+        text=msg.text,
+        is_system=msg.is_system,
+        attachments=[],
+        created_at=msg.created_at,
+    )
+
+
+@router.post(
+    "/{deal_id}/dealvault/messages/share-address",
+    response_model=MessageOut,
+    status_code=201,
+)
+@limiter.limit("5/hour")
+async def share_address(
+    deal_id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T1.26 — share user's receiving address into the DealVault chat as a
+    system-message. Body-less; server reads current user's profile."""
+    await _get_deal_as_participant(deal_id, current_user, db)
+    try:
+        text = format_address_message(current_user)
+    except AddressNotSetError:
+        raise HTTPException(
+            status_code=422,
+            detail="Receiving address not set — fill it in your profile first",
+        )
+    msg = DealVaultMessage(
+        deal_id=deal_id,
+        sender_id=current_user.id,
+        text=text,
+        is_system=True,
+    )
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
     return MessageOut(
         id=msg.id,
         deal_id=msg.deal_id,

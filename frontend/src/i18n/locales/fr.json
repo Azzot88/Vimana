@@ -87,6 +87,25 @@
     "switchToSend": "Passer à l'envoi",
     "switchToDeliver": "Passer à la livraison"
   },
+  "chat": {
+    "shareAddress": {
+      "button": "Partager mon adresse",
+      "confirm": "Partager votre adresse enregistrée ? L'autre partie la verra.",
+      "notSet": "Renseignez d'abord votre adresse dans le profil.",
+      "error": "Impossible de partager l'adresse."
+    },
+    "addressCard": {
+      "title": "Adresse de livraison",
+      "country": "Pays",
+      "city": "Ville",
+      "street": "Rue",
+      "postal": "Code postal",
+      "note": "Note",
+      "copy": "Copier",
+      "copied": "Copié ✓",
+      "openMaps": "Ouvrir dans Maps"
+    }
+  },
   "inquiry": {
     "chatButton": "Chat",
     "chatWith": "Chat avec {{name}}",
@@ -181,6 +200,18 @@
     "level": "Niveau d'Activité Commerciale",
     "levelPhase": "Phase 3",
     "levelNote": "Disponible à la prochaine phase",
+    "address": {
+      "title": "Adresse de réception",
+      "privacyHint": "Privée — visible uniquement par vous jusqu'à ce que vous la partagiez dans un chat",
+      "country": "Pays",
+      "city": "Ville",
+      "cityPlaceholder": "Commencez à taper…",
+      "street": "Rue, bâtiment, appartement",
+      "streetPlaceholder": "Marina Walk 12, apt 305",
+      "postal": "Code postal",
+      "note": "Note",
+      "notePlaceholder": "3e étage, interphone 12, uniquement les week-ends"
+    },
     "contacts": "Contacts",
     "invite": "+ Inviter",
     "noContacts": "Aucun contact",

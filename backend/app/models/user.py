@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, String, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -38,3 +38,12 @@ class User(Base):
     # T1.24 pt.1 — single role column, permissions derived via app.core.permissions.
     # Values: 'user' | 'arbiter' | 'superuser'. Superuser = User Zero.
     role: Mapped[str] = mapped_column(String(20), default="user", server_default="user")
+
+    # T1.26 — private receiving address. Never exposed in list-endpoints or via
+    # any UserOut except /me. Sharing into a chat is an explicit user action.
+    receiving_country_iso: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    receiving_city: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    receiving_city_geoname_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    receiving_street: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    receiving_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    receiving_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
