@@ -398,6 +398,75 @@
 
 **Acceptance:** перевозчик открывает `/trips/new`, видит красивую Bento-сетку с preview снизу; publish создаёт рейс; форма запоминается при перезагрузке; иконки hook-points видны и готовы принять EXP-03/EXP-04 без переработки layout'а.
 
+### T1.26 — Receiving Address в профиле (private + share by button)
+
+**Контекст:** удобство отправителей, когда я — получатель. Один основной адрес, хранится приватно на моей стороне; никто не видит его без явного share. При inquiry/DealVault-чате появляется кнопка «📍 Share my address» — адрес отправляется в чат как system-message с красивой карточкой (страна, город, улица, индекс, note). Приватность по умолчанию — принцип «не показывать пока не решил показать».
+
+- [ ] **Модель** — расширение `User` (миграция `0011_receiving_address`):
+  - `receiving_country_iso: str | None` — ISO 3166-1 alpha-2 (напр. `AE`, `US`).
+  - `receiving_city: str | None` — название города (может отличаться от GeoNames базы если пользователь ввёл вручную).
+  - `receiving_city_geoname_id: int | None` — опциональная связь с GeoNames для стандартизации/фильтров.
+  - `receiving_street: str | None` — улица, дом, квартира.
+  - `receiving_postal_code: str | None` — индекс.
+  - `receiving_note: str | None` — этаж, домофон, ориентир, время приёма (свободный текст ≤500 симв).
+  - **Индексов и уникальности нет** — адрес приватный, поиск по нему не нужен.
+
+- [ ] **Endpoints:**
+  - `PATCH /api/auth/me` расширен полями `receiving_*` (все optional, все обновляемы отдельно).
+  - `GET /api/cities?q=<prefix>&country=<iso>` — новый endpoint для autocomplete городов. Использует **существующий GeoNames dataset** из T1.16 (`cities15000.txt`) — 34k городов с alt_names (мультиязычный поиск уже работает). Возвращает `[{geoname_id, name, country_iso, population}]`, top 10.
+  - `GET /api/countries` — уже существует из T1.16 cascade, переиспользуем.
+  - `POST /api/deals/{id}/dealvault/messages/share-address` — helper endpoint: копирует текущий `user.receiving_*` в новое `DealVaultMessage(is_system=true, text=formatted_address)`. Один вызов — одно system-message.
+  - `POST /api/inquiries/{id}/messages/share-address` — то же для inquiry-чата.
+
+- [ ] **Приватность:**
+  - Адрес отдаётся **только** через `GET /api/auth/me` — владельцу.
+  - **Никогда не в `UserOut` при list-endpoints** (`/admin/users` показывает всех — там `receiving_*` отсутствуют).
+  - Однажды расшаренный через chat — становится частью `DealVaultMessage` (иммутабельно) и виден участникам сделки; это **осознанный выбор** пользователя.
+  - Rate-limit на share-address: 5 per hour per deal (защита от спама-шаринга).
+
+- [ ] **Формат system-message для share:**
+  - `text` = многострочная markdown-подобная структура:
+    ```
+    📍 SHARED ADDRESS
+    Country: {country_name_localized}
+    City: {city}
+    Street: {street}
+    Postal: {postal_code}
+    Note: {note}
+    ```
+  - Frontend парсит по префиксу `📍 SHARED ADDRESS` → рендерит как **карточку** вместо plain text: страна с флагом, копирование в clipboard, ссылка «Open in Maps» (google.com/maps/place/{urlencoded}).
+
+- [ ] **Frontend (`ProfilePage.tsx`):**
+  - Новая секция «Receiving address» между «Contacts» и «Notifications».
+  - Форма:
+    - **Country** — dropdown (existing `Intl.DisplayNames` из T1.11).
+    - **City** — autocomplete из `GET /api/cities?q=&country=` (реиспользует поиск из T1.16 но по городам, не аэропортам). Optional override — пользователь может ввести не-GeoNames название вручную.
+    - **Street** — text input.
+    - **Postal code** — text input.
+    - **Note** — textarea, placeholder «Floor 3, intercom 12, prefer weekends».
+  - Save с автосохранением через `PATCH /me`.
+  - Индикатор «🔒 Private — visible only to you until you share in a chat».
+
+- [ ] **Frontend (`InquiryPanel.tsx` + `DealVaultPage.tsx`):**
+  - Кнопка «📍 Share my address» рядом с input (только для sender-role в inquiry; для любой стороны в DealVault — получатель может тоже расшарить).
+  - Клик → confirm-модалка «Share your saved address? Other party will see it.» → если yes → `POST /messages/share-address` → сообщение появляется в чате как карточка.
+  - Если `user.receiving_country_iso === null` → tooltip «Set your address in profile first» + ссылка на профиль.
+
+- [ ] **i18n**: `profile.address.*` (country, city, street, postal, note, saveHint, privacy) + `chat.shareAddress`, `chat.addressCard.*` в 6 языках.
+
+- [ ] **Backend-тесты:**
+  - `PATCH /me` с `receiving_*` полями → сохранение работает; `GET /me` возвращает.
+  - `GET /admin/users` (superuser) → `receiving_*` **отсутствуют** в ответе.
+  - `GET /api/cities?q=Dub&country=AE` → возвращает Dubai, Abu Dhabi (etc), top 10.
+  - `POST /messages/share-address` без `receiving_country_iso` → 422 «address not set».
+  - `POST /messages/share-address` → создаёт `is_system=true` message с правильным префиксом.
+  - Rate-limit: 6-й share подряд в одной сделке → 429.
+  - Chat participant не может прочитать чужой `receiving_*` через любой endpoint кроме message-share.
+
+- [ ] Обновить `frontend/src/version.ts` до `0.01.26`.
+
+**Acceptance:** пользователь заполняет адрес в профиле (страна/город с autocomplete/улица/индекс/note); адрес приватен по умолчанию (нет в public API); в inquiry- и DealVault-чате есть кнопка «📍 Share my address» → адрес попадает в чат как красивая карточка с копированием и Open in Maps; другой участник видит адрес только после явного share; никаких других способов узнать чужой адрес не существует.
+
 ---
 
 ## 🧪 ТЕСТИРОВАНИЕ — Расширение сьюта
@@ -679,13 +748,22 @@
   - `GET /api/trips/{id}/nostr-event` — возвращает Nostr event JSON (для верификации / экспорта).
   - `POST /api/nostr/republish` (admin) — force-republish в случае разрыва.
 - [ ] **Мониторинг:** metric `nostr_publish_success_count`, `nostr_publish_error_count`, healthcheck `/health/nostr` — connectivity to friendly relays.
+
+- [ ] **Multilingual publishing strategy (default approach D)**:
+  - **Structured tags — universal, без перевода**: `l` (IATA), `depart_at` (ISO 8601), `capacity` (число+kg), `t` (category enum keys) — эти данные читаются любым Nostr-клиентом одинаково, наш frontend и внешние клиенты рендерят по своей локали через собственный i18n.
+  - **Свободный текст описания рейса** (если пользователь его добавил) — публикуется **в оригинале + `["lang", <ISO 639-1>]`** тег. Один event, один `d`, ноль дублирования.
+  - **Client-side translation в нашем frontend**: если `event.lang != user_ui_lang` — показываем translated inline с кнопкой «Show original». Backend `POST /api/nostr/translate` (deferred to Redis cache key `(event_id, target_lang)` TTL 30 дней). Provider — Claude Haiku (~$0.0002/call) либо DeepL Free API (500k символов/мес). Уточнить в TECHSTATE D-TRANSLATION при подходе к T3.5.
+  - **Опциональная публикация переводов** — feature-флаг для пользователя (см. EXP-06). По умолчанию OFF: не мусорим relay-фиды 6× копиями.
+  - **Все trip events всегда несут `lang` тег** — обязательное поле, даже если description пустой (для консистентности фильтров у клиентов).
+
 - [ ] **Frontend:**
   - На `TripsPage`, `NewTripPage` — маленький badge «📡 Also on Nostr · npub…» с копированием event ID.
+  - На карточке чужого trip — если `event.lang` не совпадает с UI-локалью → «🌐 translated» chip с tooltip «original in {lang}, click to see».
   - В профиле — секция «Nostr identity» с npub, ссылкой на relay, кнопкой export.
-- [ ] Backend-тесты: publish → event попадает в наш relay (запрос через WebSocket subscriber); подпись валидна для user's npub; deletion event публикуется при cancelled; rate-limit срабатывает после 30 events.
+- [ ] Backend-тесты: publish → event попадает в наш relay (запрос через WebSocket subscriber); подпись валидна для user's npub; deletion event публикуется при cancelled; rate-limit срабатывает после 30 events; `lang` tag присутствует всегда; translation cache hit не делает LLM-call.
 - [ ] i18n `nostr.*` в 6 языках.
 
-**Acceptance:** после `POST /api/trips` — рейс появляется как kind 30402 event в нашем relay и минимум в 2 из friendly relays; любой Nostr-клиент, подписанный на `#t: vimana`, видит новые рейсы; deletion event корректно обрабатывается. Vimana становится **видима в глобальной Nostr-сети**.
+**Acceptance:** после `POST /api/trips` — рейс появляется как kind 30402 event в нашем relay и минимум в 2 из friendly relays; любой Nostr-клиент, подписанный на `#t: vimana`, видит новые рейсы; deletion event корректно обрабатывается; всегда присутствует `lang` tag; наш frontend показывает translated текст для non-matching locale с кнопкой «show original». Vimana становится **видима в глобальной Nostr-сети на любом языке**.
 
 ---
 

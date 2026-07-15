@@ -35,6 +35,8 @@
 | Inquiry chat panel (TripInquiry + InquiryMessage) | 1 | ✅ готово (T1.22) |
 | User Zero + Arbiter role + Dispute model (базовая механика) | 1→3 | ✅ готово (T1.23; полная Фаза 3 — позже) |
 | Dual role (can_carry/can_send/active_mode) + RBAC (Permission enum + Role) | 1 | ✅ готово (T1.24) |
+| NewTripPage redesign (Bento + hook-points для EXP-03/04) | 1 | ⬜ не начато (T1.25) |
+| Receiving Address в профиле + share-in-chat | 1 | ⬜ не начато (T1.26) |
 | Peer Identity Verification (P2P KYC) | 2 | ⬜ не начато (T2.1) |
 | Trust Graph (Web-of-Trust) | 2 | ⬜ не начато (T2.4) |
 | Keypair + Nostr-совместимость (D10: A+D) | 2 | ⬜ не начато (T2.2) |
@@ -71,6 +73,7 @@
 | D10 | **Nostr-совместимость: Вариант A + D.** Платформа генерирует secp256k1-keypair при регистрации и хранит зашифрованно. Пользователь «забирает» nsec в любой момент → платформа удаляет свою копию. Если обнаружен NIP-07 браузерный extension (Alby, nos2x) — Vimana использует его для подписи вместо custodial ключа | Масс-маркет онбординг без барьеров + поддержка существующей Nostr-идентичности для продвинутых пользователей | 2026-06-27 |
 | D-NOSTR-RELAY | **Vimana Nostr Relay = strfry** (C++ от hoytech, LMDB storage). Дeploy как отдельный контейнер `nostr-relay` в docker-compose. Event kind для trip = **NIP-99 30402** (Classified Listing, replaceable per `d`-tag) — совместим с существующими Nostr-клиентами. Federation = **whitelist friendly relays** (publish only, subscribe отложен до Фазы 4+). Auth NIP-42, rate-limit 30 events/hour per pubkey, WoT-gate из T2.4 | strfry — production-ready, лёгкий (~50 MB idle), нативная поддержка нужных NIP-ов; NIP-99 = стандартный marketplace-формат (уже понят damus/amethyst/coracle); publish-only федерация — предсказуемее subscribe с точки зрения spam/moderation | 2026-07-12 |
 | D-NOSTR-FEDERATION (open) | Конкретный whitelist friendly relays (env `NOSTR_FRIENDLY_RELAYS`) | Стартовый набор: damus.io, nostr.wine, relay.nostr.band. Ревизия каждые 3-6 месяцев по популярности и uptime | TBD (Фаза 3.5) |
+| D-TRANSLATION (open) | Провайдер on-the-fly перевода Nostr-описаний для мультиязычного UI | Варианты: **Claude Haiku** (~$0.0002/call, стабильно), **DeepL Free API** (500k символов/мес, бесплатно), **локальный NLLB** (0 стоимость, но 3+ GB модель). Кэш в Redis TTL 30 дней по `(event_id, target_lang)`. Уточнить при подходе к T3.5 | TBD (Фаза 3.5) |
 
 ---
 
@@ -170,6 +173,7 @@
 - `InquiryMessage(id, inquiry_id→TripInquiry, sender_id, text_ciphertext, text_nonce, created_at)` — at-rest шифрование, T1.22
 - `Dispute(id, deal_id→Deal UNIQUE, opened_by, arbiter_id?, reason, status ∈ {open, claimed, resolved}, verdict?, created_at, resolved_at?)` — T1.23
 - `WaitlistEntry(id, email UNIQUE, name?, source, created_at)` — T1.18
+- *(User расширение T1.26)*: `receiving_country_iso?`, `receiving_city?`, `receiving_city_geoname_id?`, `receiving_street?`, `receiving_postal_code?`, `receiving_note?` — **приватные**, отдаются только через `GET /me`, никогда в list-endpoints (например `/admin/users` их не возвращает)
 
 **Фаза 2 (планируется)**
 - `VerificationLevel` enum: `auto` / `peer` / `kyc` (порядок = сила trust).
