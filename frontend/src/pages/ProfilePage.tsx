@@ -9,6 +9,7 @@ import { createInvite, listConnections, listMyInvites, type Connection, type MyI
 import api from '../api/client'
 import AddressForm from '../components/AddressForm'
 import CountryCodeSelect from '../components/CountryCodeSelect'
+import KeypairSection from '../components/KeypairSection'
 import MonoText from '../components/MonoText'
 import { APP_VERSION } from '../version'
 
@@ -282,6 +283,8 @@ export default function ProfilePage() {
           countryOptions={countryOptions}
         />
       </div>
+
+      <KeypairSection />
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <div className="flex items-center justify-between">

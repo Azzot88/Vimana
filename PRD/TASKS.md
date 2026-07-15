@@ -602,17 +602,34 @@
 - **Асимметрия соблюдена**: sender declined = badge + возможная cancel; carrier declined = нейтральное сообщение, никаких последствий.
 
 ### T2.2 — Keypair + Nostr-совместимость (D10: Вариант A + D)
-- [ ] При регистрации: генерация secp256k1-keypair; `nsec` хранится зашифрованно (AES-256-GCM, ключ в env/KMS); `npub` → `User.nostr_pubkey`.
-- [ ] `User.key_self_custody: bool = False` — миграция Alembic.
-- [ ] `User.password_hash` сделать nullable (миграция) — для аккаунтов только с keypair, без пароля.
-- [ ] Server-side подпись: `DealVaultMessage` и `DealEvent` подписываются `nsec` при создании; `nostr_sig` сохраняется.
-- [ ] Сервер верифицирует подпись через `npub` перед сохранением каждого события.
-- [ ] `GET /api/me/keypair/status` — custodial / self-custody, npub.
-- [ ] `POST /api/me/keypair/export` — вернуть зашифрованный nsec (требует re-auth/2FA).
-- [ ] `POST /api/me/keypair/claim` — пометить self-custody, платформа удаляет nsec.
-- [ ] `POST /api/me/keypair/import` — импортировать существующий npub; `key_self_custody = True`.
-- [ ] Frontend: определение `window.nostr` (NIP-07); если есть — предложить подпись через extension; сервер принимает pre-signed event и верифицирует.
-**Acceptance:** новый аккаунт автоматически получает keypair; DealVault-события подписаны и верифицируемы по `npub` без обращения к платформе; export/claim/import работают; NIP-07 extension перехватывает подпись если обнаружен.
+
+**Разбит на две части** по архитектурной причине: полный NIP-07 (D) требует backend signing в формате Nostr event (kind + tags + content, `event_id` per NIP-01), потому что browser-extensions (Alby, nos2x) могут подписать только event JSON, не произвольный хеш. Текущий backend signing = raw `sha256(canonical_json)` — годится для custodial (server держит nsec), но несовместим с NIP-07.
+
+#### T2.2 pt.1 — Custodial + Keypair Management UI ✅ (backend + frontend)
+- [x] При регистрации: генерация secp256k1-keypair; `nsec` шифруется AES-256-GCM с отдельным `NSEC_ENCRYPTION_KEY` (env, не MESSAGE_ENCRYPTION_KEY); `npub` → `User.nostr_pubkey`.
+- [x] `User.key_self_custody: bool = False`; `User.nsec_encrypted BYTEA`, `User.nsec_nonce BYTEA` — миграция 0012 + backfill для существующих юзеров.
+- [x] Server-side подпись: `DealVaultMessage` и `DealEvent` подписываются server-side через `sign_vault_message()` / `sign_deal_event()` (`app/core/signing.py`). Payload = canonical JSON + sha256 + Schnorr. `nostr_sig` заполняется во всех местах создания (dealvault.py, deals.py, admin.py). System messages (`sender_id=None`) не подписываются.
+- [x] `GET /api/me/keypair/status` — `{npub, key_self_custody, has_encrypted_nsec}`.
+- [x] `POST /api/me/keypair/export` — требует password re-auth; возвращает `{nsec_hex, npub_hex}`.
+- [x] `POST /api/me/keypair/claim` — DELETE nsec_encrypted, `key_self_custody=True` (backend готов, но UI пока не даёт кнопку — см. pt.2).
+- [x] `POST /api/me/keypair/import` — `{nsec_hex}` или `{npub_hex}`; всегда `key_self_custody=True`; foreign nsec **никогда** не сохраняется.
+- [x] Frontend Keypair section в ProfilePage: показывает `npub`, статус custody, кнопки Export / Import (nsec или npub-only). Claim скрыт до pt.2. Детект `window.nostr` — показывает info-баннер «NIP-07 extension detected», без функциональности.
+- [x] Backend-тесты (9+): keypair generation, nsec never plaintext in DB, export password re-auth, claim удаляет nsec, import с nsec / только npub, bad hex 422, server-signs new user's message, self-custody → 422 без pre-signed.
+- [x] i18n `profile.keypair.*` в 6 языках.
+
+**Acceptance pt.1:** новый аккаунт получает keypair; DealVault-события подписаны и верифицируемы через `verify_event(payload, sig, npub)`; user может увидеть свой npub, экспортировать nsec с re-auth, импортировать foreign keypair; в UI видно наличие NIP-07 extension (но клиент им ещё не пользуется). ✅
+
+#### T2.2 pt.2 — NIP-07 signing + full self-custody
+
+- [ ] **Backend refactor `signing.py`**: перейти с raw `sha256(payload)` на полноценный Nostr event формат — `{kind, created_at, pubkey, tags, content}` + NIP-01 `event_id = sha256([0, pubkey, created_at, kind, tags, content])`. Kind: 4801 для vault_message, 4802 для deal_event (custom application kinds). Tags: `[["d", model_uuid], ["k", model_type]]`. Content = canonical JSON текущего payload'а.
+- [ ] Backend endpoints принимают `nostr_sig` + `nostr_created_at` (unix) в body для self-custody; backend recomputes `event_id` с client-provided `created_at` и `msg.created_at = datetime.fromtimestamp(nostr_created_at)`.
+- [ ] Frontend `lib/nostr.ts` — buildEvent для vault_message/deal_event, `signViaNip07(event)` через `window.nostr.signEvent()`, fallback error.
+- [ ] `api/dealvault.ts` + `api/inquiry.ts` — при self-custody buildEvent → NIP-07 sign → включить `nostr_sig` + `nostr_created_at` в body.
+- [ ] UI: кнопка «Claim self-custody» становится доступна; после claim user'у показывается что все сообщения теперь подписываются его extension.
+- [ ] Миграция подписей: старые raw-hash sigs остаются валидны (verify пробует оба формата 30 дней); новые всегда Nostr event.
+- [ ] Тесты: NIP-07 sign flow (mocked), backend verify через `verify_event(event_id, sig, npub)`, self-custody может писать в чат.
+
+**Acceptance pt.2:** self-custody user с Alby/nos2x может отправлять сообщения в DealVault; backend верифицирует NIP-07 sig; кнопка Claim работает end-to-end.
 
 ### T2.3 — Threshold-encryption 2-of-3 для DealVault / Inquiry чатов (V2 замена at-rest)
 
