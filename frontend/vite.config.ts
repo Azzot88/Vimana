@@ -8,6 +8,19 @@ export default defineConfig({
     host: true,
     allowedHosts: ['vimana.dealvault.club', '.dealvault.club'],
   },
+  build: {
+    // Split heavy vendors so the main bundle stays under 500 kB and the browser
+    // can cache the (rarely-changing) libraries separately from our code.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-i18n': ['i18next', 'react-i18next'],
+          'vendor-phone': ['libphonenumber-js'],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
