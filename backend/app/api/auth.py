@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
@@ -31,6 +32,11 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="phone already registered")
 
+    # T2.2 — custodial Nostr keypair generated at registration.
+    # `nsec_encrypted` is DELETE-ed later when user claims self-custody.
+    nsec_hex, npub_hex = generate_keypair()
+    nsec_nonce, nsec_ct = encrypt_nsec(nsec_hex)
+
     user = User(
         email=email,
         phone=phone,
@@ -39,6 +45,10 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
         can_carry=body.can_carry,
         can_send=body.can_send,
         active_mode=body.active_mode,
+        nostr_pubkey=npub_hex,
+        nsec_encrypted=nsec_ct,
+        nsec_nonce=nsec_nonce,
+        key_self_custody=False,
     )
     db.add(user)
     await db.commit()

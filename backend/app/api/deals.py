@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
+from app.core.signing import sign_deal_event
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
 from app.models.marketplace import Category, Order, OrderStatus, Trip, TripInquiry, TripStatus
@@ -88,6 +89,7 @@ async def match_deal(
         actor_id=current_user.id,
         payload={"trip_id": str(trip.id), "order_id": str(order.id)},
     )
+    sign_deal_event(event, current_user)
     db.add(event)
 
     # T1.22: link existing inquiry thread (if any) to the new deal so pre-deal
@@ -127,6 +129,7 @@ async def accept_deal(
         actor_id=current_user.id,
         payload=None,
     )
+    sign_deal_event(event, current_user)
     db.add(event)
 
     await db.commit()
@@ -167,6 +170,7 @@ async def add_event(
         actor_id=current_user.id,
         payload=body.payload,
     )
+    sign_deal_event(event, current_user)
     db.add(event)
 
     await db.commit()
@@ -196,6 +200,7 @@ async def confirm_deal(
         actor_id=current_user.id,
         payload=None,
     )
+    sign_deal_event(confirmed_event, current_user)
     db.add(confirmed_event)
     await db.flush()
 
@@ -207,6 +212,7 @@ async def confirm_deal(
         actor_id=current_user.id,
         payload=None,
     )
+    sign_deal_event(closed_event, current_user)
     db.add(closed_event)
 
     await db.commit()

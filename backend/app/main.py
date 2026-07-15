@@ -20,6 +20,7 @@ from app.api.cities import router as cities_router
 from app.api.dealvault import router as dealvault_router
 from app.api.deals import router as deals_router
 from app.api.inquiries import router as inquiries_router
+from app.api.keypair import router as keypair_router
 from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
@@ -130,6 +131,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(keypair_router, prefix="/api", tags=["keypair"])
 app.include_router(social_router, prefix="/api", tags=["social"])
 app.include_router(trips_router, prefix="/api/trips", tags=["trips"])
 app.include_router(deals_router, prefix="/api/deals", tags=["deals"])

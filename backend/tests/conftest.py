@@ -10,6 +10,11 @@ os.environ.setdefault(
     "MESSAGE_ENCRYPTION_KEY",
     base64.b64encode(b"vimana-test-key-32-bytes-length!").decode(),
 )
+# T2.2 — separate key for user nsec (never share with MESSAGE_ENCRYPTION_KEY).
+os.environ.setdefault(
+    "NSEC_ENCRYPTION_KEY",
+    base64.b64encode(b"vimana-nsec-key-32-bytes-length!").decode(),
+)
 
 import psycopg2
 import pytest
@@ -205,6 +210,26 @@ async def _ensure_dual_role(engine) -> None:
             await conn.execute(text("ALTER TABLE users DROP COLUMN is_carrier"))
 
 
+async def _ensure_nostr_keypair_columns(engine) -> None:
+    """T2.2 schema fix: nsec_encrypted / nsec_nonce / key_self_custody. Idempotent."""
+    async with engine.begin() as conn:
+        for col, ddl in (
+            ("nsec_encrypted", "BYTEA"),
+            ("nsec_nonce", "BYTEA"),
+            ("key_self_custody", "BOOLEAN NOT NULL DEFAULT false"),
+        ):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='users' AND column_name='{col.split()[0]}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col}"))
+
+
 async def _ensure_receiving_address_columns(engine) -> None:
     """T1.26 schema fix: 6 nullable receiving_* columns on users. Idempotent."""
     async with engine.begin() as conn:
@@ -331,6 +356,7 @@ async def test_engine():
     await _ensure_inquiry_tables(engine)
     await _ensure_dual_role(engine)
     await _ensure_receiving_address_columns(engine)
+    await _ensure_nostr_keypair_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

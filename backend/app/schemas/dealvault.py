@@ -22,6 +22,7 @@ class MessageOut(BaseModel):
     sender_id: uuid.UUID | None
     text: str | None
     is_system: bool
+    nostr_sig: str | None = None
     attachments: list[AttachmentOut]
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -30,3 +31,5 @@ class MessageOut(BaseModel):
 class MessageCreate(BaseModel):
     text: str | None = None
     is_system: bool = False
+    # T2.2 — self-custody users MUST pre-sign; custodial users may leave null.
+    nostr_sig: str | None = None

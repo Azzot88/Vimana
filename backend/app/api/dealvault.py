@@ -12,6 +12,7 @@ from app.core.address import AddressNotSetError, format_address_message
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.rate_limit import limiter
+from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, upload_file
 from app.models.deal import Attachment, AttachmentKind, Deal, DealVaultMessage
 from app.models.user import User
@@ -76,6 +77,7 @@ def _build_message_out(msg: DealVaultMessage) -> MessageOut:
         sender_id=msg.sender_id,
         text=msg.text,
         is_system=msg.is_system,
+        nostr_sig=msg.nostr_sig,
         attachments=attachments_out,
         created_at=msg.created_at,
     )
@@ -117,6 +119,7 @@ async def create_message(
         text=body.text,
         is_system=body.is_system,
     )
+    sign_vault_message(msg, current_user, body.nostr_sig)
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
@@ -127,6 +130,7 @@ async def create_message(
         sender_id=msg.sender_id,
         text=msg.text,
         is_system=msg.is_system,
+        nostr_sig=msg.nostr_sig,
         attachments=[],
         created_at=msg.created_at,
     )
@@ -160,6 +164,7 @@ async def share_address(
         text=text,
         is_system=True,
     )
+    sign_vault_message(msg, current_user)
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
@@ -169,6 +174,7 @@ async def share_address(
         sender_id=msg.sender_id,
         text=msg.text,
         is_system=msg.is_system,
+        nostr_sig=msg.nostr_sig,
         attachments=[],
         created_at=msg.created_at,
     )
