@@ -179,7 +179,30 @@
     "publish": "Opublikuj lot",
     "carriersOnly": "Tylko przewoźnicy mogą publikować loty",
     "publishError": "Nie udało się utworzyć lotu",
-    "useGeolocation": "Moja lokalizacja"
+    "useGeolocation": "Moja lokalizacja",
+    "newTripCell": {
+      "route": "Trasa",
+      "date": "Wylot",
+      "capacity": "Wolne miejsce",
+      "categories": "Dozwolone kategorie",
+      "publish": "Publikacja",
+      "preview": "Podgląd",
+      "alsoOnNostr": "Opublikuj także w sieci Nostr"
+    },
+    "newTripHook": {
+      "voice": "Wprowadzanie głosowe",
+      "scan": "Skanuj bilet",
+      "manual": "Wprowadzanie ręczne"
+    },
+    "newTripHookComingSoon": "{{feature}} — wkrótce",
+    "newTripValidation": {
+      "route": "Wskaż skąd i dokąd",
+      "sameRoute": "Skąd i dokąd muszą się różnić",
+      "date": "Wskaż datę i czas wylotu",
+      "pastDate": "Data musi być w przyszłości",
+      "capacity": "Waga musi być co najmniej 0.5 kg",
+      "capacityWarning": "Waga powyżej 15 kg jest nietypowa dla bagażu podręcznego. Opublikować?"
+    }
   },
   "deals": {
     "title": "Transakcje",

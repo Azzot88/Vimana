@@ -179,7 +179,30 @@
     "publish": "Publish trip",
     "carriersOnly": "Only carriers can publish trips",
     "publishError": "Failed to create trip",
-    "useGeolocation": "Use my location"
+    "useGeolocation": "Use my location",
+    "newTripCell": {
+      "route": "Route",
+      "date": "Departure",
+      "capacity": "Free capacity",
+      "categories": "Allowed categories",
+      "publish": "Publish",
+      "preview": "Preview",
+      "alsoOnNostr": "Also publish to Nostr network"
+    },
+    "newTripHook": {
+      "voice": "Voice input",
+      "scan": "Scan ticket",
+      "manual": "Manual input"
+    },
+    "newTripHookComingSoon": "{{feature}} — coming soon",
+    "newTripValidation": {
+      "route": "Choose origin and destination",
+      "sameRoute": "Origin and destination must differ",
+      "date": "Choose departure date and time",
+      "pastDate": "Date must be in the future",
+      "capacity": "Capacity must be at least 0.5 kg",
+      "capacityWarning": "Capacity above 15 kg is unusual for hand luggage — publish anyway?"
+    }
   },
   "deals": {
     "title": "Deals",

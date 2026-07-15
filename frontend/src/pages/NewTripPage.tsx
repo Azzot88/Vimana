@@ -1,22 +1,167 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { createTrip } from '../api/trips'
 import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
+import MonoText from '../components/MonoText'
+
+const DRAFT_KEY = 'trips:draft:v1'
+
+interface Draft {
+  origin: string
+  destination: string
+  departAt: string
+  capacity: string
+  categories: string[]
+  alsoOnNostr: boolean
+}
+
+const EMPTY: Draft = {
+  origin: '',
+  destination: '',
+  departAt: '',
+  capacity: '',
+  categories: [],
+  alsoOnNostr: true,
+}
+
+function loadDraft(): Draft {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return EMPTY
+    const parsed = JSON.parse(raw) as Partial<Draft>
+    return { ...EMPTY, ...parsed, categories: parsed.categories ?? [] }
+  } catch {
+    return EMPTY
+  }
+}
+
+// Feature flags for experimental input methods (voice / ticket scan).
+// Kept as hook-points per PRD T1.25 — actual implementations live in
+// EXP-03 / EXP-04 (see MASTERPLAN §10).
+const VOICE_ENABLED = false
+const SCAN_ENABLED = false
 
 export default function NewTripPage() {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const user = useAuthStore((s) => s.user)
-  const [origin, setOrigin] = useState('')
-  const [destination, setDestination] = useState('')
-  const [departAt, setDepartAt] = useState('')
-  const [capacity, setCapacity] = useState('')
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+
+  const [draft, setDraft] = useState<Draft>(loadDraft)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [categoryDraft, setCategoryDraft] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+  }, [draft])
+
+  const patch = useCallback((delta: Partial<Draft>) => {
+    setDraft((prev) => ({ ...prev, ...delta }))
+  }, [])
+
+  const addCategory = (cat: string) => {
+    const key = cat.trim().toLowerCase()
+    if (!key) return
+    setDraft((prev) =>
+      prev.categories.includes(key)
+        ? prev
+        : { ...prev, categories: [...prev.categories, key] },
+    )
+    setCategoryDraft('')
+  }
+
+  const removeCategory = (cat: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      categories: prev.categories.filter((c) => c !== cat),
+    }))
+  }
+
+  const validate = (): string | null => {
+    if (!draft.origin || !draft.destination) return t('trips.newTripValidation.route') as string
+    if (draft.origin === draft.destination) return t('trips.newTripValidation.sameRoute') as string
+    if (!draft.departAt) return t('trips.newTripValidation.date') as string
+    const departDate = new Date(draft.departAt)
+    if (Number.isNaN(departDate.getTime()) || departDate.getTime() < Date.now()) {
+      return t('trips.newTripValidation.pastDate') as string
+    }
+    const cap = parseFloat(draft.capacity)
+    if (!cap || cap < 0.5) return t('trips.newTripValidation.capacity') as string
+    return null
+  }
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    setError('')
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    const cap = parseFloat(draft.capacity)
+    if (cap > 15 && !window.confirm(t('trips.newTripValidation.capacityWarning') as string)) {
+      return
+    }
+    setLoading(true)
+    try {
+      await createTrip({
+        origin: draft.origin,
+        destination: draft.destination,
+        depart_at: draft.departAt,
+        capacity: cap,
+        allowed_categories: draft.categories,
+      })
+      localStorage.removeItem(DRAFT_KEY)
+      navigate('/trips')
+    } catch {
+      setError(t('trips.publishError') as string)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Cmd/Ctrl+Enter shortcut → publish
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleSubmit()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft])
+
+  const showHookIcon = (
+    icon: string,
+    label: string,
+    enabled: boolean,
+  ) => (
+    <button
+      type="button"
+      onClick={() => {
+        if (!enabled) {
+          alert(t('trips.newTripHookComingSoon', { feature: label }) as string)
+        }
+      }}
+      disabled={!enabled}
+      title={label}
+      aria-label={label}
+      className={`w-10 h-10 rounded-lg border transition-colors ${
+        enabled
+          ? 'border-cyan/40 text-cyan hover:bg-cyan/10'
+          : 'border-navy/10 text-navy/30 cursor-not-allowed'
+      }`}
+    >
+      <span aria-hidden="true" className="text-lg">
+        {icon}
+      </span>
+    </button>
+  )
 
   if (!user?.can_carry) {
     return (
@@ -26,81 +171,122 @@ export default function NewTripPage() {
     )
   }
 
-  const [categoryDraft, setCategoryDraft] = useState('')
-
-  const removeCategory = (cat: string) => {
-    setSelectedCategories((prev) => prev.filter((c) => c !== cat))
-  }
-
-  const addCategory = (cat: string) => {
-    const key = cat.trim().toLowerCase()
-    if (!key) return
-    setSelectedCategories((prev) => (prev.includes(key) ? prev : [...prev, key]))
-    setCategoryDraft('')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await createTrip({
-        origin,
-        destination,
-        depart_at: departAt,
-        capacity: parseFloat(capacity),
-        allowed_categories: selectedCategories,
+  const previewDate = draft.departAt
+    ? new Date(draft.departAt).toLocaleString(i18n.language, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
       })
-      navigate('/')
-    } catch {
-      setError(t('trips.publishError'))
-    } finally {
-      setLoading(false)
-    }
-  }
+    : '—'
 
   return (
-    <div className="max-w-lg">
-      <h1 className="font-display font-bold text-2xl text-navy mb-6">{t('trips.newTrip')}</h1>
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-4 sm:p-6 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
-            <AirportSelect value={origin} onChange={setOrigin} required placeholder="DXB" />
-          </div>
-          <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
-            <AirportSelect value={destination} onChange={setDestination} required placeholder="JFK" />
+    <div className="max-w-4xl space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display font-bold text-2xl text-navy">
+          {t('trips.newTrip')}
+        </h1>
+        <div className="flex gap-2">
+          {showHookIcon('🎤', t('trips.newTripHook.voice'), VOICE_ENABLED)}
+          {showHookIcon('📷', t('trips.newTripHook.scan'), SCAN_ENABLED)}
+          <button
+            type="button"
+            aria-label={t('trips.newTripHook.manual') as string}
+            className="w-10 h-10 rounded-lg border border-navy/40 bg-navy text-ivory"
+            title={t('trips.newTripHook.manual') as string}
+          >
+            <span aria-hidden="true" className="text-lg">
+              ⌨️
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Route cell 2x1 */}
+        <div className="md:col-span-2 bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.route')}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
+            <div>
+              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+                {t('trips.from')}
+              </label>
+              <AirportSelect
+                value={draft.origin}
+                onChange={(v) => patch({ origin: v })}
+                required
+                placeholder="DXB"
+              />
+            </div>
+            <MonoText className="text-2xl text-cyan text-center pb-2 hidden sm:block">
+              →
+            </MonoText>
+            <div>
+              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+                {t('trips.to')}
+              </label>
+              <AirportSelect
+                value={draft.destination}
+                onChange={(v) => patch({ destination: v })}
+                required
+                placeholder="JFK"
+              />
+            </div>
           </div>
         </div>
-        <div>
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.departureDate')}</label>
+
+        {/* Date cell 1x1 */}
+        <div className="bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.date')}
+          </p>
           <input
             type="datetime-local"
-            value={departAt}
-            onChange={(e) => setDepartAt(e.target.value)}
+            value={draft.departAt}
+            onChange={(e) => patch({ departAt: e.target.value })}
             required
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
           />
         </div>
-        <div>
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.capacityKg')}</label>
+
+        {/* Capacity cell 1x1 */}
+        <div className="bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.capacity')}
+          </p>
+          <div className="flex items-baseline gap-2">
+            <input
+              type="number"
+              step="0.5"
+              min="0.5"
+              max="20"
+              value={draft.capacity}
+              onChange={(e) => patch({ capacity: e.target.value })}
+              required
+              placeholder="5"
+              className="w-24 border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
+            />
+            <MonoText className="text-sm text-navy/60">kg</MonoText>
+          </div>
           <input
-            type="number"
-            step="0.5"
+            type="range"
             min="0.5"
-            value={capacity}
-            onChange={(e) => setCapacity(e.target.value)}
-            required
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
-            placeholder="5"
+            max="20"
+            step="0.5"
+            value={draft.capacity || 0.5}
+            onChange={(e) => patch({ capacity: e.target.value })}
+            className="w-full accent-cyan"
           />
         </div>
-        <div>
-          <label className="block text-xs font-body font-medium text-navy/60 mb-2">{t('trips.allowedCategories')}</label>
-          {selectedCategories.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {selectedCategories.map((cat) => (
+
+        {/* Categories cell 1x2 (full row) */}
+        <div className="md:col-span-2 bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.categories')}
+          </p>
+          {draft.categories.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {draft.categories.map((cat) => (
                 <span
                   key={cat}
                   className="px-3 py-1 rounded-full text-xs font-mono bg-cyan text-white inline-flex items-center gap-1"
@@ -109,6 +295,7 @@ export default function NewTripPage() {
                   <button
                     type="button"
                     onClick={() => removeCategory(cat)}
+                    aria-label={t('common.close') as string}
                     className="hover:text-white/80"
                   >
                     ×
@@ -119,24 +306,80 @@ export default function NewTripPage() {
           )}
           <CategorySelect value={categoryDraft} onChange={addCategory} />
         </div>
-        {error && <p className="text-xs font-mono text-orange-600">{error}</p>}
-        <div className="flex gap-3 pt-2">
+
+        {/* Publish cell 1x1 */}
+        <div className="bg-white rounded-2xl border border-navy/10 p-4 space-y-3 flex flex-col">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.publish')}
+          </p>
+          <label className="flex items-start gap-2 text-xs font-body text-navy/60">
+            <input
+              type="checkbox"
+              checked={draft.alsoOnNostr}
+              onChange={(e) => patch({ alsoOnNostr: e.target.checked })}
+              className="mt-0.5 accent-cyan"
+            />
+            <span>{t('trips.newTripCell.alsoOnNostr')}</span>
+          </label>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 sm:flex-none bg-navy text-ivory font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+            className="mt-auto bg-amber text-white font-display font-semibold px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('trips.publish')}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3 min-h-[2.75rem]"
-          >
-            {t('common.cancel')}
-          </button>
+          <p className="text-[10px] font-mono text-navy/30 text-center">
+            ⌘/Ctrl + ⏎
+          </p>
+        </div>
+
+        {/* Preview cell 2x1 — sticky bottom on desktop */}
+        <div className="md:col-span-3 bg-gradient-to-br from-navy/5 to-cyan/5 rounded-2xl border border-navy/10 p-4">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide mb-2">
+            {t('trips.newTripCell.preview')}
+          </p>
+          <div className="bg-white rounded-xl border border-navy/10 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <MonoText className="text-lg text-navy font-medium">
+                {draft.origin || '???'} → {draft.destination || '???'}
+              </MonoText>
+              <MonoText className="text-sm text-navy/60">{previewDate}</MonoText>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
+              <span>
+                {t('trips.capacity')}:{' '}
+                <MonoText className="text-xs">{draft.capacity || '?'} кг</MonoText>
+              </span>
+              {draft.categories.length > 0 && (
+                <span className="flex flex-wrap gap-1">
+                  {draft.categories.map((c) => (
+                    <span
+                      key={c}
+                      className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-navy/60"
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </form>
+
+      {error && (
+        <p className="text-xs font-mono text-orange-600 text-center">{error}</p>
+      )}
+
+      <div className="text-center">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="text-sm font-body text-navy/50 hover:text-navy transition-colors"
+        >
+          {t('common.cancel')}
+        </button>
+      </div>
     </div>
   )
 }

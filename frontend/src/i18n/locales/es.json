@@ -179,7 +179,30 @@
     "publish": "Publicar vuelo",
     "carriersOnly": "Solo los transportistas pueden publicar vuelos",
     "publishError": "No se pudo crear el vuelo",
-    "useGeolocation": "Mi ubicación"
+    "useGeolocation": "Mi ubicación",
+    "newTripCell": {
+      "route": "Ruta",
+      "date": "Salida",
+      "capacity": "Capacidad libre",
+      "categories": "Categorías permitidas",
+      "publish": "Publicación",
+      "preview": "Vista previa",
+      "alsoOnNostr": "Publicar también en la red Nostr"
+    },
+    "newTripHook": {
+      "voice": "Entrada de voz",
+      "scan": "Escanear billete",
+      "manual": "Entrada manual"
+    },
+    "newTripHookComingSoon": "{{feature}} — próximamente",
+    "newTripValidation": {
+      "route": "Elige origen y destino",
+      "sameRoute": "Origen y destino deben ser diferentes",
+      "date": "Elige fecha y hora de salida",
+      "pastDate": "La fecha debe ser en el futuro",
+      "capacity": "El peso debe ser al menos 0.5 kg",
+      "capacityWarning": "Un peso mayor a 15 kg es inusual para equipaje de mano. ¿Publicar?"
+    }
   },
   "deals": {
     "title": "Acuerdos",
