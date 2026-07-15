@@ -222,12 +222,12 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(
                     text(
                         f"SELECT 1 FROM information_schema.columns "
-                        f"WHERE table_name='users' AND column_name='{col.split()[0]}'"
+                        f"WHERE table_name='users' AND column_name='{col}'"
                     )
                 )
             ).fetchone()
             if not row:
-                await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col}"))
+                await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
 async def _ensure_receiving_address_columns(engine) -> None:
