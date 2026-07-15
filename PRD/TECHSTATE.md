@@ -35,8 +35,8 @@
 | Inquiry chat panel (TripInquiry + InquiryMessage) | 1 | ✅ готово (T1.22) |
 | User Zero + Arbiter role + Dispute model (базовая механика) | 1→3 | ✅ готово (T1.23; полная Фаза 3 — позже) |
 | Dual role (can_carry/can_send/active_mode) + RBAC (Permission enum + Role) | 1 | ✅ готово (T1.24) |
-| NewTripPage redesign (Bento + hook-points для EXP-03/04) | 1 | ⬜ не начато (T1.25) |
-| Receiving Address в профиле + share-in-chat | 1 | ⬜ не начато (T1.26) |
+| NewTripPage redesign (Bento + hook-points для EXP-03/04) | 1 | ✅ готово (T1.25) |
+| Receiving Address в профиле + share-in-chat | 1 | ✅ готово (T1.26) |
 | Peer Identity Verification (P2P KYC) | 2 | ⬜ не начато (T2.1) |
 | Trust Graph (Web-of-Trust) | 2 | ⬜ не начато (T2.4) |
 | Keypair + Nostr-совместимость (D10: A+D) | 2 | ⬜ не начато (T2.2) |
