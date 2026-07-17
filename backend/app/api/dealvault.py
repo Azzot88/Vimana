@@ -12,8 +12,11 @@ from app.core.address import AddressNotSetError, format_address_message
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.rate_limit import limiter
+import base64
+
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, upload_file
+from app.core.threshold import E2EPayload
 from app.models.deal import Attachment, AttachmentKind, Deal, DealVaultMessage
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
@@ -71,6 +74,18 @@ def _build_message_out(msg: DealVaultMessage) -> MessageOut:
                 created_at=a.created_at,
             )
         )
+    # For e2e messages the client needs raw ciphertext + own read_package;
+    # `text` remains None because server can't decrypt. `wrapped_shares` is NOT
+    # surfaced here — arbiter's share is exposed only via the dispute endpoint.
+    ciphertext_b64 = None
+    nonce_b64 = None
+    read_packages = None
+    if msg.is_e2e:
+        if msg.text_ciphertext is not None:
+            ciphertext_b64 = base64.b64encode(bytes(msg.text_ciphertext)).decode("ascii")
+        if msg.text_nonce is not None:
+            nonce_b64 = base64.b64encode(bytes(msg.text_nonce)).decode("ascii")
+        read_packages = msg.read_packages
     return MessageOut(
         id=msg.id,
         deal_id=msg.deal_id,
@@ -81,6 +96,10 @@ def _build_message_out(msg: DealVaultMessage) -> MessageOut:
         nostr_event_id=msg.nostr_event_id,
         nostr_created_at=msg.nostr_created_at,
         nostr_pubkey=msg.nostr_pubkey,
+        is_e2e=msg.is_e2e,
+        ciphertext_b64=ciphertext_b64,
+        nonce_b64=nonce_b64,
+        read_packages=read_packages,
         attachments=attachments_out,
         created_at=msg.created_at,
     )
@@ -116,30 +135,37 @@ async def create_message(
 ):
     await _get_deal_as_participant(deal_id, current_user, db)
 
-    msg = DealVaultMessage(
-        deal_id=deal_id,
-        sender_id=current_user.id,
-        text=body.text,
-        is_system=body.is_system,
-    )
+    if body.e2e_payload is not None:
+        if body.text is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="e2e_payload and text are mutually exclusive",
+            )
+        payload = E2EPayload(body.e2e_payload)
+        ct, nonce, combined = payload.to_blob()
+        msg = DealVaultMessage(
+            deal_id=deal_id,
+            sender_id=current_user.id,
+            is_system=body.is_system,
+            is_e2e=True,
+        )
+        msg.text_ciphertext = ct
+        msg.text_nonce = nonce
+        msg.wrapped_shares = combined["wrapped_shares"]
+        msg.read_packages = combined["read_packages"]
+    else:
+        msg = DealVaultMessage(
+            deal_id=deal_id,
+            sender_id=current_user.id,
+            text=body.text,
+            is_system=body.is_system,
+        )
     sign_vault_message(msg, current_user, body.nostr_sig, body.nostr_created_at)
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
 
-    return MessageOut(
-        id=msg.id,
-        deal_id=msg.deal_id,
-        sender_id=msg.sender_id,
-        text=msg.text,
-        is_system=msg.is_system,
-        nostr_sig=msg.nostr_sig,
-        nostr_event_id=msg.nostr_event_id,
-        nostr_created_at=msg.nostr_created_at,
-        nostr_pubkey=msg.nostr_pubkey,
-        attachments=[],
-        created_at=msg.created_at,
-    )
+    return _build_message_out(msg)
 
 
 @router.post(

@@ -40,7 +40,7 @@
 | Peer Identity Verification (P2P KYC) | 2 | ✅ MVP (T2.1: backend + frontend, custodial only. OCR/OFAC — stub, self-custody 422 до T2.3) |
 | Trust Graph (Web-of-Trust) | 2 | ✅ MVP (T2.4: TrustEdge + auto dealt_with/invited + BFS endpoints + denormalized counts + UI. Follow-up: Redis-кэш, UserBadge на TripCard) |
 | Keypair + Nostr-совместимость (D10: A+D) | 2 | ✅ MVP (pt.1 custodial + UI; pt.2 NIP-01 event format + NIP-07 signing + Claim self-custody end-to-end) |
-| Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ⬜ не начато (T2.3) |
+| Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ✅ MVP (T2.3: NIP-04 wrap of Shamir shares + read_packages для нормального read; `/arbiter-reveal` с audit-event; DealVault e2e-путь, Inquiry — follow-up) |
 | Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато (T3.1) |
 | Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато (T3.5) |
 | Regulatory KYC/AML + Санкционный периметр коридоров | 4 | ⬜ не начато (T4.1) |
@@ -163,6 +163,11 @@
 | NIP-07 signing (T2.2 pt.2) — `signVaultMessageViaNip07(dealId, text, isSystem)` через `window.nostr.signEvent()`; api/dealvault.ts авто-подписывает если self-custody | `frontend/src/{lib/nostr,api/dealvault}.ts` |
 | Claim self-custody UI (T2.2 pt.2) — кнопка + модалка с warn (амбер), доступна если `has_encrypted_nsec && nip07` | `frontend/src/components/KeypairSection.tsx` |
 | Nostr event schema fields (T2.2 pt.2) — `nostr_event_id VARCHAR(64)`, `nostr_created_at BIGINT`, `nostr_pubkey VARCHAR(64)` на deal_vault_messages + deal_events (nullable для backward-compat pt.1 записей) | миграция `0015_nostr_event_format` |
+| Threshold e2e schema (T2.3) — `is_e2e BOOLEAN DEFAULT false`, `wrapped_shares JSONB`, `read_packages JSONB` на deal_vault_messages | миграция `0016_threshold_encryption` |
+| Threshold NIP-04 core (T2.3) — `nip04_encrypt`/`nip04_decrypt` через raw-x ECDH (`PublicKey.multiply`) + AES-256-CBC PKCS7; `E2EPayload` валидатор blob'а | `backend/app/core/threshold.py` |
+| Threshold endpoints (T2.3) — `/threshold/arbiter-info`, `/threshold/dealvault/messages/{id}/reveal-my-share`, `/threshold/disputes/{deal_id}/arbiter-reveal` + `arbiter_share_revealed` audit-event | `backend/app/api/threshold.py` |
+| Threshold client crypto (T2.3) — `encryptE2E` (SSS split → NIP-04 wrap → AES-GCM), `decryptE2E` (own read_package → session_key → AES-GCM decrypt), `decryptFromShares` (dispute recovery) через `@noble/{ciphers,curves,hashes}` + `shamir-secret-sharing` + `window.nostr.nip04.*` | `frontend/src/lib/threshold.ts` |
+| Threshold client API + UI (T2.3) — `api/threshold.ts`, encrypt-on-send в `api/dealvault.ts` (self-custody + NIP-07 + parties known), inline decrypt в DealVaultPage с "🔒 расшифровываю…" fallback | `frontend/src/{api/threshold,api/dealvault,pages/DealVaultPage}.tsx` |
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
 | Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
 | Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |
@@ -185,7 +190,7 @@
 - `Order(id, sender_id→User, recipient_contact, origin, destination, category VARCHAR(50), declared_value, currency, description, deadline?, status, trip_id→Trip?)`
 - `Deal(id, order_id→Order, trip_id→Trip, sender_id, carrier_id, recipient_id?, status ∈ {draft, matched, accepted, in_transit, delivered, confirmed, closed, disputed}, created_at)`
 - `DealEvent(id, deal_id→Deal, event_type ∈ {…, dispute_opened, arbiter_opened, dispute_resolved}, payload JSON, actor_id, nostr_sig?, nostr_event_id?, nostr_created_at?, nostr_pubkey?, timestamp)` — **append-only**. T2.2 pt.2 добавил NIP-01 event поля (nullable); self-custody lenient — остаётся `None`.
-- `DealVaultMessage(id, deal_id→Deal, sender_id?, text_ciphertext BYTEA, text_nonce BYTEA, is_system, nostr_sig?, nostr_event_id?, nostr_created_at?, nostr_pubkey?, created_at)` — **иммутабельно**, at-rest AES-256-GCM из T1.21; property `text` decrypt on access. T2.2 pt.2: для self-custody клиент подписывает через NIP-07 и передаёт sig+ts.
+- `DealVaultMessage(id, deal_id→Deal, sender_id?, text_ciphertext BYTEA, text_nonce BYTEA, is_system, nostr_sig?, nostr_event_id?, nostr_created_at?, nostr_pubkey?, is_e2e, wrapped_shares JSONB?, read_packages JSONB?, created_at)` — **иммутабельно**. Легаси T1.21 (`is_e2e=false`): server-encrypted at-rest, property `text` decrypt on access. T2.2 pt.2: NIP-01 event поля. **T2.3 (`is_e2e=true`)**: opaque blob — `text_ciphertext`/`text_nonce` = AES-256-GCM(session_key, plaintext) от клиента, `wrapped_shares` = 3 NIP-04 envelopes (SSS 2-of-3), `read_packages` = 2 NIP-04 envelopes с session_key для sender/carrier normal-read. Property `text` возвращает `None` для e2e — сервер не может расшифровать.
 - `Attachment(id, message_id→DealVaultMessage, r2_key, file_hash SHA-256, ipfs_cid?, kind ∈ {handoff_photo, receipt_photo, doc, payment_receipt}, created_at)` — **иммутабельно**
 - `Category(id, name_key UNIQUE, is_default, usage_count, created_at)` — T1.17
 - `TripInquiry(id, trip_id→Trip, sender_id, carrier_id, deal_id?, created_at)` — UNIQUE(trip_id, sender_id), T1.22

@@ -7,8 +7,11 @@ import {
   sendPhotoMessage,
   shareAddressInVault,
   type AttachmentKind,
+  type E2EParties,
   type VaultMessage,
 } from '../api/dealvault'
+import api from '../api/client'
+import { decryptE2E } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ImageLightbox from '../components/ImageLightbox'
@@ -32,6 +35,12 @@ export default function DealVaultPage() {
   const [error, setError] = useState<string>('')
   const [uploadKind, setUploadKind] = useState<AttachmentKind>('handoff_photo')
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
+  const [parties, setParties] = useState<{
+    e2e: E2EParties | null
+    senderId: string | null
+    carrierId: string | null
+  }>({ e2e: null, senderId: null, carrierId: null })
+  const [decrypted, setDecrypted] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -50,6 +59,57 @@ export default function DealVaultPage() {
   useEffect(() => { load() }, [dealId])
 
   useEffect(() => {
+    if (!dealId) return
+    api
+      .get<{
+        sender_id: string
+        carrier_id: string
+        sender_npub: string | null
+        carrier_npub: string | null
+      }>(`/api/deals/${dealId}`)
+      .then(({ data }) => {
+        setParties({
+          e2e:
+            data.sender_npub && data.carrier_npub
+              ? { senderNpub: data.sender_npub, carrierNpub: data.carrier_npub }
+              : null,
+          senderId: data.sender_id,
+          carrierId: data.carrier_id,
+        })
+      })
+      .catch(() => {
+        // deal-detail fetch is best-effort — plaintext send path still works.
+      })
+  }, [dealId])
+
+  // Try to decrypt e2e messages using own read_package + author's npub.
+  // Failures (custodial user, missing extension, corrupt blob) leave the
+  // message showing a "🔒 encrypted" placeholder.
+  useEffect(() => {
+    const myRole: 'sender' | 'carrier' | null =
+      user && parties.senderId === user.id
+        ? 'sender'
+        : user && parties.carrierId === user.id
+        ? 'carrier'
+        : null
+    if (!myRole) return
+
+    for (const msg of messages) {
+      if (!msg.is_e2e || decrypted[msg.id] !== undefined) continue
+      if (!msg.ciphertext_b64 || !msg.nonce_b64 || !msg.read_packages) continue
+      const readPkg = msg.read_packages[myRole]
+      if (!readPkg || !msg.nostr_pubkey) continue
+      decryptE2E(msg.ciphertext_b64, msg.nonce_b64, readPkg, msg.nostr_pubkey)
+        .then((plaintext) =>
+          setDecrypted((prev) => ({ ...prev, [msg.id]: plaintext })),
+        )
+        .catch(() => {
+          setDecrypted((prev) => ({ ...prev, [msg.id]: '' }))
+        })
+    }
+  }, [messages, parties, user, decrypted])
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
@@ -59,7 +119,12 @@ export default function DealVaultPage() {
     setSending(true)
     setError('')
     try {
-      const { data } = await createMessage(dealId, text.trim())
+      const { data } = await createMessage(
+        dealId,
+        text.trim(),
+        false,
+        parties.e2e ?? undefined,
+      )
       setMessages((prev) => [...prev, data])
       setText('')
     } catch {
@@ -125,13 +190,34 @@ export default function DealVaultPage() {
           </button>
         )}
 
-        {msg.text && isAddressMessage(msg.text) ? (
-          <AddressCard text={msg.text} />
-        ) : msg.text ? (
-          <p className="text-sm font-body text-navy/80 bg-ivory rounded-lg px-3 py-2 inline-block max-w-prose whitespace-pre-wrap">
-            {msg.text}
-          </p>
-        ) : null}
+        {(() => {
+          const shown = msg.is_e2e ? decrypted[msg.id] : msg.text
+          if (msg.is_e2e && shown === undefined) {
+            return (
+              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-lg px-3 py-2 inline-block">
+                🔒 расшифровываю…
+              </p>
+            )
+          }
+          if (msg.is_e2e && shown === '') {
+            return (
+              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-lg px-3 py-2 inline-block">
+                🔒 e2e-сообщение — требуется NIP-07 расширение для чтения
+              </p>
+            )
+          }
+          if (shown && isAddressMessage(shown)) {
+            return <AddressCard text={shown} />
+          }
+          if (shown) {
+            return (
+              <p className="text-sm font-body text-navy/80 bg-ivory rounded-lg px-3 py-2 inline-block max-w-prose whitespace-pre-wrap">
+                {shown}
+              </p>
+            )
+          }
+          return null
+        })()}
 
         {att && (
           <MonoText className="text-xs text-navy/20 block">

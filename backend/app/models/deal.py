@@ -93,6 +93,12 @@ class DealVaultMessage(Base):
     nostr_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nostr_created_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # T2.3 — client-side threshold-encrypted blob. When is_e2e=true, server
+    # cannot decrypt; `text` property returns None and callers ship the blob
+    # straight to the client.
+    is_e2e: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    wrapped_shares: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    read_packages: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -100,6 +106,9 @@ class DealVaultMessage(Base):
 
     @property
     def text(self) -> str | None:
+        # T2.3: e2e messages are opaque to the server — never decrypt attempted.
+        if self.is_e2e:
+            return None
         if self.text_ciphertext is None or self.text_nonce is None:
             return None
         from app.core.crypto import decrypt

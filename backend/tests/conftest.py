@@ -385,6 +385,29 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_threshold_columns(engine) -> None:
+    """T2.3 schema fix: is_e2e / wrapped_shares / read_packages on
+    deal_vault_messages. Idempotent."""
+    async with engine.begin() as conn:
+        for col, ddl in (
+            ("is_e2e", "BOOLEAN NOT NULL DEFAULT false"),
+            ("wrapped_shares", "JSONB"),
+            ("read_packages", "JSONB"),
+        ):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='deal_vault_messages' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(
+                    text(f"ALTER TABLE deal_vault_messages ADD COLUMN {col} {ddl}")
+                )
+
+
 async def _ensure_nostr_event_columns(engine) -> None:
     """T2.2 pt.2 schema fix: NIP-01 event_id / created_at / pubkey on
     deal_vault_messages and deal_events. Idempotent."""
@@ -537,6 +560,7 @@ async def test_engine():
     await _ensure_receiving_address_columns(engine)
     await _ensure_nostr_keypair_columns(engine)
     await _ensure_nostr_event_columns(engine)
+    await _ensure_threshold_columns(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

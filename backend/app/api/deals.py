@@ -258,6 +258,8 @@ async def get_deal(
         depart_at=trip.depart_at if trip else deal.created_at,
         sender_name=sender.display_name if sender else "",
         carrier_name=carrier.display_name if carrier else "",
+        sender_npub=sender.nostr_pubkey if sender else None,
+        carrier_npub=carrier.nostr_pubkey if carrier else None,
         cargo_description=order.description or "" if order else "",
         cargo_category=order.category if order else "",
         declared_value=order.declared_value if order else 0,

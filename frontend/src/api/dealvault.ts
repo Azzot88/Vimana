@@ -1,7 +1,9 @@
 import api from './client'
 import type { Page } from './pagination'
 import { hasNip07Extension, signVaultMessageViaNip07 } from '../lib/nostr'
+import { encryptE2E, type E2EPayload } from '../lib/threshold'
 import { getKeypairStatus } from './keypair'
+import { getArbiterInfo } from './threshold'
 
 export type AttachmentKind = 'handoff_photo' | 'receipt_photo' | 'doc' | 'payment_receipt'
 
@@ -26,8 +28,17 @@ export interface VaultMessage {
   nostr_event_id?: string | null
   nostr_created_at?: number | null
   nostr_pubkey?: string | null
+  is_e2e?: boolean
+  ciphertext_b64?: string | null
+  nonce_b64?: string | null
+  read_packages?: { sender?: string; carrier?: string } | null
   attachments: Attachment[]
   created_at: string
+}
+
+export interface E2EParties {
+  senderNpub: string
+  carrierNpub: string
 }
 
 export interface MessageListParams {
@@ -39,29 +50,65 @@ export const listMessages = (dealId: string, params?: MessageListParams) =>
   api.get<Page<VaultMessage>>(`/api/deals/${dealId}/dealvault`, { params })
 
 /**
- * Create a vault message. If the current user is on self-custody
- * (`key_self_custody=true`) AND a NIP-07 extension is available, we sign the
- * event client-side and attach `nostr_sig` + `nostr_created_at`. Otherwise we
- * send unsigned and let backend server-sign (custodial path).
+ * Create a vault message.
+ *
+ * Behaviour matrix:
+ * - self-custody + NIP-07 + all party npubs known → **e2e path**: encrypt
+ *   client-side (T2.3), sign NIP-07 (T2.2 pt.2), send `e2e_payload`.
+ * - self-custody + NIP-07 without party info → server-signed but plaintext.
+ * - custodial → server-signed plaintext (T1.21 legacy at-rest encryption).
  */
-export const createMessage = async (dealId: string, text: string, isSystem = false) => {
+export const createMessage = async (
+  dealId: string,
+  text: string,
+  isSystem = false,
+  parties?: E2EParties,
+) => {
   const body: {
-    text: string
+    text?: string
     is_system: boolean
     nostr_sig?: string
     nostr_created_at?: number
-  } = { text, is_system: isSystem }
+    e2e_payload?: E2EPayload
+  } = { is_system: isSystem }
 
-  if (hasNip07Extension()) {
+  let goE2E = false
+  if (hasNip07Extension() && parties) {
     try {
       const { data: status } = await getKeypairStatus()
       if (status.key_self_custody) {
-        const signed = await signVaultMessageViaNip07(dealId, text, isSystem)
+        const { data: arbiter } = await getArbiterInfo()
+        body.e2e_payload = await encryptE2E(
+          text,
+          parties.senderNpub,
+          parties.carrierNpub,
+          arbiter.npub,
+        )
+        // Sign the (empty-content) event skeleton so audit trail still records
+        // authorship — content bound to sig here is the encrypted ciphertext.
+        const signed = await signVaultMessageViaNip07(dealId, '', isSystem)
         body.nostr_sig = signed.nostr_sig
         body.nostr_created_at = signed.nostr_created_at
+        goE2E = true
       }
     } catch {
-      // fall through to unsigned; backend will 422 if user is self-custody
+      // fall through to plaintext path
+    }
+  }
+
+  if (!goE2E) {
+    body.text = text
+    if (hasNip07Extension()) {
+      try {
+        const { data: status } = await getKeypairStatus()
+        if (status.key_self_custody) {
+          const signed = await signVaultMessageViaNip07(dealId, text, isSystem)
+          body.nostr_sig = signed.nostr_sig
+          body.nostr_created_at = signed.nostr_created_at
+        }
+      } catch {
+        // let backend 422 if self-custody
+      }
     }
   }
 

@@ -641,49 +641,61 @@
 
 **Follow-up:** (1) добавить `nostr_sig`/`nostr_event_id`/`nostr_created_at`/`nostr_pubkey` в `InquiryMessage` (сейчас inquiry чат вообще без sig — вне scope pt.2). (2) Snapshot pubkey per-record уже есть, можно поднять read-time verify endpoint для аудита.
 
-### T2.3 — Threshold-encryption 2-of-3 для DealVault / Inquiry чатов (V2 замена at-rest)
+### T2.3 — Threshold-encryption 2-of-3 для DealVault (V2 замена at-rest) ✅ MVP
 
-**Контекст:** T1.21 (at-rest AES с server-side ключом) был переходным — сервер видит plaintext. В V2 переходим на **истинный end-to-end** с threshold: расшифровать могут **любые 2 из 3** участников `{sender, carrier, arbiter}`. Один — не может, даже арбитр. Схема — Shamir's Secret Sharing (SSS) над сессионным ключом сообщения. Зависит от T2.2 (Nostr secp256k1 keypair участников).
+**Контекст:** T1.21 (at-rest AES с server-side ключом) был переходным — сервер видит plaintext. T2.3 переводит на **истинный end-to-end** с threshold 2-of-3: расшифровать могут любые 2 из 3 участников `{sender, carrier, arbiter}`. Один — не может, даже арбитр. Схема — Shamir's Secret Sharing над сессионным ключом сообщения. Зависит от T2.2 (Nostr secp256k1 keypair).
 
-- [ ] Библиотеки:
-  - Python: `sslib` (Shamir), `cryptography` (AES-GCM), `coincurve` (secp256k1 ECIES).
-  - JS/TS клиент: `shamir-secret-sharing`, `@noble/ciphers` (AES-GCM), `@noble/curves/secp256k1` (ECIES).
-- [ ] Роль **арбитра**: `User` с ролью `Operator` (Фаза 3, T3.2) либо системный ключ платформы. Хранение приватного ключа арбитра — env/KMS/HSM.
-- [ ] **Формат сообщения** (замена схемы из T1.21):
+- [x] Библиотеки: **backend** — `cryptography` (AES-CBC PKCS7) + `coincurve` (secp256k1 ECDH сырой x-координаты, `PublicKey.multiply()`). **Frontend** — `@noble/ciphers` (AES-256-GCM), `@noble/curves` (secp256k1), `@noble/hashes` (utils), `shamir-secret-sharing`. Обмен ключами через **NIP-04** (совместим с Alby/nos2x — `window.nostr.nip04.encrypt/decrypt`).
+- [x] Роль **арбитра** — platform arbiter: `User` с `role="arbiter"`, ID указывается в env `ARBITER_USER_ID`. Custodial nsec хранится через `NSEC_ENCRYPTION_KEY` (T2.2), сервер расшифровывает свою wrapped share при arbiter-reveal. Если env не задан → endpoint отвечает 503.
+- [x] **Формат сообщения** (`E2EPayload`):
   ```
   {
-    ciphertext: bytes,         // AES-256-GCM(session_key, plaintext)
-    nonce: bytes,
+    ciphertext: b64(AES-256-GCM(session_key, plaintext)),
+    nonce: b64(gcm_nonce, 12 bytes),
     wrapped_shares: {
-      sender:  ECIES(pubkey_sender,  share_sender),
-      carrier: ECIES(pubkey_carrier, share_carrier),
-      arbiter: ECIES(pubkey_arbiter, share_arbiter),
+      sender:  <NIP-04 ct>,   // sender_priv → sender_pub
+      carrier: <NIP-04 ct>,   // sender_priv → carrier_pub
+      arbiter: <NIP-04 ct>    // sender_priv → arbiter_pub
+    },
+    read_packages: {          // session_key для нормального чтения
+      sender:  <NIP-04 ct>,
+      carrier: <NIP-04 ct>
     }
   }
   ```
-- [ ] Отправка (клиент):
-  1. Сгенерировать random `session_key` (32 байта).
-  2. `ciphertext = AES-GCM(session_key, plaintext)`.
-  3. `shares = SSS.split(session_key, threshold=2, count=3)`.
-  4. Обернуть каждую share под pubkey соответствующего участника через ECIES (NIP-44 стиль).
-  5. Отправить пакет на сервер — сервер **не знает** plaintext, хранит blob.
-- [ ] Чтение (клиент):
-  1. Клиент запрашивает своё сообщение + `wrapped_shares.self`.
-  2. Расшифровывает свою share своим приватным ключом.
-  3. Запрашивает share у второй стороны (либо у арбитра при споре).
-  4. `session_key = SSS.combine(share1, share2)`.
-  5. `plaintext = AES-GCM.decrypt(session_key, nonce, ciphertext)`.
-- [ ] Endpoints:
-  - `POST /api/messages/{id}/reveal-share` — возвращает `wrapped_shares.self`, требует владения приватным ключом (подпись challenge).
-  - `POST /api/disputes/{deal_id}/arbiter-share` — арбитр раскрывает свою share при открытии спора; событие пишется в `DealEvent` как `arbiter_share_revealed` (append-only).
-- [ ] Миграция `0008_threshold_encryption.py`: новые колонки `ciphertext`, `nonce`, `wrapped_shares` (JSONB); backfill из T1.21 колонок через wrapping под текущие pubkey участников; удаление старых `text_ciphertext`/`text_nonce`.
+  `wrapped_shares` используется только при dispute; `read_packages` — быстрый path для нормального чтения (клиент unwrap'нёт свой read_pkg NIP-07 расширением, получит session_key, дешифрует ciphertext).
+- [x] Отправка (клиент `frontend/src/lib/threshold.ts::encryptE2E`):
+  1. `session_key = random(32)`.
+  2. `ciphertext = AES-256-GCM(session_key, plaintext)` через `@noble/ciphers/aes`.
+  3. `shares = shamir.split(session_key, 3, 2)`.
+  4. Каждая share NIP-04-обёрнута под соответствующий npub через `window.nostr.nip04.encrypt`.
+  5. session_key дополнительно NIP-04-обёрнут в read_packages.sender/carrier.
+- [x] Чтение (клиент `decryptE2E`):
+  1. `session_key = nip04.decrypt(msg.nostr_pubkey, own_read_package)`.
+  2. `plaintext = AES-GCM.decrypt(session_key, nonce, ciphertext)`.
+- [x] Dispute-reveal (клиент `decryptFromShares`):
+  1. Arbiter получает свою распакованную share через `/threshold/disputes/{deal_id}/arbiter-reveal`.
+  2. Одна из сторон вручную даёт свою share (`POST /threshold/dealvault/messages/{id}/reveal-my-share` → own NIP-04 envelope → расшифровка через свой NIP-07).
+  3. `session_key = shamir.combine([shareA, shareB])` → decrypt.
+- [x] Endpoints (`backend/app/api/threshold.py`):
+  - `GET /api/threshold/arbiter-info` — `{user_id, npub}` платформенного арбитра; 503 пока `ARBITER_USER_ID` не задан.
+  - `POST /api/threshold/dealvault/messages/{id}/reveal-my-share` — возвращает свою NIP-04 wrapped_share для участника сделки (роль автоматически определяется по `sender_id`/`carrier_id`). 403 для не-участников.
+  - `POST /api/threshold/disputes/{deal_id}/arbiter-reveal` — arbiter (permission `THRESHOLD_ARBITER_REVEAL`) при наличии открытого Dispute получает расшифрованные (сервером через custodial nsec) `arbiter_share_b64` для всех e2e-сообщений сделки + пишется `DealEvent(event_type=arbiter_opened, payload={kind:"arbiter_share_revealed", count:N})` как append-only audit.
+- [x] Миграция `0016_threshold_encryption`: `deal_vault_messages` получает `is_e2e BOOLEAN DEFAULT false`, `wrapped_shares JSONB`, `read_packages JSONB`. Старые записи T1.21 остаются как есть (`is_e2e=false`). Backfill в **этой** миграции НЕ делается — старые сообщения продолжают шифроваться server-side, новые — client-side. Полная миграция всех записей — отдельный follow-up (нужен пользовательский flow "re-encrypt my history").
 - [ ] UI (клиент):
   - Нормальный флоу: расшифровка прозрачна — user видит plaintext.
   - Спор: экран «попросить арбитра расшифровать» → confirm → фронт отправляет свою share.
   - Аудит: карточка «арбитр раскрыл share для спора» в timeline сделки.
 - [ ] Backend-тесты: пакет с корректными 3 shares → шифруется; сервер не может recover session_key без 2 shares; audit trail при arbiter reveal; NIP-44 совместимость (event проверяем в Nostr-клиенте).
 
-**Acceptance:** сообщения не могут быть прочитаны сервером даже с полным доступом к БД; в нормальном флоу sender+carrier видят чат прозрачно; при споре арбитр + одна сторона расшифровывают вместе; все `arbiter_share_revealed` события append-only в `DealEvent`.
+**Acceptance MVP ✅:** сервер сохраняет opaque blob (`is_e2e=true`), `msg.text` property возвращает None для e2e-записей → API не выдаёт plaintext даже при полном доступе к БД. Sender+carrier с NIP-07 расширением расшифровывают прозрачно через own read_package. Arbiter при open Dispute получает свою распакованную share через `/arbiter-reveal` + audit-событие. Не-участник получает 403 на `/reveal-my-share`. 9 backend-тестов (arbiter-info OK/503, e2e write, mutual-exclusive text vs e2e_payload, invalid shape 422, reveal-my-share sender/carrier, forbidden outsider, arbiter-reveal happy path + audit event + require-arbiter-role, NIP-04 round-trip sanity).
+
+**Follow-up (документировано):**
+1. **Backfill старых T1.21 сообщений в e2e** — отдельный user-инициированный flow «re-encrypt my history» (нужен доступ к текущим pubkey всех участников каждой сделки).
+2. **Inquiry-чат** — пока не e2e (только DealVault); дублирование схемы на `InquiryMessage` — отдельный item.
+3. **Attachments** — R2-загрузки пока не threshold-шифруются; в MVP файл_hash даёт целостность, но не конфиденциальность от сервера. Client-side chunk-encrypt перед presigned-upload — follow-up.
+4. **NIP-44 v2** — сейчас NIP-04 (простой AES-CBC). Позже переехать на NIP-44 v2 (ChaCha20+HMAC, лучше защита от replay), когда extensions устаканятся.
+5. **Custodial e2e fallback** — если ops хочет разрешить не-self-custody юзерам писать e2e, добавить server-side signing endpoint (backend расшифрует своё через NSEC_ENCRYPTION_KEY, session_key на сервере на мс — компромисс на безопасности).
 
 ### T2.4 — Trust Graph (Web-of-Trust) — круги доверия ✅ MVP
 

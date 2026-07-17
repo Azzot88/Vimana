@@ -38,6 +38,7 @@ class Permission(str, enum.Enum):
     DISPUTE_LIST_ADMIN = "dispute:list_admin"
     IDENTITY_CONTAINER_READ = "identity:container_read"  # via escalation
     VERIFICATION_REVOKE_ANY = "verification:revoke_any"
+    THRESHOLD_ARBITER_REVEAL = "threshold:arbiter_reveal"  # T2.3
 
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"
@@ -57,6 +58,7 @@ _ARBITER_PERMS: frozenset[Permission] = frozenset({
     Permission.DISPUTE_LIST_ADMIN,
     Permission.IDENTITY_CONTAINER_READ,
     Permission.VERIFICATION_REVOKE_ANY,
+    Permission.THRESHOLD_ARBITER_REVEAL,
 })
 
 _SUPERUSER_PERMS: frozenset[Permission] = frozenset(Permission)  # all

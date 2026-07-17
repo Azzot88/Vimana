@@ -62,6 +62,9 @@ class DealDetailOut(BaseModel):
     depart_at: datetime
     sender_name: str
     carrier_name: str
+    # T2.3 — needed by client to encrypt vault messages under both parties' npubs.
+    sender_npub: str | None = None
+    carrier_npub: str | None = None
     cargo_description: str
     cargo_category: str
     declared_value: float
