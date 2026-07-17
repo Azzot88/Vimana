@@ -10,6 +10,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.signing import sign_deal_event
+from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
 from app.models.marketplace import Category, Order, OrderStatus, Trip, TripInquiry, TripStatus
@@ -214,6 +215,11 @@ async def confirm_deal(
     )
     sign_deal_event(closed_event, current_user)
     db.add(closed_event)
+
+    # T2.4 — Trust graph: `dealt_with` edge on close (symmetric).
+    await add_dealt_with(db, deal)
+    await refresh_trust_counts(db, deal.sender_id)
+    await refresh_trust_counts(db, deal.carrier_id)
 
     await db.commit()
     await db.refresh(deal)

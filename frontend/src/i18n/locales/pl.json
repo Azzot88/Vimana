@@ -87,6 +87,19 @@
     "switchToSend": "Przełącz na wysyłanie",
     "switchToDeliver": "Przełącz na dostawę"
   },
+  "trust": {
+    "sectionTitle": "Kręgi zaufania",
+    "sectionHint": "Twoja sieć zaufania: osoby, które osobiście zweryfikowałeś, oraz kolejne przeskoki.",
+    "depth": "Głębokość:",
+    "verificationsIssued": "Zweryfikowane przez Ciebie",
+    "verificationsReceived": "Twoje weryfikacje",
+    "dealt_with": "Zamkniętych transakcji",
+    "circlesTitle": "Zasięg: {{total}} osób",
+    "hopLabel_one": "{{count}} osoba",
+    "hopLabel_few": "{{count}} osoby",
+    "hopLabel_many": "{{count}} osób",
+    "empty": "Brak kręgów — zaproś znajomych i zamknij transakcję, żeby zacząć budować sieć."
+  },
   "verification": {
     "sectionTitle": "Weryfikacja tożsamości",
     "sectionHint": "Trzy poziomy weryfikacji kumulują się w profilu. Wyższy poziom = większe zaufanie w wyszukiwaniu.",

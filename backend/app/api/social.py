@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.trust import add_invited
 from app.models.social import Connection, InviteLink
 from app.models.user import User
 from app.schemas.social import ConnectionOut, InviteLinkOut, MyInviteOut
@@ -120,6 +121,13 @@ async def accept_invite(
             connected_user_id=invite.creator_id,
             invite_token=token,
         ))
+        # T2.4 — Trust graph: `invited` edge (symmetric).
+        await add_invited(
+            db,
+            inviter_id=invite.creator_id,
+            invitee_id=current_user.id,
+            invite_token=token,
+        )
         await db.commit()
     except IntegrityError:
         await db.rollback()

@@ -87,6 +87,18 @@
     "switchToSend": "Cambiar a envío",
     "switchToDeliver": "Cambiar a entrega"
   },
+  "trust": {
+    "sectionTitle": "Círculos de confianza",
+    "sectionHint": "Tu red de confianza: personas que verificaste personalmente, las que ellas verificaron, y siguientes saltos.",
+    "depth": "Profundidad:",
+    "verificationsIssued": "Verificadas por ti",
+    "verificationsReceived": "Tus verificaciones",
+    "dealt_with": "Acuerdos cerrados",
+    "circlesTitle": "Alcance: {{total}} personas",
+    "hopLabel_one": "{{count}} persona",
+    "hopLabel_other": "{{count}} personas",
+    "empty": "Aún no hay círculos — invita amigos y cierra un acuerdo para empezar a construir tu red."
+  },
   "verification": {
     "sectionTitle": "Verificación de identidad",
     "sectionHint": "Tres niveles de verificación se acumulan en tu perfil. Nivel más alto = más confianza en búsquedas.",

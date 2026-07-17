@@ -24,6 +24,7 @@ from app.api.keypair import router as keypair_router
 from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.trips import router as trips_router
+from app.api.trust import router as trust_router
 from app.api.verification import router as verification_router
 from app.api.waitlist import router as waitlist_router
 from app.core.database import AsyncSessionLocal
@@ -142,6 +143,7 @@ app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
 app.include_router(cities_router, prefix="/api/cities", tags=["cities"])
 app.include_router(verification_router, prefix="/api", tags=["verification"])
+app.include_router(trust_router, prefix="/api", tags=["trust"])
 app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
 app.include_router(inquiries_router, prefix="/api", tags=["inquiries"])

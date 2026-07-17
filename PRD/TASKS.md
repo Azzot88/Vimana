@@ -677,36 +677,27 @@
 
 **Acceptance:** сообщения не могут быть прочитаны сервером даже с полным доступом к БД; в нормальном флоу sender+carrier видят чат прозрачно; при споре арбитр + одна сторона расшифровывают вместе; все `arbiter_share_revealed` события append-only в `DealEvent`.
 
-### T2.4 — Trust Graph (Web-of-Trust) — круги доверия
+### T2.4 — Trust Graph (Web-of-Trust) — круги доверия ✅ MVP
 
-**Контекст:** T2.1 создаёт **атомарные** `PeerVerification` записи. T2.4 превращает их в граф — «круги доверия». Первый круг = кого лично подтвердил; второй = кого подтвердили те, кого подтвердил я; N-й круг = глубина сети. Модель — транзитивный граф в духе Nostr WoT / PGP web-of-trust. Идёт **после T2.3**, потому что там уже все события подписаны Nostr-ключами и граф honest.
+> **Статус:** MVP закрыт 2026-07-17 (миграция 0014). Follow-up: Redis-кэш BFS с TTL 5 мин (сейчас всё on-the-fly), UserBadge chip на TripCard, hourly Celery-task бэкапа counters (сейчас on-mutation refresh).
 
-- [ ] **Модели:**
-  - `TrustEdge(id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight FLOAT, source_ref, created_at, revoked_at)`.
-  - `peer_verified` — из T2.1 PeerVerification (weight = 1.0).
-  - `dealt_with` — есть закрытая сделка между парой (weight = 0.5) — не так сильно как явная верификация, но всё равно сигнал.
-  - `invited` — из T1.3 Connection (weight = 0.2) — самый слабый сигнал.
-  - Индексы `(from_user_id, kind)`, `(to_user_id, kind)` для быстрых BFS.
-- [ ] **Sybil-заглушка (базовая):**
-  - Edge `peer_verified` валиден только если между verifier и subject **есть закрытая сделка** (`DealStatus.closed`) — предотвращает конвейер фальшивых аккаунтов. Формально: перед `INSERT` в `TrustEdge` проверка `SELECT 1 FROM deals WHERE (sender_id, carrier_id) MATCHES AND status='closed'`.
-  - Пометка «unverified sybil-risk» для аккаунтов моложе 30 дней с > N verifications выданных.
-- [ ] **Endpoints:**
-  - `GET /api/me/trust-circle?depth=N&kind=peer_verified` — BFS от текущего user до глубины N (max 6), возвращает `{depth: 1, users: [...]}, {depth: 2, users: [...]}, ...`. Пагинация внутри уровня.
-  - `GET /api/users/{id}/trust-metrics` — публичные метрики: `verifications_issued_count`, `verifications_received_count`, `dealt_with_count`, `first_verified_at`.
-- [ ] **Кеш:**
-  - Целевые метрики (verifications issued / received) — денормализованные Postgres-колонки в `User`, обновляемые Celery-task'ом раз в час или триггером на `TrustEdge` INSERT.
-  - Trust-circle сам — считаем на лету с cursor pagination, кешируем в Redis TTL 5 мин по ключу `(user_id, depth, kind)`.
-- [ ] **Frontend:**
-  - Секция «Circles» на `ProfilePage`:
-    - «Verified by you: N» (кого я подтвердил).
-    - «In your first circle: M» (подтверждённые мной).
-    - «Reach at depth 3: K» (косвенная сеть).
-  - На карточке чужого пользователя (`UserBadge`): «You know them through 2 hops» или «Directly verified by you» — быстрый indicator.
-  - Раздел `/me/trust` — визуализация графа (простая тепловая матрица кругов, без force-layout — экономнее).
-- [ ] i18n `trust.*` в 6 языках.
-- [ ] Backend-тесты: BFS корректность, Sybil-guard (edge без closed deal → 400), метрики счётчиков, revoked edges не идут в BFS.
+**Контекст:** T2.1 создаёт **атомарные** `VerificationBadge` записи. T2.4 превращает их в граф — «круги доверия». Первый круг = кого лично подтвердил; второй = кого подтвердили те, кого подтвердил я; N-й круг = глубина сети. Модель — транзитивный граф в духе Nostr WoT / PGP web-of-trust.
 
-**Acceptance:** пользователь видит в своём профиле, сколько человек он подтвердил, сколько подтвердили его, и в каком круге относительно него находится любой другой аккаунт. Верификации без закрытых сделок отклоняются. Метрики публично видны в карточке.
+- [x] **Модели:** `TrustEdge(id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight FLOAT, source_ref, created_at, revoked_at)` + UNIQUE(from, to, kind, source_ref) + partial indexes на активных рёбрах.
+  - `peer_verified` weight 1.0 — из T2.1 (MVP: авто-INSERT не сделан до T2.1 pt.2, где появится peer flow).
+  - `dealt_with` weight 0.5 — auto-INSERT симметрично при `POST /deals/{id}/confirm` (см. app/api/deals.py).
+  - `invited` weight 0.2 — auto-INSERT симметрично при `POST /invites/{token}/accept` (см. app/api/social.py).
+- [x] **Sybil-guard**: `add_edge(kind=peer_verified, check_sybil=True)` требует closed/confirmed Deal между парой — иначе `SybilGuardError`. Проверка через `_pair_has_closed_deal()`. (Пометка «unverified sybil-risk» для новых аккаунтов — follow-up.)
+- [x] **Endpoints:**
+  - `GET /api/me/trust-circle?depth=N&kind=?` — BFS до глубины 1..6, `{depth, kind, circles: {"1": [...], "2": [...]}, total_reachable}`. Пропускает revoked, self-loops, deduplicated across levels.
+  - `GET /api/users/{id}/trust-metrics` — публично `{subject_id, verifications_issued_count, verifications_received_count, dealt_with_count, distance_from_viewer}`. Distance null для self / unauthenticated.
+- [x] **Денормализация**: `User.verifications_issued_count`, `verifications_received_count`, `dealt_with_count` (int, default 0). `refresh_trust_counts()` вызывается при `confirm_deal` и при manual add_edge. (Hourly Celery backup — follow-up.)
+- [x] **Frontend `TrustCirclesSection` в ProfilePage**: 3 counter-tile'а, depth-selector 1–6, list кругов «N people at hop K». `getMyTrustCircle` + `getUserTrustMetrics`.
+- [ ] `UserBadge` chip «You know them through 2 hops» на TripCard — **не сделан** (нужен endpoint для batch distance queries или отдельный запрос на каждую карточку — оптимизировать в T2.4 pt.2).
+- [x] i18n `trust.*` в 6 языках (10 ключей с plural forms).
+- [x] Backend-тесты: invite accept → symmetric invited edges, deal confirm → dealt_with edges + counts, BFS depth validation, kind filter validation, self trust-metrics (distance=None), Sybil-guard блокирует peer_verified без closed deal, идемпотентный insert, revoked edges не в BFS, refresh_trust_counts работает.
+
+**Acceptance MVP:** пользователь видит в своём профиле counters + circles по уровням; закрытие deal автоматически добавляет `dealt_with`; принятие invite — `invited`; Sybil-guard откидывает peer_verified без deal. Distance from viewer доступен через `/users/{id}/trust-metrics`. ✅
 
 ---
 

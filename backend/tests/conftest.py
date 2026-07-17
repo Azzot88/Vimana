@@ -210,6 +210,67 @@ async def _ensure_dual_role(engine) -> None:
             await conn.execute(text("ALTER TABLE users DROP COLUMN is_carrier"))
 
 
+async def _ensure_trust_tables(engine) -> None:
+    """T2.4 schema fix: trust_edges + 3 denormalized counts on users."""
+    async with engine.begin() as conn:
+        row = (
+            await conn.execute(
+                text("SELECT 1 FROM pg_type WHERE typname = 'trustedgekind'")
+            )
+        ).fetchone()
+        if not row:
+            await conn.execute(
+                text(
+                    "CREATE TYPE trustedgekind AS ENUM "
+                    "('peer_verified', 'dealt_with', 'invited')"
+                )
+            )
+
+        for col, ddl in (
+            ("verifications_issued_count", "INTEGER NOT NULL DEFAULT 0"),
+            ("verifications_received_count", "INTEGER NOT NULL DEFAULT 0"),
+            ("dealt_with_count", "INTEGER NOT NULL DEFAULT 0"),
+        ):
+            r = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='users' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not r:
+                await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+
+        r = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name = 'trust_edges'"
+                )
+            )
+        ).fetchone()
+        if not r:
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE trust_edges (
+                        id UUID PRIMARY KEY,
+                        from_user_id UUID NOT NULL REFERENCES users(id),
+                        to_user_id UUID NOT NULL REFERENCES users(id),
+                        kind trustedgekind NOT NULL,
+                        weight FLOAT NOT NULL DEFAULT 1.0,
+                        source_ref VARCHAR(64),
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        revoked_at TIMESTAMPTZ,
+                        CONSTRAINT uq_trust_edge_pair_kind_source
+                            UNIQUE (from_user_id, to_user_id, kind, source_ref)
+                    )
+                    """
+                )
+            )
+
+
 async def _ensure_verification_tables(engine) -> None:
     """T2.1 schema fix: 4 tables + users.highest_verification_level + 7 enums.
     Idempotent — safe to re-run when tests reset schema."""
@@ -452,6 +513,7 @@ async def test_engine():
     await _ensure_receiving_address_columns(engine)
     await _ensure_nostr_keypair_columns(engine)
     await _ensure_verification_tables(engine)
+    await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

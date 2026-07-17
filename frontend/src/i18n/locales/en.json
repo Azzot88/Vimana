@@ -87,6 +87,18 @@
     "switchToSend": "Switch to Send",
     "switchToDeliver": "Switch to Deliver"
   },
+  "trust": {
+    "sectionTitle": "Trust circles",
+    "sectionHint": "Your web of trust: people you personally verified, people they verified, and further hops.",
+    "depth": "Depth:",
+    "verificationsIssued": "Verified by you",
+    "verificationsReceived": "Verifications you have",
+    "dealt_with": "Closed deals",
+    "circlesTitle": "Reach: {{total}} users",
+    "hopLabel_one": "{{count}} person",
+    "hopLabel_other": "{{count}} people",
+    "empty": "No trust edges yet — invite friends and close a deal to start building your circle."
+  },
   "verification": {
     "sectionTitle": "Identity verification",
     "sectionHint": "Three verification tiers accumulate on your profile. Higher tiers give more trust in searches and deals.",

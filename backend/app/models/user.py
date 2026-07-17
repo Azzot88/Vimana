@@ -47,6 +47,12 @@ class User(Base):
     # Refreshed by app/core/verification.refresh_highest_level() after INSERT/revoke.
     highest_verification_level: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
+    # T2.4 — denormalized Trust Graph counters. Refreshed by
+    # app/core/trust.refresh_trust_counts() after edge INSERT/revoke.
+    verifications_issued_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    verifications_received_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    dealt_with_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
     # T1.26 — private receiving address. Never exposed in list-endpoints or via
     # any UserOut except /me. Sharing into a chat is an explicit user action.
     receiving_country_iso: Mapped[str | None] = mapped_column(String(2), nullable=True)

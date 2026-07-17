@@ -38,7 +38,7 @@
 | NewTripPage redesign (Bento + hook-points для EXP-03/04) | 1 | ✅ готово (T1.25) |
 | Receiving Address в профиле + share-in-chat | 1 | ✅ готово (T1.26) |
 | Peer Identity Verification (P2P KYC) | 2 | ✅ MVP (T2.1: backend + frontend, custodial only. OCR/OFAC — stub, self-custody 422 до T2.3) |
-| Trust Graph (Web-of-Trust) | 2 | ⬜ не начато (T2.4) |
+| Trust Graph (Web-of-Trust) | 2 | ✅ MVP (T2.4: TrustEdge + auto dealt_with/invited + BFS endpoints + denormalized counts + UI. Follow-up: Redis-кэш, UserBadge на TripCard) |
 | Keypair + Nostr-совместимость (D10: A+D) | 2 | 🟨 pt.1 готов (custodial + UI), pt.2 в ожидании NIP-07 refactor |
 | Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ⬜ не начато (T2.3) |
 | Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато (T3.1) |
@@ -163,6 +163,10 @@
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
 | Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
 | Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |
+| Trust Graph core (T2.4) — BFS до глубины 6, sybil-guard, symmetric add_dealt_with/add_invited, refresh_trust_counts | `backend/app/core/trust.py` |
+| Trust Graph endpoints (T2.4) — /me/trust-circle, /users/{id}/trust-metrics | `backend/app/api/trust.py` |
+| Trust Graph auto-populate — dealt_with на confirm_deal, invited на accept_invite | `backend/app/api/{deals,social}.py` |
+| Trust Circles UI (T2.4) — depth selector 1–6, counter tiles, hop list | `frontend/src/{api/trust,components/TrustCirclesSection}.tsx` |
 | KeypairSection frontend — status/export/import UI + NIP-07 detection | `frontend/src/components/KeypairSection.tsx`, `frontend/src/lib/nostr.ts` |
 | AddressForm / AddressCard — profile form + chat card render | `frontend/src/components/Address{Form,Card}.tsx` |
 
@@ -194,6 +198,8 @@
 
 - User расширение T2.2: `nostr_pubkey` (уже был), `nsec_encrypted BYTEA`, `nsec_nonce BYTEA`, `key_self_custody: bool = False`. Custodial nsec шифрован AES-256-GCM с env `NSEC_ENCRYPTION_KEY`.
 - User расширение T2.1: `highest_verification_level: str | None` — денормализация. Обновляется через `refresh_highest_level()` при INSERT/revoke badge.
+- User расширение T2.4: `verifications_issued_count: int`, `verifications_received_count: int`, `dealt_with_count: int` (все default 0). Refreshed через `refresh_trust_counts()`.
+- `TrustEdge(id, from_user_id, to_user_id, kind ∈ {peer_verified, dealt_with, invited}, weight FLOAT, source_ref VARCHAR(64), created_at, revoked_at?)` — T2.4. UNIQUE(from, to, kind, source_ref) для идемпотентных вставок. Partial index на активных рёбрах.
 - `VerificationLevel` enum: `auto` / `peer` / `kyc` (порядок = сила trust).
 - `VerificationRequest(id, deal_id→Deal, requested_by_id, target_role ∈ {sender, carrier}, status ∈ {pending, upload, later_in_person, declined, declined_polite, verified, escalated}, created_at, resolved_at?)` — T2.1. `target_role=carrier` → допустимо `declined_polite` (без последствий).
 - `IdentityContainer(id, owner_id, owner_role ∈ {sender, carrier, both}, storage_mode ∈ {encrypted_blob, zk_snark}, blob_encrypted BYTEA?, doc_hash, doc_country, doc_type, sanctions_check_status ∈ {clean, match, review_needed}, created_at)` — ключ = owner's Nostr nsec, multi-doc allowed. `storage_mode=encrypted_blob` default в T2.1; `zk_snark` добавляется в T6.4.
