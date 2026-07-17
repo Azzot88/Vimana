@@ -87,6 +87,57 @@
     "switchToSend": "Switch to Send",
     "switchToDeliver": "Switch to Deliver"
   },
+  "verification": {
+    "sectionTitle": "Identity verification",
+    "sectionHint": "Three verification tiers accumulate on your profile. Higher tiers give more trust in searches and deals.",
+    "uploadTitle": "Self-verify (level: auto)",
+    "uploadButton": "Upload document",
+    "chooseFile": "Choose file",
+    "uploadError": "Upload failed.",
+    "pickCountry": "Enter a 2-letter country code first.",
+    "privacyHint": "Document is encrypted with your Nostr key. Only you can decrypt it; platform stores metadata only.",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this verification badge? This can't be undone.",
+    "askSenderButton": "Ask sender for ID",
+    "askCarrierButton": "Ask carrier for ID",
+    "askSenderTitle": "Ask sender to verify identity",
+    "askCarrierTitle": "Ask carrier to verify identity",
+    "askSenderHint": "The sender will see three options: show now, show later in person, or decline (declined shows on their profile).",
+    "askCarrierHint": "The carrier can show now, show later in person, or politely decline — declining has NO consequences for the carrier (they cross borders and their identity is their operational risk).",
+    "sendRequest": "Send request",
+    "requestError": "Request failed.",
+    "requestSent": "Request sent. The other party will see it on this deal page.",
+    "pendingForYou": "The other party asked you to verify your identity.",
+    "respondButton": "Respond",
+    "respondTitle": "Respond to identity request",
+    "respondSenderHint": "Pick one of three:",
+    "respondCarrierHint": "Pick one of three. Polite decline is fine — no consequences.",
+    "actionUpload": "Show my document now",
+    "actionLater": "Show later in person",
+    "actionDecline": "Decline (badge on profile)",
+    "actionDeclinePolite": "Politely decline (no consequences)",
+    "respondError": "Response failed.",
+    "level": {
+      "auto": "auto",
+      "peer": "peer",
+      "kyc": "KYC",
+      "autoHint": "Auto-verified via OCR + sanctions check",
+      "peerHint": "Confirmed in person by another user",
+      "kycHint": "Verified by regulatory KYC provider"
+    },
+    "source": {
+      "auto_ocr": "auto-OCR",
+      "peer": "peer",
+      "arbiter_review": "arbiter",
+      "kyc_provider": "KYC provider"
+    },
+    "docType": {
+      "passport": "Passport",
+      "driver_license": "Driver license",
+      "national_id": "National ID",
+      "other": "Other document"
+    }
+  },
   "chat": {
     "shareAddress": {
       "button": "Share my address",

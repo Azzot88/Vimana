@@ -87,6 +87,57 @@
     "switchToSend": "Cambiar a envío",
     "switchToDeliver": "Cambiar a entrega"
   },
+  "verification": {
+    "sectionTitle": "Verificación de identidad",
+    "sectionHint": "Tres niveles de verificación se acumulan en tu perfil. Nivel más alto = más confianza en búsquedas.",
+    "uploadTitle": "Auto-verificar (nivel: auto)",
+    "uploadButton": "Subir documento",
+    "chooseFile": "Elegir archivo",
+    "uploadError": "Error al subir.",
+    "pickCountry": "Indica primero un código de país de 2 letras.",
+    "privacyHint": "Documento cifrado con tu clave Nostr. Sólo tú puedes descifrarlo; la plataforma sólo guarda metadatos.",
+    "revoke": "Revocar",
+    "revokeConfirm": "¿Revocar este badge? No se puede deshacer.",
+    "askSenderButton": "Pedir ID al remitente",
+    "askCarrierButton": "Pedir ID al transportista",
+    "askSenderTitle": "Pedir al remitente que verifique su identidad",
+    "askCarrierTitle": "Pedir al transportista que verifique su identidad",
+    "askSenderHint": "El remitente verá tres opciones: mostrar ahora, en persona, o rechazar (rechazo marcado en el perfil).",
+    "askCarrierHint": "El transportista puede mostrar ahora, en persona, o rechazar cortésmente — SIN consecuencias.",
+    "sendRequest": "Enviar solicitud",
+    "requestError": "Error al solicitar.",
+    "requestSent": "Solicitud enviada. La otra parte la verá en la página del acuerdo.",
+    "pendingForYou": "La otra parte te pidió verificar tu identidad.",
+    "respondButton": "Responder",
+    "respondTitle": "Responder a la solicitud",
+    "respondSenderHint": "Elige una de tres opciones:",
+    "respondCarrierHint": "Elige una de tres. Rechazo cortés está bien — sin consecuencias.",
+    "actionUpload": "Mostrar mi documento ahora",
+    "actionLater": "Mostrar en persona más tarde",
+    "actionDecline": "Rechazar (badge en el perfil)",
+    "actionDeclinePolite": "Rechazar cortésmente (sin consecuencias)",
+    "respondError": "Error al responder.",
+    "level": {
+      "auto": "auto",
+      "peer": "peer",
+      "kyc": "KYC",
+      "autoHint": "Auto-verificación por OCR + sanciones",
+      "peerHint": "Confirmado en persona por otro usuario",
+      "kycHint": "Verificado por proveedor KYC"
+    },
+    "source": {
+      "auto_ocr": "auto-OCR",
+      "peer": "peer",
+      "arbiter_review": "árbitro",
+      "kyc_provider": "proveedor KYC"
+    },
+    "docType": {
+      "passport": "Pasaporte",
+      "driver_license": "Licencia de conducir",
+      "national_id": "DNI",
+      "other": "Otro documento"
+    }
+  },
   "chat": {
     "shareAddress": {
       "button": "Compartir mi dirección",

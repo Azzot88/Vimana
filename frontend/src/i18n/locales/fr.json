@@ -87,6 +87,57 @@
     "switchToSend": "Passer à l'envoi",
     "switchToDeliver": "Passer à la livraison"
   },
+  "verification": {
+    "sectionTitle": "Vérification d'identité",
+    "sectionHint": "Trois niveaux de vérification s'accumulent sur votre profil. Plus le niveau est élevé, plus la confiance dans les recherches est grande.",
+    "uploadTitle": "Auto-vérification (niveau : auto)",
+    "uploadButton": "Téléverser un document",
+    "chooseFile": "Choisir un fichier",
+    "uploadError": "Échec du téléversement.",
+    "pickCountry": "Indiquez d'abord un code pays à 2 lettres.",
+    "privacyHint": "Document chiffré avec votre clé Nostr. Vous seul pouvez le déchiffrer ; la plateforme ne stocke que les métadonnées.",
+    "revoke": "Révoquer",
+    "revokeConfirm": "Révoquer ce badge ? Impossible d'annuler.",
+    "askSenderButton": "Demander l'ID de l'expéditeur",
+    "askCarrierButton": "Demander l'ID du transporteur",
+    "askSenderTitle": "Demander à l'expéditeur de vérifier son identité",
+    "askCarrierTitle": "Demander au transporteur de vérifier son identité",
+    "askSenderHint": "L'expéditeur verra trois options : montrer maintenant, montrer en personne plus tard, ou refuser (refus marqué sur le profil).",
+    "askCarrierHint": "Le transporteur peut montrer maintenant, plus tard en personne, ou refuser poliment — SANS conséquences.",
+    "sendRequest": "Envoyer la demande",
+    "requestError": "Échec de la demande.",
+    "requestSent": "Demande envoyée. L'autre partie la verra sur la page du contrat.",
+    "pendingForYou": "L'autre partie vous a demandé de vérifier votre identité.",
+    "respondButton": "Répondre",
+    "respondTitle": "Répondre à la demande d'identité",
+    "respondSenderHint": "Choisissez l'une des trois options :",
+    "respondCarrierHint": "Choisissez l'une des trois. Le refus poli est OK — sans conséquences.",
+    "actionUpload": "Montrer mon document maintenant",
+    "actionLater": "Montrer plus tard en personne",
+    "actionDecline": "Refuser (badge sur le profil)",
+    "actionDeclinePolite": "Refuser poliment (sans conséquences)",
+    "respondError": "Échec de la réponse.",
+    "level": {
+      "auto": "auto",
+      "peer": "peer",
+      "kyc": "KYC",
+      "autoHint": "Auto-vérification par OCR + sanctions",
+      "peerHint": "Confirmé en personne par un autre utilisateur",
+      "kycHint": "Vérifié par un prestataire KYC"
+    },
+    "source": {
+      "auto_ocr": "auto-OCR",
+      "peer": "peer",
+      "arbiter_review": "arbitre",
+      "kyc_provider": "prestataire KYC"
+    },
+    "docType": {
+      "passport": "Passeport",
+      "driver_license": "Permis de conduire",
+      "national_id": "Carte d'identité",
+      "other": "Autre document"
+    }
+  },
   "chat": {
     "shareAddress": {
       "button": "Partager mon adresse",

@@ -87,6 +87,57 @@
     "switchToSend": "Przełącz na wysyłanie",
     "switchToDeliver": "Przełącz na dostawę"
   },
+  "verification": {
+    "sectionTitle": "Weryfikacja tożsamości",
+    "sectionHint": "Trzy poziomy weryfikacji kumulują się w profilu. Wyższy poziom = większe zaufanie w wyszukiwaniu.",
+    "uploadTitle": "Self-verify (poziom: auto)",
+    "uploadButton": "Wgraj dokument",
+    "chooseFile": "Wybierz plik",
+    "uploadError": "Nie udało się wgrać.",
+    "pickCountry": "Najpierw podaj dwuliterowy kod kraju.",
+    "privacyHint": "Dokument zaszyfrowany kluczem Nostr. Tylko Ty możesz go odszyfrować; platforma przechowuje tylko metadane.",
+    "revoke": "Odwołaj",
+    "revokeConfirm": "Odwołać ten badge? Nie można cofnąć.",
+    "askSenderButton": "Poproś nadawcę o ID",
+    "askCarrierButton": "Poproś kuriera o ID",
+    "askSenderTitle": "Poproś nadawcę o weryfikację",
+    "askCarrierTitle": "Poproś kuriera o weryfikację",
+    "askSenderHint": "Nadawca zobaczy trzy opcje: pokaż teraz, przy spotkaniu, lub odmów (odmowa oznaczana w profilu).",
+    "askCarrierHint": "Kurier może pokazać teraz, przy spotkaniu, lub grzecznie odmówić — odmowa BEZ konsekwencji.",
+    "sendRequest": "Wyślij prośbę",
+    "requestError": "Nie udało się wysłać.",
+    "requestSent": "Prośba wysłana. Druga strona zobaczy ją na stronie zlecenia.",
+    "pendingForYou": "Druga strona poprosiła Cię o weryfikację tożsamości.",
+    "respondButton": "Odpowiedz",
+    "respondTitle": "Odpowiedz na prośbę",
+    "respondSenderHint": "Wybierz jedną z trzech opcji:",
+    "respondCarrierHint": "Wybierz jedną z trzech. Grzeczna odmowa jest OK, bez konsekwencji.",
+    "actionUpload": "Pokaż dokument teraz",
+    "actionLater": "Pokaż osobiście później",
+    "actionDecline": "Odmów (badge w profilu)",
+    "actionDeclinePolite": "Grzecznie odmów (bez konsekwencji)",
+    "respondError": "Nie udało się odpowiedzieć.",
+    "level": {
+      "auto": "auto",
+      "peer": "peer",
+      "kyc": "KYC",
+      "autoHint": "Autoweryfikacja OCR + sankcje",
+      "peerHint": "Potwierdzone osobiście przez innego użytkownika",
+      "kycHint": "Zweryfikowane przez dostawcę KYC"
+    },
+    "source": {
+      "auto_ocr": "auto-OCR",
+      "peer": "peer",
+      "arbiter_review": "arbiter",
+      "kyc_provider": "dostawca KYC"
+    },
+    "docType": {
+      "passport": "Paszport",
+      "driver_license": "Prawo jazdy",
+      "national_id": "Dowód osobisty",
+      "other": "Inny dokument"
+    }
+  },
   "chat": {
     "shareAddress": {
       "button": "Udostępnij adres",

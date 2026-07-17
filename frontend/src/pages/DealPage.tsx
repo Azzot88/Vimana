@@ -4,8 +4,11 @@ import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { openDispute } from '../api/admin'
 import { getDeal, acceptDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
+import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
+import VerificationRequestModal from '../components/VerificationRequestModal'
+import VerificationRespondModal from '../components/VerificationRespondModal'
 
 export default function DealPage() {
   const { t } = useTranslation()
@@ -20,6 +23,9 @@ export default function DealPage() {
   const [disputeSubmitting, setDisputeSubmitting] = useState(false)
   const [disputeError, setDisputeError] = useState('')
   const [disputeCreated, setDisputeCreated] = useState(false)
+  const [verifyRequestFor, setVerifyRequestFor] = useState<'sender' | 'carrier' | null>(null)
+  const [pendingRespond, setPendingRespond] = useState<VerificationRequestT | null>(null)
+  const [verifySuccess, setVerifySuccess] = useState(false)
 
   const handleDispute = async () => {
     if (!dealId || !disputeReason.trim()) return
@@ -38,11 +44,25 @@ export default function DealPage() {
     }
   }
 
+  const [openRequestForMe, setOpenRequestForMe] = useState<VerificationRequestT | null>(null)
+
   const load = async () => {
     if (!dealId) return
     try {
       const { data } = await getDeal(dealId)
       setDeal(data)
+      // Also check if there's a pending verification request targeted at me.
+      try {
+        const { data: reqs } = await listDealRequests(dealId)
+        const currentId = user?.id
+        const myRole = data.carrier_id === currentId ? 'carrier' : data.sender_id === currentId ? 'sender' : null
+        const pending = reqs.find(
+          (r) => r.status === 'pending' && r.target_role === myRole,
+        )
+        setOpenRequestForMe(pending ?? null)
+      } catch {
+        setOpenRequestForMe(null)
+      }
     } catch {
       setError('Сделка не найдена')
     } finally {
@@ -50,7 +70,7 @@ export default function DealPage() {
     }
   }
 
-  useEffect(() => { load() }, [dealId])
+  useEffect(() => { load() }, [dealId, user?.id])
 
   const handleAction = async (action: 'accept' | 'handoff' | 'confirm') => {
     if (!dealId) return
@@ -180,6 +200,24 @@ export default function DealPage() {
           >
             DealVault →
           </Link>
+          {isCarrier &&
+            ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
+              <button
+                onClick={() => setVerifyRequestFor('sender')}
+                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-cyan/10 transition-colors"
+              >
+                {t('verification.askSenderButton')}
+              </button>
+            )}
+          {isSender &&
+            ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
+              <button
+                onClick={() => setVerifyRequestFor('carrier')}
+                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-cyan/10 transition-colors"
+              >
+                {t('verification.askCarrierButton')}
+              </button>
+            )}
           {(isCarrier || isSender) &&
             ['accepted', 'in_transit', 'delivered'].includes(deal.status) &&
             deal.status !== 'disputed' && (
@@ -197,6 +235,50 @@ export default function DealPage() {
         <div className="bg-amber/10 border border-amber/40 rounded-xl p-4">
           <p className="text-sm font-body text-navy">{t('dispute.createdNotice')}</p>
         </div>
+      )}
+
+      {verifySuccess && (
+        <div className="bg-cyan/10 border border-cyan/40 rounded-xl p-4">
+          <p className="text-sm font-body text-navy">{t('verification.requestSent')}</p>
+        </div>
+      )}
+
+      {openRequestForMe && !pendingRespond && (
+        <div className="bg-amber/10 border border-amber/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm font-body text-navy">
+            ⚠️ {t('verification.pendingForYou')}
+          </p>
+          <button
+            onClick={() => setPendingRespond(openRequestForMe)}
+            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid"
+          >
+            {t('verification.respondButton')}
+          </button>
+        </div>
+      )}
+
+      {verifyRequestFor && dealId && (
+        <VerificationRequestModal
+          dealId={dealId}
+          targetRole={verifyRequestFor}
+          onClose={() => setVerifyRequestFor(null)}
+          onCreated={() => {
+            setVerifyRequestFor(null)
+            setVerifySuccess(true)
+          }}
+        />
+      )}
+
+      {pendingRespond && (
+        <VerificationRespondModal
+          request={pendingRespond}
+          yourRole={isCarrier ? 'carrier' : 'sender'}
+          onClose={() => setPendingRespond(null)}
+          onDone={() => {
+            setPendingRespond(null)
+            load()
+          }}
+        />
       )}
 
       {disputeOpen && (

@@ -367,6 +367,27 @@ async def self_upload(
 
 
 @router.get(
+    "/deals/{deal_id}/verification-requests",
+    response_model=list[VerificationRequestOut],
+)
+async def list_deal_requests(
+    deal_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Both participants can see all VerificationRequests scoped to their deal."""
+    await _get_deal_as_participant(deal_id, current_user, db)
+    rows = (
+        await db.execute(
+            select(VerificationRequest)
+            .where(VerificationRequest.deal_id == deal_id)
+            .order_by(VerificationRequest.created_at.desc())
+        )
+    ).scalars().all()
+    return list(rows)
+
+
+@router.get(
     "/users/{user_id}/verifications", response_model=UserVerificationSummary
 )
 async def get_user_verifications(
