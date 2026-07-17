@@ -1,11 +1,12 @@
 /**
- * T2.2 pt.1 — light-touch NIP-07 detection.
+ * T2.2 pt.2 — NIP-01 event build + NIP-07 signing helpers.
  *
- * Alby, nos2x and other Nostr browser extensions inject `window.nostr`. We
- * only *detect* the presence here; actual signing via `window.nostr.signEvent()`
- * is deferred to T2.2 pt.2 (requires backend signing to switch from raw
- * `sha256(payload)` to the NIP-01 event format).
+ * Detection (pt.1): `hasNip07Extension()`, `getNip07Pubkey()`.
+ * Signing (pt.2): build vault-message events matching backend `signing.py`
+ * shape and pass them to `window.nostr.signEvent()`.
  */
+
+export const NOSTR_KIND_VAULT_MESSAGE = 4801
 
 interface NostrExtension {
   getPublicKey(): Promise<string>
@@ -42,4 +43,38 @@ export async function getNip07Pubkey(): Promise<string | null> {
   } catch {
     return null
   }
+}
+
+export interface SignedVaultMessage {
+  nostr_sig: string
+  nostr_created_at: number
+}
+
+/**
+ * Build a NIP-01 vault-message event and sign via NIP-07.
+ *
+ * Tags must match `_tags_vault_message` in `backend/app/core/signing.py`.
+ * If they diverge, backend event_id recompute won't match sig → 422.
+ */
+export async function signVaultMessageViaNip07(
+  dealId: string,
+  text: string,
+  isSystem: boolean,
+): Promise<SignedVaultMessage> {
+  if (!hasNip07Extension() || !window.nostr) {
+    throw new Error('NIP-07 extension not available')
+  }
+  const tags: string[][] = [
+    ['k', 'vault_message'],
+    ['deal', dealId],
+  ]
+  if (isSystem) tags.push(['system', '1'])
+  const created_at = Math.floor(Date.now() / 1000)
+  const signed = await window.nostr.signEvent({
+    kind: NOSTR_KIND_VAULT_MESSAGE,
+    created_at,
+    tags,
+    content: text,
+  })
+  return { nostr_sig: signed.sig, nostr_created_at: created_at }
 }

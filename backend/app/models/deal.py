@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, JSON, LargeBinary, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -70,6 +70,9 @@ class DealEvent(Base):
     payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     nostr_sig: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    nostr_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    nostr_created_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -87,6 +90,9 @@ class DealVaultMessage(Base):
     text_nonce: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
     nostr_sig: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    nostr_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    nostr_created_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

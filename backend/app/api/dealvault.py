@@ -78,6 +78,9 @@ def _build_message_out(msg: DealVaultMessage) -> MessageOut:
         text=msg.text,
         is_system=msg.is_system,
         nostr_sig=msg.nostr_sig,
+        nostr_event_id=msg.nostr_event_id,
+        nostr_created_at=msg.nostr_created_at,
+        nostr_pubkey=msg.nostr_pubkey,
         attachments=attachments_out,
         created_at=msg.created_at,
     )
@@ -119,7 +122,7 @@ async def create_message(
         text=body.text,
         is_system=body.is_system,
     )
-    sign_vault_message(msg, current_user, body.nostr_sig)
+    sign_vault_message(msg, current_user, body.nostr_sig, body.nostr_created_at)
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
@@ -131,6 +134,9 @@ async def create_message(
         text=msg.text,
         is_system=msg.is_system,
         nostr_sig=msg.nostr_sig,
+        nostr_event_id=msg.nostr_event_id,
+        nostr_created_at=msg.nostr_created_at,
+        nostr_pubkey=msg.nostr_pubkey,
         attachments=[],
         created_at=msg.created_at,
     )
@@ -175,6 +181,9 @@ async def share_address(
         text=msg.text,
         is_system=msg.is_system,
         nostr_sig=msg.nostr_sig,
+        nostr_event_id=msg.nostr_event_id,
+        nostr_created_at=msg.nostr_created_at,
+        nostr_pubkey=msg.nostr_pubkey,
         attachments=[],
         created_at=msg.created_at,
     )

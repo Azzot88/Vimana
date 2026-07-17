@@ -292,8 +292,8 @@
       "selfCustody": "self-custody",
       "npubLabel": "Clave pública (npub, hex)",
       "custodialHint": "Guardamos tu clave privada cifrada para firmar tus mensajes. Puedes exportarla y pasar a self-custody en cualquier momento.",
-      "selfCustodyHint": "Tú tienes tu clave privada. El envío de mensajes requiere soporte NIP-07 (próximamente).",
-      "nip07Detected": "Extensión NIP-07 detectada — la firma self-custody completa llegará en la próxima actualización.",
+      "selfCustodyHint": "Tú tienes tu clave privada. Los mensajes del vault se firman con tu extensión NIP-07 (Alby, nos2x, etc.).",
+      "nip07Detected": "Extensión NIP-07 detectada — puedes pasar a self-custody y firmar mensajes localmente.",
       "export": "Exportar nsec",
       "exportTitle": "Exportar clave privada",
       "exportHint": "Confirma tu contraseña para recibir tu nsec Nostr. Manténlo en secreto.",
@@ -303,7 +303,13 @@
       "import": "Importar clave",
       "importTitle": "Importar clave Nostr",
       "importHint": "Reemplaza el keypair actual. Si pegas nsec — no lo almacenamos, pasas a self-custody. Sólo npub = modo tracking (solo lectura).",
-      "importError": "Error al importar."
+      "importError": "Error al importar.",
+      "claim": "Pasar a self-custody",
+      "claimTitle": "Pasar a self-custody",
+      "claimWarn": "Eliminaremos nuestra copia cifrada de tu clave privada. Si pierdes acceso a tu extensión NIP-07, no podrás firmar nuevos mensajes.",
+      "claimHint": "Después del claim, cada mensaje del vault se firma localmente por tu extensión. Primero exporta y guarda tu nsec de forma segura.",
+      "claimConfirm": "Pasar a self-custody",
+      "claimError": "Error al pasar."
     },
     "address": {
       "title": "Dirección de recepción",

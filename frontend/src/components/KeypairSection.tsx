@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  claimSelfCustody,
   exportKeypair,
   getKeypairStatus,
   importKeypair,
@@ -9,7 +10,7 @@ import {
 import { hasNip07Extension } from '../lib/nostr'
 import MonoText from './MonoText'
 
-type Modal = 'none' | 'export' | 'import'
+type Modal = 'none' | 'export' | 'import' | 'claim'
 
 export default function KeypairSection() {
   const { t } = useTranslation()
@@ -54,6 +55,23 @@ export default function KeypairSection() {
         status === 401
           ? (t('profile.keypair.exportBadPassword') as string)
           : (t('profile.keypair.exportError') as string),
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleClaim = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const { data } = await claimSelfCustody()
+      setStatus(data)
+      setModal('none')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+      setError(
+        typeof detail === 'string' ? detail : (t('profile.keypair.claimError') as string),
       )
     } finally {
       setBusy(false)
@@ -173,6 +191,15 @@ export default function KeypairSection() {
             {t('profile.keypair.export')}
           </button>
         )}
+        {status?.has_encrypted_nsec && nip07 && (
+          <button
+            type="button"
+            onClick={() => setModal('claim')}
+            className="text-xs font-display font-medium border border-amber/40 bg-amber/10 text-amber px-3 py-1.5 rounded-lg hover:bg-amber/20"
+          >
+            {t('profile.keypair.claim')}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setModal('import')}
@@ -181,6 +208,44 @@ export default function KeypairSection() {
           {t('profile.keypair.import')}
         </button>
       </div>
+
+      {modal === 'claim' && (
+        <div
+          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+          >
+            <h3 className="font-display font-semibold text-lg text-navy">
+              {t('profile.keypair.claimTitle')}
+            </h3>
+            <p className="text-sm font-body text-red-700 bg-red-50 rounded-lg px-3 py-2">
+              ⚠️ {t('profile.keypair.claimWarn')}
+            </p>
+            <p className="text-sm font-body text-navy/70">
+              {t('profile.keypair.claimHint')}
+            </p>
+            {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={closeModal}
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleClaim}
+                disabled={busy}
+                className="bg-amber text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-40"
+              >
+                {busy ? '…' : t('profile.keypair.claimConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal === 'export' && (
         <div

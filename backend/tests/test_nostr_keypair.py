@@ -275,47 +275,43 @@ async def test_message_from_new_user_gets_server_signed(client):
     assert len(body["nostr_sig"]) == 128  # 64 bytes hex
 
 
-async def test_self_custody_requires_pre_signed(client):
-    """After claim → server refuses to sign; body must include nostr_sig."""
+async def test_self_custody_vault_message_requires_pre_signed(client):
+    """After claim → server can't sign vault messages; POST without nostr_sig → 422.
+
+    Deal-state events remain OK for self-custody (lenient, unsigned) — only the
+    user-content vault message path is strict.
+    """
     from datetime import datetime, timedelta, timezone
     from tests.conftest import SEED_PASSWORD, unique_email
 
-    # Register + claim self-custody
-    email = unique_email("selfc")
+    c_email = unique_email("scc")
     await client.post(
         "/api/auth/register",
         json={
-            "email": email,
+            "email": c_email,
             "password": SEED_PASSWORD,
-            "display_name": "SelfC",
+            "display_name": "SCC",
             "can_carry": True,
+            "active_mode": "carrier",
         },
     )
-    login = await client.post(
-        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    c_login = await client.post(
+        "/api/auth/login", json={"login": c_email, "password": SEED_PASSWORD}
     )
-    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    await client.post("/api/me/keypair/claim", headers=headers)
-
-    # Create trip via carrier
+    c_headers = {"Authorization": f"Bearer {c_login.json()['access_token']}"}
     trip = await client.post(
         "/api/trips",
-        headers=headers,
+        headers=c_headers,
         json={
-            "origin": "SLF",
-            "destination": "CUS",
+            "origin": "SCC",
+            "destination": "SLF",
             "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
             "capacity": 2.0,
+            "allowed_categories": ["document"],
         },
     )
-    # trip publish uses DealEvent — wait, /trips doesn't create DealEvent. OK.
-    assert trip.status_code == 201
-
-    # Use existing seed sender to inquiry → messages need signing
-    # Simplest: sender posts a message → sender is self-custody → 422 expected.
     trip_id = trip.json()["id"]
 
-    # Register a fresh sender who is also self-custody
     s_email = unique_email("selfs")
     await client.post(
         "/api/auth/register",
@@ -334,13 +330,22 @@ async def test_self_custody_requires_pre_signed(client):
             "trip_id": trip_id,
             "order": {
                 "recipient_contact": "+10000008888",
-                "origin": "SLF",
-                "destination": "CUS",
+                "origin": "SCC",
+                "destination": "SLF",
                 "category": "document",
                 "declared_value": 30.0,
             },
         },
     )
-    # match_deal creates DealEvent(actor=sender). Sender is self-custody → 422.
-    assert match.status_code == 422
-    assert "self-custody" in match.json()["detail"].lower()
+    # Deal state events are lenient — self-custody proceeds without sig.
+    assert match.status_code == 201, match.json()
+    deal_id = match.json()["id"]
+
+    # But vault message under self-custody without pre-signed sig → 422.
+    msg = await client.post(
+        f"/api/deals/{deal_id}/dealvault/messages",
+        headers=s_headers,
+        json={"text": "unsigned attempt"},
+    )
+    assert msg.status_code == 422
+    assert "self-custody" in msg.json()["detail"].lower()

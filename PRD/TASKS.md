@@ -621,17 +621,25 @@
 
 **Acceptance pt.1:** новый аккаунт получает keypair; DealVault-события подписаны и верифицируемы через `verify_event(payload, sig, npub)`; user может увидеть свой npub, экспортировать nsec с re-auth, импортировать foreign keypair; в UI видно наличие NIP-07 extension (но клиент им ещё не пользуется). ✅
 
-#### T2.2 pt.2 — NIP-07 signing + full self-custody
+#### T2.2 pt.2 — NIP-07 signing + full self-custody ✅
 
-- [ ] **Backend refactor `signing.py`**: перейти с raw `sha256(payload)` на полноценный Nostr event формат — `{kind, created_at, pubkey, tags, content}` + NIP-01 `event_id = sha256([0, pubkey, created_at, kind, tags, content])`. Kind: 4801 для vault_message, 4802 для deal_event (custom application kinds). Tags: `[["d", model_uuid], ["k", model_type]]`. Content = canonical JSON текущего payload'а.
-- [ ] Backend endpoints принимают `nostr_sig` + `nostr_created_at` (unix) в body для self-custody; backend recomputes `event_id` с client-provided `created_at` и `msg.created_at = datetime.fromtimestamp(nostr_created_at)`.
-- [ ] Frontend `lib/nostr.ts` — buildEvent для vault_message/deal_event, `signViaNip07(event)` через `window.nostr.signEvent()`, fallback error.
-- [ ] `api/dealvault.ts` + `api/inquiry.ts` — при self-custody buildEvent → NIP-07 sign → включить `nostr_sig` + `nostr_created_at` в body.
-- [ ] UI: кнопка «Claim self-custody» становится доступна; после claim user'у показывается что все сообщения теперь подписываются его extension.
-- [ ] Миграция подписей: старые raw-hash sigs остаются валидны (verify пробует оба формата 30 дней); новые всегда Nostr event.
-- [ ] Тесты: NIP-07 sign flow (mocked), backend verify через `verify_event(event_id, sig, npub)`, self-custody может писать в чат.
+- [x] **Backend refactor `signing.py`**: полноценный NIP-01 event формат — `event_id = sha256([0, pubkey, created_at, kind, tags, content])`. Kind: **4801** vault_message, **4802** deal_event. Tags vault_message: `[["k","vault_message"],["deal",<uuid>]]` (+ `["system","1"]` для системных). Tags deal_event: `[["k","deal_event"],["deal",<uuid>],["e",event_type]]`. Content vault_message = plaintext (client-reproducible); content deal_event = canonical JSON `{event_type, actor_id, payload}`.
+- [x] Backend endpoints принимают `nostr_sig` + `nostr_created_at` (unix) в body; backend recomputes `event_id` с client-provided `created_at` (±5 min clock-skew guard).
+- [x] `keypair.py`: `sign_event_id(event_id_hex, nsec)` / `verify_event_id(event_id, sig, npub)` — signing над готовым 32-byte id (NIP-01 стиль). Legacy `sign_event`/`verify_event` (pt.1 raw-hash) сохранены для старых записей.
+- [x] Frontend `lib/nostr.ts` — `signVaultMessageViaNip07(dealId, text, isSystem)` через `window.nostr.signEvent()`, возвращает `{nostr_sig, nostr_created_at}`.
+- [x] `api/dealvault.ts` — при self-custody + NIP-07 автоматически подписывает и добавляет поля в POST body. Custodial проходит без sig (сервер сам подпишет).
+- [x] UI: кнопка «Claim self-custody» доступна если `has_encrypted_nsec && nip07`. Модалка с warn + hint + confirm.
+- [x] Миграция подписей: старые pt.1 sigs остаются в БД неизменёнными (маркер — `nostr_event_id IS NULL`). Новые записи — всегда NIP-01. Dual-verify не понадобился (read-time verify пока не используется).
+- [x] Асимметрия self-custody:
+  - **Vault message** (user-authored content): строгий режим — self-custody без `nostr_sig` → 422.
+  - **Deal event** (server-produced state change): лениво — self-custody → `nostr_sig=None`. Actor attribution via `actor_id` сохраняется.
+- [x] Модель + миграция `0015`: `deal_vault_messages` и `deal_events` получают `nostr_event_id VARCHAR(64)`, `nostr_created_at BIGINT`, `nostr_pubkey VARCHAR(64)` (все nullable).
+- [x] 7 backend-тестов: pre-signed accept + wrong sig + missing ts + stale ts + custodial NIP-01 event_id populated + self-custody deal event lenient + вспомогательный keypair-тест обновлён.
+- [x] i18n `profile.keypair.claim*` в 6 языках + selfCustodyHint/nip07Detected обновлены.
 
-**Acceptance pt.2:** self-custody user с Alby/nos2x может отправлять сообщения в DealVault; backend верифицирует NIP-07 sig; кнопка Claim работает end-to-end.
+**Acceptance pt.2:** self-custody user с Alby/nos2x подписывает vault-сообщения client-side; backend верифицирует по NIP-01 event_id; state-change endpoints остаются работоспособными для self-custody (unsigned). ✅
+
+**Follow-up:** (1) добавить `nostr_sig`/`nostr_event_id`/`nostr_created_at`/`nostr_pubkey` в `InquiryMessage` (сейчас inquiry чат вообще без sig — вне scope pt.2). (2) Snapshot pubkey per-record уже есть, можно поднять read-time verify endpoint для аудита.
 
 ### T2.3 — Threshold-encryption 2-of-3 для DealVault / Inquiry чатов (V2 замена at-rest)
 

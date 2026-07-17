@@ -292,8 +292,8 @@
       "selfCustody": "self-custody",
       "npubLabel": "Clé publique (npub, hex)",
       "custodialHint": "Nous conservons votre clé privée chiffrée pour signer vos messages. Vous pouvez l'exporter et passer en self-custody à tout moment.",
-      "selfCustodyHint": "Vous détenez votre clé privée. L'envoi de messages nécessite NIP-07 (prochainement).",
-      "nip07Detected": "Extension NIP-07 détectée — la signature self-custody complète arrive dans la prochaine mise à jour.",
+      "selfCustodyHint": "Vous détenez votre clé privée. Les messages du coffre sont signés par votre extension NIP-07 (Alby, nos2x, etc.).",
+      "nip07Detected": "Extension NIP-07 détectée — vous pouvez passer en self-custody et signer les messages localement.",
       "export": "Exporter nsec",
       "exportTitle": "Exporter la clé privée",
       "exportHint": "Confirmez votre mot de passe pour recevoir votre nsec Nostr. Gardez-le secret.",
@@ -303,7 +303,13 @@
       "import": "Importer une clé",
       "importTitle": "Importer une clé Nostr",
       "importHint": "Remplace le keypair actuel. Si vous collez un nsec — nous ne le stockons pas, vous passez en self-custody. npub seul = mode tracking (lecture).",
-      "importError": "Échec de l'import."
+      "importError": "Échec de l'import.",
+      "claim": "Passer en self-custody",
+      "claimTitle": "Passer en self-custody",
+      "claimWarn": "Nous supprimerons notre copie chiffrée de votre clé privée. Si vous perdez l'accès à votre extension NIP-07, vous ne pourrez plus signer de nouveaux messages.",
+      "claimHint": "Après le claim, chaque message du coffre est signé localement par votre extension. Assurez-vous d'avoir exporté et stocké votre nsec en sécurité.",
+      "claimConfirm": "Passer en self-custody",
+      "claimError": "Échec du passage."
     },
     "address": {
       "title": "Adresse de réception",

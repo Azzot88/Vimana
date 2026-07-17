@@ -293,8 +293,8 @@
       "selfCustody": "self-custody",
       "npubLabel": "Klucz publiczny (npub, hex)",
       "custodialHint": "Przechowujemy zaszyfrowany klucz prywatny, aby podpisywać Twoje wiadomości. W każdej chwili możesz go wyeksportować i przejść na self-custody.",
-      "selfCustodyHint": "Klucz prywatny masz tylko Ty. Wysyłanie wiadomości wymaga wsparcia NIP-07 (w następnej aktualizacji).",
-      "nip07Detected": "Wykryto rozszerzenie NIP-07 — pełny self-custody podpis pojawi się w kolejnej aktualizacji.",
+      "selfCustodyHint": "Klucz prywatny masz tylko Ty. Wiadomości w czacie transakcji są podpisywane przez Twoje rozszerzenie NIP-07 (Alby, nos2x itp.).",
+      "nip07Detected": "Wykryto rozszerzenie NIP-07 — możesz przejść na self-custody i podpisywać wiadomości lokalnie.",
       "export": "Eksport nsec",
       "exportTitle": "Eksport klucza prywatnego",
       "exportHint": "Potwierdź hasło, aby otrzymać Nostr nsec. Trzymaj go w tajemnicy.",
@@ -304,7 +304,13 @@
       "import": "Import klucza",
       "importTitle": "Import klucza Nostr",
       "importHint": "Zastępuje bieżący keypair. Jeśli wkleisz nsec — nie zapisujemy go, przechodzisz w self-custody. Sam npub = tryb tracking (tylko odczyt).",
-      "importError": "Nie udało się zaimportować."
+      "importError": "Nie udało się zaimportować.",
+      "claim": "Przejdź na self-custody",
+      "claimTitle": "Przejście na self-custody",
+      "claimWarn": "Usuniemy naszą zaszyfrowaną kopię Twojego klucza prywatnego. Jeśli stracisz dostęp do rozszerzenia NIP-07 — nie będziesz mógł podpisywać nowych wiadomości.",
+      "claimHint": "Po claim każda wiadomość w czacie jest podpisywana lokalnie przez rozszerzenie. Najpierw upewnij się, że wyeksportowałeś i bezpiecznie zapisałeś nsec.",
+      "claimConfirm": "Przejdź na self-custody",
+      "claimError": "Nie udało się przejść."
     },
     "address": {
       "title": "Adres odbioru",

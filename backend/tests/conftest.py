@@ -385,6 +385,30 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_nostr_event_columns(engine) -> None:
+    """T2.2 pt.2 schema fix: NIP-01 event_id / created_at / pubkey on
+    deal_vault_messages and deal_events. Idempotent."""
+    async with engine.begin() as conn:
+        for tbl in ("deal_vault_messages", "deal_events"):
+            for col, ddl in (
+                ("nostr_event_id", "VARCHAR(64)"),
+                ("nostr_created_at", "BIGINT"),
+                ("nostr_pubkey", "VARCHAR(64)"),
+            ):
+                row = (
+                    await conn.execute(
+                        text(
+                            f"SELECT 1 FROM information_schema.columns "
+                            f"WHERE table_name='{tbl}' AND column_name='{col}'"
+                        )
+                    )
+                ).fetchone()
+                if not row:
+                    await conn.execute(
+                        text(f"ALTER TABLE {tbl} ADD COLUMN {col} {ddl}")
+                    )
+
+
 async def _ensure_receiving_address_columns(engine) -> None:
     """T1.26 schema fix: 6 nullable receiving_* columns on users. Idempotent."""
     async with engine.begin() as conn:
@@ -512,6 +536,7 @@ async def test_engine():
     await _ensure_dual_role(engine)
     await _ensure_receiving_address_columns(engine)
     await _ensure_nostr_keypair_columns(engine)
+    await _ensure_nostr_event_columns(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

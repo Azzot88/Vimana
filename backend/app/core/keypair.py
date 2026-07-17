@@ -86,11 +86,10 @@ def decrypt_nsec(nonce: bytes, ciphertext: bytes) -> str:
 
 
 def sign_event(payload_json: str, nsec_hex: str) -> str:
-    """Schnorr sign(sha256(payload)) with nsec. Returns 64-byte hex signature.
+    """Legacy T2.2 pt.1 helper — raw sha256(payload) Schnorr sig.
 
-    `payload_json` should be the canonical serialization of whatever we want to
-    make tamper-evident. For Vimana Phase 2 that's the DealVaultMessage /
-    DealEvent content (no need for full NIP-01 event envelope at this stage).
+    Kept for backward compat with records signed before the T2.2 pt.2 NIP-01
+    event refactor. New records use `sign_event_id` (see below).
     """
     priv = PrivateKey(bytes.fromhex(nsec_hex))
     digest = hashlib.sha256(payload_json.encode("utf-8")).digest()
@@ -99,10 +98,26 @@ def sign_event(payload_json: str, nsec_hex: str) -> str:
 
 
 def verify_event(payload_json: str, sig_hex: str, npub_hex: str) -> bool:
-    """Verify signature against x-only pubkey."""
+    """Legacy T2.2 pt.1 verify — see `sign_event` doc."""
     try:
         digest = hashlib.sha256(payload_json.encode("utf-8")).digest()
         pub = PublicKeyXOnly(bytes.fromhex(npub_hex))
         return pub.verify(bytes.fromhex(sig_hex), digest)
+    except Exception:
+        return False
+
+
+def sign_event_id(event_id_hex: str, nsec_hex: str) -> str:
+    """T2.2 pt.2 — Schnorr sign a precomputed 32-byte NIP-01 event id."""
+    priv = PrivateKey(bytes.fromhex(nsec_hex))
+    sig = priv.sign_schnorr(bytes.fromhex(event_id_hex))
+    return sig.hex()
+
+
+def verify_event_id(event_id_hex: str, sig_hex: str, npub_hex: str) -> bool:
+    """T2.2 pt.2 — verify Schnorr sig against a NIP-01 event id."""
+    try:
+        pub = PublicKeyXOnly(bytes.fromhex(npub_hex))
+        return pub.verify(bytes.fromhex(sig_hex), bytes.fromhex(event_id_hex))
     except Exception:
         return False

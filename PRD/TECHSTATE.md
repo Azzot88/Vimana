@@ -39,7 +39,7 @@
 | Receiving Address в профиле + share-in-chat | 1 | ✅ готово (T1.26) |
 | Peer Identity Verification (P2P KYC) | 2 | ✅ MVP (T2.1: backend + frontend, custodial only. OCR/OFAC — stub, self-custody 422 до T2.3) |
 | Trust Graph (Web-of-Trust) | 2 | ✅ MVP (T2.4: TrustEdge + auto dealt_with/invited + BFS endpoints + denormalized counts + UI. Follow-up: Redis-кэш, UserBadge на TripCard) |
-| Keypair + Nostr-совместимость (D10: A+D) | 2 | 🟨 pt.1 готов (custodial + UI), pt.2 в ожидании NIP-07 refactor |
+| Keypair + Nostr-совместимость (D10: A+D) | 2 | ✅ MVP (pt.1 custodial + UI; pt.2 NIP-01 event format + NIP-07 signing + Claim self-custody end-to-end) |
 | Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ⬜ не начато (T2.3) |
 | Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато (T3.1) |
 | Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато (T3.5) |
@@ -158,8 +158,11 @@
 | Receiving Address helper (T1.26) + share-address message prefix `📍 SHARED ADDRESS` | `backend/app/core/address.py` |
 | GeoNames city autocomplete (T1.26) — reuses `cities15000.txt` из T1.16 | `backend/app/core/cities.py`, `backend/app/api/cities.py` |
 | Nostr keypair core (T2.2) — coincurve secp256k1, Schnorr sign/verify, AES-256-GCM wrap для nsec | `backend/app/core/keypair.py` |
-| Signing helper (T2.2) — canonical JSON payload + sha256 + Schnorr для DealVaultMessage/DealEvent, pre-signed для NIP-07 (в T2.2 pt.2) | `backend/app/core/signing.py` |
+| Signing helper (T2.2 pt.2) — NIP-01 event format (kind 4801 vault_message / 4802 deal_event), event_id per NIP-01, ±5 min clock-skew guard. Vault-message strict для self-custody (422 без sig); deal-event lenient (unsigned OK). Legacy pt.1 helpers сохранены | `backend/app/core/signing.py` |
 | Keypair endpoints (T2.2) — /me/keypair/{status,export,claim,import} | `backend/app/api/keypair.py` |
+| NIP-07 signing (T2.2 pt.2) — `signVaultMessageViaNip07(dealId, text, isSystem)` через `window.nostr.signEvent()`; api/dealvault.ts авто-подписывает если self-custody | `frontend/src/{lib/nostr,api/dealvault}.ts` |
+| Claim self-custody UI (T2.2 pt.2) — кнопка + модалка с warn (амбер), доступна если `has_encrypted_nsec && nip07` | `frontend/src/components/KeypairSection.tsx` |
+| Nostr event schema fields (T2.2 pt.2) — `nostr_event_id VARCHAR(64)`, `nostr_created_at BIGINT`, `nostr_pubkey VARCHAR(64)` на deal_vault_messages + deal_events (nullable для backward-compat pt.1 записей) | миграция `0015_nostr_event_format` |
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
 | Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
 | Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |
@@ -181,8 +184,8 @@
 - `Trip(id, carrier_id→User, origin, destination, depart_at, capacity, allowed_categories JSON, status)`
 - `Order(id, sender_id→User, recipient_contact, origin, destination, category VARCHAR(50), declared_value, currency, description, deadline?, status, trip_id→Trip?)`
 - `Deal(id, order_id→Order, trip_id→Trip, sender_id, carrier_id, recipient_id?, status ∈ {draft, matched, accepted, in_transit, delivered, confirmed, closed, disputed}, created_at)`
-- `DealEvent(id, deal_id→Deal, event_type ∈ {…, dispute_opened, arbiter_opened, dispute_resolved}, payload JSON, actor_id, nostr_sig?, timestamp)` — **append-only**
-- `DealVaultMessage(id, deal_id→Deal, sender_id?, text_ciphertext BYTEA, text_nonce BYTEA, is_system, nostr_sig?, created_at)` — **иммутабельно**, at-rest AES-256-GCM из T1.21; property `text` decrypt on access
+- `DealEvent(id, deal_id→Deal, event_type ∈ {…, dispute_opened, arbiter_opened, dispute_resolved}, payload JSON, actor_id, nostr_sig?, nostr_event_id?, nostr_created_at?, nostr_pubkey?, timestamp)` — **append-only**. T2.2 pt.2 добавил NIP-01 event поля (nullable); self-custody lenient — остаётся `None`.
+- `DealVaultMessage(id, deal_id→Deal, sender_id?, text_ciphertext BYTEA, text_nonce BYTEA, is_system, nostr_sig?, nostr_event_id?, nostr_created_at?, nostr_pubkey?, created_at)` — **иммутабельно**, at-rest AES-256-GCM из T1.21; property `text` decrypt on access. T2.2 pt.2: для self-custody клиент подписывает через NIP-07 и передаёт sig+ts.
 - `Attachment(id, message_id→DealVaultMessage, r2_key, file_hash SHA-256, ipfs_cid?, kind ∈ {handoff_photo, receipt_photo, doc, payment_receipt}, created_at)` — **иммутабельно**
 - `Category(id, name_key UNIQUE, is_default, usage_count, created_at)` — T1.17
 - `TripInquiry(id, trip_id→Trip, sender_id, carrier_id, deal_id?, created_at)` — UNIQUE(trip_id, sender_id), T1.22
