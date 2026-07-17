@@ -37,9 +37,9 @@
 | Dual role (can_carry/can_send/active_mode) + RBAC (Permission enum + Role) | 1 | ✅ готово (T1.24) |
 | NewTripPage redesign (Bento + hook-points для EXP-03/04) | 1 | ✅ готово (T1.25) |
 | Receiving Address в профиле + share-in-chat | 1 | ✅ готово (T1.26) |
-| Peer Identity Verification (P2P KYC) | 2 | ⬜ не начато (T2.1) |
+| Peer Identity Verification (P2P KYC) | 2 | ✅ MVP (T2.1: backend + frontend, custodial only. OCR/OFAC — stub, self-custody 422 до T2.3) |
 | Trust Graph (Web-of-Trust) | 2 | ⬜ не начато (T2.4) |
-| Keypair + Nostr-совместимость (D10: A+D) | 2 | ⬜ не начато (T2.2) |
+| Keypair + Nostr-совместимость (D10: A+D) | 2 | 🟨 pt.1 готов (custodial + UI), pt.2 в ожидании NIP-07 refactor |
 | Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ⬜ не начато (T2.3) |
 | Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато (T3.1) |
 | Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато (T3.5) |
@@ -153,6 +153,18 @@
 | Landing + Waitlist public route (T1.18) | `frontend/src/pages/LandingPage.tsx` |
 | Frontend smoke-тесты (7 кейсов через vitest) | `frontend/src/test/`, `frontend/src/**/*.test.tsx` |
 | Docker compose dev с nginx dynamic DNS resolver + SSL termination | `docker-compose.dev.yml`, `nginx/default.conf` |
+| Nginx custom 502/503/504 page с auto-refresh + healthcheck-based startup (2026-07-14) | `nginx/_error.html`, `nginx/default.conf`, `docker-compose.dev.yml` |
+| Vite build vendor chunk splitting (react/i18n/phone) — main bundle < 500 kB | `frontend/vite.config.ts`, `frontend/package.json` |
+| Receiving Address helper (T1.26) + share-address message prefix `📍 SHARED ADDRESS` | `backend/app/core/address.py` |
+| GeoNames city autocomplete (T1.26) — reuses `cities15000.txt` из T1.16 | `backend/app/core/cities.py`, `backend/app/api/cities.py` |
+| Nostr keypair core (T2.2) — coincurve secp256k1, Schnorr sign/verify, AES-256-GCM wrap для nsec | `backend/app/core/keypair.py` |
+| Signing helper (T2.2) — canonical JSON payload + sha256 + Schnorr для DealVaultMessage/DealEvent, pre-signed для NIP-07 (в T2.2 pt.2) | `backend/app/core/signing.py` |
+| Keypair endpoints (T2.2) — /me/keypair/{status,export,claim,import} | `backend/app/api/keypair.py` |
+| Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
+| Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
+| Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |
+| KeypairSection frontend — status/export/import UI + NIP-07 detection | `frontend/src/components/KeypairSection.tsx`, `frontend/src/lib/nostr.ts` |
+| AddressForm / AddressCard — profile form + chat card render | `frontend/src/components/Address{Form,Card}.tsx` |
 
 ---
 
@@ -175,7 +187,13 @@
 - `WaitlistEntry(id, email UNIQUE, name?, source, created_at)` — T1.18
 - *(User расширение T1.26)*: `receiving_country_iso?`, `receiving_city?`, `receiving_city_geoname_id?`, `receiving_street?`, `receiving_postal_code?`, `receiving_note?` — **приватные**, отдаются только через `GET /me`, никогда в list-endpoints (например `/admin/users` их не возвращает)
 
-**Фаза 2 (планируется)**
+**Фаза 2 (частично в prod)**
+
+> **Реализовано** (миграции 0012 + 0013): keypair per user, verification MVP.
+> **Планируется**: T2.2 pt.2 NIP-07, T2.3 threshold, T2.4 trust graph.
+
+- User расширение T2.2: `nostr_pubkey` (уже был), `nsec_encrypted BYTEA`, `nsec_nonce BYTEA`, `key_self_custody: bool = False`. Custodial nsec шифрован AES-256-GCM с env `NSEC_ENCRYPTION_KEY`.
+- User расширение T2.1: `highest_verification_level: str | None` — денормализация. Обновляется через `refresh_highest_level()` при INSERT/revoke badge.
 - `VerificationLevel` enum: `auto` / `peer` / `kyc` (порядок = сила trust).
 - `VerificationRequest(id, deal_id→Deal, requested_by_id, target_role ∈ {sender, carrier}, status ∈ {pending, upload, later_in_person, declined, declined_polite, verified, escalated}, created_at, resolved_at?)` — T2.1. `target_role=carrier` → допустимо `declined_polite` (без последствий).
 - `IdentityContainer(id, owner_id, owner_role ∈ {sender, carrier, both}, storage_mode ∈ {encrypted_blob, zk_snark}, blob_encrypted BYTEA?, doc_hash, doc_country, doc_type, sanctions_check_status ∈ {clean, match, review_needed}, created_at)` — ключ = owner's Nostr nsec, multi-doc allowed. `storage_mode=encrypted_blob` default в T2.1; `zk_snark` добавляется в T6.4.

@@ -490,7 +490,9 @@
 
 ## 🪪 ЭТАП 2 — Идентификация и ключи (Фаза 2)
 
-### T2.1 — Peer Identity Verification + Verification Levels (P2P KYC)
+### T2.1 — Peer Identity Verification + Verification Levels (P2P KYC) ✅ MVP
+
+> **Статус:** MVP (backend + frontend) закрыт 2026-07-17. Остаётся follow-up: реальный PaddleOCR (сейчас `doc_type`/`doc_country` из body), реальный OFAC/EU sanctions match (сейчас stub `clean`), self-custody upload path (сейчас 422 — ожидает T2.3 threshold).
 
 **Контекст:** классический regulatory KYC/AML уезжает в Фазу 4 (T4.1) — до того как через платформу пойдут деньги, у нас нет обязательств перед регулятором раскрывать identity пользователей. Вместо этого в Фазе 2 вводим **три уровня верификации** для любого пользователя:
 
