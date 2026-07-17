@@ -43,6 +43,10 @@ class User(Base):
     # Values: 'user' | 'arbiter' | 'superuser'. Superuser = User Zero.
     role: Mapped[str] = mapped_column(String(20), default="user", server_default="user")
 
+    # T2.1 — denormalized highest active VerificationBadge.level for fast reads.
+    # Refreshed by app/core/verification.refresh_highest_level() after INSERT/revoke.
+    highest_verification_level: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
     # T1.26 — private receiving address. Never exposed in list-endpoints or via
     # any UserOut except /me. Sharing into a chat is an explicit user action.
     receiving_country_iso: Mapped[str | None] = mapped_column(String(2), nullable=True)

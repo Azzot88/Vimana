@@ -210,6 +210,100 @@ async def _ensure_dual_role(engine) -> None:
             await conn.execute(text("ALTER TABLE users DROP COLUMN is_carrier"))
 
 
+async def _ensure_verification_tables(engine) -> None:
+    """T2.1 schema fix: 4 tables + users.highest_verification_level + 7 enums.
+    Idempotent — safe to re-run when tests reset schema."""
+    enums = [
+        ("verificationlevel", ["auto", "peer", "kyc"]),
+        (
+            "verificationrequeststatus",
+            [
+                "pending", "later_in_person", "declined", "declined_polite",
+                "verified", "escalated",
+            ],
+        ),
+        ("verificationtargetrole", ["sender", "carrier"]),
+        ("sanctionsstatus", ["clean", "match", "review_needed"]),
+        ("ownerrole", ["sender", "carrier", "both"]),
+        ("storagemode", ["encrypted_blob", "zk_snark"]),
+        (
+            "verificationsource",
+            ["auto_ocr", "peer", "arbiter_review", "kyc_provider"],
+        ),
+    ]
+    async with engine.begin() as conn:
+        for name, values in enums:
+            row = (
+                await conn.execute(
+                    text("SELECT 1 FROM pg_type WHERE typname = :n").bindparams(n=name)
+                )
+            ).fetchone()
+            if not row:
+                inner = ", ".join(f"'{v}'" for v in values)
+                await conn.execute(text(f"CREATE TYPE {name} AS ENUM ({inner})"))
+
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='users' AND column_name='highest_verification_level'"
+                )
+            )
+        ).fetchone()
+        if not row:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN highest_verification_level VARCHAR(10)"
+                )
+            )
+
+        for table_sql in (
+            """CREATE TABLE IF NOT EXISTS identity_containers (
+                id UUID PRIMARY KEY,
+                owner_id UUID NOT NULL REFERENCES users(id),
+                owner_role ownerrole NOT NULL DEFAULT 'both',
+                storage_mode storagemode NOT NULL DEFAULT 'encrypted_blob',
+                blob_encrypted BYTEA NOT NULL,
+                blob_nonce BYTEA NOT NULL,
+                doc_hash VARCHAR(64) NOT NULL,
+                doc_country VARCHAR(2),
+                doc_type VARCHAR(32),
+                sanctions_check_status sanctionsstatus NOT NULL DEFAULT 'clean',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS verification_requests (
+                id UUID PRIMARY KEY,
+                deal_id UUID NOT NULL REFERENCES deals(id),
+                requested_by_id UUID NOT NULL REFERENCES users(id),
+                target_role verificationtargetrole NOT NULL,
+                status verificationrequeststatus NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                resolved_at TIMESTAMPTZ
+            )""",
+            """CREATE TABLE IF NOT EXISTS verification_badges (
+                id UUID PRIMARY KEY,
+                subject_id UUID NOT NULL REFERENCES users(id),
+                level verificationlevel NOT NULL,
+                source verificationsource NOT NULL,
+                container_ref_id UUID REFERENCES identity_containers(id),
+                verified_by_id UUID REFERENCES users(id),
+                in_deal_id UUID REFERENCES deals(id),
+                verified_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                expires_at TIMESTAMPTZ,
+                revoked_at TIMESTAMPTZ
+            )""",
+            """CREATE TABLE IF NOT EXISTS sanctions_list (
+                id SERIAL PRIMARY KEY,
+                source VARCHAR(32) NOT NULL,
+                name_normalized VARCHAR(255) NOT NULL,
+                dob VARCHAR(10),
+                country VARCHAR(2),
+                added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+        ):
+            await conn.execute(text(table_sql))
+
+
 async def _ensure_nostr_keypair_columns(engine) -> None:
     """T2.2 schema fix: nsec_encrypted / nsec_nonce / key_self_custody. Idempotent."""
     async with engine.begin() as conn:
@@ -357,6 +451,7 @@ async def test_engine():
     await _ensure_dual_role(engine)
     await _ensure_receiving_address_columns(engine)
     await _ensure_nostr_keypair_columns(engine)
+    await _ensure_verification_tables(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
@@ -402,6 +497,13 @@ async def _get_or_create_user(
     user = result.scalar_one_or_none()
     if user:
         return user
+    # T2.2 — seed users get a custodial keypair too so signing + container
+    # encryption paths work in tests without touching /register.
+    from app.core.keypair import encrypt_nsec, generate_keypair
+
+    nsec_hex, npub_hex = generate_keypair()
+    nonce, ct = encrypt_nsec(nsec_hex)
+
     user = User(
         email=email,
         password_hash=hash_password(SEED_PASSWORD),
@@ -409,6 +511,10 @@ async def _get_or_create_user(
         can_carry=can_carry,
         can_send=can_send,
         active_mode=active_mode,
+        nostr_pubkey=npub_hex,
+        nsec_encrypted=ct,
+        nsec_nonce=nonce,
+        key_self_custody=False,
     )
     db.add(user)
     await db.commit()

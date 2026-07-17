@@ -26,11 +26,18 @@ class Permission(str, enum.Enum):
     TRIP_PUBLISH = "trip:publish"
     ORDER_CREATE = "order:create"
 
+    # T2.1 — Peer verification surface
+    IDENTITY_REQUEST = "identity:request"
+    IDENTITY_SELF_UPLOAD = "identity:self_upload"
+    VERIFICATION_REVOKE_OWN = "verification:revoke_own"
+
     # Arbiter surface — assigned by superuser
     DISPUTE_CLAIM = "dispute:claim"
     DISPUTE_RESOLVE = "dispute:resolve"
     VAULT_READ_AS_ARBITER = "vault:read_as_arbiter"
     DISPUTE_LIST_ADMIN = "dispute:list_admin"
+    IDENTITY_CONTAINER_READ = "identity:container_read"  # via escalation
+    VERIFICATION_REVOKE_ANY = "verification:revoke_any"
 
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"
@@ -48,6 +55,8 @@ _ARBITER_PERMS: frozenset[Permission] = frozenset({
     Permission.DISPUTE_RESOLVE,
     Permission.VAULT_READ_AS_ARBITER,
     Permission.DISPUTE_LIST_ADMIN,
+    Permission.IDENTITY_CONTAINER_READ,
+    Permission.VERIFICATION_REVOKE_ANY,
 })
 
 _SUPERUSER_PERMS: frozenset[Permission] = frozenset(Permission)  # all
@@ -75,6 +84,15 @@ def perms_of(user: User) -> frozenset[Permission]:
         perms.add(Permission.TRIP_PUBLISH)
     if user.can_send:
         perms.add(Permission.ORDER_CREATE)
+    # T2.1 — every authenticated user can request verification, self-upload,
+    # and revoke their own peer-verification badges.
+    perms.update(
+        {
+            Permission.IDENTITY_REQUEST,
+            Permission.IDENTITY_SELF_UPLOAD,
+            Permission.VERIFICATION_REVOKE_OWN,
+        }
+    )
     return frozenset(perms)
 
 
