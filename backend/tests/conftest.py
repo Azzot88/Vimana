@@ -493,14 +493,25 @@ async def _get_or_create_user(
     can_send: bool = True,
     active_mode: str = "sender",
 ) -> User:
+    from app.core.keypair import encrypt_nsec, generate_keypair
+
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user:
+        # T2.1/T2.2 backfill for seed users created before keypair migration.
+        # Idempotent: only fills what's missing, never rotates existing key.
+        if not user.nostr_pubkey or user.nsec_encrypted is None:
+            nsec_hex, npub_hex = generate_keypair()
+            nonce, ct = encrypt_nsec(nsec_hex)
+            user.nostr_pubkey = npub_hex
+            user.nsec_encrypted = ct
+            user.nsec_nonce = nonce
+            user.key_self_custody = False
+            await db.commit()
+            await db.refresh(user)
         return user
     # T2.2 — seed users get a custodial keypair too so signing + container
     # encryption paths work in tests without touching /register.
-    from app.core.keypair import encrypt_nsec, generate_keypair
-
     nsec_hex, npub_hex = generate_keypair()
     nonce, ct = encrypt_nsec(nsec_hex)
 
