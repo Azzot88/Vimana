@@ -16,6 +16,7 @@ import AcceptInvitePage from './pages/AcceptInvitePage'
 import AdminDisputesPage from './pages/AdminDisputesPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminVaultPage from './pages/AdminVaultPage'
+import JoinDealPage from './pages/JoinDealPage'
 
 function ProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/invite/:token" element={<AcceptInvitePage />} />
+        <Route path="/join/deal/:token" element={<JoinDealPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
