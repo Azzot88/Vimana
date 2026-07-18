@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "install:browsers": "playwright install chromium",
-    "headed": "playwright test --headed --slow-mo=500",
-    "headed:single": "playwright test --headed --slow-mo=500 --workers=1",
+    "headed": "playwright test --headed",
+    "headed:single": "playwright test --headed --workers=1",
     "trace": "playwright test --trace=on",
     "ci": "playwright test --project=chromium",
     "show-trace": "playwright show-trace",

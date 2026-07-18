@@ -22,6 +22,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
+    // Slow-mo lives in launchOptions (Playwright removed the CLI flag in
+    // 1.49). Override with `SLOW_MO=1000 npm run headed` when you want to
+    // watch even more slowly, or `SLOW_MO=0` for full speed.
+    launchOptions: {
+      slowMo: Number(process.env.SLOW_MO ?? 500),
+    },
   },
   projects: [
     {
