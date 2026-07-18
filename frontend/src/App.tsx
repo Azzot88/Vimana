@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from './stores/auth'
+import AuthBootstrap from './components/AuthBootstrap'
 import Layout from './components/Layout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -27,28 +28,30 @@ function ProtectedRoute() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/invite/:token" element={<AcceptInvitePage />} />
-        <Route path="/join/deal/:token" element={<JoinDealPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/trips" element={<TripsPage />} />
-            <Route path="/trips/new" element={<NewTripPage />} />
-            <Route path="/deals" element={<DealsPage />} />
-            <Route path="/deals/:dealId" element={<DealPage />} />
-            <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/invite" element={<InvitePage />} />
-            <Route path="/admin/disputes" element={<AdminDisputesPage />} />
-            <Route path="/admin/users" element={<AdminUsersPage />} />
-            <Route path="/admin/deals/:dealId/vault" element={<AdminVaultPage />} />
+      <AuthBootstrap>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/invite/:token" element={<AcceptInvitePage />} />
+          <Route path="/join/deal/:token" element={<JoinDealPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/trips" element={<TripsPage />} />
+              <Route path="/trips/new" element={<NewTripPage />} />
+              <Route path="/deals" element={<DealsPage />} />
+              <Route path="/deals/:dealId" element={<DealPage />} />
+              <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/invite" element={<InvitePage />} />
+              <Route path="/admin/disputes" element={<AdminDisputesPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/deals/:dealId/vault" element={<AdminVaultPage />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </AuthBootstrap>
     </BrowserRouter>
   )
 }

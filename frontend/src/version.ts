@@ -2,5 +2,5 @@
 // Examples: 0.01.6 → 0.01.12 → 0.02.1
 // Update this after each completed task in TASKS.md
 // Phase 2 fully closed (T2.1 – T2.4). Now on Phase 3.
-// T_TEST.3 bumped patch — cross-cutting.
-export const APP_VERSION = '0.03.8'
+// T_UX.3 + T_UX.2 backend cross-cutting.
+export const APP_VERSION = '0.03.9'

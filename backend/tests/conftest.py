@@ -385,6 +385,69 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_notices_tables(engine) -> None:
+    """T_UX.2 schema fix: routestatus / noticeseverity / noticesurface enums
+    + route_notes + platform_notices tables. Idempotent."""
+    async with engine.begin() as conn:
+        for enum_name, values in (
+            ("routestatus", ["standard", "attention", "complex", "restricted"]),
+            ("noticeseverity", ["info", "warning", "alert"]),
+            ("noticesurface", ["footer", "trip_card", "deal_page", "all"]),
+        ):
+            existing = (
+                await conn.execute(
+                    text(f"SELECT 1 FROM pg_type WHERE typname = '{enum_name}'")
+                )
+            ).fetchone()
+            if not existing:
+                inner = ", ".join(f"'{v}'" for v in values)
+                await conn.execute(text(f"CREATE TYPE {enum_name} AS ENUM ({inner})"))
+        for tbl, ddl in (
+            (
+                "route_notes",
+                """
+                CREATE TABLE route_notes (
+                    id UUID PRIMARY KEY,
+                    origin_iso VARCHAR(3) NOT NULL,
+                    destination_iso VARCHAR(3) NOT NULL,
+                    status routestatus NOT NULL DEFAULT 'standard',
+                    severity noticeseverity NOT NULL DEFAULT 'info',
+                    headline_i18n_key VARCHAR(100) NOT NULL,
+                    body_i18n_key VARCHAR(100) NOT NULL,
+                    active_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    active_until TIMESTAMPTZ,
+                    created_by UUID REFERENCES users(id),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """,
+            ),
+            (
+                "platform_notices",
+                """
+                CREATE TABLE platform_notices (
+                    id UUID PRIMARY KEY,
+                    key VARCHAR(100) UNIQUE NOT NULL,
+                    severity noticeseverity NOT NULL DEFAULT 'info',
+                    target_surface noticesurface NOT NULL DEFAULT 'all',
+                    active_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    active_until TIMESTAMPTZ,
+                    created_by UUID REFERENCES users(id),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """,
+            ),
+        ):
+            exists = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.tables WHERE table_name='{tbl}'"
+                    )
+                )
+            ).fetchone()
+            if not exists:
+                await conn.execute(text(ddl))
+
+
 async def _ensure_deal_participants(engine) -> None:
     """T3.3 schema fix: dealparticipantrole enum + deal_participants table."""
     async with engine.begin() as conn:
@@ -677,6 +740,7 @@ async def test_engine():
     await _ensure_trip_nostr_columns(engine)
     await _ensure_publish_metrics_table(engine)
     await _ensure_deal_participants(engine)
+    await _ensure_notices_tables(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

@@ -1077,7 +1077,9 @@
 - [ ] Backend: убедиться что `VerificationRequest.status = declined_polite` отдаётся в API как есть (проверить schema).
 - [ ] Frontend UI-компонент — см. T_UX.1.
 
-### T_UX.2 — Route notes + platform disclaimers
+### T_UX.2 — Route notes + platform disclaimers ✅ backend MVP
+
+**Статус:** backend MVP закрыт 2026-07-18 (миграция 0021, модели + public GET endpoints + 7 тестов). Admin CRUD + UI слоты — pt.2 follow-up.
 
 **Контекст.** Платформа **не блокирует направления** — позиция зафиксирована в TECHSTATE `D-COMPLIANCE-STANCE`. Пользователи имеют право сами решать. Vimana только **информирует** через две модели:
 
@@ -1086,23 +1088,23 @@
 
 **Модель:**
 
-- [ ] `RouteNote(id, origin_iso, destination_iso, status ∈ {standard, attention, complex, restricted}, severity ∈ {info, warning, alert}, headline_i18n_key, body_i18n_key, active_from, active_until?, created_by)`. Wildcards `*` в origin/destination. Multiple notes на одном коридоре — рендерим все, сортировка по specificity → severity.
-- [ ] `PlatformNotice(id, key, severity ∈ {info, warning, alert}, target_surface ∈ {footer, trip_card, deal_page, all}, active_from, active_until?, created_by)`.
-- [ ] i18n backing: `route_notes` / `platform_notices` namespaces в `frontend/src/i18n/locales/*.json`. Redakторская pipeline: EN → LLM-перевод → superuser proofread.
+- [x] `RouteNote(id, origin_iso, destination_iso, status ∈ {standard, attention, complex, restricted}, severity ∈ {info, warning, alert}, headline_i18n_key, body_i18n_key, active_from, active_until?, created_by)` — миграция 0021. Wildcards `*` в origin/destination.
+- [x] `PlatformNotice(id, key UNIQUE, severity, target_surface ∈ {footer, trip_card, deal_page, all}, active_from, active_until?, created_by)`.
+- [ ] i18n backing — pt.2 (сейчас поля хранят i18n keys, реальные тексты добавит editorial workflow).
 
 **Endpoints:**
 
-- [ ] `GET /api/route-notes?origin=X&destination=Y` — все active + матчащие wildcards. Public (не требует auth) — карточка рейса видна всем.
-- [ ] `GET /api/platform-notices?surface=all` — все active. Public.
-- [ ] `POST/PATCH/DELETE /api/admin/route-notes` + `/api/admin/platform-notices` — superuser CRUD. Immediate cache invalidation.
+- [x] `GET /api/route-notes?origin=X&destination=Y` — active + wildcard matching, sort by specificity → severity. Public.
+- [x] `GET /api/platform-notices?surface=X` — active + `all` matches any surface filter. Public.
+- [ ] `POST/PATCH/DELETE /api/admin/route-notes` + `/api/admin/platform-notices` — superuser CRUD — pt.2.
 
-**UI слоты (frontend):**
+**UI слоты (frontend) — pt.2:**
 
-- [ ] **TripCard** — маленький статус-pill возле origin→destination для не-standard коридоров. Клик → раскрытие body с деталями.
-- [ ] **NewTripPage** — если carrier выбирает direction с `complex` или `restricted` → pre-flight warning modal + чекбокс «I understand».
-- [ ] **DealPage** — sticky-banner если route имеет active note или global platform notice `target_surface ∈ {deal_page, all}`.
-- [ ] **DealVault** — при создании сделки на flagged коридоре → pinned system-message с note body.
-- [ ] **Footer** — постоянные `PlatformNotice(target_surface=footer)`.
+- [ ] **TripCard** pill для не-standard коридоров, клик → раскрытие body.
+- [ ] **NewTripPage** pre-flight warning modal + checkbox для complex/restricted.
+- [ ] **DealPage** sticky-banner для active note или platform notice.
+- [ ] **DealVault** pinned system-message при создании сделки на flagged коридоре.
+- [ ] **Footer** постоянные `PlatformNotice(target_surface=footer)`.
 
 **Пограничные кейсы (документированы в TECHSTATE §D-COMPLIANCE-STANCE):**
 
@@ -1119,10 +1121,8 @@
 
 **Backend-тесты:**
 
-- [ ] Public GET route-notes возвращает active + матчит wildcards.
-- [ ] POST/PATCH/DELETE requires superuser.
-- [ ] Expired note (`active_until < now`) не возвращается.
-- [ ] Overlap: `*→IR` + `US→IR` — оба в ответе.
+- [x] 7 тестов (`test_notices.py`): specific match, wildcard '*' matches any origin, expired note excluded, overlap ranks specific before wildcards, platform notices by surface, `target_surface='all'` matches any filter, both endpoints public no-auth.
+- [ ] POST/PATCH/DELETE requires superuser — pt.2.
 
 **Acceptance:** superuser редактирует RouteNote/PlatformNotice через admin panel; изменения появляются в UI мгновенно (Redis invalidate); TripCard показывает pill на flagged коридорах; DealPage — banner; NewTripPage требует checkbox для complex/restricted направлений; никакое действие пользователя не блокируется по коридору. Платформа осталась «инфраструктурой, не цензором».
 
@@ -1132,7 +1132,7 @@
 3. **community notes** — user-suggested notes с модерацией.
 4. **Multi-hop** — рейсы с промежуточными посадками, expansion на транзитные страны.
 
-### T_UX.3 — Auth rehydrate on reload + inactivity logout
+### T_UX.3 — Auth rehydrate on reload + inactivity logout ✅ MVP pt.1 + pt.2
 
 **Контекст.** Обнаружено при написании T_TEST.3 Playwright recipient-спека:
 после hard-nav (`page.goto` / открытие ссылки `/join/deal/:token` в новой
@@ -1141,22 +1141,22 @@
 повторно чтобы принять invite. Одновременно нет **inactivity logout**
 (индустриальный стандарт — 15-30 мин без действий → auto-logout по security best-practices).
 
-**pt.1 — Auth rehydrate on page load**
+**pt.1 — Auth rehydrate on page load ✅**
 
-- [ ] `useAuthStore` при init: если в `localStorage` есть валидный `token`, вызвать `GET /api/auth/me` и восстановить `user`. До ответа — держать `authState = 'loading'` (не 'unauthenticated'), чтобы `ProtectedRoute` не redirect'ил преждевременно.
-- [ ] Компонент-обёртка `<AuthBootstrap>` в `App.tsx` — показывает `<Splash>` или пустой экран пока rehydrate не завершился. Только после — рендерит `<Routes>`.
-- [ ] Обработка невалидного/протухшего token: если `/auth/me` возвращает 401 → чистим `localStorage.token` + `setState({user: null})` → обычный не-логин flow.
-- [ ] `JoinDealPage` и другие «recipient-invite»-роуты — теперь корректно видят user после direct navigation и сразу вызывают `joinDeal`.
+- [x] `useAuthStore` расширен: `authState ∈ {'loading', 'authenticated', 'anonymous'}`, `lastActivityAt`, `hydrate()`, `bumpActivity()`. При init `token` из `localStorage`, `authState='loading'`.
+- [x] `<AuthBootstrap>` в `App.tsx` — обёртка над `<Routes>`. `useEffect` on mount → `hydrate()` → `GET /api/auth/me` → `setState({user, authState: 'authenticated'})`. Пока `loading` — показывает пустой экран.
+- [x] На 401/403 → `localStorage.removeItem('token')` + `authState='anonymous'`. На network/server ошибках — не clears token, ставит anonymous.
+- [x] `JoinDealPage` и other direct-nav-роуты теперь корректно видят user после hard-nav.
 
-**pt.2 — Inactivity logout (industry standard)**
+**pt.2 — Inactivity logout (Option A frontend-only) ✅**
 
-- [ ] Global activity tracker в `App.tsx` — listen `mousemove`, `keydown`, `scroll`, `touchstart`. Debounce обновление `lastActivityAt` в zustand (не чаще 1 раз/10 сек чтобы не спамить renders).
-- [ ] Idle timer: `setInterval(60_000)` проверяет `Date.now() - lastActivityAt`. При `>= INACTIVITY_TIMEOUT_MS` → logout + redirect на `/login?reason=inactivity`.
-- [ ] Дефолт `INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000` (30 мин, OWASP recommendation для non-sensitive session). Env-переопределение `VITE_INACTIVITY_TIMEOUT_MS`.
-- [ ] Baseline **warning modal** за 2 минуты до истечения: «You'll be logged out in 2 min due to inactivity. Stay signed in?». Клик по «Stay» сбрасывает таймер.
-- [ ] Показывать причину на LoginPage: если `?reason=inactivity` → info-banner «Signed out due to inactivity. Please sign in again.»
-- [ ] JWT expiry: сейчас токен живёт долго; для inactivity logout сама сессия должна быть revoke'able. **Опция A** (простая): фронт просто чистит `localStorage`, но старый JWT остаётся валидным на бэке до expiry — небольшой gap. **Опция B** (правильная): backend `POST /api/auth/logout` invalid'ит токен через Redis blacklist. Для MVP — Option A.
-- [ ] i18n `auth.inactivityLoggedOut` + `auth.stayLoggedIn` + `auth.countdown` в 6 языках (или fallback на EN).
+- [x] Global activity tracker в `<AuthBootstrap>` — listen `mousemove`, `keydown`, `scroll`, `touchstart` (passive). Debounced `bumpActivity()` — не чаще 1 раз/10 сек.
+- [x] Idle timer `setInterval(30_000)` проверяет `Date.now() - lastActivityAt`. При `>= INACTIVITY_MS` → `logout('inactivity')` → `window.location.replace('/login?reason=inactivity')`.
+- [x] Дефолт `INACTIVITY_MS = 30 * 60 * 1000` (OWASP). Env-override `VITE_INACTIVITY_MS`.
+- [x] Warning modal за 2 мин до истечения: заголовок + body + кнопки «Stay signed in» / «Log out now». Клик по backdrop = «Stay».
+- [x] LoginPage: `?reason=inactivity` → амбер-баннер «Signed out due to inactivity» перед формой.
+- [x] JWT expiry — **Option A** (frontend-only): чистим `localStorage`, backend JWT остаётся валидным до natural expiry.
+- [x] i18n `auth.inactivityWarningTitle/Body/LoggedOut/stayLoggedIn/logoutNow` в EN + RU.
 
 **pt.3 — Multi-tab sync (nice to have)**
 

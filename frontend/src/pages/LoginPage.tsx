@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { login, me } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
@@ -9,6 +9,8 @@ import { APP_VERSION } from '../version'
 export default function LoginPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const [searchParams] = useSearchParams()
+  const inactivityLogout = searchParams.get('reason') === 'inactivity'
   const setAuth = useAuthStore((s) => s.setAuth)
   const [loginVal, setLoginVal] = usePersistedState<string>('login:login', '')
   const [password, setPassword] = useState('')
@@ -39,6 +41,13 @@ export default function LoginPage() {
           {t('auth.title')}
         </h1>
         <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
+        {inactivityLogout && (
+          <div className="bg-amber/10 border border-amber/40 rounded-lg px-4 py-3 mb-4">
+            <p className="text-sm font-body text-navy">
+              {t('auth.inactivityLoggedOut')}
+            </p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">

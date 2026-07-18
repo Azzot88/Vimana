@@ -70,7 +70,12 @@
     "signIn": "Sign in",
     "errorDuplicate": "User with this email or phone already exists.",
     "errorServer": "Server error. Please try again.",
-    "errorCredentials": "Invalid login or password"
+    "errorCredentials": "Invalid login or password",
+    "inactivityWarningTitle": "You'll be logged out soon",
+    "inactivityWarningBody": "You've been inactive for a while. Click Stay signed in to keep your session, or Log out now to end it.",
+    "inactivityLoggedOut": "Signed out due to inactivity. Please sign in again.",
+    "stayLoggedIn": "Stay signed in",
+    "logoutNow": "Log out now"
   },
   "common": {
     "loading": "Loading...",
