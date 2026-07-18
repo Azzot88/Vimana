@@ -173,3 +173,22 @@ cp .env.example .env   # заполнить .env
 docker compose -f docker-compose.dev.yml up -d --build
 docker compose exec backend alembic upgrade head
 ```
+
+## 9. Правила инкрементального деплоя (dev/prod)
+
+**Стандартный цикл на сервере после `git pull`:**
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build backend frontend celery-worker celery-beat
+docker compose -f docker-compose.dev.yml exec -w /app backend alembic upgrade head
+docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v
+```
+
+**Правила:**
+
+- **При изменении `frontend/package.json`** — только `--build frontend`. `Dockerfile` уже содержит `RUN npm install`, Docker инвалидирует слой автоматически. **Никогда не запускать `docker compose exec frontend npm install`** — это лишний шаг, зависимости уже установлены в новом образе.
+- **При изменении `backend/requirements.txt`** — только `--build backend`. Аналогично: `pip install -r requirements.txt` в Dockerfile ставит пакеты при билде.
+- **При изменении только исходников (без deps)** — `--build` всё равно быстро отрабатывает через кэш слоёв, ставить только `restart backend/frontend` **не безопасно** (nginx-контейнер держит соединения к старым, .env не подхватится).
+- **При изменении `.env`** — обязательно `up --force-recreate --remove-orphans` (просто `restart` **не подхватит** переменные окружения, см. [feedback_docker_compose_env]).
+- **Миграции `alembic upgrade head`** запускать после `up`, до `pytest`. Идемпотентно.
+- **Тесты и билды выполняются только на сервере**, никогда локально (см. `feedback_no_local_tests_builds`).
