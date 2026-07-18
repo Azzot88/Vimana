@@ -384,17 +384,15 @@ async def delete_user(
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    if user.role == "superuser":
-        raise HTTPException(status_code=400, detail="Cannot delete a superuser")
+    # Self-check first — more actionable than the superuser message when both
+    # apply (admin trying to delete themselves).
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    if user.role == "superuser":
+        raise HTTPException(status_code=400, detail="Cannot delete a superuser")
 
-    # Reuse the cascade logic from the Celery task by scoping it to one id.
-    from app.tasks.cleanup import _cascade_delete_users
-
-    _cascade_delete_users(db.sync_session, [user_id]) if False else None  # noqa
-    # Async equivalent — since the Celery task is sync, we duplicate the
-    # narrower version here. Keep in sync when either changes.
+    # Async cascade — mirrors the sync cleanup in `app/tasks/cleanup.py`.
+    # Keep in sync when the schema grows.
     from sqlalchemy import delete
     from app.models.deal import (
         Attachment,
@@ -479,7 +477,11 @@ async def delete_user(
             (Connection.user_id.in_(ids)) | (Connection.connected_user_id.in_(ids))
         )
     )
-    await db.execute(delete(InviteLink).where(InviteLink.inviter_id.in_(ids)))
+    await db.execute(
+        delete(InviteLink).where(
+            (InviteLink.creator_id.in_(ids)) | (InviteLink.used_by.in_(ids))
+        )
+    )
     await db.execute(delete(Order).where(Order.sender_id.in_(ids)))
     await db.execute(delete(User).where(User.id.in_(ids)))
     await db.commit()

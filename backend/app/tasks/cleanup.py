@@ -139,7 +139,10 @@ def cleanup_e2e_users() -> dict:
             )
         )
         db.execute(
-            delete(InviteLink).where(InviteLink.inviter_id.in_(user_ids))
+            delete(InviteLink).where(
+                (InviteLink.creator_id.in_(user_ids))
+                | (InviteLink.used_by.in_(user_ids))
+            )
         )
 
         # Finally — the users themselves.
