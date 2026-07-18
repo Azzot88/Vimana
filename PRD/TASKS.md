@@ -1132,6 +1132,58 @@
 3. **community notes** — user-suggested notes с модерацией.
 4. **Multi-hop** — рейсы с промежуточными посадками, expansion на транзитные страны.
 
+### T_UX.3 — Auth rehydrate on reload + inactivity logout
+
+**Контекст.** Обнаружено при написании T_TEST.3 Playwright recipient-спека:
+после hard-nav (`page.goto` / открытие ссылки `/join/deal/:token` в новой
+вкладке) Zustand auth store пустой, хотя `localStorage.token` есть. Результат:
+залогиненный юзер получает redirect на `/login?next=...`, вынужден логиниться
+повторно чтобы принять invite. Одновременно нет **inactivity logout**
+(индустриальный стандарт — 15-30 мин без действий → auto-logout по security best-practices).
+
+**pt.1 — Auth rehydrate on page load**
+
+- [ ] `useAuthStore` при init: если в `localStorage` есть валидный `token`, вызвать `GET /api/auth/me` и восстановить `user`. До ответа — держать `authState = 'loading'` (не 'unauthenticated'), чтобы `ProtectedRoute` не redirect'ил преждевременно.
+- [ ] Компонент-обёртка `<AuthBootstrap>` в `App.tsx` — показывает `<Splash>` или пустой экран пока rehydrate не завершился. Только после — рендерит `<Routes>`.
+- [ ] Обработка невалидного/протухшего token: если `/auth/me` возвращает 401 → чистим `localStorage.token` + `setState({user: null})` → обычный не-логин flow.
+- [ ] `JoinDealPage` и другие «recipient-invite»-роуты — теперь корректно видят user после direct navigation и сразу вызывают `joinDeal`.
+
+**pt.2 — Inactivity logout (industry standard)**
+
+- [ ] Global activity tracker в `App.tsx` — listen `mousemove`, `keydown`, `scroll`, `touchstart`. Debounce обновление `lastActivityAt` в zustand (не чаще 1 раз/10 сек чтобы не спамить renders).
+- [ ] Idle timer: `setInterval(60_000)` проверяет `Date.now() - lastActivityAt`. При `>= INACTIVITY_TIMEOUT_MS` → logout + redirect на `/login?reason=inactivity`.
+- [ ] Дефолт `INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000` (30 мин, OWASP recommendation для non-sensitive session). Env-переопределение `VITE_INACTIVITY_TIMEOUT_MS`.
+- [ ] Baseline **warning modal** за 2 минуты до истечения: «You'll be logged out in 2 min due to inactivity. Stay signed in?». Клик по «Stay» сбрасывает таймер.
+- [ ] Показывать причину на LoginPage: если `?reason=inactivity` → info-banner «Signed out due to inactivity. Please sign in again.»
+- [ ] JWT expiry: сейчас токен живёт долго; для inactivity logout сама сессия должна быть revoke'able. **Опция A** (простая): фронт просто чистит `localStorage`, но старый JWT остаётся валидным на бэке до expiry — небольшой gap. **Опция B** (правильная): backend `POST /api/auth/logout` invalid'ит токен через Redis blacklist. Для MVP — Option A.
+- [ ] i18n `auth.inactivityLoggedOut` + `auth.stayLoggedIn` + `auth.countdown` в 6 языках (или fallback на EN).
+
+**pt.3 — Multi-tab sync (nice to have)**
+
+- [ ] `storage` event listener: если другая вкладка сделала logout (`localStorage.removeItem('token')`) → эта вкладка тоже logout'ит. Иначе одна вкладка logout, другая продолжает работать со старой session.
+
+**Backend поддержка (минимум для pt.2 Option B):**
+
+- [ ] `POST /api/auth/logout` — простой endpoint, добавляет `jti` (JWT ID) в Redis blacklist с TTL = remaining JWT lifetime.
+- [ ] `get_current_user` dependency проверяет blacklist перед acceptance.
+- [ ] Alembic + модель — не нужны (blacklist в Redis).
+
+**Тесты:**
+
+- [ ] Backend: `/auth/logout` blacklist'ит токен → следующий запрос с ним → 401.
+- [ ] Frontend (vitest): mocked `localStorage.token` + mocked `/auth/me` → store rehydrates → user set.
+- [ ] Playwright (T_TEST.3 pt.2): open two tabs → logout in one → other becomes unauthenticated within 1 сек.
+
+**Acceptance:**
+1. User логинится, закрывает вкладку, открывает по прямой ссылке `/join/deal/:token` в новой вкладке → рендерит invite-flow (не redirect на login).
+2. User неактивен 30 мин → за 2 мин появляется warning → если игнорирует, автоматически logout + landing на `/login?reason=inactivity` с info-banner.
+3. User logout в одной вкладке → другая вкладка тоже logout'ится (pt.3).
+
+**Follow-up (pt.4):**
+- Refresh token flow (сейчас single JWT; для «keep me logged in for 30 days» нужен long-lived refresh token + short access token).
+- Device-list в профиле (superuser может revoke конкретное устройство).
+- Suspicious-activity detection (impossible-travel = login из RU + LA за 10 мин → force logout всех сессий).
+
 ### Follow-up: vite/esbuild security advisory
 
 - [ ] `npm audit` в frontend показывает 5 уязвимостей (moderate/high/critical) из цепочки esbuild ≤0.24.2 → vite ≤6.4.2 → vitest ≤3.2.5. Все — **dev-only** (dev server / test runner), prod (`npm run build → dist/`) не затронут. GHSA-67mh-4wv8-2f99. Апгрейд vite 5 → 6+ отдельным PR, чтобы breaking changes не смешивались с фичами. Приоритет — низкий.
