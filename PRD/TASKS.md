@@ -1184,6 +1184,98 @@
 - Device-list в профиле (superuser может revoke конкретное устройство).
 - Suspicious-activity detection (impossible-travel = login из RU + LA за 10 мин → force logout всех сессий).
 
+### T_TEST.4 — API contract + fuzzing (schemathesis)
+
+**Активация:** перед Фазой 4 (перед платежами обязательно). См. `PRD/PROJECT.md §7.4`.
+
+- [ ] `pip install schemathesis` в `backend/requirements-dev.txt`.
+- [ ] CI job: `schemathesis run http://backend:8000/openapi.json --checks all --hypothesis-max-examples=50`.
+- [ ] Contract: pre-commit hook сравнивает frontend TS types (`openapi-typescript` генерирует) с backend OpenAPI. Drift → fail.
+- [ ] Отчёт в `backend/reports/schemathesis.html` после каждого прогона.
+
+**Acceptance:** 0 unhandled 500 на fuzz'е публичных endpoint'ов; CI ломается при drift TS-типов.
+
+### T_TEST.5 — Property-based тесты (Hypothesis)
+
+**Активация:** сейчас — крипта T2.3, УБА T3.1, trust graph T2.4 идеальны.
+
+- [ ] `pip install hypothesis` (backend).
+- [ ] `tests/test_props_threshold.py` — SSS `split(k, 3, 2)` → любые 2 из 3 shares → `combine == k`. AES-GCM roundtrip.
+- [ ] `tests/test_props_uba.py` — для любых `(f, q, v, d, verify)`: `0 ≤ УБА ≤ 1000`, монотонность по каждому компоненту.
+- [ ] `tests/test_props_trust.py` — BFS: `len(circles[N]) ≤ len(circles[N+1])`, no duplicate hops, revoked excluded.
+- [ ] `tests/test_props_signing.py` — NIP-01 roundtrip: `compute_event_id → sign_event_id → verify_event_id`.
+
+**Acceptance:** ≥ 100 property'ей проходят; Hypothesis не находит counterexample за `--hypothesis-max-examples=200`.
+
+### T_TEST.6 — Load / performance (k6)
+
+**Активация:** перед Фазой 4 (обязательно перед платежами).
+
+- [ ] `load/` директория (не в frontend/backend). `load/scripts/*.js` — k6 сценарии.
+- [ ] Сценарии: `register_burst.js`, `browse_trips.js`, `chat_hammer.js` (100 юзеров в один DealVault), `mixed_workload.js`.
+- [ ] Target = **staging** (не prod). `k6 run --vus=100 --duration=5m`.
+- [ ] Метрики: `http_req_duration p95 < 500ms`, `http_req_failed < 1%`.
+- [ ] Docker-compose profile `load` — контейнер `k6` с mount'нутыми скриптами.
+- [ ] Baseline JSON фиксируется, каждый прогон сравнивает ±10%.
+
+**Acceptance:** 100 VUs 5 мин → p95 < 500 мс, error rate < 1%.
+
+### T_TEST.7 — Security scan (OWASP ZAP baseline)
+
+**Активация:** после Фазы 3 (когда T_SEC.1 стабилен), обязательно перед Ф.4.
+
+- [ ] `docker run -t owasp/zap2docker-stable zap-baseline.py -t <URL> -r zap-report.html`.
+- [ ] Baseline mode (пассивный скан) безопасен на prod. Активный (`zap-full-scan.py`) — только staging.
+- [ ] Telegram alert через notification-worker при появлении High/Critical.
+- [ ] `.zap/rules.tsv` — known-false-positives с оснвоанием.
+
+**Acceptance:** ZAP baseline на prod = 0 High, ≤ 3 Medium (документированные).
+
+### T_TEST.8 — Accessibility (axe-core в Playwright)
+
+**Активация:** после Фазы 3, закрывает обещание DESIGNGUIDELINES §Accessibility про WCAG 2.2 AA.
+
+- [ ] `npm i -D @axe-core/playwright` в `frontend/e2e/`.
+- [ ] `specs/a11y.spec.ts` — обход 5 канонических страниц (`/`, `/register`, `/login`, `/dashboard`, `/profile`) + assertion `violations.length === 0`.
+- [ ] `axe-rules.json` — игнор для намеренных отклонений, каждый обоснован.
+
+**Acceptance:** 0 violations на 5 главных страницах; §Accessibility закрыто.
+
+### T_TEST.9 — Visual regression (Playwright screenshots)
+
+**Активация:** Ф.5 (когда UI не меняется каждый день).
+
+- [ ] `frontend/e2e/specs/visual/*.spec.ts` — 10 канонических экранов.
+- [ ] Первый прогон = baseline PNG'и коммитятся в repo.
+- [ ] `toHaveScreenshot({ maxDiffPixelRatio: 0.005 })`.
+- [ ] `npm run visual:update` — обновить baseline'ы намеренно.
+
+**Acceptance:** 10 baseline'ов; CI ломается при diff > 0.5%.
+
+### T_TEST.10 — Mutation testing (mutmut / stryker)
+
+**Активация:** Ф.5+ (когда unit-покрытие уже хорошее).
+
+- [ ] `pip install mutmut` (backend), `npm i -D @stryker-mutator/core @stryker-mutator/vitest-runner` (frontend).
+- [ ] Pilot-модули: `backend/app/core/{crypto,keypair,signing,threshold,uba,trust,permissions}.py` + `frontend/src/{hooks/useBentoLayout,lib/threshold}.ts`.
+- [ ] `mutmut run --paths-to-mutate=app/core/` → `mutmut html` → `mutation-report.html`.
+
+**Acceptance:** mutation kill-rate ≥ 60% на критичных модулях; оставшиеся мутанты — задокументированные ложные позитивы или пробелы фиксятся.
+
+### T_TEST.11 — Chaos engineering (Toxiproxy)
+
+**Активация:** Ф.5+ (когда сервис production-grade).
+
+- [ ] `docker-compose profile chaos` — Toxiproxy между backend ↔ db, backend ↔ redis.
+- [ ] Сценарии в `chaos/`:
+  - `db-timeout.sh` — Postgres 30 сек timeout → API 503 не 500.
+  - `redis-drop.sh` — Redis down → rate-limit fail-open, sessions expire нормально.
+  - `slow-nostr-relay.sh` — publish task не блокирует POST /trips.
+- [ ] Прогон в staging (не prod). Раз в неделю ручной.
+- [ ] `chaos-report.md` со списком degradations vs graceful behavior.
+
+**Acceptance:** каждый сценарий → 503/degraded, не 500 crashed. Zero потерянных транзакций.
+
 ### Follow-up: vite/esbuild security advisory
 
 - [ ] `npm audit` в frontend показывает 5 уязвимостей (moderate/high/critical) из цепочки esbuild ≤0.24.2 → vite ≤6.4.2 → vitest ≤3.2.5. Все — **dev-only** (dev server / test runner), prod (`npm run build → dist/`) не затронут. GHSA-67mh-4wv8-2f99. Апгрейд vite 5 → 6+ отдельным PR, чтобы breaking changes не смешивались с фичами. Приоритет — низкий.

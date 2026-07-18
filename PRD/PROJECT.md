@@ -151,6 +151,81 @@ PROJECT.md управляет **процессом**, но не переопре
 
 Не пройден тест — задача возвращается в работу.
 
+### 7.1 Testing Pyramid — стратегия
+
+Тесты расширяются послойно снизу вверх по частоте прогона и стоимости поддержки:
+
+```
+                 ▲
+                / \
+               /   \
+              / VR  \     Visual regression, Chaos
+             /-------\    (редко, ручная триаж)
+            /  E2E    \
+           /   full    \   Multi-context Playwright, full business flows
+          /-------------\
+         / Contract/Load \  schemathesis, k6, ZAP scan
+        /-----------------\
+       /   Smoke E2E       \  Playwright happy-path (T_TEST.3)
+      /---------------------\
+     /    Integration        \  pytest + TestClient (backend), vitest
+    /-------------------------\
+   /         Unit              \  pytest pure funcs, vitest hooks (базис)
+  /---------------------------- \
+```
+
+Правило: **новый layer активируется только когда нижний стабилен**. Не имеет смысла делать chaos-тесты пока unit падают.
+
+### 7.2 Coverage matrix (тип × фаза)
+
+Цель — к концу разработки все клетки зелёные. Приоритет активации указан в клетке.
+
+| Тип теста | Задача | Ф.1 | Ф.2 | Ф.3 | Ф.3.5 | Ф.4 | Ф.5 | Ф.6 |
+|---|---|---|---|---|---|---|---|---|
+| **Unit** (pytest, vitest) | (в каждой задаче) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Integration** (TestClient) | (в каждой задаче) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Smoke E2E** happy-path | T_TEST.3 | | | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Full E2E** multi-context | T_TEST.3 pt.2 | | | | 🟨 | ✅ | ✅ | ✅ |
+| **Property-based** (Hypothesis) | T_TEST.5 | | 🟨 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Contract** (schemathesis) | T_TEST.4 | | | | 🟨 | ✅ | ✅ | ✅ |
+| **API fuzzing** (schemathesis) | T_TEST.4 | | | | 🟨 | ✅ | ✅ | ✅ |
+| **Load** (k6) | T_TEST.6 | | | | | ✅ | ✅ | ✅ |
+| **Security scan** (OWASP ZAP baseline) | T_TEST.7 | | | 🟨 | ✅ | ✅ | ✅ | ✅ |
+| **Accessibility** (axe-core) | T_TEST.8 | | | 🟨 | ✅ | ✅ | ✅ | ✅ |
+| **Visual regression** (Playwright screenshot) | T_TEST.9 | | | | | 🟨 | ✅ | ✅ |
+| **Mutation** (mutmut / stryker) | T_TEST.10 | | | | | | 🟨 | ✅ |
+| **Chaos** (Toxiproxy) | T_TEST.11 | | | | | | 🟨 | ✅ |
+
+Легенда: ✅ активно и стабильно · 🟨 pilot, in progress · пусто — не запускается.
+
+### 7.3 Definition of Done по типам
+
+| Тип | «Готово» = |
+|---|---|
+| **Unit** | branch coverage ≥ 80% для новой функции, оба true/false пути покрыты |
+| **Integration** | endpoint + happy path + minimum 2 негативных кейса (auth, validation) |
+| **Smoke E2E** | 3 спека проходят на prod за < 30 сек, `git push` → green |
+| **Full E2E** | golden path сделки, verification 3-tier, dispute + arbiter reveal, threshold e2e |
+| **Property-based** | invariants на всю крипту (SSS split→combine roundtrip), формулы (УБА clamp), BFS (depth limit) |
+| **Contract** | OpenAPI spec = frontend types, автомат в CI |
+| **Load** | 100 concurrent users на match/publish/chat без ошибок за 5 мин |
+| **Security scan** | ZAP baseline `-r report.html` = 0 High, ≤ 3 Medium (документированные) |
+| **Accessibility** | axe-core no violations на 5 главных страницах |
+| **Visual regression** | опорные снимки для 10 канонических экранов, diff < 0.5% |
+| **Mutation** | mutmut kill-rate ≥ 60% на критичных модулях (crypto, permissions, uba) |
+| **Chaos** | сервис выдерживает 30-сек отключение Postgres/Redis без потери данных |
+
+### 7.4 Progression schedule
+
+- **Сейчас (Ф.3.5 done):** активны Unit + Integration + Smoke E2E. ~272 теста.
+- **Активировать в Ф.3.5.х:** `T_TEST.5` Hypothesis (T2.3 SSS, T3.1 УБА, T2.4 BFS). Быстрая работа, огромный ROI.
+- **Активировать перед Ф.4:** `T_TEST.4` (contract + fuzzing) + `T_TEST.6` (load-tests) + `T_TEST.7` (ZAP baseline). Перед платежами обязательно.
+- **Активировать в Ф.4:** `T_TEST.3 pt.2` (full E2E multi-context), `T_TEST.8` (a11y).
+- **Активировать в Ф.5:** `T_TEST.9` (visual regression), `T_TEST.10` (mutation), `T_TEST.11` (chaos) — pilot.
+- **Ф.6:** все зелёные, `T_TEST.10` и `T_TEST.11` в full-scale.
+
+**Правило-guardrail:** каждая новая задача-фича должна оставить coverage matrix не хуже чем было. Если добавили новый endpoint — новый integration тест обязателен. Если новая крипто-функция — property-based invariant.
+
 ---
 
 ## 8. Change-management
