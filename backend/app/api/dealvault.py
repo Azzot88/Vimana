@@ -59,21 +59,30 @@ async def _get_deal_as_participant(
     return deal
 
 
-def _build_message_out(msg: DealVaultMessage) -> MessageOut:
-    attachments_out = []
-    for a in msg.attachments:
-        attachments_out.append(
-            AttachmentOut(
-                id=a.id,
-                message_id=a.message_id,
-                r2_key=a.r2_key,
-                file_hash=a.file_hash,
-                ipfs_cid=a.ipfs_cid,
-                kind=a.kind.value,
-                url=get_presigned_url(a.r2_key),
-                created_at=a.created_at,
+def _build_message_out(
+    msg: DealVaultMessage, *, skip_attachments: bool = False
+) -> MessageOut:
+    """Serialize a vault message.
+
+    `skip_attachments=True` — for freshly-created rows where the caller knows
+    there are no attachments yet. Prevents `attachments is not available due to
+    lazy='raise'` when the row hasn't been loaded via `selectinload`.
+    """
+    attachments_out: list[AttachmentOut] = []
+    if not skip_attachments:
+        for a in msg.attachments:
+            attachments_out.append(
+                AttachmentOut(
+                    id=a.id,
+                    message_id=a.message_id,
+                    r2_key=a.r2_key,
+                    file_hash=a.file_hash,
+                    ipfs_cid=a.ipfs_cid,
+                    kind=a.kind.value,
+                    url=get_presigned_url(a.r2_key),
+                    created_at=a.created_at,
+                )
             )
-        )
     # For e2e messages the client needs raw ciphertext + own read_package;
     # `text` remains None because server can't decrypt. `wrapped_shares` is NOT
     # surfaced here — arbiter's share is exposed only via the dispute endpoint.
@@ -165,7 +174,7 @@ async def create_message(
     await db.commit()
     await db.refresh(msg)
 
-    return _build_message_out(msg)
+    return _build_message_out(msg, skip_attachments=True)
 
 
 @router.post(
