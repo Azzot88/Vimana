@@ -28,10 +28,12 @@ def test_max_saturation_hits_ceiling():
 
 
 def test_verify_factor_scales_score():
-    base = compute_uba(_c(f=24, q=50, v=50000.0, d=5000.0, verify=None))
-    kyc = compute_uba(_c(f=24, q=50, v=50000.0, d=5000.0, verify="kyc"))
-    peer = compute_uba(_c(f=24, q=50, v=50000.0, d=5000.0, verify="peer"))
-    auto = compute_uba(_c(f=24, q=50, v=50000.0, d=5000.0, verify="auto"))
+    """D=0 avoids the 1.5× D_factor pushing everything to the 1000 clamp so
+    the four verify levels stay linearly separable."""
+    base = compute_uba(_c(f=24, q=50, v=50000.0, d=0.0, verify=None))
+    kyc = compute_uba(_c(f=24, q=50, v=50000.0, d=0.0, verify="kyc"))
+    peer = compute_uba(_c(f=24, q=50, v=50000.0, d=0.0, verify="peer"))
+    auto = compute_uba(_c(f=24, q=50, v=50000.0, d=0.0, verify="auto"))
     assert base < auto < peer < kyc
     # kyc is the ceiling — V_verify_norm = 1.0.
     assert kyc == round(base / (1.0 / 1.30))
