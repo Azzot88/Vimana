@@ -39,6 +39,7 @@ class Permission(str, enum.Enum):
     IDENTITY_CONTAINER_READ = "identity:container_read"  # via escalation
     VERIFICATION_REVOKE_ANY = "verification:revoke_any"
     THRESHOLD_ARBITER_REVEAL = "threshold:arbiter_reveal"  # T2.3
+    NOSTR_REPUBLISH = "nostr:republish"  # T3.5 pt.2 — superuser force republish
 
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"

@@ -385,6 +385,31 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_publish_metrics_table(engine) -> None:
+    """T3.5 pt.2 schema fix: publish_metrics single-row counter. Idempotent."""
+    async with engine.begin() as conn:
+        exists = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables WHERE table_name='publish_metrics'"
+                )
+            )
+        ).fetchone()
+        if not exists:
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE publish_metrics (
+                        id UUID PRIMARY KEY,
+                        success_count BIGINT NOT NULL DEFAULT 0,
+                        error_count BIGINT NOT NULL DEFAULT 0,
+                        last_attempt_at TIMESTAMPTZ
+                    )
+                    """
+                )
+            )
+
+
 async def _ensure_trip_nostr_columns(engine) -> None:
     """T3.5 schema fix: nostr_event_id + nostr_published_at on trips. Idempotent."""
     async with engine.begin() as conn:
@@ -610,6 +635,7 @@ async def test_engine():
     await _ensure_threshold_columns(engine)
     await _ensure_operator_access_grants(engine)
     await _ensure_trip_nostr_columns(engine)
+    await _ensure_publish_metrics_table(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

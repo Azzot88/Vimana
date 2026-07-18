@@ -782,14 +782,22 @@
 - [x] **Dependency:** `websockets==13.1` в requirements.
 - [x] **6 backend-тестов:** toggle disabled/enabled от env, `build_event` даёт валидную NIP-01 подпись + структурные tags + parseable content, endpoint 503 когда off, endpoint возвращает event когда on + подпись верифицируется, self-custody carrier → `build_event` None, `TripOut` содержит nostr_* поля.
 
-**pt.2 open:**
-- [ ] NIP-42 auth на своём relay (только Vimana-npub могут писать; читать — свободно или whitelist).
-- [ ] WoT-gate из T2.4: не-Vimana npub'ы отсекаются на publish; трафик от чужаков — read-only.
-- [ ] Self-custody publish: клиент через `window.nostr.signEvent()` формирует kind-30402, backend только форвардит.
-- [ ] Endpoint `POST /api/nostr/republish` (superuser) — force-republish в случае разрыва.
-- [ ] Metric `nostr_publish_success_count` / `nostr_publish_error_count`.
-- [ ] Определённый whitelist в TECHSTATE `D-NOSTR-FEDERATION` (сейчас open).
-- [ ] Мультиязычный перевод описаний рейсов (TECHSTATE `D-TRANSLATION` open) — Redis-кэш `(event_id, target_lang)` TTL 30 дней.
+### T3.5 pt.2 ✅ MVP — NIP-07 self-custody + WoT-gate + metrics + republish
+
+- [x] **Self-custody NIP-07 publish** — `POST /api/nostr/publish-signed` принимает event JSON от `window.nostr.signEvent()`. Backend recomputes event_id из `(pubkey, ts, kind, tags, content)` (rejects drift 422), verify Schnorr sig, verify `body.pubkey == current_user.nostr_pubkey` (rejects impersonation 422), verify `trip.carrier_id == current_user.id` (403 для чужих рейсов). После валидации форвардит через `publish_event` + стампит `Trip.nostr_event_id/published_at`.
+- [x] **WoT-gate через writePolicy plugin** — `nostr/write_policy.py` читает `NOSTR_ALLOWED_PUBKEYS_FILE` (default `/data/allowed_pubkeys.txt`), mtime hot-reload на каждый запрос. Non-whitelisted pubkey → `{"action": "reject", "msg": "blocked: pubkey not in Vimana WoT"}`. Plugin монтируется в strfry контейнер как `/etc/write_policy.py`, конфиг `writePolicy.plugin = "/etc/write_policy.py"`.
+- [x] **Whitelist Celery task** — `refresh_allowed_pubkeys` каждый час: список User.nostr_pubkey где юзер имеет хотя бы одно активное входящее ребро `TrustEdge` (WoT из T2.4) + arbiter/superuser role explicit. Пишет в mounted volume `nostr_whitelist:/data`.
+- [x] **Superuser republish endpoint** — `POST /api/nostr/republish/{trip_id}` под permission `NOSTR_REPUBLISH` (superuser). Только custodial carrier (self-custody → 422). Force regenerate event + publish + stamp. Пометка `forced: true` в response.
+- [x] **Publish metrics** — миграция `0019_publish_metrics` single-row table (`success_count BIGINT`, `error_count BIGINT`, `last_attempt_at TIMESTAMPTZ`). `bump_publish_metric(db, success=bool)` вызывается из обоих publish path'ов. `GET /api/nostr/metrics` — публичный (не sensitive) для observability.
+- [x] **Permission `NOSTR_REPUBLISH`** — добавлен в enum + auto-inherited superuser'ом через `_SUPERUSER_PERMS = frozenset(Permission)`.
+- [x] **D-NOSTR-FEDERATION закрыт в TECHSTATE** — стартовый whitelist `wss://relay.damus.io,wss://nostr.wine,wss://relay.nostr.band` + пороги для ревизии (>10% publish failures/неделя, >48ч недоступность).
+- [x] Frontend `api/nostr.ts` — `publishSignedEvent`, `republishTrip`, `getNostrMetrics` типы + fetch (UI integration отложена — публикация автоматом при `POST /trips` через custodial path, NIP-07 путь activates когда self-custody carrier обновит trip).
+- [x] 7 backend-тестов: publish-signed happy path end-to-end (recompute id + verify sig + DB stamp), reject bad sig 422, reject wrong pubkey 422, forbid third party 403, metrics start at zero, metrics bump после publish, republish 403 для user + 200 для superuser + `forced: true`, whitelist task пишет файл.
+
+**pt.3 open:**
+- [ ] Мультиязычный перевод описаний рейсов (TECHSTATE `D-TRANSLATION` open) — Redis-кэш `(event_id, target_lang)` TTL 30 дней. Provider — Claude Haiku (~$0.0002/call) либо DeepL Free API.
+- [ ] Frontend UI для NIP-07 publish: кнопка «📡 Publish to Nostr» на TripCard для self-custody carrier'ов + прогресс индикатор.
+- [ ] Nostr metrics в admin dashboard: график success/error rate, latency histogramma (когда добавим).
 
 ### T3.5 — strfry-relay + publish trip-events + whitelist federation
 

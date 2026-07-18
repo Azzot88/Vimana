@@ -79,6 +79,8 @@ services:
       retries: 6
       start_period: 20s
 
+  # T3.5 pt.2 — mount whitelist volume into celery-worker so the refresh task
+  # writes to the same file strfry reads. Defined via the shared anchor below.
   celery-worker:
     build:
       context: ./backend
@@ -88,6 +90,7 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
+      - nostr_whitelist:/data
     depends_on:
       db:
         condition: service_healthy
@@ -138,8 +141,13 @@ services:
       - "7777:7777"
     volumes:
       - ./nostr/strfry.conf:/etc/strfry.conf:ro
+      - ./nostr/write_policy.py:/etc/write_policy.py:ro
       - nostr_data:/app/strfry-db
+      - nostr_whitelist:/data
 
 volumes:
   postgres_data:
   nostr_data:
+  # T3.5 pt.2 — shared writePolicy whitelist. Backend Celery task refreshes
+  # /data/allowed_pubkeys.txt hourly from the trust graph.
+  nostr_whitelist:
