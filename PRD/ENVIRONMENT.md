@@ -128,6 +128,18 @@
 - Ключ арбитра — через защищённое хранилище (KMS/HSM-подход), **никогда** в открытом виде в БД.
 - Платформа **не кастодирует средства пользователей** — только ключ арбитра в схеме 2-of-3.
 
+### 5.1 Prod attack-surface (T_SEC.1)
+
+- **Swagger / OpenAPI выключены в prod** через env `EXPOSE_DOCS=false` → `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. В dev остаются открыты `/docs`, `/redoc`. Реализация — T_SEC.1.
+- **nginx security headers** (см. T_SEC.1): CSP, HSTS `max-age=31536000; includeSubDomains`, X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `strict-origin-when-cross-origin`, Permissions-Policy минимальный, `server_tokens off`.
+- **Probe-пути блокируются** на уровне nginx: `.env`, `.git`, `wp-admin`, `.php`, `.aspx` → 403/404.
+- **Rate-limit** на `/api/auth/login` и `/api/auth/register` — slowapi + nginx `limit_req` дублированно.
+- **Публичные endpoint'ы** только `/health` (для docker healthcheck); всё остальное — JWT auth или RBAC.
+
+### 5.2 Developer setup — remote access
+
+- **iOS-клиент для управления Mac-терминалом с Claude Code:** Blink Shell (App Store) + Tailscale mesh VPN. Тайл: телефон → Blink через Tailscale → mosh на Mac → `claude` в терминале. Официального iOS Claude Code клиента нет; альтернатива — Safari на claude.ai/code (UX хуже).
+
 ---
 
 ## 6. Docker-Dev (правило)

@@ -890,6 +890,85 @@
 
 ---
 
+## 🛠 Cross-cutting задачи (не привязаны к фазе)
+
+Задачи безопасности, UX-правил, наблюдаемости и интеграций — планируются параллельно фазовым.
+
+### T_SEC.1 — Security hardening: Swagger UI и attack surface
+
+**Контекст.** Сейчас `/docs`, `/redoc`, `/openapi.json` открыты в prod без auth. Плюс отсутствуют HTTP security headers, нет deny-правил для типичных probe-путей (`.env`, `.git`, `wp-admin`).
+
+- [ ] `main.py` — env-флаг `EXPOSE_DOCS` (`false` в prod). При `false`: `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. Dev остаётся с открытыми `/docs`.
+- [ ] nginx конфиг: `add_header` для CSP, HSTS (`max-age=31536000; includeSubDomains`), X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `strict-origin-when-cross-origin`, Permissions-Policy минимальный.
+- [ ] nginx: `deny all` для `/.env`, `/.git`, `~ /wp-admin`, `~ /\.php$`, `~ /\.aspx$`.
+- [ ] nginx: `server_tokens off` (скрыть версию nginx).
+- [ ] Rate-limit по IP на `/api/auth/login`, `/api/auth/register` — 10/min (сейчас slowapi ограничивает частично, проверить).
+- [ ] Audit endpoint-list: `/health` — публичный (для docker healthcheck), всё остальное — auth или RBAC.
+- [ ] Тесты: prod-конфиг возвращает 404 на `/docs`; `/openapi.json` тоже 404; security headers присутствуют в ответе; probe-пути возвращают 403.
+
+**Acceptance:** OWASP baseline pass; `/docs` недоступен в prod; nginx возвращает security headers; probe-пути (`.env`, `.git`) блокируются.
+
+### T_UX.1 — Bento breakpoint rule + decline_polite copy
+
+**Bento двухколоночная сетка.** Правило: 2 колонки на desktop/tablet, **1 колонка на phone даже в landscape**. Не работает по Tailwind width-only breakpoint'ам (iPhone Pro Max landscape = 932px попадает в `md:` 768+).
+
+- [ ] Хук `useBentoLayout()` в `frontend/src/hooks/`: возвращает `'phone' | 'tablet' | 'desktop'` через `matchMedia`: phone = `(max-width: 767px) OR (max-height: 500px AND any-pointer: coarse)`, tablet = 768-1023 + fine pointer, desktop = 1024+.
+- [ ] Bento контейнер `<BentoGrid>` в `components/`: применяет `grid-cols-1` для phone, `grid-cols-2` для tablet+desktop.
+- [ ] Обновить DESIGNGUIDELINES.md §Responsive: явно прописать правило + примеры.
+- [ ] Мигрировать существующие Bento-места на `<BentoGrid>` (ProfilePage, Dashboard, DealVaultPage).
+
+**decline_polite sender-copy.** При отказе перевозчика от verification (target_role=carrier, status=`declined_polite`) sender видит объяснение + CTA.
+
+- [ ] `frontend/src/components/VerificationDeclineBanner.tsx` — амбер-баннер: `verification.declinedPolite.senderCopy` + CTA-кнопка `verification.declinedPolite.requestCollateralCTA` (пока заглушка).
+- [ ] Показывать в DealPage и в DealVault для sender при наличии соотв. `VerificationRequest`.
+- [ ] i18n `verification.declinedPolite.*` в 6 языках.
+- [ ] Заглушка CTA открывает модалку «Feature coming in Phase 5» → в T5.x подключить Collateral.
+
+**Acceptance:** BentoGrid работает корректно на iPhone 14 Pro Max landscape (1 колонка), iPad portrait (2 колонки), MacBook (2 колонки); sender видит polite-decline банер с CTA.
+
+### T_TEST.3 — Playwright smoke suite (наблюдаемая e2e)
+
+**Контекст.** Сейчас unit+integration через pytest/vitest, но нет UI e2e. Смок нужен для (a) визуального наблюдения регистрации и flow, (b) CI-верификации после prod-деплоя.
+
+- [ ] `frontend/e2e/` — Playwright test suite. Установка `@playwright/test`.
+- [ ] Один smoke-spec: `smoke-golden-path.spec.ts` — регистрация carrier + sender → create trip → match deal → chat message → confirm → close.
+- [ ] Headed режим `--headed --slow-mo=500` для локального интерактивного наблюдения; headless на CI.
+- [ ] Скрипт `npm run smoke` (headed) + `npm run smoke:ci` (headless).
+- [ ] Playwright конфиг: baseURL из env, screenshots on failure, video on failure.
+- [ ] Documented в ENVIRONMENT.md §Testing: как запустить локально + как CI подцепляет.
+- [ ] Отдельный target в docker-compose для e2e-контейнера (опционально).
+
+**Acceptance:** `npm run smoke` открывает Chromium, проходит full flow, ты наблюдаешь визуально; на CI прогоняется headless после каждого deploy.
+
+### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server
+
+**Контекст.** Стороннние AI-агенты (Claude, GPT, Nostr-native клиенты) должны читать доступные рейсы через стандартные протоколы. Двойная стратегия: (A) Nostr publish (Nostr-slope, часть T3.5), (B) MCP server для прямой интеграции с Claude/Anthropic.
+
+- [ ] **Nostr путь (совмещён с T3.5):** trip = kind 30402 в наш strfry-relay. Агенты подписываются на `wss://vimana.dealvault.club/relay`, фильтр `#t=vimana #t=trip`. Уже spec'ится в T3.5, тут не дублируем.
+- [ ] **MCP путь (новый):** отдельный процесс `mcp-server` в docker-compose. Публикует Model Context Protocol tools:
+  - `list_trips(origin?, destination?, date_from?, date_to?, category?)` → список активных Trip.
+  - `get_trip_details(trip_id)` → полные детали + carrier verification level.
+  - `search_trips(text_query)` → полнотекстовый поиск (использует Nostr relay как источник).
+- [ ] MCP server на Python (`mcp` SDK от Anthropic) или Node (`@modelcontextprotocol/sdk`). Auth: API key через env.
+- [ ] Docs: `PRD/README.md` секция «Agentic interface» — как подключиться через Claude Desktop / Claude Code MCP config.
+- [ ] Rate-limit на MCP: 60 tool-calls/min per API key.
+- [ ] Тесты: MCP server отвечает на `list_trips` в тестовой среде.
+
+**Acceptance:** агент (Claude Desktop) может подключить наш MCP server через config, вызывать `list_trips`, получать актуальные рейсы. Плюс Nostr агенты видят те же рейсы через relay.
+
+### T2.1 pt.3 — decline_polite sender copy
+
+*(child T2.1; см. также T_UX.1 где UI компонент)*
+
+- [ ] Backend: убедиться что `VerificationRequest.status = declined_polite` отдаётся в API как есть (проверить schema).
+- [ ] Frontend UI-компонент — см. T_UX.1.
+
+### Follow-up: vite/esbuild security advisory
+
+- [ ] `npm audit` в frontend показывает 5 уязвимостей (moderate/high/critical) из цепочки esbuild ≤0.24.2 → vite ≤6.4.2 → vitest ≤3.2.5. Все — **dev-only** (dev server / test runner), prod (`npm run build → dist/`) не затронут. GHSA-67mh-4wv8-2f99. Апгрейд vite 5 → 6+ отдельным PR, чтобы breaking changes не смешивались с фичами. Приоритет — низкий.
+
+---
+
 ## ✅ Критерий финиша V1
 
 V1 завершена, если:

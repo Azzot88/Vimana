@@ -74,6 +74,7 @@ Vimana — Sacred Logistics не имеет AI-агента-собеседник
 - **Nostr layer badge (Фаза 3.5, T3.5):** на карточке рейса — тонкая метка «📡 Also on Nostr · npub…» с копированием event ID. Не громкая, но заметная — сигнал «твой рейс уже в глобальной сети».
 - **ModeSwitcher (T1.24):** кнопка в Navbar показывает **противоположный** режим, а не текущий. Amber-акцент для «Switch to Send», cyan для «Switch to Deliver». Текущий режим не подписан текстом — понимание из цвета и иконки на дашборде (✈️/📦).
 - **Bento layout (skill):** карточки-ячейки 1×1 / 1×2 / 2×2 / 2×1 с крупным радиусом, мягкими градиентами, frosted glass. Каждая ячейка = одна идея, метрика или действие. Используется в Dashboard, NewTripPage (T1.25), Profile. См. `skills/design-system/BENTO_DESIGN_SKILL.md`.
+- **Bento breakpoint правило (T_UX.1):** desktop и tablet → **2 колонки**, phone → **1 колонка даже в landscape**. Причина: телефон в landscape пользователь переворачивает чтобы увидеть содержимое **крупнее**, а не чтобы получить больше колонок. Реализуется хуком `useBentoLayout()` — не Tailwind width-only breakpoint'ами, т. к. iPhone 14 Pro Max landscape = 932px попадает в `md:` (768+). Логика: `phone = (max-width: 767px) OR (max-height: 500px AND any-pointer: coarse)`, `tablet = 768-1023 AND fine pointer`, `desktop = 1024+`. Все Bento-контейнеры проходят через `<BentoGrid>` — единая точка правды.
 
 ---
 
