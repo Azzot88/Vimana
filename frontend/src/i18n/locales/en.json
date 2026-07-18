@@ -108,6 +108,12 @@
     "joinError": "Could not join this deal"
   },
   "verification": {
+    "declinedPolite": {
+      "senderCopy": "The carrier chose to stay anonymous. You can request a larger deposit if you're concerned about the safety of your parcel.",
+      "requestCollateralCTA": "Request larger deposit",
+      "comingSoonTitle": "Collateral coming in Phase 5",
+      "comingSoonBody": "Escrow and collateral mechanics land with Phase 5 (BTC/USDT non-custodial 2-of-3). For now, you can chat with the carrier and negotiate directly."
+    },
     "sectionTitle": "Identity verification",
     "sectionHint": "Three verification tiers accumulate on your profile. Higher tiers give more trust in searches and deals.",
     "uploadTitle": "Self-verify (level: auto)",

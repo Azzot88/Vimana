@@ -7,6 +7,7 @@ import { getDeal, acceptDeal, addEvent, confirmDeal, type DealDetail } from '../
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
+import VerificationDeclineBanner from '../components/VerificationDeclineBanner'
 import VerificationRequestModal from '../components/VerificationRequestModal'
 import VerificationRespondModal from '../components/VerificationRespondModal'
 
@@ -45,13 +46,17 @@ export default function DealPage() {
   }
 
   const [openRequestForMe, setOpenRequestForMe] = useState<VerificationRequestT | null>(null)
+  const [carrierPoliteDecline, setCarrierPoliteDecline] = useState<VerificationRequestT | null>(null)
 
   const load = async () => {
     if (!dealId) return
     try {
       const { data } = await getDeal(dealId)
       setDeal(data)
-      // Also check if there's a pending verification request targeted at me.
+      // Also check if there's a pending verification request targeted at me,
+      // AND if carrier polite-declined an identity request from sender (T2.1
+      // pt.3 / T_UX.1: show reassurance banner + collateral CTA on sender's
+      // side).
       try {
         const { data: reqs } = await listDealRequests(dealId)
         const currentId = user?.id
@@ -60,8 +65,14 @@ export default function DealPage() {
           (r) => r.status === 'pending' && r.target_role === myRole,
         )
         setOpenRequestForMe(pending ?? null)
+
+        const politeDecline = reqs.find(
+          (r) => r.status === 'declined_polite' && r.target_role === 'carrier',
+        )
+        setCarrierPoliteDecline(politeDecline ?? null)
       } catch {
         setOpenRequestForMe(null)
+        setCarrierPoliteDecline(null)
       }
     } catch {
       setError('Сделка не найдена')
@@ -255,6 +266,10 @@ export default function DealPage() {
             {t('verification.respondButton')}
           </button>
         </div>
+      )}
+
+      {isSender && carrierPoliteDecline && (
+        <VerificationDeclineBanner />
       )}
 
       {verifyRequestFor && dealId && (

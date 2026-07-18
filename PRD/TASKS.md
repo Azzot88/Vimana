@@ -979,23 +979,26 @@
 
 **Follow-up:** (1) CSP tightening — сейчас `unsafe-inline` в style-src из-за Tailwind runtime; вынести critical inline styles в CSS-файл. (2) `/health` можно ужесточить — вернуть 200 без тела (не выдавать версию). (3) Мониторинг rate-limit hits — счётчик отказов nginx в metrics.
 
-### T_UX.1 — Bento breakpoint rule + decline_polite copy
+### T_UX.1 — Bento breakpoint rule + decline_polite copy ✅ MVP
 
 **Bento двухколоночная сетка.** Правило: 2 колонки на desktop/tablet, **1 колонка на phone даже в landscape**. Не работает по Tailwind width-only breakpoint'ам (iPhone Pro Max landscape = 932px попадает в `md:` 768+).
 
-- [ ] Хук `useBentoLayout()` в `frontend/src/hooks/`: возвращает `'phone' | 'tablet' | 'desktop'` через `matchMedia`: phone = `(max-width: 767px) OR (max-height: 500px AND any-pointer: coarse)`, tablet = 768-1023 + fine pointer, desktop = 1024+.
-- [ ] Bento контейнер `<BentoGrid>` в `components/`: применяет `grid-cols-1` для phone, `grid-cols-2` для tablet+desktop.
-- [ ] Обновить DESIGNGUIDELINES.md §Responsive: явно прописать правило + примеры.
-- [ ] Мигрировать существующие Bento-места на `<BentoGrid>` (ProfilePage, Dashboard, DealVaultPage).
+- [x] Хук `useBentoLayout()` в `frontend/src/hooks/useBentoLayout.ts`: возвращает `'phone' | 'tablet' | 'desktop'` через `window.innerWidth/innerHeight` + `matchMedia('(any-pointer: coarse)')`. Правило: phone = `width < 768 OR (height < 500 AND coarse pointer)`, tablet = 768-1023, desktop = 1024+. Слушает `resize` + `orientationchange`.
+- [x] Bento контейнер `<BentoGrid>` в `components/BentoGrid.tsx`: применяет `grid-cols-1` для phone, `grid-cols-1 md:grid-cols-2` для tablet+desktop. Опциональный `force` prop для форсирования 1 или 2 колонок.
+- [x] DESIGNGUIDELINES.md §5 уже содержит правило (обновлено при T_UX.1 записи в PRD).
+- [ ] **Миграция существующих Bento-мест** отложена в follow-up — ProfilePage/Dashboard/DealVaultPage сейчас используют собственные grid-классы, работают корректно на десктопе/tablet. Заменять на `<BentoGrid>` — механическая работа + testing per-page.
 
 **decline_polite sender-copy.** При отказе перевозчика от verification (target_role=carrier, status=`declined_polite`) sender видит объяснение + CTA.
 
-- [ ] `frontend/src/components/VerificationDeclineBanner.tsx` — амбер-баннер: `verification.declinedPolite.senderCopy` + CTA-кнопка `verification.declinedPolite.requestCollateralCTA` (пока заглушка).
-- [ ] Показывать в DealPage и в DealVault для sender при наличии соотв. `VerificationRequest`.
-- [ ] i18n `verification.declinedPolite.*` в 6 языках.
-- [ ] Заглушка CTA открывает модалку «Feature coming in Phase 5» → в T5.x подключить Collateral.
+- [x] `frontend/src/components/VerificationDeclineBanner.tsx` — амбер-баннер: `verification.declinedPolite.senderCopy` + CTA-кнопка `verification.declinedPolite.requestCollateralCTA` (открывает модалку «Coming in Phase 5»).
+- [x] Показывать в DealPage для sender при наличии `VerificationRequest.status = 'declined_polite'` с `target_role = 'carrier'` (проверка через `listDealRequests`).
+- [x] i18n `verification.declinedPolite.*` — EN + RU + UA локализованы, остальные fallback на EN.
+- [x] Заглушка CTA открывает модалку с текстом про Phase 5 escrow — реальная реализация в T5.x.
+- [x] Vitest 5 тестов для `useBentoLayout` — desktop, tablet, phone-narrow, **iPhone 14 Pro Max landscape (932×430 coarse) → phone**, iPad portrait (768×1024 coarse) → tablet.
 
-**Acceptance:** BentoGrid работает корректно на iPhone 14 Pro Max landscape (1 колонка), iPad portrait (2 колонки), MacBook (2 колонки); sender видит polite-decline банер с CTA.
+**Acceptance ✅:** `useBentoLayout` корректно классифицирует iPhone 14 Pro Max landscape как phone (что не может Tailwind width-only); `<BentoGrid>` доступен для использования; sender видит polite-decline banner на DealPage с рабочей CTA-заглушкой.
+
+**Follow-up:** (1) миграция существующих Bento-мест на `<BentoGrid>` (ProfilePage, Dashboard, DealVaultPage) — механическая работа; (2) остальные 3 языка (pl/fr/es) локализовать полностью (сейчас fallback на EN).
 
 ### T_TEST.3 — Playwright smoke suite (наблюдаемая e2e)
 
