@@ -192,18 +192,13 @@ async def test_grant_is_idempotent_reactivating_after_revoke(
     async with session_maker() as db:
         rows = await db.execute(
             select(OperatorAccessGrant).where(
-                OperatorAccessGrant.dispute_id == d["dispute_id"],
-                OperatorAccessGrant.granted_by == d["sender_headers"] is None,  # noqa
-            )
-        )
-        # Simpler assertion: exactly one row for the sender, revoked_at cleared.
-        all_rows = await db.execute(
-            select(OperatorAccessGrant).where(
                 OperatorAccessGrant.dispute_id == d["dispute_id"]
             )
         )
-        # There should still be only one grant row per party.
-        assert len(list(all_rows.scalars())) == 1
+        grants = list(rows.scalars())
+        # UNIQUE(dispute_id, granted_by) — re-grant reactivates, doesn't insert.
+        assert len(grants) == 1
+        assert grants[0].revoked_at is None
 
 
 async def test_arbiter_vault_read_blocked_when_all_grants_revoked(
