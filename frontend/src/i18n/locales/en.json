@@ -81,7 +81,8 @@
     "sending": "Sending...",
     "error": "Error",
     "close": "Close",
-    "search": "Search…"
+    "search": "Search…",
+    "copied": "Copied"
   },
   "mode": {
     "switchToSend": "Switch to Send",
@@ -224,6 +225,7 @@
     "search": "Search",
     "carrier": "Carrier",
     "capacity": "Capacity",
+    "alsoOnNostr": "on Nostr",
     "sendPackage": "Send package",
     "noTrips": "No trips found",
     "requestTitle": "Request delivery",

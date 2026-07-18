@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.nostr_publish import (
+    build_event as build_nostr_event,
+    is_publish_enabled,
+)
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.models.marketplace import Trip, TripStatus
 from app.models.user import User
@@ -36,6 +40,16 @@ async def create_trip(
     db.add(trip)
     await db.commit()
     await db.refresh(trip)
+
+    # T3.5 — fire-and-forget publish. Task itself checks the flag; enqueuing
+    # unconditionally keeps the request path free of env branches.
+    from app.tasks.nostr_publish import publish_trip_to_nostr
+    try:
+        publish_trip_to_nostr.delay(str(trip.id))
+    except Exception:
+        # Broker unreachable in dev — the trip still exists in Postgres.
+        pass
+
     return trip
 
 
@@ -89,7 +103,49 @@ async def list_trips(
                     allowed_categories=t.allowed_categories,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,
+                    nostr_event_id=t.nostr_event_id,
+                    nostr_published_at=t.nostr_published_at,
                 )
             )
         return Page(items=out, next_cursor=next_cursor)
     return Page(items=[], next_cursor=next_cursor)
+
+
+@router.get("/{trip_id}/nostr-event")
+async def get_trip_nostr_event(
+    trip_id: uuid.UUID,
+    _: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.5 — return the Nostr event JSON for a trip.
+
+    Two states:
+    - `nostr_event_id` is set → return the event as it would be published
+      (regenerated from current state — content stays stable per NIP-99
+      replaceable semantics).
+    - Publish disabled or the carrier lacks a server-held nsec → 503.
+    """
+    if not is_publish_enabled():
+        raise HTTPException(
+            status_code=503, detail="Nostr publish is disabled on this instance"
+        )
+    trip = await db.get(Trip, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    carrier = await db.get(User, trip.carrier_id)
+    if carrier is None:
+        raise HTTPException(status_code=404, detail="Carrier not found")
+
+    import os as _os
+
+    event = build_nostr_event(
+        trip,
+        carrier,
+        _os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club"),
+    )
+    if event is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Carrier has no server-held nsec (self-custody carriers publish via NIP-07 in pt.2)",
+        )
+    return event

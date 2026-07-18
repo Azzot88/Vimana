@@ -7,6 +7,7 @@ import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
+import NostrBadge from '../components/NostrBadge'
 import UBAChip from '../components/UBAChip'
 import { usePersistedState } from '../hooks/usePersistedState'
 
@@ -134,9 +135,10 @@ export default function TripsPage() {
                     {trip.origin} → {trip.destination}
                   </MonoText>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 flex-wrap">
                       {t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span>
                       <UBAChip uba={trip.carrier_uba} level={trip.carrier_uba_level} />
+                      <NostrBadge eventId={trip.nostr_event_id} publishedAt={trip.nostr_published_at} />
                     </span>
                     <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
                     <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} кг</MonoText></span>

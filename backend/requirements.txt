@@ -32,6 +32,9 @@ slowapi==0.1.9
 # Notifications
 twilio==9.4.0
 
+# Nostr relay publish (T3.5) — WebSocket client for kind-30402 events
+websockets==13.1
+
 # Utilities
 pydantic==2.10.3
 pydantic-settings==2.6.1

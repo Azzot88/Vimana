@@ -43,7 +43,7 @@
 | Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ✅ MVP (T2.3: NIP-04 wrap of Shamir shares + read_packages для нормального read; `/arbiter-reveal` с audit-event; DealVault e2e-путь, Inquiry — follow-up) |
 | Уровень Бизнес-Активности (УБА) | 3 | ✅ MVP (T3.1: формула F/Q/V/D/Vrf в `core.uba`, Celery beat hourly recompute, `/me/uba` + `/users/{id}/uba` endpoints, `UBASection` в профиле. D=0 до T5.x Collateral) |
 | Оператор-арбитр и споры + Access Grants | 3 | ✅ MVP (T3.2: OperatorAccessGrant + auto-create от opener + explicit grant/revoke + vault-read gate на active grant. UBA-chip на TripCard. Роль/консоль/Dispute — из T1.23/T1.24. Escrow → T5.x) |
-| Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато (T3.5) |
+| Vimana Nostr Relay (strfry) + Federation | 3.5 | 🟨 pt.1 MVP (T3.5: kind-30402 trip publish, `NOSTR_PUBLISH_ENABLED` toggle, Celery task `publish_trip_to_nostr`, endpoint `/trips/{id}/nostr-event`, strfry контейнер под `--profile nostr`, badge на TripCard. pt.2 open: NIP-42 auth на своём relay, WoT-gate из T2.4, self-custody publishing через NIP-07) |
 | Regulatory KYC/AML + Санкционный периметр коридоров | 4 | ⬜ не начато (T4.1) |
 | Карточные платежи | 4 | ⬜ не начато (T4.2) |
 | Эскроу BTC + Залог | 5 | ⬜ не начато |

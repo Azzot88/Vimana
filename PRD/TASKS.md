@@ -769,6 +769,28 @@
 
 ## 📡 ЭТАП 3.5 — Vimana Nostr Relay + Federation (Фаза 3.5)
 
+### T3.5 pt.1 ✅ MVP — publish bridge + relay-контейнер toggle + бэйдж
+
+- [x] **Toggle:** `NOSTR_PUBLISH_ENABLED=false` по-умолчанию. `NOSTR_FRIENDLY_RELAYS=<comma>` — whitelist. `NOSTR_OWN_RELAY_URL=ws://nostr-relay:7777` — опциональный collect endpoint (наш strfry).
+- [x] **Модель Trip:** `nostr_event_id VARCHAR(64) UNIQUE`, `nostr_published_at TIMESTAMPTZ` — миграция `0018_trip_nostr_publish`.
+- [x] **`core.nostr_publish`:** `build_event(trip, carrier, platform_url)` → NIP-01 event dict (kind 30402, tags `d/l/l/t/published_at/expires_at/capacity/+categories`, content = JSON, sig через `sign_event_id` из T2.2). Custodial only: self-custody carriers → `None` (pt.2 через NIP-07). `build_deletion_event` — NIP-09 kind 5 при cancel.
+- [x] **`publish_event(event)`:** websockets-клиент в whitelist relays + own strfry (если задан), возвращает per-URL map. Timeout 5с per relay, failures ловятся и логируются, request-путь не блокируется.
+- [x] **Celery task `publish_trip_to_nostr(trip_id)`** — sync-session (`SyncSessionLocal`), `asyncio.run(publish_event)`, обновляет `Trip.nostr_event_id/published_at`. `POST /api/trips` делает `.delay()` fire-and-forget.
+- [x] **Endpoint `GET /api/trips/{id}/nostr-event`** — регенерирует event JSON on-demand для верификации; 503 когда toggle off, 422 когда self-custody carrier.
+- [x] **strfry контейнер** — `docker-compose.dev.yml` service `nostr-relay` под `profiles: ["nostr"]`, образ `dockurr/strfry:latest`, minimal `nostr/strfry.conf` (LMDB, port 7777, publish/subscribe open — auth в pt.2). Volume `nostr_data`.
+- [x] **Frontend:** `Trip` extended `nostr_event_id/published_at`, `<NostrBadge>` компонент («📡 в Nostr» + copy на клик) в TripsPage carrier-строке. i18n `trips.alsoOnNostr` + `common.copied` × 6 языков.
+- [x] **Dependency:** `websockets==13.1` в requirements.
+- [x] **6 backend-тестов:** toggle disabled/enabled от env, `build_event` даёт валидную NIP-01 подпись + структурные tags + parseable content, endpoint 503 когда off, endpoint возвращает event когда on + подпись верифицируется, self-custody carrier → `build_event` None, `TripOut` содержит nostr_* поля.
+
+**pt.2 open:**
+- [ ] NIP-42 auth на своём relay (только Vimana-npub могут писать; читать — свободно или whitelist).
+- [ ] WoT-gate из T2.4: не-Vimana npub'ы отсекаются на publish; трафик от чужаков — read-only.
+- [ ] Self-custody publish: клиент через `window.nostr.signEvent()` формирует kind-30402, backend только форвардит.
+- [ ] Endpoint `POST /api/nostr/republish` (superuser) — force-republish в случае разрыва.
+- [ ] Metric `nostr_publish_success_count` / `nostr_publish_error_count`.
+- [ ] Определённый whitelist в TECHSTATE `D-NOSTR-FEDERATION` (сейчас open).
+- [ ] Мультиязычный перевод описаний рейсов (TECHSTATE `D-TRANSLATION` open) — Redis-кэш `(event_id, target_lang)` TTL 30 дней.
+
 ### T3.5 — strfry-relay + publish trip-events + whitelist federation
 
 **Контекст:** Vimana идёт по «Nostr-slope» (см. MASTERPLAN §7). Фаза 2 дала пользователям keypair, Фаза 3 закрыла арбитраж. Теперь запускаем **собственный Nostr-relay** и делаем каждый trip Nostr-событием: наши рейсы становятся видимыми в любом стандартном Nostr-клиенте (damus, amethyst, coracle), а пользователи получают точку внешней децентрализации своих данных. Subscribe (чтение чужих events) откладываем до Фазы 4+ — сначала осваиваем publish-стек и spam-protection.

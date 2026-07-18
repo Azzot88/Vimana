@@ -81,7 +81,8 @@
     "sending": "Enviando...",
     "error": "Error",
     "close": "Cerrar",
-    "search": "Buscar…"
+    "search": "Buscar…",
+    "copied": "Copiado"
   },
   "mode": {
     "switchToSend": "Cambiar a envío",
@@ -224,6 +225,7 @@
     "search": "Buscar",
     "carrier": "Transportista",
     "capacity": "Capacidad",
+    "alsoOnNostr": "en Nostr",
     "sendPackage": "Enviar paquete",
     "noTrips": "No se encontraron vuelos",
     "requestTitle": "Solicitar entrega",

@@ -50,6 +50,14 @@ class Trip(Base):
     capacity: Mapped[float] = mapped_column(Float)
     allowed_categories: Mapped[list | None] = mapped_column(JSON, nullable=True)
     status: Mapped[TripStatus] = mapped_column(SAEnum(TripStatus), default=TripStatus.draft)
+    # T3.5 — Nostr publication tracking. Unique event_id enforces idempotency
+    # for the replaceable kind-30402 event (updates rewrite in-place).
+    nostr_event_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True
+    )
+    nostr_published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

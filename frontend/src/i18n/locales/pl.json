@@ -81,7 +81,8 @@
     "sending": "Wysyłanie...",
     "error": "Błąd",
     "close": "Zamknij",
-    "search": "Szukaj…"
+    "search": "Szukaj…",
+    "copied": "Skopiowano"
   },
   "mode": {
     "switchToSend": "Przełącz na wysyłanie",
@@ -225,6 +226,7 @@
     "search": "Szukaj",
     "carrier": "Przewoźnik",
     "capacity": "Pojemność",
+    "alsoOnNostr": "w Nostr",
     "sendPackage": "Wyślij paczkę",
     "noTrips": "Nie znaleziono lotów",
     "requestTitle": "Złóż zamówienie",

@@ -5,6 +5,8 @@ export interface Trip {
   id: string
   carrier_id: string
   carrier_name: string
+  carrier_uba?: number | null
+  carrier_uba_level?: 'newbie' | 'verified' | 'reliable' | 'trusted' | 'elite' | null
   origin: string
   destination: string
   depart_at: string
@@ -12,6 +14,8 @@ export interface Trip {
   allowed_categories: string[]
   status: string
   created_at: string
+  nostr_event_id?: string | null
+  nostr_published_at?: string | null
 }
 
 export interface CreateTripPayload {

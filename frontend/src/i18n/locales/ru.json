@@ -81,7 +81,8 @@
     "sending": "Отправка...",
     "error": "Ошибка",
     "close": "Закрыть",
-    "search": "Поиск…"
+    "search": "Поиск…",
+    "copied": "Скопировано"
   },
   "mode": {
     "switchToSend": "Переключиться в отправку",
@@ -225,6 +226,7 @@
     "search": "Найти",
     "carrier": "Перевозчик",
     "capacity": "Вместимость",
+    "alsoOnNostr": "в Nostr",
     "sendPackage": "Отправить посылку",
     "noTrips": "Рейсы не найдены",
     "requestTitle": "Оформить заявку",

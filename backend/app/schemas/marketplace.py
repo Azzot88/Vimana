@@ -26,6 +26,9 @@ class TripOut(BaseModel):
     allowed_categories: list[str] | None
     status: str
     created_at: datetime
+    # T3.5 — Nostr publish state (surfaced to clients for the "📡 Also on Nostr" chip).
+    nostr_event_id: str | None = None
+    nostr_published_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

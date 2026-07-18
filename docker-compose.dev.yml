@@ -126,5 +126,20 @@ services:
       frontend:
         condition: service_healthy
 
+  # T3.5 — optional strfry Nostr relay. Not started by default. Enable with:
+  #   docker compose --profile nostr up -d nostr-relay
+  # Then set NOSTR_OWN_RELAY_URL=ws://nostr-relay:7777 in backend .env.
+  nostr-relay:
+    image: dockurr/strfry:latest
+    profiles: ["nostr"]
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "7777:7777"
+    volumes:
+      - ./nostr/strfry.conf:/etc/strfry.conf:ro
+      - nostr_data:/app/strfry-db
+
 volumes:
   postgres_data:
+  nostr_data:

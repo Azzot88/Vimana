@@ -81,7 +81,8 @@
     "sending": "Envoi...",
     "error": "Erreur",
     "close": "Fermer",
-    "search": "Rechercher…"
+    "search": "Rechercher…",
+    "copied": "Copié"
   },
   "mode": {
     "switchToSend": "Passer à l'envoi",
@@ -224,6 +225,7 @@
     "search": "Rechercher",
     "carrier": "Transporteur",
     "capacity": "Capacité",
+    "alsoOnNostr": "sur Nostr",
     "sendPackage": "Envoyer un colis",
     "noTrips": "Aucun vol trouvé",
     "requestTitle": "Commander une livraison",

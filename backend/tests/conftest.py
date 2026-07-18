@@ -385,6 +385,25 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_trip_nostr_columns(engine) -> None:
+    """T3.5 schema fix: nostr_event_id + nostr_published_at on trips. Idempotent."""
+    async with engine.begin() as conn:
+        for col, ddl in (
+            ("nostr_event_id", "VARCHAR(64)"),
+            ("nostr_published_at", "TIMESTAMPTZ"),
+        ):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='trips' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(text(f"ALTER TABLE trips ADD COLUMN {col} {ddl}"))
+
+
 async def _ensure_operator_access_grants(engine) -> None:
     """T3.2 schema fix: operator_access_grants table. Idempotent."""
     async with engine.begin() as conn:
@@ -590,6 +609,7 @@ async def test_engine():
     await _ensure_nostr_event_columns(engine)
     await _ensure_threshold_columns(engine)
     await _ensure_operator_access_grants(engine)
+    await _ensure_trip_nostr_columns(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)
