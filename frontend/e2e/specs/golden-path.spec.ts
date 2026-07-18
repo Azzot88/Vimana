@@ -1,18 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { registerUser, uniqueEmail } from '../helpers'
 
-/**
- * Smoke #1 — Golden path (minimal, honest).
- *
- * Proves: app is up, register works, key logged-in routes render without
- * crashing. Full deal lifecycle (trip publish → match → chat → confirm) is
- * covered by ~200 pytest integration tests; e2e smoke doesn't reproduce it —
- * that's fragile against UI copy changes.
- *
- * If this passes, you're 90% sure prod is alive.
- */
+/** Smoke #1 — register + walk through key logged-in routes.
+ *  Loud on failure (helpers throw with HTTP status on non-2xx register). */
 test('golden path: register + navigate main routes without crash', async ({ page }) => {
-  test.setTimeout(90_000)
+  test.setTimeout(60_000)
 
   const user = await registerUser(page, {
     email: uniqueEmail('e2e-c'),
@@ -20,24 +12,17 @@ test('golden path: register + navigate main routes without crash', async ({ page
     canCarry: true,
   })
 
-  // Dashboard / landing after register — page has content.
-  await page.waitForLoadState('networkidle')
-  await expect(page.locator('body')).not.toBeEmpty()
+  // After register we should NOT be on login or register page.
+  await expect(page).not.toHaveURL(/\/(login|register)$/)
 
-  // Trips page loads.
-  await page.goto('/trips')
-  await page.waitForLoadState('networkidle')
-  await expect(page.locator('body')).not.toBeEmpty()
-
-  // New-trip page loads (carrier has access).
-  await page.goto('/trips/new')
-  await page.waitForLoadState('networkidle')
-  await expect(page.locator('body')).not.toBeEmpty()
-
-  // Profile page loads.
-  await page.goto('/profile')
-  await page.waitForLoadState('networkidle')
-  await expect(page.locator('body')).not.toBeEmpty()
+  // Trips + New-trip + Profile — each page must render actual content.
+  for (const path of ['/trips', '/trips/new', '/profile']) {
+    await page.goto(path)
+    await page.waitForLoadState('domcontentloaded')
+    const bodyText = (await page.locator('body').innerText()).trim()
+    expect(bodyText.length, `empty body on ${path}`).toBeGreaterThan(50)
+    expect(page.url(), `bounced off ${path}`).toContain(path)
+  }
 
   console.log(`Golden smoke ok — user=${user.email}`)
 })

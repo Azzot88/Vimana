@@ -26,7 +26,7 @@ export default defineConfig({
     // 1.49). Override with `SLOW_MO=1000 npm run headed` when you want to
     // watch even more slowly, or `SLOW_MO=0` for full speed.
     launchOptions: {
-      slowMo: Number(process.env.SLOW_MO ?? 500),
+      slowMo: Number(process.env.SLOW_MO ?? 300),
     },
   },
   projects: [
