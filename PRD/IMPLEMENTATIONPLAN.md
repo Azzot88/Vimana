@@ -288,9 +288,9 @@ V_verify_norm = V_verify_factor / 1.30                    — диапазон [
 1. Выбор провайдера — TECHSTATE Decision Log D-KYC (варианты: Sumsub / Onfido / Jumio).
 2. `KycRecord` — id, user_id, provider, external_id, status ∈ {pending, verified, rejected, expired}, verified_at, expires_at, level.
 3. `ComplianceAck` — id, user_id, doc_version, category, acknowledged_at.
-4. `CorridorRestriction(origin_country, destination_country, requires_kyc_level, blocked)` — санкционный периметр коридоров.
-5. Webhook провайдера → обновляет `KycRecord.status` → триггерит evaluation прав.
-6. Permission `PLATFORM_PAYMENT_INITIATE` требует `KycRecord.status = verified`.
+4. Webhook провайдера → обновляет `KycRecord.status` → триггерит evaluation прав.
+5. Permission `PLATFORM_PAYMENT_INITIATE` требует `KycRecord.status = verified`.
+6. **Corridor-периметр НЕ блокируем.** Информационная задача `T_UX.2 Route notes + platform disclaimers` (cross-cutting) — платформа показывает статус коридора (standard / attention / complex / restricted) с i18n-текстом, но не запрещает публикацию/матч. Позиция зафиксирована в TECHSTATE `D-COMPLIANCE-STANCE`.
 
 ### 4.2 Платежи на платформе
 1. `Payment` — id, deal_id, method [card], amount, platform_fee, status.
@@ -300,7 +300,7 @@ V_verify_norm = V_verify_factor / 1.30                    — диапазон [
 
 ### ✅ Phase 4 Integrity Check
 - [ ] User без `KycRecord.status = verified` → 403 на `POST /payments`?
-- [ ] Санкционный периметр блокирует запрещённые пары стран на этапе match?
+- [ ] `RouteNote` для флагированных коридоров показывает informational badge на TripCard / DealPage (не блокирует match — см. T_UX.2)?
 - [ ] `ComplianceAck` версионируется и хранится по каждой версии условий?
 - [ ] Все карточные транзакции пишут событие в `DealEvent`?
 - [ ] Комиссия рассчитывается корректно?

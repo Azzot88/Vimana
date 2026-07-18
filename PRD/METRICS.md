@@ -67,7 +67,7 @@
 | KPI | Формула / Источник | Цель | Фаза |
 |---|---|---|---|
 | **Compliance-ack coverage** | сделок с подтверждением запрещёнки / всех | 100% | 4 |
-| **Sanctions-screen coverage** | сделок, прошедших periметр / всех | 100% | 4 |
+| **Route-note acknowledgment coverage** | сделок на flagged коридорах, где обе стороны видели RouteNote badge / всех сделок на flagged коридорах | 100% (замер логированием импрешена) | 3–4 |
 | **Peer-verification sanctions match rate** | контейнеров с `sanctions_check_status=match` / всех | должно быть 0% | 2 |
 | **Identity fraud escalation rate** | escalated verifications → arbiter / всех verifications | падает | 2 |
 

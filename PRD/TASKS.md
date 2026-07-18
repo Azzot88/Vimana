@@ -875,23 +875,22 @@
 
 ## 💳 ЭТАП 4 — Карточные платежи + Regulatory KYC (Фаза 4)
 
-### T4.1 — Классический regulatory KYC / AML
+### T4.1 — Классический regulatory KYC (person-level)
 
-**Контекст:** до Фазы 4 через платформу не идут деньги — P2P-верификации (T2.1) достаточно для доверия между участниками. Перед вводом карточных платежей (T4.2) регулятор требует **формальный KYC** и санкционный скрининг: kyc-провайдер интегрируется, `KycRecord` привязывается к аккаунту, санкционный периметр коридоров становится жёстким блоком.
+**Контекст:** до Фазы 4 через платформу не идут деньги — P2P-верификации (T2.1) достаточно для доверия между участниками. Перед вводом карточных платежей (T4.2) регулятор требует **формальный KYC** на пользователя (не на направление): kyc-провайдер интегрируется, `KycRecord` привязывается к аккаунту. **Corridor-периметр НЕ является частью T4.1** — платформа не блокирует направления (см. `T_UX.2 Route notes` + `D-COMPLIANCE-STANCE`); person-level санкционный чек (OFAC/EU SDN) идёт как часть стандартного KYC-провайдера.
 
 - [ ] Выбор провайдера — фиксируется в TECHSTATE Decision Log. Варианты:
   - **Sumsub** — популярный на СНГ/EU, ~€1.5/verification, поддержка 220+ стран.
   - **Onfido** — UK/EU/US, ~$1.5, лидер по SDK-качеству.
   - **Jumio** — enterprise, дороже, максимум коридоров.
-- [ ] `KycRecord(id, user_id, provider, external_id, status ∈ {pending, verified, rejected, expired}, verified_at, expires_at, level)` — уровень зависит от suma/paйect (basic / enhanced).
+- [ ] `KycRecord(id, user_id, provider, external_id, status ∈ {pending, verified, rejected, expired}, verified_at, expires_at, level)` — уровень зависит от strict/enhanced.
 - [ ] `ComplianceAck(id, user_id, doc_version, category, acknowledged_at)` — версионируемое подтверждение запрещёнки и ответственности.
-- [ ] Санкционный периметр коридора: `CorridorRestriction(origin_country, destination_country, requires_kyc_level, blocked)` — таблица правил. При `POST /api/trips`, `POST /api/deals/match` — проверка.
 - [ ] Webhook от провайдера → обновляет `KycRecord.status` → триггерит evaluation прав.
 - [ ] Frontend: onboarding-модалка при первой попытке карточной оплаты; SDK провайдера в iframe/webview.
 - [ ] Permissions (расширение RBAC): `PLATFORM_PAYMENT_INITIATE` — требует `KycRecord.status = verified`.
-- [ ] Backend-тесты: user без KYC не может создать `Payment`; webhook меняет статус; санкционный чек блокирует match.
+- [ ] Backend-тесты: user без KYC не может создать `Payment`; webhook меняет статус; person-level sanctions match от провайдера → `KycRecord.status=rejected`.
 
-**Acceptance:** пользователь проходит formal KYC перед первой карточной оплатой; санкционный периметр коридоров блокирует запрещённые пары стран; ComplianceAck обязателен на каждую версию условий.
+**Acceptance:** пользователь проходит formal KYC перед первой карточной оплатой; ComplianceAck обязателен на каждую версию условий; person-level санкционный match блокирует KYC (не corridor).
 
 ### T4.2 — Платежи на платформе (карта)
 - [ ] `Payment` (card), комиссия платформы.
@@ -1064,6 +1063,61 @@
 
 - [ ] Backend: убедиться что `VerificationRequest.status = declined_polite` отдаётся в API как есть (проверить schema).
 - [ ] Frontend UI-компонент — см. T_UX.1.
+
+### T_UX.2 — Route notes + platform disclaimers
+
+**Контекст.** Платформа **не блокирует направления** — позиция зафиксирована в TECHSTATE `D-COMPLIANCE-STANCE`. Пользователи имеют право сами решать. Vimana только **информирует** через две модели:
+
+- `RouteNote` — плашка на конкретный коридор (или wildcard `*→X`).
+- `PlatformNotice` — глобальные плашки платформы (не привязаны к коридору).
+
+**Модель:**
+
+- [ ] `RouteNote(id, origin_iso, destination_iso, status ∈ {standard, attention, complex, restricted}, severity ∈ {info, warning, alert}, headline_i18n_key, body_i18n_key, active_from, active_until?, created_by)`. Wildcards `*` в origin/destination. Multiple notes на одном коридоре — рендерим все, сортировка по specificity → severity.
+- [ ] `PlatformNotice(id, key, severity ∈ {info, warning, alert}, target_surface ∈ {footer, trip_card, deal_page, all}, active_from, active_until?, created_by)`.
+- [ ] i18n backing: `route_notes` / `platform_notices` namespaces в `frontend/src/i18n/locales/*.json`. Redakторская pipeline: EN → LLM-перевод → superuser proofread.
+
+**Endpoints:**
+
+- [ ] `GET /api/route-notes?origin=X&destination=Y` — все active + матчащие wildcards. Public (не требует auth) — карточка рейса видна всем.
+- [ ] `GET /api/platform-notices?surface=all` — все active. Public.
+- [ ] `POST/PATCH/DELETE /api/admin/route-notes` + `/api/admin/platform-notices` — superuser CRUD. Immediate cache invalidation.
+
+**UI слоты (frontend):**
+
+- [ ] **TripCard** — маленький статус-pill возле origin→destination для не-standard коридоров. Клик → раскрытие body с деталями.
+- [ ] **NewTripPage** — если carrier выбирает direction с `complex` или `restricted` → pre-flight warning modal + чекбокс «I understand».
+- [ ] **DealPage** — sticky-banner если route имеет active note или global platform notice `target_surface ∈ {deal_page, all}`.
+- [ ] **DealVault** — при создании сделки на flagged коридоре → pinned system-message с note body.
+- [ ] **Footer** — постоянные `PlatformNotice(target_surface=footer)`.
+
+**Пограничные кейсы (документированы в TECHSTATE §D-COMPLIANCE-STANCE):**
+
+1. Overlap — рендерим все, sorted by specificity+severity.
+2. Time-critical updates — superuser edit → Redis invalidate → immediate propagation.
+3. Legal safety — платформа = «показываем известную информацию, юридических советов не даём». ToS дисклеймер.
+4. False positive — curation дисциплина; не пугаться помещать warning на всё.
+5. False negative — global footer disclaimer покрывает («Vimana не проверяет direction'ы, carrier несёт риск сам»).
+6. **Nostr export (T3.5)** — RouteNote **не выкладывается** в Nostr; это платформенная субъективная метадата.
+7. Category × direction — deferred (pt.2).
+8. Multi-hop trips — deferred до Фазы 5+.
+9. Automatic feeds (ICAO/StateDept) — deferred (pt.3).
+10. User-suggested notes — deferred, требует модерации.
+
+**Backend-тесты:**
+
+- [ ] Public GET route-notes возвращает active + матчит wildcards.
+- [ ] POST/PATCH/DELETE requires superuser.
+- [ ] Expired note (`active_until < now`) не возвращается.
+- [ ] Overlap: `*→IR` + `US→IR` — оба в ответе.
+
+**Acceptance:** superuser редактирует RouteNote/PlatformNotice через admin panel; изменения появляются в UI мгновенно (Redis invalidate); TripCard показывает pill на flagged коридорах; DealPage — banner; NewTripPage требует checkbox для complex/restricted направлений; никакое действие пользователя не блокируется по коридору. Платформа осталась «инфраструктурой, не цензором».
+
+**Follow-up:**
+1. **pt.2** — (category, destination) правила для warnings типа «электроника > $500 в X → декларация».
+2. **pt.3** — auto-import из public sources (ICAO advisories, StateDept travel warnings).
+3. **community notes** — user-suggested notes с модерацией.
+4. **Multi-hop** — рейсы с промежуточными посадками, expansion на транзитные страны.
 
 ### Follow-up: vite/esbuild security advisory
 
