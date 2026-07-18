@@ -218,14 +218,19 @@ async def test_publish_signed_forbids_third_party(client):
         os.environ.pop("NOSTR_PUBLISH_ENABLED", None)
 
 
-async def test_metrics_endpoint_starts_zero(client):
+async def test_metrics_endpoint_returns_expected_shape(client):
+    """`publish_metrics` is a single row shared across the whole test session,
+    so we can't assert zero — earlier publish tests may have bumped counters.
+    Structural check + non-negative invariant is what actually matters."""
     hdr, _ = await _register(client, "met")
     resp = await client.get("/api/nostr/metrics", headers=hdr)
     assert resp.status_code == 200
     body = resp.json()
-    assert body["success_count"] == 0
-    assert body["error_count"] == 0
-    assert body["last_attempt_at"] is None
+    assert set(body.keys()) == {"success_count", "error_count", "last_attempt_at"}
+    assert isinstance(body["success_count"], int) and body["success_count"] >= 0
+    assert isinstance(body["error_count"], int) and body["error_count"] >= 0
+    # last_attempt_at is either None (никогда не публиковали) или ISO string.
+    assert body["last_attempt_at"] is None or isinstance(body["last_attempt_at"], str)
 
 
 async def test_metrics_bump_after_publish(client, session_maker):
