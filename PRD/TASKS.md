@@ -723,19 +723,26 @@
 
 ## 📈 ЭТАП 3 — УБА и арбитраж (Фаза 3)
 
-### T3.1 — Уровень Бизнес-Активности (УБА)
+### T3.1 — Уровень Бизнес-Активности (УБА) ✅ MVP
 
 По IMPLEMENTATIONPLAN §6 §3.1 (полная формула там).
 
-- [ ] Celery task: пересчёт УБА каждый час, кеш в `User.business_activity_level`.
-- [ ] `F_norm = min(завершённых рейсов за 90 дней / 3 / 8, 1.0)`.
-- [ ] `Q_norm = min(log₁₀(Q+1) / log₁₀(51), 1.0)` — только сделки с **двумя** DealVault-фото.
-- [ ] `V_norm = min(log₁₀(V+1) / log₁₀(50001), 1.0)` — сумма `Order.declared_value` по closed deals.
-- [ ] `D_factor = 1.0 + 0.5 × min(MAX(Collateral.amount) / 5000, 1.0)` — бонус от 1.0 до 1.5.
-- [ ] `УБА = round(F_norm × Q_norm × V_norm × D_factor × 1000)`.
-- [ ] Маппинг на уровень: 0–49 Новичок / 50–199 Проверенный / 200–449 Надёжный / 450–749 Доверенный / 750–1000 Элита.
-- [ ] Отображение в профиле и карточке участника (заглушка → реальное значение).
-**Acceptance:** УБА пересчитывается автоматически; Q засчитывает только полностью задокументированные сделки; без залога factor = 1.0 (не ноль); уровень отображается в профиле.
+- [x] Celery beat task `app.tasks.uba.recompute_all_uba` — раз в час пересчитывает УБА для всех user-ов, у кого был `Deal.created_at` за последние 90 дней (окно формулы). Кеш в `User.business_activity_level`.
+- [x] `F_norm = min((F / 3) / 8, 1.0)` — F = closed deals как carrier за 90 дней; деление на 3 = месячная скорость.
+- [x] `Q_norm = min(log₁₀(Q+1) / log₁₀(51), 1.0)` — Q = сделки с **обоими** DealVault-фото (`handoff_photo` + `receipt_photo` через `EXISTS` sub-queries).
+- [x] `V_norm = min(log₁₀(V+1) / log₁₀(50001), 1.0)` — `SUM(Order.declared_value)` по closed deals как carrier.
+- [x] `D_factor = 1.0 + 0.5 × min(D / 5000, 1.0)` — бонус от 1.0 до 1.5. **D=0 пока Collateral модели нет** (T5.x); factor остаётся 1.0 (нейтральный, не штраф).
+- [x] **V_verify_factor** (T2.1 расширение): множитель `[null → 1.00, auto → 1.05, peer → 1.15, kyc → 1.30]`. Нормализуется на 1.30 (V_verify_norm = factor / 1.30) чтобы max УБА оставался 1000.
+- [x] `УБА = round(F_norm × Q_norm × V_norm × D_factor × V_verify_norm × 1000)`, clamp [0, 1000].
+- [x] Маппинг на уровень (slugs stable для i18n): `newbie` 0–49 / `verified` 50–199 / `reliable` 200–449 / `trusted` 450–749 / `elite` 750–1000. `level_of(uba)` → slug.
+- [x] Endpoints: `GET /api/me/uba` + `GET /api/users/{id}/uba` — возвращают `{uba, level, components: {f_count, q_count, v_sum, d_peak, verify_level}}`. Компоненты пересчитываются on-demand; кеш обновляется одновременно.
+- [x] Frontend: `UBASection` в профиле — число, level-chip с цветовой семантикой (navy/cyan/amber в градации), 4 tile'а компонент (F/Q/V/D). Плейсхолдер "Available in next phase" заменён живым виджетом.
+- [x] i18n `profile.uba.*` (title/hint/levels.{newbie|verified|reliable|trusted|elite}/components.{f|q|v|d}+Hint) в 6 языках.
+- [x] 10 backend-тестов: zero → 0, saturation → ≈1000, verify-factor scaling, D — мультипликатор не штраф, F монтжлы, Q log shape, level thresholds, level slugs stable, `/me/uba` для fresh user, `/users/{id}/uba` 404, e2e closed deal без фото → Q=0 → УБА=0.
+
+**Acceptance ✅:** УБА пересчитывается по расписанию Celery beat; Q засчитывает **только** полностью задокументированные сделки (оба фото); без залога factor = 1.0 (нейтральный); уровень отображается в профиле.
+
+**Follow-up:** (1) `Collateral` модель в T5.x → D_factor заработает; (2) UBA chip на карточке участника (TripCard/DealCard) — сейчас только в профиле; (3) миграция Redis-кэш для endpoint (`(user_id, quarter_hour)` TTL 15 мин) когда трафик вырастет.
 
 ### T3.2 — Оператор-арбитр и споры
 - [ ] Роль `Operator` + консоль.

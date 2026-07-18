@@ -287,6 +287,27 @@
     "level": "Poziom Aktywności Biznesowej",
     "levelPhase": "Faza 3",
     "levelNote": "Dostępne w następnej fazie",
+    "uba": {
+      "title": "Poziom Aktywności Biznesowej",
+      "hint": "Kroczący 90-dniowy wskaźnik oparty na zamkniętych transakcjach, wolumenie dostaw, zabezpieczeniu i poziomie weryfikacji.",
+      "levels": {
+        "newbie":   "Nowicjusz",
+        "verified": "Zweryfikowany",
+        "reliable": "Niezawodny",
+        "trusted":  "Zaufany",
+        "elite":    "Elita"
+      },
+      "components": {
+        "f":     "Częstotliwość",
+        "fHint": "Zamknięte transakcje jako kurier",
+        "q":     "Jakość",
+        "qHint": "Transakcje z fotografią przekazania + odbioru",
+        "v":     "Wolumen",
+        "vHint": "Suma zadeklarowanej wartości",
+        "d":     "Depozyt",
+        "dHint": "Szczytowe aktywne zabezpieczenie"
+      }
+    },
     "keypair": {
       "title": "Tożsamość Nostr",
       "custodial": "u platformy",

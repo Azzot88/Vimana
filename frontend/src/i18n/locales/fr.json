@@ -286,6 +286,27 @@
     "level": "Niveau d'Activité Commerciale",
     "levelPhase": "Phase 3",
     "levelNote": "Disponible à la prochaine phase",
+    "uba": {
+      "title": "Niveau d'Activité Commerciale",
+      "hint": "Score glissant sur 90 jours basé sur les transactions clôturées, le volume livré, la caution et le niveau de vérification.",
+      "levels": {
+        "newbie":   "Débutant",
+        "verified": "Vérifié",
+        "reliable": "Fiable",
+        "trusted":  "De confiance",
+        "elite":    "Élite"
+      },
+      "components": {
+        "f":     "Fréquence",
+        "fHint": "Transactions clôturées comme convoyeur",
+        "q":     "Qualité",
+        "qHint": "Transactions avec photos remise + réception",
+        "v":     "Volume",
+        "vHint": "Somme des valeurs déclarées",
+        "d":     "Dépôt",
+        "dHint": "Caution active maximale"
+      }
+    },
     "keypair": {
       "title": "Identité Nostr",
       "custodial": "chez la plateforme",

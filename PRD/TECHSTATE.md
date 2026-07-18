@@ -41,7 +41,7 @@
 | Trust Graph (Web-of-Trust) | 2 | ✅ MVP (T2.4: TrustEdge + auto dealt_with/invited + BFS endpoints + denormalized counts + UI. Follow-up: Redis-кэш, UserBadge на TripCard) |
 | Keypair + Nostr-совместимость (D10: A+D) | 2 | ✅ MVP (pt.1 custodial + UI; pt.2 NIP-01 event format + NIP-07 signing + Claim self-custody end-to-end) |
 | Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ✅ MVP (T2.3: NIP-04 wrap of Shamir shares + read_packages для нормального read; `/arbiter-reveal` с audit-event; DealVault e2e-путь, Inquiry — follow-up) |
-| Уровень Бизнес-Активности (УБА) | 3 | ⬜ не начато (T3.1) |
+| Уровень Бизнес-Активности (УБА) | 3 | ✅ MVP (T3.1: формула F/Q/V/D/Vrf в `core.uba`, Celery beat hourly recompute, `/me/uba` + `/users/{id}/uba` endpoints, `UBASection` в профиле. D=0 до T5.x Collateral) |
 | Vimana Nostr Relay (strfry) + Federation | 3.5 | ⬜ не начато (T3.5) |
 | Regulatory KYC/AML + Санкционный периметр коридоров | 4 | ⬜ не начато (T4.1) |
 | Карточные платежи | 4 | ⬜ не начато (T4.2) |
@@ -168,6 +168,10 @@
 | Threshold endpoints (T2.3) — `/threshold/arbiter-info`, `/threshold/dealvault/messages/{id}/reveal-my-share`, `/threshold/disputes/{deal_id}/arbiter-reveal` + `arbiter_share_revealed` audit-event | `backend/app/api/threshold.py` |
 | Threshold client crypto (T2.3) — `encryptE2E` (SSS split → NIP-04 wrap → AES-GCM), `decryptE2E` (own read_package → session_key → AES-GCM decrypt), `decryptFromShares` (dispute recovery) через `@noble/{ciphers,curves,hashes}` + `shamir-secret-sharing` + `window.nostr.nip04.*` | `frontend/src/lib/threshold.ts` |
 | Threshold client API + UI (T2.3) — `api/threshold.ts`, encrypt-on-send в `api/dealvault.ts` (self-custody + NIP-07 + parties known), inline decrypt в DealVaultPage с "🔒 расшифровываю…" fallback | `frontend/src/{api/threshold,api/dealvault,pages/DealVaultPage}.tsx` |
+| УБА core (T3.1) — формула F_norm × Q_norm × V_norm × D_factor × V_verify_norm × 1000, level slugs, `compute_components/compute_uba/level_of/recompute_and_persist` (sync session для Celery) | `backend/app/core/uba.py` |
+| УБА Celery beat (T3.1) — `recompute_all_uba` каждый час для активных за 90 дней carrier-ов; queue=notifications | `backend/app/tasks/uba.py`, `backend/app/worker.py` |
+| УБА endpoints (T3.1) — `GET /api/me/uba` + `GET /api/users/{id}/uba` → `{uba, level, components}` | `backend/app/api/uba.py` |
+| УБА UI (T3.1) — `UBASection` в профиле: score, level chip (navy/cyan/amber градация), 4 component tile'а | `frontend/src/{api/uba,components/UBASection,pages/ProfilePage}.tsx` |
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
 | Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
 | Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |

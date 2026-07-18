@@ -286,6 +286,27 @@
     "level": "Business Activity Level",
     "levelPhase": "Phase 3",
     "levelNote": "Available in next phase",
+    "uba": {
+      "title": "Business Activity Level",
+      "hint": "A rolling 90-day score based on your closed deals, delivered value, deposit, and verification level.",
+      "levels": {
+        "newbie":   "Newbie",
+        "verified": "Verified",
+        "reliable": "Reliable",
+        "trusted":  "Trusted",
+        "elite":    "Elite"
+      },
+      "components": {
+        "f":     "Frequency",
+        "fHint": "Closed deals as carrier",
+        "q":     "Quality",
+        "qHint": "Deals with both handoff + receipt photos",
+        "v":     "Volume",
+        "vHint": "Sum of declared value",
+        "d":     "Deposit",
+        "dHint": "Peak active collateral"
+      }
+    },
     "keypair": {
       "title": "Nostr identity",
       "custodial": "custodial",

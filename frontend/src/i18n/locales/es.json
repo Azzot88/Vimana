@@ -286,6 +286,27 @@
     "level": "Nivel de Actividad Empresarial",
     "levelPhase": "Fase 3",
     "levelNote": "Disponible en la próxima fase",
+    "uba": {
+      "title": "Nivel de Actividad Empresarial",
+      "hint": "Puntuación móvil de 90 días basada en transacciones cerradas, volumen entregado, depósito y nivel de verificación.",
+      "levels": {
+        "newbie":   "Novato",
+        "verified": "Verificado",
+        "reliable": "Confiable",
+        "trusted":  "De confianza",
+        "elite":    "Élite"
+      },
+      "components": {
+        "f":     "Frecuencia",
+        "fHint": "Transacciones cerradas como transportista",
+        "q":     "Calidad",
+        "qHint": "Transacciones con fotos de entrega + recepción",
+        "v":     "Volumen",
+        "vHint": "Suma del valor declarado",
+        "d":     "Depósito",
+        "dHint": "Garantía activa máxima"
+      }
+    },
     "keypair": {
       "title": "Identidad Nostr",
       "custodial": "en la plataforma",

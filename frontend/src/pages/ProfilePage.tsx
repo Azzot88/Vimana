@@ -12,6 +12,7 @@ import CountryCodeSelect from '../components/CountryCodeSelect'
 import KeypairSection from '../components/KeypairSection'
 import MonoText from '../components/MonoText'
 import TrustCirclesSection from '../components/TrustCirclesSection'
+import UBASection from '../components/UBASection'
 import VerificationSection from '../components/VerificationSection'
 import { APP_VERSION } from '../version'
 
@@ -217,14 +218,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-navy/10 p-6">
-        <p className="text-xs font-body font-medium text-navy/40 mb-1 uppercase tracking-wider">{t('profile.level')}</p>
-        <div className="flex items-baseline gap-2 mt-2">
-          <MonoText className="text-3xl font-medium text-navy">—</MonoText>
-          <span className="text-xs font-body text-navy/40">{t('profile.levelPhase')}</span>
-        </div>
-        <p className="text-xs font-body text-navy/30 mt-2">{t('profile.levelNote')}</p>
-      </div>
+      <UBASection />
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <div className="flex items-center justify-between">
