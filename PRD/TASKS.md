@@ -1000,9 +1000,9 @@
 
 **Follow-up:** (1) миграция существующих Bento-мест на `<BentoGrid>` (ProfilePage, Dashboard, DealVaultPage) — механическая работа; (2) остальные 3 языка (pl/fr/es) локализовать полностью (сейчас fallback на EN).
 
-### T_TEST.3 — Playwright smoke suite (наблюдаемая e2e)
+### T_TEST.3 — Playwright smoke suite (наблюдаемая e2e) ✅ MVP
 
-**Контекст.** Сейчас unit+integration через pytest (220 тестов) + vitest сконфигурирован но пуст. UI e2e = ноль. Смок нужен для (a) визуального наблюдения регистрации и полного flow глазами разработчика, (b) CI-верификации после prod-деплоя, (c) как приёмочный лабораторный стенд перед демо инвесторам.
+**Контекст.** Сейчас unit+integration через pytest (~250 тестов) + vitest (13 тестов). UI e2e MVP закрыт T_TEST.3.
 
 **Софт — Playwright** (Microsoft). Мотивация в comparison table ниже (сохранена как обнаруженная логика — не удалять):
 
@@ -1014,38 +1014,45 @@
 
 **Спеки (3 штуки):**
 
-- [ ] `smoke-golden-path.spec.ts` — carrier reg → trip publish → sender reg → match → chat message → carrier accept → sender confirm → status = closed. Полный жизненный цикл сделки.
-- [ ] `smoke-verification.spec.ts` — carrier reg → sender реквестит verification → carrier upload (или decline_polite) → badge появляется / decline-banner виден. Проверяет T2.1 flow.
+- [x] `golden-path.spec.ts` — carrier reg → trip publish → sender reg → matching. Full accept/confirm/close — pt.2 когда стабилизируется UI-selectors.
+- [x] `verification.spec.ts` — VerificationSection присутствует на profile для fresh user. Full 3-tier flow с multi-context — pt.2.
+- [x] `recipient.spec.ts` — `/join/deal/<bogus>` роут отвечает, не крашится. Full invite copy-paste — pt.2.
 - [ ] `smoke-nostr.spec.ts` (после T3.5) — trip publish → `Trip.nostr_event_id` проставлен → `GET /api/trips/{id}/nostr-event` возвращает валидный NIP-01 event JSON. Проверяет T3.5 publish bridge.
 
 **Инфра:**
 
-- [ ] `frontend/e2e/` — Playwright config: `baseURL` из env `SMOKE_BASE_URL` (default `http://localhost:5173` для dev, `https://vimana.dealvault.club` для prod-smoke), screenshots + video + trace на failure всегда.
-- [ ] `frontend/package.json` — добавить `@playwright/test` в devDependencies.
-- [ ] **docker-compose profile `smoke`** — контейнер `playwright-runner` из образа `mcr.microsoft.com/playwright:v1.49.0-jammy` (или актуальный latest). Запуск: `docker compose --profile smoke run playwright-runner`.
-- [ ] **docker-compose profile `smoke-live`** — контейнер `playwright-vnc` с xvfb + x11vnc + noVNC; публикует UI на `:6080` (только для админа, nginx deny в prod). Позволяет **наблюдать live с телефона / другого браузера** — открываешь `http://server:6080`, видишь виртуальный экран сервера с бегущим Chromium.
-- [ ] **npm scripts:**
-  - `smoke:headed` — `playwright test --headed --slow-mo=500` (Mac local, наблюдаешь глазами).
-  - `smoke:trace` — `playwright test --trace=on` (server headless, записывает trace.zip → скачиваешь на Mac, открываешь на trace.playwright.dev, крутишь как машину времени; лучше видео — можно кликать по замороженной DOM).
-  - `smoke:ci` — `playwright test --project=chromium` (headless, screenshots/video/trace только на failure).
+- [x] `frontend/e2e/` — отдельный npm-пакет (`@playwright/test` не тянется в основной build). `playwright.config.ts` с `baseURL = SMOKE_BASE_URL ?? https://vimana.dealvault.club`, trace всегда, video/screenshot on failure, sequential (fullyParallel=false — shared prod DB, no races).
+- [x] npm scripts: `install:browsers`, `headed`, `headed:single`, `trace`, `ci`, `show-trace`, `show-report`.
+- [ ] **docker-compose profile `smoke` + `smoke-live` (VNC :6080)** — pt.2. Для MVP native запуск с Mac достаточен.
 
-**CI + оповещения:**
+**Cleanup e2e users (T_TEST.3):**
 
-- [ ] После `git push` в prod ветку — CI прогоняет `smoke:ci` против prod URL.
-- [ ] На failure — уведомление в Telegram через существующий `app/tasks/notifications.py` (задействовать worker'а).
-- [ ] Trace-артефакты сохраняются на S3/R2 30 дней для post-mortem.
+- [x] Convention: все Playwright users регистрируются с email `<prefix>-<ts>-<rand>@e2e.vimana.local`. TLD `.local` не резолвится.
+- [x] `backend/app/tasks/cleanup.py::cleanup_e2e_users` — Celery beat раз в 24ч, каскадный delete через 12 таблиц (Trips→Inquiries+Messages, Deals→Messages+Attachments+Events+Disputes+Grants+Participants, Orders, Connections, InviteLinks, TrustEdges).
+- [x] Beat schedule `cleanup-e2e-users-daily` в `worker.py`.
+
+**AdminUsersPage расширения (T_TEST.3):**
+
+- [x] `GET /api/admin/users?email_contains=X` — case-insensitive ILIKE.
+- [x] `DELETE /api/admin/users/{user_id}` — superuser hard-delete + async cascade (зеркалит логику Celery task). Cannot delete superuser or self.
+- [x] Frontend AdminUsersPage — чекбокс «Only e2e test users», text-filter, счётчик total/test, амбер-chip «test», красная Delete-кнопка с confirm (двойной copy — короткий для test, строгий для non-test).
 
 **Документация:**
 
-- [ ] `ENVIRONMENT.md §Testing` — три сценария запуска (Mac headed / server trace / server VNC) c командами.
-- [ ] Инструкция «как открыть trace.zip» — ссылка на trace.playwright.dev.
-- [ ] Инструкция «как подключиться к smoke-live VNC» — только с одобренного IP через админ-VPN.
+- [x] `frontend/e2e/README.md` — три режима (headed/trace/ci), env override, cleanup convention, trace viewer link.
 
-**Acceptance:**
-1. `npm run smoke:headed` на Mac открывает Chromium, проходит full flow, разработчик наблюдает визуально с 500 мс замедлением.
-2. `docker compose --profile smoke run playwright-runner npm run smoke:trace` на сервере headless за ~30 сек, генерирует trace.zip.
-3. `docker compose --profile smoke-live up playwright-vnc` — VNC на `:6080` показывает бегущий Chromium с телефона (live).
-4. На CI после prod-деплоя smoke-ci прогоняется автоматически; failure → Telegram-alert.
+**Acceptance ✅ MVP:**
+1. `cd frontend/e2e && npm install && npm run install:browsers && npm run headed` на Mac открывает Chromium, проходит 3 спека visibly с 500 мс замедлением.
+2. Тестовые юзеры видны в `/admin/users` с амбер-chip'ом «test»; superuser может bulk-очистить или дождаться Celery.
+3. `npm run trace` (headless) генерирует trace.zip → смотрится на trace.playwright.dev.
+
+**Follow-up (pt.2):**
+1. `smoke-nostr.spec.ts` после T3.5.
+2. Multi-context спеки (invite copy-paste, dispute + arbiter reveal, decline_polite banner визуально).
+3. Docker profile `smoke` (headless в контейнере) + `smoke-live` (VNC :6080 для live с телефона).
+4. CI-hook на prod-деплой + Telegram alert.
+5. Trace артефакты на R2 30 дней.
+6. 5 backend-тестов (`test_admin_users_cleanup.py`): filter, delete cascade, forbidden non-superuser, cannot delete superuser/self, Celery deletes stale ≥24ч + preserves fresh.
 
 ### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server
 
