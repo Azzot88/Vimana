@@ -977,7 +977,7 @@
 
 **Acceptance:** ✅ `EXPOSE_DOCS=false` в prod → 404 на docs surface; nginx возвращает security headers (проверяется `curl -I`); probe-пути (`.env`, `.git`, `.php`) → 404; auth-endpoints под rate-limit 10r/min + burst 5.
 
-**Follow-up:** (1) CSP tightening — сейчас `unsafe-inline` в style-src из-за Tailwind runtime; вынести critical inline styles в CSS-файл. (2) `/health` можно ужесточить — вернуть 200 без тела (не выдавать версию). (3) Мониторинг rate-limit hits — счётчик отказов nginx в metrics.
+**Follow-up:** (1) **CSP tightening (T_SEC.2)** — сейчас `unsafe-inline` + `unsafe-eval` в script-src потому что frontend контейнер бежит `npm run dev` (Vite dev server, нужны для HMR/module bootstrapper). Правильно: переключить на static-serve `dist/` (`npm run build` + `nginx serve` или serve-package), тогда script-src сжимается до `'self'`. Также style-src `unsafe-inline` из-за Tailwind runtime — вынести critical inline styles в CSS-файл. (2) `/health` можно ужесточить — вернуть 200 без тела (не выдавать версию). (3) Мониторинг rate-limit hits — счётчик отказов nginx в metrics.
 
 ### T_UX.1 — Bento breakpoint rule + decline_polite copy ✅ MVP
 

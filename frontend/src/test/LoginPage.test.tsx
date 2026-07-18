@@ -20,6 +20,7 @@ describe('LoginPage', () => {
 
   it('renders version badge', () => {
     renderWithProviders(<LoginPage />)
-    expect(screen.getByText(/^v0\.01\./)).toBeInTheDocument()
+    // Format `v0.<phase:02>.<task>` — match any phase, not just 0.01.
+    expect(screen.getByText(/^v0\.\d{2}\./)).toBeInTheDocument()
   })
 })
