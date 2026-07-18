@@ -115,8 +115,8 @@ def test_level_returns_valid_slug(u):
 
 
 @_settings
-@given(_f_strat, _q_strat, _v_strat, _d_strat, _verify_strat)
-def test_zero_q_yields_zero_uba(f, v, d, verify, q=0):  # noqa: ARG001 — q is fixed
+@given(_f_strat, _v_strat, _d_strat, _verify_strat)
+def test_zero_q_yields_zero_uba(f, v, d, verify):
     """Q=0 means log10(1)/log10(51)=0, product=0, so UBA=0 regardless of others."""
     u = compute_uba(_c(f=f, q=0, v=v, d=d, verify=verify))
     assert u == 0
