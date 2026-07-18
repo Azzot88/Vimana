@@ -385,6 +385,46 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_deal_participants(engine) -> None:
+    """T3.3 schema fix: dealparticipantrole enum + deal_participants table."""
+    async with engine.begin() as conn:
+        exists_type = (
+            await conn.execute(
+                text("SELECT 1 FROM pg_type WHERE typname = 'dealparticipantrole'")
+            )
+        ).fetchone()
+        if not exists_type:
+            await conn.execute(
+                text("CREATE TYPE dealparticipantrole AS ENUM ('recipient')")
+            )
+        exists_table = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables WHERE table_name='deal_participants'"
+                )
+            )
+        ).fetchone()
+        if not exists_table:
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE deal_participants (
+                        id UUID PRIMARY KEY,
+                        deal_id UUID NOT NULL REFERENCES deals(id),
+                        user_id UUID REFERENCES users(id),
+                        role dealparticipantrole NOT NULL DEFAULT 'recipient',
+                        invited_by UUID NOT NULL REFERENCES users(id),
+                        invite_token VARCHAR(64) NOT NULL UNIQUE,
+                        invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        accepted_at TIMESTAMPTZ,
+                        revoked_at TIMESTAMPTZ,
+                        CONSTRAINT uq_participant_deal_user_role UNIQUE (deal_id, user_id, role)
+                    )
+                    """
+                )
+            )
+
+
 async def _ensure_publish_metrics_table(engine) -> None:
     """T3.5 pt.2 schema fix: publish_metrics single-row counter. Idempotent."""
     async with engine.begin() as conn:
@@ -636,6 +676,7 @@ async def test_engine():
     await _ensure_operator_access_grants(engine)
     await _ensure_trip_nostr_columns(engine)
     await _ensure_publish_metrics_table(engine)
+    await _ensure_deal_participants(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

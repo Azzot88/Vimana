@@ -100,6 +100,13 @@
     "hopLabel_other": "{{count}} people",
     "empty": "No trust edges yet — invite friends and close a deal to start building your circle."
   },
+  "recipient": {
+    "inviteButton": "Invite recipient",
+    "inviteCopied": "Invite link copied — send it to the recipient",
+    "inviteError": "Could not create invite",
+    "joinTitle": "Joining deal chat…",
+    "joinError": "Could not join this deal"
+  },
   "verification": {
     "sectionTitle": "Identity verification",
     "sectionHint": "Three verification tiers accumulate on your profile. Higher tiers give more trust in searches and deals.",

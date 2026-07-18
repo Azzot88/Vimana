@@ -145,6 +145,50 @@ class Dispute(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class DealParticipantRole(str, enum.Enum):
+    recipient = "recipient"
+
+
+class DealParticipant(Base):
+    """T3.3 — additional deal participants beyond sender/carrier/arbiter.
+
+    Currently only `recipient` role: someone the sender invites to view (and
+    write to) the chat. Recipient has their own custodial keypair (invisible
+    to them) and is included in `read_packages` on every subsequent e2e
+    message. Threshold scheme stays 2-of-3 {sender, carrier, arbiter}; recipient
+    is orthogonal to it.
+
+    Row is created with `user_id=NULL` at invite time; populated when the
+    invitee accepts the link and their user gets bound. `invite_token` is
+    the shareable secret in the URL.
+    """
+
+    __tablename__ = "deal_participants"
+    __table_args__ = (
+        UniqueConstraint("deal_id", "user_id", "role", name="uq_participant_deal_user_role"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    role: Mapped[DealParticipantRole] = mapped_column(
+        SAEnum(DealParticipantRole), default=DealParticipantRole.recipient
+    )
+    invited_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    invite_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    invited_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class OperatorAccessGrant(Base):
     """T3.2 — explicit consent from a deal participant to let the arbiter read
     DealVault for a given dispute.

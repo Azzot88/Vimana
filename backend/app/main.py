@@ -24,6 +24,7 @@ from app.api.keypair import router as keypair_router
 from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.nostr import router as nostr_router
+from app.api.participants import router as participants_router
 from app.api.threshold import router as threshold_router
 from app.api.trips import router as trips_router
 from app.api.trust import router as trust_router
@@ -143,6 +144,7 @@ app.include_router(deals_router, prefix="/api/deals", tags=["deals"])
 app.include_router(dealvault_router, prefix="/api/deals", tags=["dealvault"])
 app.include_router(threshold_router, prefix="/api/threshold", tags=["threshold"])
 app.include_router(nostr_router, prefix="/api/nostr", tags=["nostr"])
+app.include_router(participants_router, prefix="/api", tags=["participants"])
 app.include_router(uba_router, prefix="/api", tags=["uba"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
 app.include_router(airports_router, prefix="/api/airports", tags=["airports"])

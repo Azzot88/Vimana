@@ -769,6 +769,30 @@
 
 ## 📡 ЭТАП 3.5 — Vimana Nostr Relay + Federation (Фаза 3.5)
 
+### T3.3 — Recipient role + приглашение в чат ✅ MVP
+
+**Контекст:** Отправитель может пригласить конкретного получателя посмотреть чат сделки, писать в него, координировать по посылке. Позже (Фаза 5) — вносить деньги. Threshold 2-of-3 остаётся `{sender, carrier, arbiter}` — recipient вне схемы.
+
+- [x] **Модель `DealParticipant`** (миграция 0020) — `(id, deal_id, user_id?, role ∈ {recipient}, invited_by, invite_token UNIQUE, invited_at, accepted_at?, revoked_at?)` + UNIQUE(deal_id, user_id, role) + partial index на active + index на invite_token. Enum `dealparticipantrole` для будущих ролей.
+- [x] **Ключи (Вариант A):** каждый recipient получает **невидимый custodial keypair** при регистрации (той же процедурой T2.2 pt.1 — `generate_keypair` → `encrypt_nsec`). Recipient UI не показывает npub/nsec — пользователь не знает про Nostr. **Threshold `wrapped_shares` не тронут**; расширяется только `read_packages` карта: `{sender, carrier, recipient_<uuid1>, recipient_<uuid2>, …}` — NIP-04-обёрнутая копия session_key под каждый recipient npub.
+- [x] **Endpoints:**
+  - `POST /api/deals/{deal_id}/invite-recipient` — sender-only, генерит `secrets.token_urlsafe(32)`, создаёт row с `user_id=NULL`, возвращает `{invite_token, invite_url: "<VIMANA_PUBLIC_URL>/join/deal/<token>"}`.
+  - `POST /api/deals/join/{token}` — авторизованный пользователь принимает; attach `user_id = current_user.id + accepted_at = now`. Idempotent (повторный accept тем же user'ом = 200 no-op). 409 если токен уже связан с другим user'ом. 400 если caller = sender/carrier сделки (принципал уже имеет доступ).
+  - `POST /api/deals/{deal_id}/participants/{user_id}/revoke` — sender-only. `revoked_at = now`. Прошлые сообщения остаются доступны (нельзя стереть память); новые e2e-messages без этого recipient'а в read_packages.
+  - `GET /api/deals/{deal_id}/participants` — sender/carrier/attached recipient видят active список с `{user_id, display_name, npub, role, invited_at, accepted_at}`.
+- [x] **Chat access:** `_get_deal_as_participant` в `dealvault.py` расширен — sender/carrier/active recipient пропускаются, остальные 403. Recipient может **читать** и **писать** обычные plaintext-сообщения (backend T1.21 путь) без изменений.
+- [x] **Server-mediated decrypt для e2e:** `POST /api/deals/{id}/dealvault/messages/{msg_id}/decrypt-for-me` — сервер находит caller'ов `read_packages` (sender / carrier / recipient_<uuid>), расшифровывает NIP-04 envelope через custodial nsec caller'а, потом AES-GCM decrypt ciphertext, возвращает plaintext. **Компромисс** (документирован в TECHSTATE): sender/carrier с self-custody продолжают расшифровывать client-side через NIP-07 (сервер их plaintext не видит никогда). Recipient и custodial callers идут через этот endpoint — сервер видит plaintext на мс, не хранит. Recipient добровольно доверяет платформе relay текста в браузер.
+- [x] **Frontend:**
+  - `api/participants.ts` — invite/join/revoke/list/decryptForMe fetch + types.
+  - `JoinDealPage` на `/join/deal/:token` — если не залогинен → redirect на `/login?next=/join/deal/:token`; если залогинен → POST accept → redirect на `/deals/:id/vault`.
+  - Кнопка «Пригласить получателя» на DealVaultPage **только для sender'а** (проверка `parties.senderId === user.id`) — one-click: генерит invite, копирует URL в clipboard, показывает toast.
+  - i18n `recipient.*` (EN + RU + UA локализованы; остальные fallback на EN).
+- [x] **10 backend-тестов** (`test_recipient.py`): only-sender-invite, invite→token+url, join attaches user, join idempotent, join conflict for другого user'а, principal cannot self-join, recipient read + write, revoke блокирует, only-sender-revoke, list participants (sender/carrier/outsider), decrypt-for-me end-to-end (sender e2e-write с `recipient_<id>` read_pkg → recipient POST decrypt → получает plaintext).
+
+**Money contribution:** deferred до Фазы 5 (T5.x Escrow + Payments). UI placeholder «Contribute — coming in Phase 5» появится когда модель Payment будет.
+
+**Follow-up:** (1) UI kick-out toggle на sender-panel (список recipient'ов с revoke-кнопкой); (2) фронтенд e2e-write path сейчас **не включает** recipient'ов автоматом — encryptE2E надо расширить `parties.recipients: npub[]` из `listParticipants`; (3) unified read hook: если own read_pkg есть и NIP-07 работает — client-side, else server-mediated fallback.
+
 ### T3.5 pt.1 ✅ MVP — publish bridge + relay-контейнер toggle + бэйдж
 
 - [x] **Toggle:** `NOSTR_PUBLISH_ENABLED=false` по-умолчанию. `NOSTR_FRIENDLY_RELAYS=<comma>` — whitelist. `NOSTR_OWN_RELAY_URL=ws://nostr-relay:7777` — опциональный collect endpoint (наш strfry).

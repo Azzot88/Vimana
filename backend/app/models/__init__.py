@@ -1,7 +1,7 @@
 from app.models.user import User
 from app.models.social import InviteLink, Connection
 from app.models.marketplace import Trip, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
-from app.models.deal import Deal, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant
+from app.models.deal import Deal, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant, DealParticipant, DealParticipantRole
 from app.models.metrics import PublishMetric
 from app.models.trust import TrustEdge, TrustEdgeKind
 from app.models.verification import (
@@ -19,6 +19,7 @@ __all__ = [
     "Deal", "DealEvent", "DealVaultMessage", "Attachment", "Dispute",
     "DealStatus", "DealEventType", "AttachmentKind", "DisputeStatus",
     "OperatorAccessGrant", "PublishMetric",
+    "DealParticipant", "DealParticipantRole",
     "IdentityContainer", "OwnerRole", "SanctionsList", "SanctionsStatus",
     "StorageMode", "TrustEdge", "TrustEdgeKind", "VerificationBadge",
     "VerificationLevel", "VerificationRequest", "VerificationRequestStatus",

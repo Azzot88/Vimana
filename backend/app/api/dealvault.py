@@ -14,9 +14,10 @@ from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.rate_limit import limiter
 import base64
 
+from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, upload_file
-from app.core.threshold import E2EPayload
+from app.core.threshold import E2EPayload, nip04_decrypt
 from app.models.deal import Attachment, AttachmentKind, Deal, DealVaultMessage
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
@@ -54,7 +55,20 @@ async def _get_deal_as_participant(
     deal = await db.get(Deal, deal_id)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
-    if current_user.id not in (deal.sender_id, deal.carrier_id):
+    if current_user.id in (deal.sender_id, deal.carrier_id):
+        return deal
+    # T3.3 — active recipients also have access.
+    from app.models.deal import DealParticipant as DP
+    row = (
+        await db.execute(
+            select(DP).where(
+                DP.deal_id == deal_id,
+                DP.user_id == current_user.id,
+                DP.revoked_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
         raise HTTPException(status_code=403, detail="Not a deal participant")
     return deal
 
@@ -309,3 +323,79 @@ async def upload_attachment(
         url=get_presigned_url(attachment.r2_key),
         created_at=attachment.created_at,
     )
+
+
+@router.post("/{deal_id}/dealvault/messages/{message_id}/decrypt-for-me")
+async def decrypt_message_for_me(
+    deal_id: uuid.UUID,
+    message_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.3 — server-mediated decrypt for participants who don't hold their
+    own keys client-side (recipients invited via T3.3).
+
+    Trade-off: sender / carrier retain full E2E (they decrypt via NIP-07);
+    recipient trusts the platform to relay plaintext into their browser via
+    HTTPS. Server sees plaintext for milliseconds and does not store it.
+
+    Custodial callers (sender/carrier who haven't claimed self-custody) can
+    also use this endpoint as a convenience — same trust model.
+    """
+    await _get_deal_as_participant(deal_id, current_user, db)
+    msg = await db.get(DealVaultMessage, message_id)
+    if msg is None or msg.deal_id != deal_id:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if not msg.is_e2e:
+        raise HTTPException(status_code=400, detail="Message is not e2e; use standard read")
+    if not msg.read_packages:
+        raise HTTPException(status_code=422, detail="Message has no read_packages")
+
+    # Locate a read_package addressed to the caller. Keys can be role-based
+    # ("sender"/"carrier") or recipient-scoped ("recipient_<uuid>").
+    from app.models.deal import DealParticipant as DP
+    deal = await db.get(Deal, deal_id)
+    read_pkg: str | None = None
+    if deal.sender_id == current_user.id:
+        read_pkg = msg.read_packages.get("sender")
+    elif deal.carrier_id == current_user.id:
+        read_pkg = msg.read_packages.get("carrier")
+    else:
+        # Recipient path.
+        row = (
+            await db.execute(
+                select(DP).where(
+                    DP.deal_id == deal_id,
+                    DP.user_id == current_user.id,
+                    DP.revoked_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if row is not None:
+            read_pkg = msg.read_packages.get(f"recipient_{row.user_id}")
+    if read_pkg is None:
+        raise HTTPException(
+            status_code=403,
+            detail="No read package for you on this message",
+        )
+    if current_user.nsec_encrypted is None or current_user.nsec_nonce is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Server-mediated decrypt requires custodial nsec (self-custody users decrypt client-side)",
+        )
+    if not msg.nostr_pubkey:
+        raise HTTPException(status_code=422, detail="Message has no writer pubkey — cannot verify NIP-04 sender")
+
+    caller_nsec = decrypt_nsec(bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted))
+    session_key = nip04_decrypt(read_pkg, caller_nsec, msg.nostr_pubkey)
+
+    # Now AES-GCM decrypt the ciphertext with the recovered session_key.
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    ct = bytes(msg.text_ciphertext or b"")
+    nonce = bytes(msg.text_nonce or b"")
+    try:
+        plaintext = AESGCM(session_key).decrypt(nonce, ct, None).decode("utf-8")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"AES-GCM decrypt failed: {exc}")
+
+    return {"message_id": str(message_id), "text": plaintext}

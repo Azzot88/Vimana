@@ -11,6 +11,7 @@ import {
   type VaultMessage,
 } from '../api/dealvault'
 import api from '../api/client'
+import { inviteRecipient } from '../api/participants'
 import { decryptE2E } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
@@ -235,6 +236,23 @@ export default function DealVaultPage() {
           ← Сделка
         </Link>
         <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
+        {user && parties.senderId === user.id && dealId && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const { data } = await inviteRecipient(dealId)
+                await navigator.clipboard.writeText(data.invite_url)
+                alert(t('recipient.inviteCopied'))
+              } catch {
+                alert(t('recipient.inviteError'))
+              }
+            }}
+            className="ml-auto text-xs font-display font-medium border border-cyan/40 text-cyan px-3 py-1.5 rounded-lg hover:bg-cyan/10"
+          >
+            {t('recipient.inviteButton')}
+          </button>
+        )}
       </div>
 
       <div className="bg-navy/5 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
