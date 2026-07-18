@@ -50,7 +50,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Vimana", lifespan=lifespan)
+# T_SEC.1 — In prod set EXPOSE_DOCS=false; docs surface (/docs, /redoc,
+# /openapi.json) returns 404. Dev keeps them open for developer ergonomics.
+_expose_docs = os.getenv("EXPOSE_DOCS", "true").strip().lower() in {"1", "true", "yes"}
+app = FastAPI(
+    title="Vimana",
+    lifespan=lifespan,
+    docs_url="/docs" if _expose_docs else None,
+    redoc_url="/redoc" if _expose_docs else None,
+    openapi_url="/openapi.json" if _expose_docs else None,
+)
 app.state.limiter = limiter
 
 origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]

@@ -962,19 +962,22 @@
 
 Задачи безопасности, UX-правил, наблюдаемости и интеграций — планируются параллельно фазовым.
 
-### T_SEC.1 — Security hardening: Swagger UI и attack surface
+### T_SEC.1 — Security hardening: Swagger UI и attack surface ✅ MVP
 
 **Контекст.** Сейчас `/docs`, `/redoc`, `/openapi.json` открыты в prod без auth. Плюс отсутствуют HTTP security headers, нет deny-правил для типичных probe-путей (`.env`, `.git`, `wp-admin`).
 
-- [ ] `main.py` — env-флаг `EXPOSE_DOCS` (`false` в prod). При `false`: `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. Dev остаётся с открытыми `/docs`.
-- [ ] nginx конфиг: `add_header` для CSP, HSTS (`max-age=31536000; includeSubDomains`), X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `strict-origin-when-cross-origin`, Permissions-Policy минимальный.
-- [ ] nginx: `deny all` для `/.env`, `/.git`, `~ /wp-admin`, `~ /\.php$`, `~ /\.aspx$`.
-- [ ] nginx: `server_tokens off` (скрыть версию nginx).
-- [ ] Rate-limit по IP на `/api/auth/login`, `/api/auth/register` — 10/min (сейчас slowapi ограничивает частично, проверить).
-- [ ] Audit endpoint-list: `/health` — публичный (для docker healthcheck), всё остальное — auth или RBAC.
-- [ ] Тесты: prod-конфиг возвращает 404 на `/docs`; `/openapi.json` тоже 404; security headers присутствуют в ответе; probe-пути возвращают 403.
+- [x] `main.py` — env-флаг `EXPOSE_DOCS` (default `true` для dev; `false` в prod). При `false`: `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. Читается один раз при импорте.
+- [x] nginx конфиг: `add_header` с флагом `always`: HSTS (`max-age=31536000; includeSubDomains`), X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `strict-origin-when-cross-origin`, Permissions-Policy `camera=(), microphone=(), geolocation=(), interest-cohort=()`, CSP baseline (`default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; …; frame-ancestors 'none'`).
+- [x] nginx: `server_tokens off` глобально.
+- [x] nginx probe-deny: `/.env(.*)?`, `/.git`, `/.svn`, `.php|.php3|.php4|.php5|.phtml|.aspx|.jsp|.cgi`, `/wp-admin|/wp-login|/wp-content|/xmlrpc.php`, `/.ht*` → 404.
+- [x] nginx rate-limit zone `auth_zone` (10 req/min per IP) на `/api/auth/login` + `/api/auth/register` с `burst=5 nodelay`. Двухслойная защита: nginx-guard перед app + slowapi внутри app.
+- [x] `/health` остаётся публичным (docker healthcheck работает). `/docs`, `/redoc`, `/openapi.json` — 404 при `EXPOSE_DOCS=false`.
+- [x] 3 backend-теста (`test_docs_exposure.py`): docs disabled → 404 на /docs+/redoc+/openapi.json, docs enabled → 200 на /docs+/openapi.json, /health доступен независимо от флага. Тесты через `importlib.reload(app.main)` с monkeypatched env — читают флаг заново.
+- [x] `.env.example` — добавлен `EXPOSE_DOCS=true` с pointer на что менять для prod.
 
-**Acceptance:** OWASP baseline pass; `/docs` недоступен в prod; nginx возвращает security headers; probe-пути (`.env`, `.git`) блокируются.
+**Acceptance:** ✅ `EXPOSE_DOCS=false` в prod → 404 на docs surface; nginx возвращает security headers (проверяется `curl -I`); probe-пути (`.env`, `.git`, `.php`) → 404; auth-endpoints под rate-limit 10r/min + burst 5.
+
+**Follow-up:** (1) CSP tightening — сейчас `unsafe-inline` в style-src из-за Tailwind runtime; вынести critical inline styles в CSS-файл. (2) `/health` можно ужесточить — вернуть 200 без тела (не выдавать версию). (3) Мониторинг rate-limit hits — счётчик отказов nginx в metrics.
 
 ### T_UX.1 — Bento breakpoint rule + decline_polite copy
 
