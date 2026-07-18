@@ -943,17 +943,50 @@
 
 ### T_TEST.3 — Playwright smoke suite (наблюдаемая e2e)
 
-**Контекст.** Сейчас unit+integration через pytest/vitest, но нет UI e2e. Смок нужен для (a) визуального наблюдения регистрации и flow, (b) CI-верификации после prod-деплоя.
+**Контекст.** Сейчас unit+integration через pytest (220 тестов) + vitest сконфигурирован но пуст. UI e2e = ноль. Смок нужен для (a) визуального наблюдения регистрации и полного flow глазами разработчика, (b) CI-верификации после prod-деплоя, (c) как приёмочный лабораторный стенд перед демо инвесторам.
 
-- [ ] `frontend/e2e/` — Playwright test suite. Установка `@playwright/test`.
-- [ ] Один smoke-spec: `smoke-golden-path.spec.ts` — регистрация carrier + sender → create trip → match deal → chat message → confirm → close.
-- [ ] Headed режим `--headed --slow-mo=500` для локального интерактивного наблюдения; headless на CI.
-- [ ] Скрипт `npm run smoke` (headed) + `npm run smoke:ci` (headless).
-- [ ] Playwright конфиг: baseURL из env, screenshots on failure, video on failure.
-- [ ] Documented в ENVIRONMENT.md §Testing: как запустить локально + как CI подцепляет.
-- [ ] Отдельный target в docker-compose для e2e-контейнера (опционально).
+**Софт — Playwright** (Microsoft). Мотивация в comparison table ниже (сохранена как обнаруженная логика — не удалять):
 
-**Acceptance:** `npm run smoke` открывает Chromium, проходит full flow, ты наблюдаешь визуально; на CI прогоняется headless после каждого deploy.
+| Тул | За | Против | Вердикт |
+|---|---|---|---|
+| Playwright | Multi-browser (Chromium/Firefox/WebKit), встроенный trace viewer (record + offline replay), auto-wait без sleep, TS-native, docker образ `mcr.microsoft.com/playwright` | ~200 MB npm-deps | ✅ default |
+| Puppeteer | Легче, official Chrome API | Только Chromium; менее удобное API для многошаговых спеков | микро-smoke на одну проверку |
+| Cypress | GUI dashboard, time-travel debug | Замкнутый рантайм, медленнее в CI, сложнее headless | нет |
+
+**Спеки (3 штуки):**
+
+- [ ] `smoke-golden-path.spec.ts` — carrier reg → trip publish → sender reg → match → chat message → carrier accept → sender confirm → status = closed. Полный жизненный цикл сделки.
+- [ ] `smoke-verification.spec.ts` — carrier reg → sender реквестит verification → carrier upload (или decline_polite) → badge появляется / decline-banner виден. Проверяет T2.1 flow.
+- [ ] `smoke-nostr.spec.ts` (после T3.5) — trip publish → `Trip.nostr_event_id` проставлен → `GET /api/trips/{id}/nostr-event` возвращает валидный NIP-01 event JSON. Проверяет T3.5 publish bridge.
+
+**Инфра:**
+
+- [ ] `frontend/e2e/` — Playwright config: `baseURL` из env `SMOKE_BASE_URL` (default `http://localhost:5173` для dev, `https://vimana.dealvault.club` для prod-smoke), screenshots + video + trace на failure всегда.
+- [ ] `frontend/package.json` — добавить `@playwright/test` в devDependencies.
+- [ ] **docker-compose profile `smoke`** — контейнер `playwright-runner` из образа `mcr.microsoft.com/playwright:v1.49.0-jammy` (или актуальный latest). Запуск: `docker compose --profile smoke run playwright-runner`.
+- [ ] **docker-compose profile `smoke-live`** — контейнер `playwright-vnc` с xvfb + x11vnc + noVNC; публикует UI на `:6080` (только для админа, nginx deny в prod). Позволяет **наблюдать live с телефона / другого браузера** — открываешь `http://server:6080`, видишь виртуальный экран сервера с бегущим Chromium.
+- [ ] **npm scripts:**
+  - `smoke:headed` — `playwright test --headed --slow-mo=500` (Mac local, наблюдаешь глазами).
+  - `smoke:trace` — `playwright test --trace=on` (server headless, записывает trace.zip → скачиваешь на Mac, открываешь на trace.playwright.dev, крутишь как машину времени; лучше видео — можно кликать по замороженной DOM).
+  - `smoke:ci` — `playwright test --project=chromium` (headless, screenshots/video/trace только на failure).
+
+**CI + оповещения:**
+
+- [ ] После `git push` в prod ветку — CI прогоняет `smoke:ci` против prod URL.
+- [ ] На failure — уведомление в Telegram через существующий `app/tasks/notifications.py` (задействовать worker'а).
+- [ ] Trace-артефакты сохраняются на S3/R2 30 дней для post-mortem.
+
+**Документация:**
+
+- [ ] `ENVIRONMENT.md §Testing` — три сценария запуска (Mac headed / server trace / server VNC) c командами.
+- [ ] Инструкция «как открыть trace.zip» — ссылка на trace.playwright.dev.
+- [ ] Инструкция «как подключиться к smoke-live VNC» — только с одобренного IP через админ-VPN.
+
+**Acceptance:**
+1. `npm run smoke:headed` на Mac открывает Chromium, проходит full flow, разработчик наблюдает визуально с 500 мс замедлением.
+2. `docker compose --profile smoke run playwright-runner npm run smoke:trace` на сервере headless за ~30 сек, генерирует trace.zip.
+3. `docker compose --profile smoke-live up playwright-vnc` — VNC на `:6080` показывает бегущий Chromium с телефона (live).
+4. На CI после prod-деплоя smoke-ci прогоняется автоматически; failure → Telegram-alert.
 
 ### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server
 
