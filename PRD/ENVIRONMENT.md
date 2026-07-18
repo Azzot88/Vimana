@@ -180,7 +180,6 @@ docker compose exec backend alembic upgrade head
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --build backend frontend celery-worker celery-beat
-docker compose -f docker-compose.dev.yml exec -w /app backend alembic upgrade head
 docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v
 ```
 
@@ -190,5 +189,5 @@ docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v
 - **При изменении `backend/requirements.txt`** — только `--build backend`. Аналогично: `pip install -r requirements.txt` в Dockerfile ставит пакеты при билде.
 - **При изменении только исходников (без deps)** — `--build` всё равно быстро отрабатывает через кэш слоёв, ставить только `restart backend/frontend` **не безопасно** (nginx-контейнер держит соединения к старым, .env не подхватится).
 - **При изменении `.env`** — обязательно `up --force-recreate --remove-orphans` (просто `restart` **не подхватит** переменные окружения, см. [feedback_docker_compose_env]).
-- **Миграции `alembic upgrade head`** запускать после `up`, до `pytest`. Идемпотентно.
+- **Миграции `alembic upgrade head` — НЕ в стандартный шаблон.** Запускать только если в коммите есть новый файл в `backend/alembic/versions/`. Alembic идемпотентна, но лишняя `docker exec` — трата времени и шума в логах. Проверка: `git diff --name-only HEAD~1 HEAD -- backend/alembic/versions/`. Если пусто — миграцию не запускать.
 - **Тесты и билды выполняются только на сервере**, никогда локально (см. `feedback_no_local_tests_builds`).
