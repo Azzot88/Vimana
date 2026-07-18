@@ -1,16 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { registerUser, uniqueEmail } from '../helpers'
 
-/**
- * Smoke #3 — Recipient join route wiring.
- *
- * Proves `/join/deal/:token` is wired (App.tsx → JoinDealPage → backend).
- * A bogus token should either surface a friendly error, redirect somewhere,
- * or just render a page — anything but crash / blank.
- *
- * Full invite-and-join round-trip requires clipboard + real deal + sender
- * button — pt.2.
- */
+/** Smoke #3 — /join/deal/:token wiring works for bogus tokens. */
 test('recipient join route handles unknown token gracefully', async ({ page }) => {
   test.setTimeout(30_000)
   const user = await registerUser(page, {
@@ -18,17 +9,22 @@ test('recipient join route handles unknown token gracefully', async ({ page }) =
     displayName: 'E2E Recipient',
   })
 
-  await page.goto('/join/deal/definitely-not-a-real-token-999')
-  await page.waitForLoadState('networkidle')
+  // Watch the real /api/deals/join/... XHR — must respond 4xx (bogus token).
+  const [joinResp] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().includes('/api/deals/join/') && r.request().method() === 'POST',
+      { timeout: 10_000 },
+    ),
+    page.goto('/join/deal/definitely-not-a-real-token-999'),
+  ])
+  expect(joinResp.status(), 'bogus token should be 4xx').toBeGreaterThanOrEqual(400)
+  expect(joinResp.status()).toBeLessThan(500)
 
-  // Give the JoinDealPage's async fetch a beat to run.
-  await page.waitForTimeout(1500)
-
-  // Success = either navigated away (login/dashboard) OR rendered content
-  // with visible text (loading state, "invite not found" error, redirect).
-  // Failure = zero DOM content / crashed React tree.
+  await page.waitForLoadState('domcontentloaded')
   const bodyText = (await page.locator('body').innerText()).trim()
-  expect(bodyText.length + page.url().length).toBeGreaterThan(50)
+  expect(bodyText.length, 'page should not be blank').toBeGreaterThan(20)
 
-  console.log(`Recipient smoke ok — user=${user.email}, url=${page.url()}, body-len=${bodyText.length}`)
+  console.log(
+    `Recipient smoke ok — user=${user.email}, join-status=${joinResp.status()}, body-len=${bodyText.length}`,
+  )
 })
