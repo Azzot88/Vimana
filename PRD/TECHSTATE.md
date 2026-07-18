@@ -186,6 +186,9 @@
 | УБА Celery beat (T3.1) — `recompute_all_uba` каждый час для активных за 90 дней carrier-ов; queue=notifications | `backend/app/tasks/uba.py`, `backend/app/worker.py` |
 | УБА endpoints (T3.1) — `GET /api/me/uba` + `GET /api/users/{id}/uba` → `{uba, level, components}` | `backend/app/api/uba.py` |
 | УБА UI (T3.1) — `UBASection` в профиле: score, level chip (navy/cyan/amber градация), 4 component tile'а | `frontend/src/{api/uba,components/UBASection,pages/ProfilePage}.tsx` |
+| Playwright smoke suite (T_TEST.3) — `frontend/e2e/` отдельный npm-пакет, `baseURL` prod, 3 spec'а (golden/verification/recipient), headed режим для Mac, trace всегда | `frontend/e2e/{package.json,playwright.config.ts,helpers.ts,specs/*}` |
+| E2E user cleanup (T_TEST.3) — Celery beat `cleanup_e2e_users` раз в 24ч по convention `@e2e.vimana.local`, каскадный delete через 12 таблиц | `backend/app/tasks/cleanup.py`, beat schedule в `worker.py` |
+| Admin users viewer (T_TEST.3) — `email_contains` filter, `DELETE /admin/users/{id}` async cascade, «test» chip, bulk-friendly UI | `backend/app/api/admin.py`, `frontend/src/{api/admin,pages/AdminUsersPage}.ts(x)` |
 | УБА chip на карточке рейса (T3.2) — TripOut carrier_uba+carrier_uba_level (batch-lookup), `<UBAChip>` компонент с scoped-цветом | `backend/app/{api/trips,schemas/marketplace}.py`, `frontend/src/components/UBAChip.tsx` |
 | OperatorAccessGrant (T3.2) — модель + auto-create на open_dispute + explicit grant/revoke endpoints + gate на arbiter vault read (нужен ≥1 active grant) | `backend/app/{models/deal,api/admin}.py`, миграция `0017_operator_access_grants` |
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |

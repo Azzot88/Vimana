@@ -17,9 +17,14 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.nostr_whitelist.refresh_allowed_pubkeys",
         "schedule": 3600.0,
     },
+    "cleanup-e2e-users-daily": {
+        "task": "app.tasks.cleanup.cleanup_e2e_users",
+        "schedule": 86400.0,
+    },
 }
 celery_app.conf.task_routes = {
     "app.tasks.notifications.*": {"queue": "notifications"},
     "app.tasks.uba.*": {"queue": "notifications"},
     "app.tasks.nostr_whitelist.*": {"queue": "notifications"},
+    "app.tasks.cleanup.*": {"queue": "notifications"},
 }

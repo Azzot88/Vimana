@@ -38,10 +38,17 @@ export const readVaultAsArbiter = (
 ) =>
   api.get<Page<VaultMessage>>(`/api/admin/deals/${dealId}/vault`, { params })
 
-export const listAllUsers = (params?: { after?: string; limit?: number }) =>
-  api.get<Page<User>>('/api/admin/users', { params })
+export const listAllUsers = (params?: {
+  after?: string
+  limit?: number
+  email_contains?: string
+}) => api.get<Page<User>>('/api/admin/users', { params })
 
 export const promoteArbiter = (userId: string, isArbiter: boolean) =>
   api.post<User>(`/api/admin/users/${userId}/promote-arbiter`, {
     is_arbiter: isArbiter,
   })
+
+/** T_TEST.3 — superuser hard-delete for e2e/junk cleanup. Cascade. */
+export const deleteUser = (userId: string) =>
+  api.delete<void>(`/api/admin/users/${userId}`)

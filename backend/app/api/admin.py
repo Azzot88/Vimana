@@ -332,9 +332,17 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
+    email_contains: str | None = Query(
+        default=None,
+        description="Optional substring filter on email. Case-insensitive.",
+    ),
 ):
+    """T_TEST.3 — `email_contains` lets superuser find e2e test users
+    (`@e2e.vimana.local`) or otherwise scope the list without pulling
+    thousands of rows."""
     base = select(User)
-    # User doesn't have `created_at` as pagination cursor field? It does — check.
+    if email_contains:
+        base = base.where(User.email.ilike(f"%{email_contains}%"))
     items, next_cursor = await paginate_desc(db, base, User, after, clamp_limit(limit))
     return Page(items=items, next_cursor=next_cursor)
 
@@ -359,3 +367,120 @@ async def promote_arbiter(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.delete("/admin/users/{user_id}", status_code=204)
+async def delete_user(
+    user_id: uuid.UUID,
+    current_user: User = Depends(require_perm(Permission.USERS_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    """T_TEST.3 — superuser hard-delete for e2e/junk cleanup.
+
+    Runs the same cascade as `cleanup_e2e_users` (see `app/tasks/cleanup.py`)
+    but for a single user on demand. Superuser cannot delete themselves or
+    another superuser.
+    """
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role == "superuser":
+        raise HTTPException(status_code=400, detail="Cannot delete a superuser")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+
+    # Reuse the cascade logic from the Celery task by scoping it to one id.
+    from app.tasks.cleanup import _cascade_delete_users
+
+    _cascade_delete_users(db.sync_session, [user_id]) if False else None  # noqa
+    # Async equivalent — since the Celery task is sync, we duplicate the
+    # narrower version here. Keep in sync when either changes.
+    from sqlalchemy import delete
+    from app.models.deal import (
+        Attachment,
+        Deal,
+        DealParticipant,
+        DealVaultMessage,
+        Dispute,
+        OperatorAccessGrant,
+    )
+    from app.models.marketplace import InquiryMessage, Order, Trip, TripInquiry
+    from app.models.social import Connection, InviteLink
+    from app.models.trust import TrustEdge
+
+    ids = [user_id]
+    trip_ids = [
+        r[0] for r in (await db.execute(select(Trip.id).where(Trip.carrier_id.in_(ids)))).all()
+    ]
+    deal_ids = [
+        r[0]
+        for r in (
+            await db.execute(
+                select(Deal.id).where(
+                    (Deal.sender_id.in_(ids)) | (Deal.carrier_id.in_(ids))
+                )
+            )
+        ).all()
+    ]
+    if deal_ids:
+        msg_ids = [
+            r[0]
+            for r in (
+                await db.execute(
+                    select(DealVaultMessage.id).where(
+                        DealVaultMessage.deal_id.in_(deal_ids)
+                    )
+                )
+            ).all()
+        ]
+        if msg_ids:
+            await db.execute(delete(Attachment).where(Attachment.message_id.in_(msg_ids)))
+        await db.execute(delete(DealVaultMessage).where(DealVaultMessage.deal_id.in_(deal_ids)))
+        await db.execute(delete(DealEvent).where(DealEvent.deal_id.in_(deal_ids)))
+        dispute_ids = [
+            r[0]
+            for r in (
+                await db.execute(select(Dispute.id).where(Dispute.deal_id.in_(deal_ids)))
+            ).all()
+        ]
+        if dispute_ids:
+            await db.execute(
+                delete(OperatorAccessGrant).where(
+                    OperatorAccessGrant.dispute_id.in_(dispute_ids)
+                )
+            )
+            await db.execute(delete(Dispute).where(Dispute.id.in_(dispute_ids)))
+        await db.execute(
+            delete(DealParticipant).where(DealParticipant.deal_id.in_(deal_ids))
+        )
+        await db.execute(delete(Deal).where(Deal.id.in_(deal_ids)))
+    if trip_ids:
+        inquiry_ids = [
+            r[0]
+            for r in (
+                await db.execute(
+                    select(TripInquiry.id).where(TripInquiry.trip_id.in_(trip_ids))
+                )
+            ).all()
+        ]
+        if inquiry_ids:
+            await db.execute(
+                delete(InquiryMessage).where(InquiryMessage.inquiry_id.in_(inquiry_ids))
+            )
+            await db.execute(delete(TripInquiry).where(TripInquiry.id.in_(inquiry_ids)))
+        await db.execute(delete(Trip).where(Trip.id.in_(trip_ids)))
+    await db.execute(
+        delete(TrustEdge).where(
+            (TrustEdge.from_user_id.in_(ids)) | (TrustEdge.to_user_id.in_(ids))
+        )
+    )
+    await db.execute(
+        delete(Connection).where(
+            (Connection.user_id.in_(ids)) | (Connection.connected_user_id.in_(ids))
+        )
+    )
+    await db.execute(delete(InviteLink).where(InviteLink.inviter_id.in_(ids)))
+    await db.execute(delete(Order).where(Order.sender_id.in_(ids)))
+    await db.execute(delete(User).where(User.id.in_(ids)))
+    await db.commit()
+    return
