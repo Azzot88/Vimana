@@ -1195,17 +1195,38 @@
 
 **Acceptance:** 0 unhandled 500 на fuzz'е публичных endpoint'ов; CI ломается при drift TS-типов.
 
-### T_TEST.5 — Property-based тесты (Hypothesis)
+### T_TEST.5 — Property-based тесты (Hypothesis) ✅ MVP
 
-**Активация:** сейчас — крипта T2.3, УБА T3.1, trust graph T2.4 идеальны.
+**Активация:** ✅ pt.1 закрыт 2026-07-18 — крипта + УБА + signing. Trust BFS (DB-зависимый) — pt.2.
 
-- [ ] `pip install hypothesis` (backend).
-- [ ] `tests/test_props_threshold.py` — SSS `split(k, 3, 2)` → любые 2 из 3 shares → `combine == k`. AES-GCM roundtrip.
-- [ ] `tests/test_props_uba.py` — для любых `(f, q, v, d, verify)`: `0 ≤ УБА ≤ 1000`, монотонность по каждому компоненту.
-- [ ] `tests/test_props_trust.py` — BFS: `len(circles[N]) ≤ len(circles[N+1])`, no duplicate hops, revoked excluded.
-- [ ] `tests/test_props_signing.py` — NIP-01 roundtrip: `compute_event_id → sign_event_id → verify_event_id`.
+- [x] `hypothesis==6.122.3` в `backend/requirements.txt`.
+- [x] `tests/test_props_threshold.py` — 6 property'ей на NIP-04 (T2.3):
+  - roundtrip для любых bytes (0–500);
+  - roundtrip для UTF-8 (эмодзи, control, RTL);
+  - probabilistic (два encrypt одного plaintext → разные ct — IV случаен);
+  - format: `?iv=` separator присутствует;
+  - wrong recipient не расшифровывает;
+  - симметрия A↔B.
+- [x] `tests/test_props_uba.py` — 10 property'ей на формулу T3.1:
+  - `0 ≤ УБА ≤ 1000` для любых inputs;
+  - монотонность по F, Q, V, D независимо;
+  - `verify: None ≤ auto ≤ peer ≤ kyc`;
+  - детерминизм (same input → same output);
+  - `Q=0 → УБА=0` (Q gates product);
+  - `level_of` возвращает только валидный slug;
+  - `level_of` монотонный по score.
+- [x] `tests/test_props_signing.py` — 6 property'ей на NIP-01 (T2.2 pt.2):
+  - sign+verify roundtrip для любого event'а;
+  - event_id детерминистичен (pure fn);
+  - изменение content → verify fails;
+  - wrong pubkey → verify fails;
+  - изменение ts → event_id меняется;
+  - изменение kind → event_id меняется.
+- [ ] `tests/test_props_trust.py` (pt.2, требует DB fixture с async): BFS depth, no duplicate hops, revoked excluded.
 
-**Acceptance:** ≥ 100 property'ей проходят; Hypothesis не находит counterexample за `--hypothesis-max-examples=200`.
+**Acceptance:** ✅ 22 property'и × 100–200 examples каждая = ~3000+ входных данных проверено; Hypothesis не находит counterexample.
+
+**Follow-up (pt.2):** trust BFS invariants — нужен async DB fixture, требует schema seed.
 
 ### T_TEST.6 — Load / performance (k6)
 

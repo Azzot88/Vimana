@@ -48,3 +48,5 @@ weasyprint==63.0
 # Tests
 pytest==8.3.4
 pytest-asyncio==0.24.0
+# T_TEST.5 — property-based tests for crypto/math (threshold, UBA, signing)
+hypothesis==6.122.3

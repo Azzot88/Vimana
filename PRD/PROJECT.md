@@ -186,7 +186,7 @@ PROJECT.md управляет **процессом**, но не переопре
 | **Integration** (TestClient) | (в каждой задаче) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Smoke E2E** happy-path | T_TEST.3 | | | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Full E2E** multi-context | T_TEST.3 pt.2 | | | | 🟨 | ✅ | ✅ | ✅ |
-| **Property-based** (Hypothesis) | T_TEST.5 | | 🟨 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Property-based** (Hypothesis) | T_TEST.5 | | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Contract** (schemathesis) | T_TEST.4 | | | | 🟨 | ✅ | ✅ | ✅ |
 | **API fuzzing** (schemathesis) | T_TEST.4 | | | | 🟨 | ✅ | ✅ | ✅ |
 | **Load** (k6) | T_TEST.6 | | | | | ✅ | ✅ | ✅ |
