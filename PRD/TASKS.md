@@ -744,11 +744,26 @@
 
 **Follow-up:** (1) `Collateral` модель в T5.x → D_factor заработает; (2) UBA chip на карточке участника (TripCard/DealCard) — сейчас только в профиле; (3) миграция Redis-кэш для endpoint (`(user_id, quarter_hour)` TTL 15 мин) когда трафик вырастет.
 
-### T3.2 — Оператор-арбитр и споры
-- [ ] Роль `Operator` + консоль.
-- [ ] `Dispute`, `OperatorAccessGrant` (доступ к DealVault по запросу стороны).
-- [ ] Вердикт фиксируется в `DealEvent`; при наличии эскроу (Фаза 5) — разблокировка.
-**Acceptance:** спор открывается, оператор изучает DealVault, выносит вердикт; всё в логе.
+### T3.2 — Оператор-арбитр и споры ✅ MVP
+
+Большая часть уже покрыта T1.23 (Dispute модель + open/claim/resolve endpoints + AdminDisputesPage) и T1.24 (Role.ARBITER + RBAC permissions). T3.2 добавляет **OperatorAccessGrant** как первоклассную privacy-модель и UBA-chip на карточку рейса.
+
+- [x] Роль `arbiter` — уже была через T1.24 pt.1 (`Role.ARBITER` + `ROLE_PERMISSIONS[arbiter]`: DISPUTE_CLAIM, DISPUTE_RESOLVE, VAULT_READ_AS_ARBITER, DISPUTE_LIST_ADMIN, IDENTITY_CONTAINER_READ, VERIFICATION_REVOKE_ANY, +THRESHOLD_ARBITER_REVEAL из T2.3).
+- [x] Консоль arbiter — уже была через T1.23 (`/admin/disputes`, `/admin/deals/{id}/vault`).
+- [x] `Dispute` модель — уже была через T1.23 (id, deal_id, opened_by, arbiter_id, reason, status ∈ {open,claimed,resolved}, verdict, created_at, resolved_at).
+- [x] **`OperatorAccessGrant`** (миграция 0017): `(id, dispute_id → Dispute, granted_by → User, granted_at, revoked_at?)` + UNIQUE(dispute_id, granted_by) для идемпотентных re-grant'ов + partial index на активных.
+- [x] Auto-create grant от opener при `POST /deals/{id}/dispute` — opener де-факто согласен эскалацией.
+- [x] `POST /disputes/{id}/grant-access` — вторая сторона (не opener) явно даёт разрешение; idempotent (re-activates revoked row).
+- [x] `POST /disputes/{id}/revoke-access` — участник отзывает свой grant.
+- [x] `GET /admin/deals/{id}/vault` теперь требует ≥1 non-revoked grant на dispute (superuser bypasses). 403 если все grants отозваны.
+- [x] Вердикт фиксируется в `DealEvent(event_type=dispute_resolved)` — уже было через T1.23.
+- [x] Разблокировка эскроу — вне scope до Фазы 5 (T5.x).
+- [x] **UBA-chip на TripCard**: TripOut расширен `carrier_name`, `carrier_uba`, `carrier_uba_level`; `list_trips` делает batch-lookup по carrier_ids для одного дополнительного запроса. Frontend `<UBAChip>` компонент — цветной pill с score+level slug, скрывается если UBA ещё не посчитан (fresh user). Встроен в carrier-строку TripsPage.
+- [x] 7 backend-тестов: opener auto-grant, counterparty explicit grant, третья сторона 403, idempotent re-grant после revoke, arbiter vault read блокируется когда все grants revoked, vault read OK при active sender grant, vault read OK когда только counterparty grants (крест-случай).
+
+**Acceptance ✅:** спор открывается → opener grant создаётся автоматически → arbiter claim'ит → пока хоть один grant активен, arbiter читает DealVault; audit-event пишется как раньше; вердикт → DealEvent. Двух-сторонний consent доступен через explicit endpoint; отзыв consent блокирует arbiter'а. UBA виден на карточке рейса.
+
+**Follow-up:** (1) UI grant/revoke флоу в AdminDisputesPage для сторон (сейчас endpoint есть, UI-кнопок нет — участник может открыть DealPage/dispute-панель и там нажать); (2) escrow разблокировка — T5.x.
 
 ---
 

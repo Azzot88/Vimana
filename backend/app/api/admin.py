@@ -28,6 +28,7 @@ from app.models.deal import (
     DealVaultMessage,
     Dispute,
     DisputeStatus,
+    OperatorAccessGrant,
 )
 from app.models.user import User
 from app.schemas.dealvault import MessageOut
@@ -87,6 +88,10 @@ async def open_dispute(
         status=DisputeStatus.open,
     )
     db.add(dispute)
+    await db.flush()
+
+    # T3.2 — opener implicitly consents to arbiter reading DealVault.
+    db.add(OperatorAccessGrant(dispute_id=dispute.id, granted_by=current_user.id))
 
     deal.status = DealStatus.disputed
     dispute_event = DealEvent(
@@ -100,6 +105,66 @@ async def open_dispute(
 
     await db.commit()
     await db.refresh(dispute)
+    return dispute
+
+
+@router.post("/disputes/{dispute_id}/grant-access", response_model=DisputeOut)
+async def grant_arbiter_access(
+    dispute_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.2 — the counterparty of a dispute may add their own access grant so
+    the arbiter can inspect the DealVault with two-sided consent on record.
+
+    Idempotent: re-granting after a revoke re-activates the row instead of
+    inserting a duplicate (UNIQUE(dispute_id, granted_by))."""
+    dispute = await db.get(Dispute, dispute_id)
+    if dispute is None:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+
+    deal = await db.get(Deal, dispute.deal_id)
+    if deal is None or current_user.id not in (deal.sender_id, deal.carrier_id):
+        raise HTTPException(status_code=403, detail="Not a deal participant")
+
+    existing = await db.execute(
+        select(OperatorAccessGrant).where(
+            OperatorAccessGrant.dispute_id == dispute_id,
+            OperatorAccessGrant.granted_by == current_user.id,
+        )
+    )
+    row = existing.scalar_one_or_none()
+    if row is None:
+        db.add(OperatorAccessGrant(dispute_id=dispute_id, granted_by=current_user.id))
+    else:
+        row.revoked_at = None
+    await db.commit()
+    return dispute
+
+
+@router.post("/disputes/{dispute_id}/revoke-access", response_model=DisputeOut)
+async def revoke_arbiter_access(
+    dispute_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.2 — participant may revoke their earlier grant. Arbiter can still
+    read if the other participant's grant remains active."""
+    dispute = await db.get(Dispute, dispute_id)
+    if dispute is None:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+
+    row_result = await db.execute(
+        select(OperatorAccessGrant).where(
+            OperatorAccessGrant.dispute_id == dispute_id,
+            OperatorAccessGrant.granted_by == current_user.id,
+        )
+    )
+    row = row_result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="No grant to revoke")
+    row.revoked_at = datetime.now(timezone.utc)
+    await db.commit()
     return dispute
 
 
@@ -210,6 +275,18 @@ async def arbiter_read_vault(
             raise HTTPException(status_code=403, detail="Not your claimed dispute")
         if dispute.status not in (DisputeStatus.claimed, DisputeStatus.resolved):
             raise HTTPException(status_code=403, detail="Dispute not claimed")
+        # T3.2 — at least one active OperatorAccessGrant must exist.
+        active_grant = await db.execute(
+            select(OperatorAccessGrant).where(
+                OperatorAccessGrant.dispute_id == dispute.id,
+                OperatorAccessGrant.revoked_at.is_(None),
+            )
+        )
+        if active_grant.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=403,
+                detail="No active access grant — both parties revoked consent",
+            )
 
     # Audit trail: DealEvent + system-message in the chat
     now = datetime.now(timezone.utc)

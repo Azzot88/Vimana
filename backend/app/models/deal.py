@@ -145,6 +145,35 @@ class Dispute(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class OperatorAccessGrant(Base):
+    """T3.2 — explicit consent from a deal participant to let the arbiter read
+    DealVault for a given dispute.
+
+    Opening a dispute auto-creates a grant from the opener (they de facto
+    consent by escalating). The other party may add their own grant via
+    `POST /disputes/{id}/grant-access` — useful when arbiter wants both sides
+    on record (e.g., threshold recovery needs cooperation). Superuser bypasses
+    grants; arbiter needs ≥1 non-revoked grant on the dispute to read.
+    """
+
+    __tablename__ = "operator_access_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "dispute_id", "granted_by", name="uq_grant_dispute_party"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    dispute_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("disputes.id"))
+    granted_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class Attachment(Base):
     __tablename__ = "attachments"
 

@@ -58,4 +58,38 @@ async def list_trips(
         stmt = stmt.where(cast(Trip.depart_at, Date) == date)
 
     items, next_cursor = await paginate_desc(db, stmt, Trip, after, clamp_limit(limit))
-    return Page(items=items, next_cursor=next_cursor)
+
+    # Enrich with carrier name + UBA. One additional query batched by ids.
+    from app.core.uba import level_of
+    from app.models.user import User
+
+    if items:
+        carrier_ids = list({t.carrier_id for t in items})
+        rows = await db.execute(
+            select(User.id, User.display_name, User.business_activity_level).where(
+                User.id.in_(carrier_ids)
+            )
+        )
+        by_id = {r.id: r for r in rows}
+        out: list[TripOut] = []
+        for t in items:
+            row = by_id.get(t.carrier_id)
+            uba = int(row.business_activity_level) if row and row.business_activity_level is not None else None
+            out.append(
+                TripOut(
+                    id=t.id,
+                    carrier_id=t.carrier_id,
+                    carrier_name=row.display_name if row else None,
+                    carrier_uba=uba,
+                    carrier_uba_level=level_of(uba) if uba is not None else None,
+                    origin=t.origin,
+                    destination=t.destination,
+                    depart_at=t.depart_at,
+                    capacity=t.capacity,
+                    allowed_categories=t.allowed_categories,
+                    status=t.status.value if hasattr(t.status, "value") else str(t.status),
+                    created_at=t.created_at,
+                )
+            )
+        return Page(items=out, next_cursor=next_cursor)
+    return Page(items=[], next_cursor=next_cursor)

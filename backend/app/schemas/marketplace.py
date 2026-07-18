@@ -15,6 +15,10 @@ class TripCreate(BaseModel):
 class TripOut(BaseModel):
     id: uuid.UUID
     carrier_id: uuid.UUID
+    carrier_name: str | None = None
+    # T3.1/T3.2 — UBA is a first-class trust signal on trip cards.
+    carrier_uba: int | None = None
+    carrier_uba_level: str | None = None
     origin: str
     destination: str
     depart_at: datetime

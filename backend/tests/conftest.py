@@ -385,6 +385,34 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
 
+async def _ensure_operator_access_grants(engine) -> None:
+    """T3.2 schema fix: operator_access_grants table. Idempotent."""
+    async with engine.begin() as conn:
+        exists = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name='operator_access_grants'"
+                )
+            )
+        ).fetchone()
+        if not exists:
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE operator_access_grants (
+                        id UUID PRIMARY KEY,
+                        dispute_id UUID NOT NULL REFERENCES disputes(id),
+                        granted_by UUID NOT NULL REFERENCES users(id),
+                        granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        revoked_at TIMESTAMPTZ,
+                        CONSTRAINT uq_grant_dispute_party UNIQUE (dispute_id, granted_by)
+                    )
+                    """
+                )
+            )
+
+
 async def _ensure_threshold_columns(engine) -> None:
     """T2.3 schema fix: is_e2e / wrapped_shares / read_packages on
     deal_vault_messages. Idempotent."""
@@ -561,6 +589,7 @@ async def test_engine():
     await _ensure_nostr_keypair_columns(engine)
     await _ensure_nostr_event_columns(engine)
     await _ensure_threshold_columns(engine)
+    await _ensure_operator_access_grants(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

@@ -175,6 +175,8 @@
 | УБА Celery beat (T3.1) — `recompute_all_uba` каждый час для активных за 90 дней carrier-ов; queue=notifications | `backend/app/tasks/uba.py`, `backend/app/worker.py` |
 | УБА endpoints (T3.1) — `GET /api/me/uba` + `GET /api/users/{id}/uba` → `{uba, level, components}` | `backend/app/api/uba.py` |
 | УБА UI (T3.1) — `UBASection` в профиле: score, level chip (navy/cyan/amber градация), 4 component tile'а | `frontend/src/{api/uba,components/UBASection,pages/ProfilePage}.tsx` |
+| УБА chip на карточке рейса (T3.2) — TripOut carrier_uba+carrier_uba_level (batch-lookup), `<UBAChip>` компонент с scoped-цветом | `backend/app/{api/trips,schemas/marketplace}.py`, `frontend/src/components/UBAChip.tsx` |
+| OperatorAccessGrant (T3.2) — модель + auto-create на open_dispute + explicit grant/revoke endpoints + gate на arbiter vault read (нужен ≥1 active grant) | `backend/app/{models/deal,api/admin}.py`, миграция `0017_operator_access_grants` |
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
 | Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
 | Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |
@@ -203,6 +205,7 @@
 - `TripInquiry(id, trip_id→Trip, sender_id, carrier_id, deal_id?, created_at)` — UNIQUE(trip_id, sender_id), T1.22
 - `InquiryMessage(id, inquiry_id→TripInquiry, sender_id, text_ciphertext, text_nonce, created_at)` — at-rest шифрование, T1.22
 - `Dispute(id, deal_id→Deal UNIQUE, opened_by, arbiter_id?, reason, status ∈ {open, claimed, resolved}, verdict?, created_at, resolved_at?)` — T1.23
+- `OperatorAccessGrant(id, dispute_id→Dispute, granted_by→User, granted_at, revoked_at?)` — T3.2, UNIQUE(dispute_id, granted_by). Auto-create от opener при open_dispute; explicit grant для второй стороны; ≥1 active grant требуется для arbiter DealVault read.
 - `WaitlistEntry(id, email UNIQUE, name?, source, created_at)` — T1.18
 - *(User расширение T1.26)*: `receiving_country_iso?`, `receiving_city?`, `receiving_city_geoname_id?`, `receiving_street?`, `receiving_postal_code?`, `receiving_note?` — **приватные**, отдаются только через `GET /me`, никогда в list-endpoints (например `/admin/users` их не возвращает)
 
