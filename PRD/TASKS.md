@@ -966,7 +966,7 @@
 
 **Контекст.** Сейчас `/docs`, `/redoc`, `/openapi.json` открыты в prod без auth. Плюс отсутствуют HTTP security headers, нет deny-правил для типичных probe-путей (`.env`, `.git`, `wp-admin`).
 
-- [x] `main.py` — env-флаг `EXPOSE_DOCS` (default `true` для dev; `false` в prod). При `false`: `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. Читается один раз при импорте.
+- [x] `main.py` — env-флаг `EXPOSE_DOCS` (**fail-safe default `false`**; opt-in `true` только когда нужен Swagger для отладки). При `false`: `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. Читается один раз при импорте. **Реализация fail-safe** учитывает single-server топологию Vimana (dev == prod) — новый деплой никогда случайно не выставит Swagger наружу.
 - [x] nginx конфиг: `add_header` с флагом `always`: HSTS (`max-age=31536000; includeSubDomains`), X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `strict-origin-when-cross-origin`, Permissions-Policy `camera=(), microphone=(), geolocation=(), interest-cohort=()`, CSP baseline (`default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; …; frame-ancestors 'none'`).
 - [x] nginx: `server_tokens off` глобально.
 - [x] nginx probe-deny: `/.env(.*)?`, `/.git`, `/.svn`, `.php|.php3|.php4|.php5|.phtml|.aspx|.jsp|.cgi`, `/wp-admin|/wp-login|/wp-content|/xmlrpc.php`, `/.ht*` → 404.

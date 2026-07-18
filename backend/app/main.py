@@ -50,9 +50,11 @@ async def lifespan(app: FastAPI):
     yield
 
 
-# T_SEC.1 — In prod set EXPOSE_DOCS=false; docs surface (/docs, /redoc,
-# /openapi.json) returns 404. Dev keeps them open for developer ergonomics.
-_expose_docs = os.getenv("EXPOSE_DOCS", "true").strip().lower() in {"1", "true", "yes"}
+# T_SEC.1 — Fail-safe default: docs are CLOSED unless EXPOSE_DOCS=true is
+# explicitly set. Vimana runs a single-server topology (dev == prod), so an
+# opt-in flag is safer than an opt-out one — a fresh deploy never accidentally
+# exposes Swagger. To debug locally: put `EXPOSE_DOCS=true` in .env + rebuild.
+_expose_docs = os.getenv("EXPOSE_DOCS", "false").strip().lower() in {"1", "true", "yes"}
 app = FastAPI(
     title="Vimana",
     lifespan=lifespan,
