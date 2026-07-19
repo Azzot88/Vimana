@@ -142,7 +142,32 @@
 
 **Acceptance:** ✅ `EXPOSE_DOCS=false` в prod → 404 на docs surface; nginx возвращает security headers (проверяется `curl -I`); probe-пути (`.env`, `.git`, `.php`) → 404; auth-endpoints под rate-limit 10r/min + burst 5.
 
-**Follow-up:** (1) **CSP tightening (T_SEC.2)** — сейчас `unsafe-inline` + `unsafe-eval` в script-src потому что frontend контейнер бежит `npm run dev` (Vite dev server, нужны для HMR/module bootstrapper). Правильно: переключить на static-serve `dist/` (`npm run build` + `nginx serve` или serve-package), тогда script-src сжимается до `'self'`. Также style-src `unsafe-inline` из-за Tailwind runtime — вынести critical inline styles в CSS-файл. (2) `/health` можно ужесточить — вернуть 200 без тела (не выдавать версию). (3) Мониторинг rate-limit hits — счётчик отказов nginx в metrics.
+**Follow-up:** (1) `/health` можно ужесточить — вернуть 200 без тела (не выдавать версию). (2) Мониторинг rate-limit hits — счётчик отказов nginx в metrics.
+
+### T_SEC.2 — Vite dev → static production build ✅ MVP
+
+**Контекст.** До T_SEC.2 frontend-контейнер запускал `npm run dev` (Vite dev-server с HMR) как prod: (a) `unsafe-inline` + `unsafe-eval` в script-src CSP, (b) React StrictMode двойным mount'ом дёргал useEffect (реально ловилось на invite-flow → fix через backend idempotency), (c) source-код + node_modules в prod-контейнере, (d) без бандлинга/минификации.
+
+**Изменения:**
+
+- [x] `frontend/Dockerfile` — multi-stage: `node:22-alpine` builder → `nginx:1.27-alpine` server. Stage 1: `npm ci` + `npm run build` → `dist/`. Stage 2: копирует `dist` в `/usr/share/nginx/html`, кладёт `nginx.conf` для SPA `try_files $uri /index.html`.
+- [x] `frontend/nginx.conf` — internal nginx контейнера: `/assets/` c 1y immutable cache, SPA fallback, `/health` возвращает `ok`.
+- [x] `docker-compose.dev.yml` frontend — убран volume-mount (`./frontend:/app`), healthcheck переведён на `http://localhost/health` (:80 внутри).
+- [x] `nginx/default.conf` — main-nginx proxy_pass `frontend:5173` → `frontend:80`, убраны websocket-upgrade headers (Vite HMR больше нет).
+- [x] **CSP tightened**: `script-src 'self'` (было `'self' 'unsafe-inline' 'unsafe-eval'`). style-src остаётся с `unsafe-inline` — Tailwind + libs всё ещё пишут inline `<style>`. Полный nonce/hash pass — future.
+- [x] `AcceptInvitePage` — убран `attemptedRef` guard: StrictMode-double-effect больше не может произойти (dev-only behavior), backend + так idempotent per user.
+
+**Acceptance:**
+1. Prod-build: `docker compose up -d --build frontend` — контейнер стартует, healthcheck зелёный за <30s.
+2. `curl -sI https://vimana.dealvault.club/` — CSP header **без** `unsafe-eval`, **без** `unsafe-inline` в script-src.
+3. `/assets/index-<hash>.js` — cache-control `public, immutable, max-age=31536000`.
+4. Прямой navigate на `/deals/xxx` в новой вкладке — nginx SPA fallback → index.html → React Router → правильная страница.
+5. Bundle size: `dist/assets/*.js` < 500KB gzip'ed (Vite tree-shaking).
+
+**Follow-up:**
+1. Nonce/hash-based CSP полный strict — генерация nonce в nginx per-request + injecting в HTML (нужен custom Vite plugin).
+2. Self-hosted fonts — снять `fonts.googleapis.com` / `fonts.gstatic.com` из CSP.
+3. Backfill Playwright `T_TEST.3 pt.2` через prod-build — сейчас тесты гоняются против prod, вопрос: производительность и стабильность после T_SEC.2.
 
 ### T_UX.1 — Bento breakpoint rule + decline_polite copy ✅ MVP
 

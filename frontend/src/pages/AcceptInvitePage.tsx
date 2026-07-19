@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { acceptInvite } from '../api/social'
@@ -10,9 +10,6 @@ export default function AcceptInvitePage() {
   const authToken = useAuthStore((s) => s.token)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
-  // StrictMode dev double-mounts effect — without this guard the second call
-  // races the first and clobbers status. Backend is idempotent anyway.
-  const attemptedRef = useRef(false)
 
   useEffect(() => {
     if (!authToken) {
@@ -20,8 +17,6 @@ export default function AcceptInvitePage() {
       return
     }
     if (!token) return
-    if (attemptedRef.current) return
-    attemptedRef.current = true
     setStatus('loading')
     acceptInvite(token)
       .then(() => {
