@@ -159,3 +159,104 @@ async def test_endpoints_public_no_auth_required(client, session_maker):
     assert r1.status_code == 200
     r2 = await client.get("/api/platform-notices")
     assert r2.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────
+# T_UX.2 pt.2 — superuser CRUD tests
+# ─────────────────────────────────────────────────────────────
+
+
+async def _register_and_promote_superuser(client, session_maker) -> dict:
+    from sqlalchemy import select
+
+    from app.models.user import User
+    from tests.conftest import SEED_PASSWORD, unique_email
+
+    email = unique_email("adm")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "Adm"},
+    )
+    async with session_maker() as db:
+        u = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        u.role = "superuser"
+        await db.commit()
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+async def test_create_route_note_superuser(client, session_maker):
+    hdr = await _register_and_promote_superuser(client, session_maker)
+    key = f"h.{uuid.uuid4().hex[:6]}"
+    r = await client.post(
+        "/api/admin/route-notes",
+        headers=hdr,
+        json={
+            "origin_iso": "US",
+            "destination_iso": "IR",
+            "status": "complex",
+            "severity": "warning",
+            "headline_i18n_key": key,
+            "body_i18n_key": key + ".body",
+        },
+    )
+    assert r.status_code == 201, r.json()
+    assert r.json()["headline_i18n_key"] == key
+
+
+async def test_create_route_note_forbidden_for_non_superuser(client):
+    from tests.conftest import SEED_PASSWORD, unique_email
+
+    email = unique_email("usr")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "Usr"},
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    r = await client.post(
+        "/api/admin/route-notes",
+        headers=hdr,
+        json={
+            "origin_iso": "US",
+            "destination_iso": "IR",
+            "status": "attention",
+            "severity": "info",
+            "headline_i18n_key": "x",
+            "body_i18n_key": "y",
+        },
+    )
+    assert r.status_code == 403
+
+
+async def test_delete_route_note_removes_row(client, session_maker):
+    hdr = await _register_and_promote_superuser(client, session_maker)
+    note_id = await _add_route_note(
+        session_maker, headline_i18n_key=f"del.{uuid.uuid4().hex[:6]}"
+    )
+    r = await client.delete(f"/api/admin/route-notes/{note_id}", headers=hdr)
+    assert r.status_code == 204
+    r2 = await client.get("/api/route-notes")
+    assert not any(n["id"] == str(note_id) for n in r2.json())
+
+
+async def test_create_platform_notice_key_conflict(client, session_maker):
+    hdr = await _register_and_promote_superuser(client, session_maker)
+    key = f"unique.{uuid.uuid4().hex[:6]}"
+    r1 = await client.post(
+        "/api/admin/platform-notices",
+        headers=hdr,
+        json={"key": key, "severity": "info", "target_surface": "footer"},
+    )
+    assert r1.status_code == 201
+    r2 = await client.post(
+        "/api/admin/platform-notices",
+        headers=hdr,
+        json={"key": key, "severity": "info", "target_surface": "footer"},
+    )
+    assert r2.status_code == 409
+    assert "already exists" in r2.json()["detail"].lower()

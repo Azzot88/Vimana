@@ -1054,21 +1054,31 @@
 5. Trace артефакты на R2 30 дней.
 6. 5 backend-тестов (`test_admin_users_cleanup.py`): filter, delete cascade, forbidden non-superuser, cannot delete superuser/self, Celery deletes stale ≥24ч + preserves fresh.
 
-### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server
+### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server ✅ pt.1 skeleton
 
-**Контекст.** Стороннние AI-агенты (Claude, GPT, Nostr-native клиенты) должны читать доступные рейсы через стандартные протоколы. Двойная стратегия: (A) Nostr publish (Nostr-slope, часть T3.5), (B) MCP server для прямой интеграции с Claude/Anthropic.
+**Контекст.** Стороннние AI-агенты (Claude, GPT, Nostr-native клиенты) читают рейсы через стандартные протоколы: (A) Nostr publish (T3.5), (B) MCP server для Claude/Anthropic (T_AGENT.1).
 
-- [ ] **Nostr путь (совмещён с T3.5):** trip = kind 30402 в наш strfry-relay. Агенты подписываются на `wss://vimana.dealvault.club/relay`, фильтр `#t=vimana #t=trip`. Уже spec'ится в T3.5, тут не дублируем.
-- [ ] **MCP путь (новый):** отдельный процесс `mcp-server` в docker-compose. Публикует Model Context Protocol tools:
-  - `list_trips(origin?, destination?, date_from?, date_to?, category?)` → список активных Trip.
-  - `get_trip_details(trip_id)` → полные детали + carrier verification level.
-  - `search_trips(text_query)` → полнотекстовый поиск (использует Nostr relay как источник).
-- [ ] MCP server на Python (`mcp` SDK от Anthropic) или Node (`@modelcontextprotocol/sdk`). Auth: API key через env.
-- [ ] Docs: `PRD/README.md` секция «Agentic interface» — как подключиться через Claude Desktop / Claude Code MCP config.
-- [ ] Rate-limit на MCP: 60 tool-calls/min per API key.
-- [ ] Тесты: MCP server отвечает на `list_trips` в тестовой среде.
+**pt.1 — skeleton ✅ MVP**
 
-**Acceptance:** агент (Claude Desktop) может подключить наш MCP server через config, вызывать `list_trips`, получать актуальные рейсы. Плюс Nostr агенты видят те же рейсы через relay.
+- [x] `mcp-server/` — отдельный Python-процесс + Dockerfile. Использует `mcp` SDK v1.1.0.
+- [x] Docker service `mcp-server` под `profiles: ["mcp"]` в docker-compose. Не стартует по умолчанию: `docker compose --profile mcp up -d mcp-server`.
+- [x] `env VIMANA_API_URL` (default `http://backend:8000`) — MCP-server читает через тот же backend что и frontend. Никаких DB-креденшелов, никаких приватных доступов.
+- [x] 2 tools:
+  - `list_trips(origin?, destination?, date?, limit?)` — вызывает `GET /api/trips`, форматирует список с carrier_name + UBA + категориями.
+  - `get_trip_details(trip_id)` — берёт `GET /api/trips/{id}/nostr-event` (или fallback на list search).
+- [x] `mcp-server/README.md` — как подключить в Claude Desktop config.
+- [x] **Nostr путь** (Nostr-slope) — уже реализован в T3.5 (agents подключаются к `wss://vimana.dealvault.club/relay`, фильтр `#t=vimana #t=trip`).
+
+**pt.2 — доработка (отложено):**
+
+- [ ] `search_trips(text_query)` — полнотекстовый поиск через Nostr relay backfeed.
+- [ ] Auth: `MCP_API_KEY` env для проверки, сейчас open (mitigation: bind на localhost/compose network only).
+- [ ] Rate-limit 60 tool-calls/min per API key.
+- [ ] Метрики `mcp_tool_call_count` per tool.
+- [ ] Backend-тесты через subprocess-запуск MCP + fake stdio.
+- [ ] Секция «Agentic interface» в `PRD/README.md` — как ставить в Claude Desktop / Claude Code.
+
+**Acceptance MVP ✅:** `docker compose --profile mcp up -d mcp-server` стартует контейнер. При подключении в Claude Desktop через stdio → `list_tools` возвращает 2 tools + описания; `call_tool('list_trips', {origin: 'SVO'})` возвращает форматированный список активных рейсов.
 
 ### T2.1 pt.3 — decline_polite sender copy
 

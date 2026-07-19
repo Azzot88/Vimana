@@ -40,6 +40,7 @@ class Permission(str, enum.Enum):
     VERIFICATION_REVOKE_ANY = "verification:revoke_any"
     THRESHOLD_ARBITER_REVEAL = "threshold:arbiter_reveal"  # T2.3
     NOSTR_REPUBLISH = "nostr:republish"  # T3.5 pt.2 — superuser force republish
+    NOTICES_MANAGE = "notices:manage"  # T_UX.2 pt.2 — CRUD RouteNote/PlatformNotice
 
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"

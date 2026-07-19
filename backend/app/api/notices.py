@@ -9,12 +9,13 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.permissions import Permission, require_perm
 from app.models.notices import (
     NoticeSeverity,
     NoticeSurface,
@@ -22,6 +23,7 @@ from app.models.notices import (
     RouteNote,
     RouteStatus,
 )
+from app.models.user import User
 
 router = APIRouter()
 
@@ -141,3 +143,184 @@ async def list_platform_notices(
         )
         for n in rows
     ]
+
+
+# ─────────────────────────────────────────────────────────────
+# T_UX.2 pt.2 — superuser CRUD (permission NOTICES_MANAGE)
+# ─────────────────────────────────────────────────────────────
+
+
+class RouteNoteCreate(BaseModel):
+    origin_iso: str
+    destination_iso: str
+    status: str = "attention"
+    severity: str = "info"
+    headline_i18n_key: str
+    body_i18n_key: str
+    active_until: datetime | None = None
+
+
+class RouteNoteUpdate(BaseModel):
+    origin_iso: str | None = None
+    destination_iso: str | None = None
+    status: str | None = None
+    severity: str | None = None
+    headline_i18n_key: str | None = None
+    body_i18n_key: str | None = None
+    active_until: datetime | None = None
+
+
+@router.post("/admin/route-notes", response_model=RouteNoteOut, status_code=201)
+async def create_route_note(
+    body: RouteNoteCreate,
+    current_user: User = Depends(require_perm(Permission.NOTICES_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        status_enum = RouteStatus(body.status)
+        severity_enum = NoticeSeverity(body.severity)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    note = RouteNote(
+        origin_iso=body.origin_iso,
+        destination_iso=body.destination_iso,
+        status=status_enum,
+        severity=severity_enum,
+        headline_i18n_key=body.headline_i18n_key,
+        body_i18n_key=body.body_i18n_key,
+        active_until=body.active_until,
+        created_by=current_user.id,
+    )
+    db.add(note)
+    await db.commit()
+    await db.refresh(note)
+    return RouteNoteOut(
+        id=note.id,
+        origin_iso=note.origin_iso,
+        destination_iso=note.destination_iso,
+        status=note.status.value,
+        severity=note.severity.value,
+        headline_i18n_key=note.headline_i18n_key,
+        body_i18n_key=note.body_i18n_key,
+        active_from=note.active_from,
+        active_until=note.active_until,
+    )
+
+
+@router.patch("/admin/route-notes/{note_id}", response_model=RouteNoteOut)
+async def update_route_note(
+    note_id: uuid.UUID,
+    body: RouteNoteUpdate,
+    _: User = Depends(require_perm(Permission.NOTICES_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    note = await db.get(RouteNote, note_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="RouteNote not found")
+    if body.origin_iso is not None:
+        note.origin_iso = body.origin_iso
+    if body.destination_iso is not None:
+        note.destination_iso = body.destination_iso
+    if body.status is not None:
+        try:
+            note.status = RouteStatus(body.status)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+    if body.severity is not None:
+        try:
+            note.severity = NoticeSeverity(body.severity)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+    if body.headline_i18n_key is not None:
+        note.headline_i18n_key = body.headline_i18n_key
+    if body.body_i18n_key is not None:
+        note.body_i18n_key = body.body_i18n_key
+    if body.active_until is not None:
+        note.active_until = body.active_until
+    await db.commit()
+    await db.refresh(note)
+    return RouteNoteOut(
+        id=note.id,
+        origin_iso=note.origin_iso,
+        destination_iso=note.destination_iso,
+        status=note.status.value,
+        severity=note.severity.value,
+        headline_i18n_key=note.headline_i18n_key,
+        body_i18n_key=note.body_i18n_key,
+        active_from=note.active_from,
+        active_until=note.active_until,
+    )
+
+
+@router.delete("/admin/route-notes/{note_id}", status_code=204)
+async def delete_route_note(
+    note_id: uuid.UUID,
+    _: User = Depends(require_perm(Permission.NOTICES_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    note = await db.get(RouteNote, note_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="RouteNote not found")
+    from sqlalchemy import delete as sql_delete
+    await db.execute(sql_delete(RouteNote).where(RouteNote.id == note_id))
+    await db.commit()
+    return
+
+
+class PlatformNoticeCreate(BaseModel):
+    key: str
+    severity: str = "info"
+    target_surface: str = "all"
+    active_until: datetime | None = None
+
+
+@router.post("/admin/platform-notices", response_model=PlatformNoticeOut, status_code=201)
+async def create_platform_notice(
+    body: PlatformNoticeCreate,
+    current_user: User = Depends(require_perm(Permission.NOTICES_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        severity_enum = NoticeSeverity(body.severity)
+        surface_enum = NoticeSurface(body.target_surface)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    # Enforce UNIQUE(key) at app level with a friendlier error.
+    existing = (
+        await db.execute(select(PlatformNotice).where(PlatformNotice.key == body.key))
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(status_code=409, detail=f"key '{body.key}' already exists")
+    notice = PlatformNotice(
+        key=body.key,
+        severity=severity_enum,
+        target_surface=surface_enum,
+        active_until=body.active_until,
+        created_by=current_user.id,
+    )
+    db.add(notice)
+    await db.commit()
+    await db.refresh(notice)
+    return PlatformNoticeOut(
+        id=notice.id,
+        key=notice.key,
+        severity=notice.severity.value,
+        target_surface=notice.target_surface.value,
+        active_from=notice.active_from,
+        active_until=notice.active_until,
+    )
+
+
+@router.delete("/admin/platform-notices/{notice_id}", status_code=204)
+async def delete_platform_notice(
+    notice_id: uuid.UUID,
+    _: User = Depends(require_perm(Permission.NOTICES_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    notice = await db.get(PlatformNotice, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="PlatformNotice not found")
+    from sqlalchemy import delete as sql_delete
+    await db.execute(sql_delete(PlatformNotice).where(PlatformNotice.id == notice_id))
+    await db.commit()
+    return

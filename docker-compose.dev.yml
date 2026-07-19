@@ -145,6 +145,24 @@ services:
       - nostr_data:/app/strfry-db
       - nostr_whitelist:/data
 
+  # T_AGENT.1 pt.1 — optional MCP server exposing Vimana tools to AI agents.
+  # Not started by default. Enable:
+  #   docker compose --profile mcp up -d mcp-server
+  # Then wire into Claude Desktop config (see mcp-server/README.md).
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    profiles: ["mcp"]
+    restart: unless-stopped
+    logging: *default-logging
+    env_file: .env
+    environment:
+      VIMANA_API_URL: "http://backend:8000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   nostr_data:
