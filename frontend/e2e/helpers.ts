@@ -33,7 +33,18 @@ export async function registerUser(page: Page, opts: RegisterOpts = {}) {
     await page.locator('input[type="checkbox"]').first().check()
   }
 
-  // Watch the real /api/auth/register XHR — throw with body detail if not ok.
+  // RegisterPage chains 3 XHRs: POST /register → POST /login → GET /me →
+  // navigate('/'). Wait for all three, throw loud with URL+status if any fail.
+  // Otherwise a rate-limited login step just leaves the browser on /register
+  // with an amber error banner and the URL check below times out mysteriously.
+  const authResponses: Array<{ url: string; status: number }> = []
+  page.on('response', (r) => {
+    const u = r.url()
+    if (u.includes('/api/auth/register') || u.includes('/api/auth/login') || u.includes('/api/auth/me')) {
+      authResponses.push({ url: u, status: r.status() })
+    }
+  })
+
   const [regResp] = await Promise.all([
     page.waitForResponse(
       (r) => r.url().includes('/api/auth/register') && r.request().method() === 'POST',
@@ -49,7 +60,15 @@ export async function registerUser(page: Page, opts: RegisterOpts = {}) {
     throw new Error(`Register failed: HTTP ${regResp.status()} — ${body.slice(0, 200)}`)
   }
 
-  await expect(page).not.toHaveURL(/\/register$/, { timeout: 8_000 })
+  try {
+    await expect(page).not.toHaveURL(/\/register$/, { timeout: 8_000 })
+  } catch {
+    const trail = authResponses.map((r) => `${r.status} ${r.url.replace(/^https?:\/\/[^/]+/, '')}`).join(' | ')
+    const visible = (await page.locator('body').innerText().catch(() => '')).slice(0, 200)
+    throw new Error(
+      `Register chain stuck on /register. Auth XHR trail: [${trail}]. Visible: ${visible}`,
+    )
+  }
   return { email, password: TEST_PASSWORD, displayName }
 }
 

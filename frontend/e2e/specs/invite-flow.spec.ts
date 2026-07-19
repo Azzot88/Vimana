@@ -46,43 +46,68 @@ test('invite flow: Alice creates → Bob accepts → connection visible', async 
     const inviteBody = (await createResp.json()) as { token: string }
     expect(inviteBody.token, 'no token in invite response').toBeTruthy()
 
-    // Bob → /invite/<token>. AcceptInvitePage auto-triggers the POST accept.
+    // Bob → /invite/<token>. AcceptInvitePage auto-triggers POST accept.
+    // waitForResponse filter is method-strict to avoid matching CORS preflight
+    // or a stray retry. If the response is non-2xx, log body — invaluable for
+    // "Cannot accept your own invite" / "Invite already used" races.
     const [acceptResp] = await Promise.all([
       bobPage.waitForResponse(
-        (r) => r.url().includes(`/api/invites/${inviteBody.token}/accept`),
+        (r) =>
+          r.url().includes(`/api/invites/${inviteBody.token}/accept`) &&
+          r.request().method() === 'POST',
         { timeout: 15_000 },
       ),
       bobPage.goto(`/invite/${inviteBody.token}`),
     ])
-    expect(acceptResp.ok(), `accept invite failed HTTP ${acceptResp.status()}`).toBe(true)
+    const acceptBody = await acceptResp.text().catch(() => '')
+    if (!acceptResp.ok()) {
+      throw new Error(`Accept invite failed HTTP ${acceptResp.status()} — ${acceptBody.slice(0, 200)}`)
+    }
 
-    // Success UI: green checkmark card with "Связь установлена" or similar.
+    // Wait for the actual success card by visible text, not body-scrape —
+    // that way a stray double-render can't leave us reading the error state.
     await bobPage.waitForLoadState('domcontentloaded')
-    await bobPage.waitForTimeout(1_000)
-    const successText = (await bobPage.locator('body').innerText()).toLowerCase()
-    expect(successText).toMatch(/связь установлена|contact|profile|перейти в профиль/i)
+    await bobPage
+      .getByText(/связь установлена|contact added|перейти в профиль/i)
+      .waitFor({ timeout: 8_000 })
+      .catch(async () => {
+        const bodyDump = (await bobPage.locator('body').innerText()).slice(0, 200)
+        throw new Error(
+          `Accept UI never rendered success. Backend said HTTP ${acceptResp.status()} body=${acceptBody.slice(0, 100)}. Visible: ${bodyDump}`,
+        )
+      })
 
-    // Bob → /profile → connections list must include Alice by display name.
-    await bobPage.goto('/profile')
-    await bobPage.waitForLoadState('domcontentloaded')
-    await bobPage.waitForResponse(
-      (r) => r.url().includes('/api/social/connections') && r.request().method() === 'GET',
-      { timeout: 10_000 },
-    )
-    await bobPage.waitForTimeout(500)
-    const bobProfileText = await bobPage.locator('body').innerText()
-    expect(bobProfileText, 'Alice not visible in Bob connections').toContain(alice.displayName)
+    // Symmetry check via API (not UI — ConnectionOut is nested and different
+    // pages render display_name from different paths; the invariant we care
+    // about is: each side has exactly the other in their connections list).
+    const bobToken = await bobPage.evaluate(() => localStorage.getItem('token'))
+    const aliceToken = await alicePage.evaluate(() => localStorage.getItem('token'))
+    expect(bobToken, 'Bob localStorage token missing').toBeTruthy()
+    expect(aliceToken, 'Alice localStorage token missing').toBeTruthy()
 
-    // Symmetry: Alice → /profile should now show Bob too.
-    await alicePage.goto('/profile')
-    await alicePage.waitForLoadState('domcontentloaded')
-    await alicePage.waitForResponse(
-      (r) => r.url().includes('/api/social/connections') && r.request().method() === 'GET',
-      { timeout: 10_000 },
+    const bobConns = await bobPage.request.get('/api/me/connections', {
+      headers: { Authorization: `Bearer ${bobToken}` },
+    })
+    expect(bobConns.ok(), `Bob connections HTTP ${bobConns.status()}`).toBe(true)
+    const bobConnsJson = (await bobConns.json()) as Array<{
+      connected_user: { display_name: string; email?: string }
+    }>
+    const bobSeesAlice = bobConnsJson.some(
+      (c) => c.connected_user.display_name === alice.displayName,
     )
-    await alicePage.waitForTimeout(500)
-    const aliceProfileText = await alicePage.locator('body').innerText()
-    expect(aliceProfileText, 'Bob not visible in Alice connections').toContain(bob.displayName)
+    expect(bobSeesAlice, `Bob does not see Alice. Got: ${JSON.stringify(bobConnsJson).slice(0, 200)}`).toBe(true)
+
+    const aliceConns = await alicePage.request.get('/api/me/connections', {
+      headers: { Authorization: `Bearer ${aliceToken}` },
+    })
+    expect(aliceConns.ok(), `Alice connections HTTP ${aliceConns.status()}`).toBe(true)
+    const aliceConnsJson = (await aliceConns.json()) as Array<{
+      connected_user: { display_name: string }
+    }>
+    const aliceSeesBob = aliceConnsJson.some(
+      (c) => c.connected_user.display_name === bob.displayName,
+    )
+    expect(aliceSeesBob, `Alice does not see Bob. Got: ${JSON.stringify(aliceConnsJson).slice(0, 200)}`).toBe(true)
 
     console.log(`Invite flow ok — alice=${alice.email}, bob=${bob.email}, token=${inviteBody.token.slice(0, 12)}…`)
   } finally {
