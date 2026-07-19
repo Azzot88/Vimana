@@ -354,6 +354,7 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
         json={
             "trip_id": trip_id,
             "order": {
+                "recipient_contact": "+79990000001",
                 "origin": unique_origin,
                 "destination": unique_dest,
                 "category": "docs",
@@ -433,6 +434,7 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
         json={
             "trip_id": trip_id,
             "order": {
+                "recipient_contact": "+79990000002",
                 "origin": origin,
                 "destination": dest,
                 "category": "docs",
