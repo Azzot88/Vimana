@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { createTrip } from '../api/trips'
+import { listRouteNotes, type RouteNote } from '../api/notices'
 import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
 import MonoText from '../components/MonoText'
@@ -93,6 +94,9 @@ export default function NewTripPage() {
     return null
   }
 
+  const [preflightNotes, setPreflightNotes] = useState<RouteNote[]>([])
+  const [ackedPreflight, setAckedPreflight] = useState(false)
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     setError('')
@@ -104,6 +108,24 @@ export default function NewTripPage() {
     const cap = parseFloat(draft.capacity)
     if (cap > 15 && !window.confirm(t('trips.newTripValidation.capacityWarning') as string)) {
       return
+    }
+    // T_UX.2 pt.3 — pre-flight warning for complex/restricted corridors.
+    if (!ackedPreflight) {
+      try {
+        const { data: notes } = await listRouteNotes({
+          origin: draft.origin,
+          destination: draft.destination,
+        })
+        const critical = notes.filter(
+          (n) => n.status === 'complex' || n.status === 'restricted',
+        )
+        if (critical.length > 0) {
+          setPreflightNotes(critical)
+          return
+        }
+      } catch {
+        // fall through — never block publish on notes fetch failure
+      }
     }
     setLoading(true)
     try {
@@ -380,6 +402,68 @@ export default function NewTripPage() {
           {t('common.cancel')}
         </button>
       </div>
+
+      {preflightNotes.length > 0 && (
+        <div
+          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setPreflightNotes([])}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl"
+          >
+            <h3 className="font-display font-semibold text-lg text-navy">
+              {t('routeNote.preflightTitle', 'Route requires attention')}
+            </h3>
+            <p className="text-sm font-body text-navy/70">
+              {t(
+                'routeNote.preflightBody',
+                'This corridor has known specifics. Read them below and confirm you understand before publishing.',
+              )}
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {preflightNotes.map((n) => (
+                <div
+                  key={n.id}
+                  className={`border rounded-lg p-3 text-xs font-body ${
+                    n.status === 'restricted'
+                      ? 'bg-red-50 border-red-300 text-red-800'
+                      : 'bg-amber/10 border-amber/40 text-navy'
+                  }`}
+                >
+                  <p className="font-mono text-xs mb-1">
+                    {n.origin_iso}→{n.destination_iso} [{n.status}/{n.severity}]
+                  </p>
+                  <p className="font-medium mb-1">
+                    {t(n.headline_i18n_key, n.headline_i18n_key)}
+                  </p>
+                  <p className="text-navy/70">
+                    {t(n.body_i18n_key, n.body_i18n_key)}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setPreflightNotes([])}
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  setPreflightNotes([])
+                  setAckedPreflight(true)
+                  handleSubmit()
+                }}
+                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid"
+              >
+                {t('routeNote.iUnderstand', 'I understand — publish anyway')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

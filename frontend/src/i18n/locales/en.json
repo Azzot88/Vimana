@@ -105,6 +105,11 @@
     "hopLabel_other": "{{count}} people",
     "empty": "No trust edges yet — invite friends and close a deal to start building your circle."
   },
+  "routeNote": {
+    "preflightTitle": "Route requires attention",
+    "preflightBody": "This corridor has known specifics you should be aware of. Please read them and confirm before publishing.",
+    "iUnderstand": "I understand — publish anyway"
+  },
   "recipient": {
     "inviteButton": "Invite recipient",
     "inviteCopied": "Invite link copied — send it to the recipient",

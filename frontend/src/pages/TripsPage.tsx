@@ -8,7 +8,9 @@ import CategorySelect from '../components/CategorySelect'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import NostrBadge from '../components/NostrBadge'
+import RouteNoteBadge from '../components/RouteNoteBadge'
 import UBAChip from '../components/UBAChip'
+import { filterNotesForCorridor, useRouteNotes } from '../hooks/useRouteNotes'
 import { usePersistedState } from '../hooks/usePersistedState'
 
 export default function TripsPage() {
@@ -16,6 +18,9 @@ export default function TripsPage() {
   const { t, i18n } = useTranslation()
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
+  // T_UX.2 pt.3 — все active route notes одним запросом, фильтр per trip
+  // в JSX ниже. Меньше XHR чем per-card fetch.
+  const { notes: allNotes } = useRouteNotes(undefined, undefined)
   const [origin, setOrigin] = usePersistedState<string>('trips:filter:origin', '')
   const [destination, setDestination] = usePersistedState<string>('trips:filter:destination', '')
   const [date, setDate] = usePersistedState<string>('trips:filter:date', '')
@@ -139,6 +144,9 @@ export default function TripsPage() {
                       {t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span>
                       <UBAChip uba={trip.carrier_uba} level={trip.carrier_uba_level} />
                       <NostrBadge eventId={trip.nostr_event_id} publishedAt={trip.nostr_published_at} />
+                      {filterNotesForCorridor(allNotes, trip.origin, trip.destination).map((n) => (
+                        <RouteNoteBadge key={n.id} note={n} compact />
+                      ))}
                     </span>
                     <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
                     <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} кг</MonoText></span>

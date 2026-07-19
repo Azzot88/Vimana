@@ -7,9 +7,12 @@ import { getDeal, acceptDeal, addEvent, confirmDeal, type DealDetail } from '../
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
+import PlatformNoticeBanner from '../components/PlatformNoticeBanner'
+import RouteNoteBadge from '../components/RouteNoteBadge'
 import VerificationDeclineBanner from '../components/VerificationDeclineBanner'
 import VerificationRequestModal from '../components/VerificationRequestModal'
 import VerificationRespondModal from '../components/VerificationRespondModal'
+import { useRouteNotes } from '../hooks/useRouteNotes'
 
 export default function DealPage() {
   const { t } = useTranslation()
@@ -17,6 +20,8 @@ export default function DealPage() {
   const user = useAuthStore((s) => s.user)
   const [deal, setDeal] = useState<DealDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  // T_UX.2 pt.3 — RouteNotes for this corridor (empty until deal loads).
+  const { notes: routeNotes } = useRouteNotes(deal?.origin, deal?.destination)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -131,6 +136,15 @@ export default function DealPage() {
           ← Сделки
         </Link>
       </div>
+
+      <PlatformNoticeBanner surface="deal_page" />
+      {routeNotes.length > 0 && (
+        <div className="space-y-2">
+          {routeNotes.map((n) => (
+            <RouteNoteBadge key={n.id} note={n} />
+          ))}
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-navy/10 overflow-hidden">
         <div className="bg-navy px-4 py-4 sm:px-6 sm:py-5">
