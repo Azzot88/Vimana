@@ -387,16 +387,37 @@
 - Device-list в профиле (superuser может revoke конкретное устройство).
 - Suspicious-activity detection (impossible-travel = login из RU + LA за 10 мин → force logout всех сессий).
 
-### T_TEST.4 — API contract + fuzzing (schemathesis)
+### T_TEST.4 — API contract + fuzzing (schemathesis) ✅ pt.1 MVP
 
-**Активация:** перед Фазой 4 (перед платежами обязательно). См. `PRD/PROJECT.md §7.4`.
+**Активация:** ✅ pt.1 закрыт 2026-07-19 (перед Фазой 4). См. `PRD/PROJECT.md §7.4`.
 
-- [ ] `pip install schemathesis` в `backend/requirements-dev.txt`.
-- [ ] CI job: `schemathesis run http://backend:8000/openapi.json --checks all --hypothesis-max-examples=50`.
-- [ ] Contract: pre-commit hook сравнивает frontend TS types (`openapi-typescript` генерирует) с backend OpenAPI. Drift → fail.
-- [ ] Отчёт в `backend/reports/schemathesis.html` после каждого прогона.
+**pt.1 — MVP no-5xx fuzz ✅**
 
-**Acceptance:** 0 unhandled 500 на fuzz'е публичных endpoint'ов; CI ломается при drift TS-типов.
+- [x] `schemathesis==3.39.5` в `backend/requirements.txt`.
+- [x] `backend/tests/test_contract_fuzz.py` — pytest-плагин: `schemathesis.from_dict(app.openapi(), app=app, force_schema_version="30")`. FastAPI генерирует OpenAPI 3.1.0, schemathesis 3.x полноценно поддерживает только 3.0.x → патчим версию в dict + `force_schema_version="30"`. Warnings из внутренних вызовов `jsonschema.RefResolver` заглушены на уровне модуля.
+- [x] `@schema.parametrize() + @settings(max_examples=15, deadline=None) → case.call()`. Один assertion: `response.status_code < 500`. Дамп body/query/headers на falure.
+- [x] **Найден и починен реальный баг**: `GET /api/platform-notices?surface=X` принимал `str | None`, на `"null"` (fuzz'а) → asyncpg InvalidTextRepresentation → 500. Fix: тип `NoticeSurface | None` → FastAPI/Pydantic 422 до DB. Регрессия `test_platform_notices_invalid_surface_rejected` в `test_notices.py`.
+- [x] Acceptance для pt.1: **86 test cases across ~50 endpoints × 15 examples ≈ 750 requests → 0 unhandled 5xx**. ~33 сек прогон.
+
+**pt.2 — authed fuzz (отложено)**
+
+- [ ] Bearer-token injection через schemathesis auth hooks (`schemathesis.auth.on_before_call`).
+- [ ] Раздельные test-runs: `test_no_5xx_unauthed` + `test_no_5xx_authed_user` + `test_no_5xx_authed_superuser`.
+- [ ] `case.call_and_validate(checks=(status_code_conformance,))` — проверка что endpoint'ы возвращают только объявленные в OpenAPI status codes.
+
+**pt.3 — TS drift check (отложено)**
+
+- [ ] `openapi-typescript` в `frontend/devDependencies`.
+- [ ] Pre-commit hook: `npx openapi-typescript http://localhost:8000/openapi.json -o frontend/src/types/api.generated.ts` → `git diff --exit-code`. Drift → fail commit.
+- [ ] Использовать generated types в `frontend/src/api/*.ts` вместо ручных interface (постепенная миграция).
+
+**pt.4 — HTML report + CI (отложено)**
+
+- [ ] `schemathesis run --checks all --hypothesis-max-examples=50 --html backend/reports/schemathesis.html` в отдельной CI job.
+- [ ] Артефакт-загрузка отчёта.
+- [ ] Bump `max_examples` до 50 в CI (сейчас 15 для скорости локально).
+
+**Acceptance финальный:** 0 unhandled 500 на fuzz'е всех endpoint'ов (public + authed); CI ломается при drift TS-типов; HTML-отчёт после каждого прогона.
 
 ### T_TEST.5 — Property-based тесты (Hypothesis) ✅ MVP
 
