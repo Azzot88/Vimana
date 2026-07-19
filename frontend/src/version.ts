@@ -2,5 +2,5 @@
 // Examples: 0.01.6 → 0.01.12 → 0.02.1
 // Update this after each completed task in TASKS.md
 // Phase 2 fully closed (T2.1 – T2.4). Now on Phase 3.
-// T_UX.2 pt.3.1 admin panel section on profile.
+// T_TEST.3 pt.2 multi-context specs.
 export const APP_VERSION = '0.03.11'

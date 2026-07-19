@@ -47,11 +47,22 @@ Deals / Messages / TrustEdges.
 
 Ручная проверка что накопилось — `/admin/users` (superuser).
 
-## Что покрыто в MVP
+## Что покрыто
 
+**MVP (pt.1)** — single-context smoke:
 - **`golden-path.spec.ts`** — carrier → publish trip → sender → match → chat.
 - **`verification.spec.ts`** — VerificationSection присутствует на profile.
 - **`recipient.spec.ts`** — /join/deal/:token роут отвечает.
 
-Более полные round-trip'ы (multi-context, real invite copy-paste, dispute
-+ arbiter reveal) — в pt.2.
+**pt.2** — multi-context (`browser.newContext()` × 2 для изоляции сессий):
+- **`invite-flow.spec.ts`** — Alice создаёт invite → Bob (свежий контекст) открывает
+  ссылку → connection появляется у обоих в /profile.
+- **`auth-rehydrate.spec.ts`** — регистрируемся → закрываем страницу → открываем
+  новую → hard-nav на /profile → `<AuthBootstrap>` регидрирует из localStorage,
+  редиректа на /login быть не должно. Регрессионный тест на T_UX.3 pt.1.
+- **`admin-guard.spec.ts`** — обычный юзер → /admin/{notices,users,disputes}
+  → всегда редирект на /dashboard. Также проверяет что AdminPanelSection не
+  протекает в /profile для не-admin ролей.
+
+Отложено: `smoke-nostr.spec.ts` (нужен T3.5 включённым), Docker profile
+`smoke-live` (VNC), CI-hook, R2 trace артефакты.

@@ -211,9 +211,9 @@
 2. Тестовые юзеры видны в `/admin/users` с амбер-chip'ом «test»; superuser может bulk-очистить или дождаться Celery.
 3. `npm run trace` (headless) генерирует trace.zip → смотрится на trace.playwright.dev.
 
-**Follow-up (pt.2):**
+**Follow-up (pt.2 ✅ частично):**
 1. `smoke-nostr.spec.ts` после T3.5.
-2. Multi-context спеки (invite copy-paste, dispute + arbiter reveal, decline_polite banner визуально).
+2. [x] Multi-context спеки (2026-07-18): `invite-flow.spec.ts` (Alice→Bob invite copy-paste + connection symmetry), `auth-rehydrate.spec.ts` (hard-nav в новой page с сохранённым localStorage — регрессия на T_UX.3 pt.1), `admin-guard.spec.ts` (не-superuser → /admin/* → redirect + AdminPanelSection не в /profile). Dispute + arbiter reveal и decline_polite визуал отложены до T_UX.1 pt.2.
 3. Docker profile `smoke` (headless в контейнере) + `smoke-live` (VNC :6080 для live с телефона).
 4. CI-hook на prod-деплой + Telegram alert.
 5. Trace артефакты на R2 30 дней.
