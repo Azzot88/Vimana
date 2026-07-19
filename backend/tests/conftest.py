@@ -412,8 +412,8 @@ async def _ensure_notices_tables(engine) -> None:
                     destination_iso VARCHAR(3) NOT NULL,
                     status routestatus NOT NULL DEFAULT 'standard',
                     severity noticeseverity NOT NULL DEFAULT 'info',
-                    headline_i18n_key VARCHAR(100) NOT NULL,
-                    body_i18n_key VARCHAR(100) NOT NULL,
+                    headline VARCHAR(500) NOT NULL DEFAULT '',
+                    body TEXT NOT NULL DEFAULT '',
                     active_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     active_until TIMESTAMPTZ,
                     created_by UUID REFERENCES users(id),
@@ -429,6 +429,8 @@ async def _ensure_notices_tables(engine) -> None:
                     key VARCHAR(100) UNIQUE NOT NULL,
                     severity noticeseverity NOT NULL DEFAULT 'info',
                     target_surface noticesurface NOT NULL DEFAULT 'all',
+                    headline VARCHAR(500) NOT NULL DEFAULT '',
+                    body TEXT NOT NULL DEFAULT '',
                     active_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     active_until TIMESTAMPTZ,
                     created_by UUID REFERENCES users(id),
@@ -446,6 +448,34 @@ async def _ensure_notices_tables(engine) -> None:
             ).fetchone()
             if not exists:
                 await conn.execute(text(ddl))
+
+        # T_UX.2 pt.4: migrate legacy tables that were created with i18n_key
+        # columns to direct-text schema. Idempotent — no-op if already migrated.
+        for tbl in ("route_notes", "platform_notices"):
+            await conn.execute(
+                text(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS headline VARCHAR(500) NOT NULL DEFAULT ''")
+            )
+            await conn.execute(
+                text(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT ''")
+            )
+        for legacy_col, new_col in (
+            ("headline_i18n_key", "headline"),
+            ("body_i18n_key", "body"),
+        ):
+            has_col = (
+                await conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name='route_notes' AND column_name=:c"
+                    ),
+                    {"c": legacy_col},
+                )
+            ).fetchone()
+            if has_col:
+                await conn.execute(
+                    text(f"UPDATE route_notes SET {new_col} = {legacy_col} WHERE {new_col} = ''")
+                )
+                await conn.execute(text(f"ALTER TABLE route_notes DROP COLUMN {legacy_col}"))
 
 
 async def _ensure_deal_participants(engine) -> None:
