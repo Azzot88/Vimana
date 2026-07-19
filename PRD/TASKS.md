@@ -252,9 +252,9 @@
 - [ ] Backend: убедиться что `VerificationRequest.status = declined_polite` отдаётся в API как есть (проверить schema).
 - [ ] Frontend UI-компонент — см. T_UX.1.
 
-### T_UX.2 — Route notes + platform disclaimers ✅ backend MVP
+### T_UX.2 — Route notes + platform disclaimers ✅ MVP
 
-**Статус:** backend MVP закрыт 2026-07-18 (миграция 0021, модели + public GET endpoints + 7 тестов). Admin CRUD + UI слоты — pt.2 follow-up.
+**Статус:** MVP полностью закрыт 2026-07-19 (pt.1 backend → pt.2 admin CRUD + PlatformNoticeBanner → pt.3 UI slots → pt.4 direct-text поля + DealVault pinned system-msg на match). Multi-lang translations — pt.5 (когда появится curation workflow).
 
 **Контекст.** Платформа **не блокирует направления** — позиция зафиксирована в TECHSTATE `D-COMPLIANCE-STANCE`. Пользователи имеют право сами решать. Vimana только **информирует** через две модели:
 
@@ -263,23 +263,23 @@
 
 **Модель:**
 
-- [x] `RouteNote(id, origin_iso, destination_iso, status ∈ {standard, attention, complex, restricted}, severity ∈ {info, warning, alert}, headline_i18n_key, body_i18n_key, active_from, active_until?, created_by)` — миграция 0021. Wildcards `*` в origin/destination.
-- [x] `PlatformNotice(id, key UNIQUE, severity, target_surface ∈ {footer, trip_card, deal_page, all}, active_from, active_until?, created_by)`.
-- [ ] i18n backing — pt.2 (сейчас поля хранят i18n keys, реальные тексты добавит editorial workflow).
+- [x] `RouteNote(id, origin_iso, destination_iso, status ∈ {standard, attention, complex, restricted}, severity ∈ {info, warning, alert}, headline VARCHAR(500), body TEXT, active_from, active_until?, created_by)` — миграция 0021 + pt.4 миграция 0022 (заменила i18n_key на direct text). Wildcards `*` в origin/destination.
+- [x] `PlatformNotice(id, key UNIQUE, severity, target_surface ∈ {footer, trip_card, deal_page, all}, headline, body, active_from, active_until?, created_by)`.
+- [x] Direct text (pt.4) — superuser вбивает headline+body в admin CRUD, они рендерятся напрямую. Multi-lang — pt.5.
 
 **Endpoints:**
 
 - [x] `GET /api/route-notes?origin=X&destination=Y` — active + wildcard matching, sort by specificity → severity. Public.
 - [x] `GET /api/platform-notices?surface=X` — active + `all` matches any surface filter. Public.
-- [ ] `POST/PATCH/DELETE /api/admin/route-notes` + `/api/admin/platform-notices` — superuser CRUD — pt.2.
+- [x] `POST/PATCH/DELETE /api/admin/route-notes` + `/api/admin/platform-notices` — superuser CRUD (pt.2).
 
-**UI слоты (frontend) — pt.2:**
+**UI слоты (frontend):**
 
-- [ ] **TripCard** pill для не-standard коридоров, клик → раскрытие body.
-- [ ] **NewTripPage** pre-flight warning modal + checkbox для complex/restricted.
-- [ ] **DealPage** sticky-banner для active note или platform notice.
-- [ ] **DealVault** pinned system-message при создании сделки на flagged коридоре.
-- [ ] **Footer** постоянные `PlatformNotice(target_surface=footer)`.
+- [x] **TripCard** pill для не-standard коридоров, клик → раскрытие body (pt.3).
+- [x] **NewTripPage** pre-flight warning modal для complex/restricted с «Понимаю — публикую» (pt.3).
+- [x] **DealPage** sticky-banner для active note + platform notice (pt.3).
+- [x] **DealVault** pinned system-message при создании сделки на flagged коридоре (pt.4 — `core/notice_pin.py::maybe_pin_route_note`).
+- [ ] **Footer** постоянные `PlatformNotice(target_surface=footer)` — pt.5 (нужен Footer компонент, сейчас нет).
 
 **Пограничные кейсы (документированы в TECHSTATE §D-COMPLIANCE-STANCE):**
 
@@ -297,15 +297,18 @@
 **Backend-тесты:**
 
 - [x] 7 тестов (`test_notices.py`): specific match, wildcard '*' matches any origin, expired note excluded, overlap ranks specific before wildcards, platform notices by surface, `target_surface='all'` matches any filter, both endpoints public no-auth.
-- [ ] POST/PATCH/DELETE requires superuser — pt.2.
+- [x] admin CRUD (pt.2): superuser create + non-superuser 403 + delete removes row + key conflict 409.
+- [x] pt.4: match on flagged corridor pins system-message; match on standard corridor doesn't.
 
 **Acceptance:** superuser редактирует RouteNote/PlatformNotice через admin panel; изменения появляются в UI мгновенно (Redis invalidate); TripCard показывает pill на flagged коридорах; DealPage — banner; NewTripPage требует checkbox для complex/restricted направлений; никакое действие пользователя не блокируется по коридору. Платформа осталась «инфраструктурой, не цензором».
 
 **Follow-up:**
-1. **pt.2** — (category, destination) правила для warnings типа «электроника > $500 в X → декларация».
-2. **pt.3** — auto-import из public sources (ICAO advisories, StateDept travel warnings).
-3. **community notes** — user-suggested notes с модерацией.
-4. **Multi-hop** — рейсы с промежуточными посадками, expansion на транзитные страны.
+1. **pt.5** — multi-lang translations (headline_by_lang JSONB + fallback на default). Требует editorial UI.
+2. **pt.5** — Footer компонент + PlatformNotice(target_surface=footer) rendering.
+3. (category, destination) правила для warnings типа «электроника > $500 в X → декларация».
+4. auto-import из public sources (ICAO advisories, StateDept travel warnings).
+5. community notes — user-suggested notes с модерацией.
+6. Multi-hop — рейсы с промежуточными посадками, expansion на транзитные страны.
 
 ### T_UX.3 — Auth rehydrate on reload + inactivity logout ✅ MVP pt.1 + pt.2
 

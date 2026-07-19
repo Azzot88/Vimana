@@ -46,7 +46,7 @@
 | Recipient role в DealVault | 3 | ✅ MVP (T3.3: DealParticipant модель + invite/join/revoke/list endpoints + невидимый custodial keypair per recipient + server-mediated decrypt-for-me для custodial callers. Threshold 2-of-3 не тронут — recipient орто) |
 | Vimana Nostr Relay (strfry) + Federation | 3.5 | ✅ MVP (T3.5 pt.1 + pt.2: publish bridge + toggle + strfry контейнер + badge + NIP-07 self-custody publish + WoT-gate через writePolicy plugin + metrics endpoint + superuser republish. Follow-up: D-TRANSLATION мультиязычный перевод описаний — pt.3) |
 | Regulatory KYC/AML (только KYC-провайдер + person-level SDN) | 4 | ⬜ не начато (T4.1). Corridor-периметр не блокируем — информируем через RouteNote (T_UX.2, D-COMPLIANCE-STANCE). |
-| Route notes + platform disclaimers | 3 | 🟨 pt.3 (T_UX.2: backend + admin CRUD + PlatformNoticeBanner + TripsPage/NewTripPage/DealPage UI slots). Остаётся: DealVault system-msg на match + полная локализация — pt.4. |
+| Route notes + platform disclaimers | 3 | ✅ MVP (T_UX.2: backend + admin CRUD + PlatformNoticeBanner + UI slots + DealVault pinned system-msg на match + direct headline/body text вместо i18n_key). Multi-lang translations — pt.5 (когда появится curation workflow). |
 | Agentic MCP server | 3 | 🟨 pt.1 skeleton (T_AGENT.1: 2 tools list_trips + get_trip_details, docker-compose profile mcp). Auth + rate-limit + search_trips + metrics — pt.2. |
 | Карточные платежи | 4 | ⬜ не начато (T4.2) |
 | Эскроу BTC + Залог | 5 | ⬜ не начато |

@@ -34,6 +34,8 @@ export default function AdminNoticesPage() {
   const [pnKey, setPnKey] = useState('')
   const [pnSeverity, setPnSeverity] = useState<PlatformNotice['severity']>('info')
   const [pnSurface, setPnSurface] = useState<PlatformNotice['target_surface']>('all')
+  const [pnHeadline, setPnHeadline] = useState('')
+  const [pnBody, setPnBody] = useState('')
 
   if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
 
@@ -63,8 +65,8 @@ export default function AdminNoticesPage() {
         destination_iso: rnDestination,
         status: rnStatus,
         severity: rnSeverity,
-        headline_i18n_key: rnHeadline,
-        body_i18n_key: rnBody,
+        headline: rnHeadline,
+        body: rnBody,
       })
       setRnOrigin('')
       setRnDestination('')
@@ -83,8 +85,12 @@ export default function AdminNoticesPage() {
         key: pnKey,
         severity: pnSeverity,
         target_surface: pnSurface,
+        headline: pnHeadline,
+        body: pnBody,
       })
       setPnKey('')
+      setPnHeadline('')
+      setPnBody('')
       await reload()
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -134,18 +140,18 @@ export default function AdminNoticesPage() {
             <option value="alert">alert</option>
           </select>
           <input
-            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2 md:col-span-1"
-            placeholder="Headline i18n key"
+            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2 md:col-span-6"
+            placeholder="Headline (shown to users)"
             value={rnHeadline}
             onChange={(e) => setRnHeadline(e.target.value)}
             required
           />
-          <input
-            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2 md:col-span-1"
-            placeholder="Body i18n key"
+          <textarea
+            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2 md:col-span-6"
+            placeholder="Body — full description (optional)"
+            rows={3}
             value={rnBody}
             onChange={(e) => setRnBody(e.target.value)}
-            required
           />
           <button
             type="submit"
@@ -166,7 +172,7 @@ export default function AdminNoticesPage() {
                 <span className="ml-2 text-navy/50">
                   [{n.status}/{n.severity}]
                 </span>
-                <span className="ml-2 text-navy/70">{n.headline_i18n_key}</span>
+                <span className="ml-2 text-navy/70 font-body">{n.headline}</span>
               </span>
               <button
                 onClick={async () => {
@@ -188,8 +194,8 @@ export default function AdminNoticesPage() {
         <h2 className="font-display font-semibold text-lg text-navy">Platform notices</h2>
         <form onSubmit={submitPlatformNotice} className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <input
-            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2"
-            placeholder="i18n key (unique)"
+            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-mono col-span-2"
+            placeholder="Slug key (unique, e.g. beta.disclaimer)"
             value={pnKey}
             onChange={(e) => setPnKey(e.target.value)}
             required
@@ -213,6 +219,20 @@ export default function AdminNoticesPage() {
             <option value="trip_card">trip_card</option>
             <option value="deal_page">deal_page</option>
           </select>
+          <input
+            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2 md:col-span-4"
+            placeholder="Headline (shown to users)"
+            value={pnHeadline}
+            onChange={(e) => setPnHeadline(e.target.value)}
+            required
+          />
+          <textarea
+            className="border border-navy/20 rounded px-2 py-1.5 text-xs font-body col-span-2 md:col-span-4"
+            placeholder="Body (optional)"
+            rows={2}
+            value={pnBody}
+            onChange={(e) => setPnBody(e.target.value)}
+          />
           <button
             type="submit"
             className="col-span-2 md:col-span-4 bg-navy text-ivory font-display font-medium text-xs py-2 rounded"
@@ -227,12 +247,13 @@ export default function AdminNoticesPage() {
           )}
           {platformNotices.map((n) => (
             <div key={n.id} className="flex items-center justify-between text-xs font-mono">
-              <MonoText className="text-navy">
-                {n.key}
+              <span className="text-navy">
+                <MonoText className="inline">{n.key}</MonoText>
                 <span className="ml-2 text-navy/50">
                   [{n.severity}/{n.target_surface}]
                 </span>
-              </MonoText>
+                <span className="ml-2 text-navy/70 font-body">{n.headline}</span>
+              </span>
               <button
                 onClick={async () => {
                   if (confirm(`Delete platform notice ${n.key}?`)) {

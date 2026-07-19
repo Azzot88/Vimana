@@ -10,8 +10,8 @@ export interface RouteNote {
   destination_iso: string
   status: RouteStatus
   severity: NoticeSeverity
-  headline_i18n_key: string
-  body_i18n_key: string
+  headline: string
+  body: string
   active_from: string
   active_until: string | null
 }
@@ -21,6 +21,8 @@ export interface PlatformNotice {
   key: string
   severity: NoticeSeverity
   target_surface: NoticeSurface
+  headline: string
+  body: string
   active_from: string
   active_until: string | null
 }

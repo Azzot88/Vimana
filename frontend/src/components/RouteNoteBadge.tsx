@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { RouteNote } from '../api/notices'
 
 const STATUS_CLASS: Record<RouteNote['status'], string> = {
@@ -21,14 +20,15 @@ interface Props {
   compact?: boolean
 }
 
-/** T_UX.2 pt.3 — RouteNote pill, expandable on click.
- *  `t(note.headline_i18n_key, note.headline_i18n_key)` — fallback показывает
- *  сам ключ (superuser пишет human-readable keys как MVP). */
+/** T_UX.2 pt.4 — RouteNote pill with expandable body. Renders headline/body
+ *  directly (edited by the platform owner via /admin/notices). No i18n key
+ *  resolution — content is what the superuser typed. */
 export default function RouteNoteBadge({ note, compact = false }: Props) {
-  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   if (note.status === 'standard') return null
+
+  const headline = note.headline || `${note.origin_iso}→${note.destination_iso}`
 
   return (
     <div className="inline-block">
@@ -42,20 +42,12 @@ export default function RouteNoteBadge({ note, compact = false }: Props) {
           {note.origin_iso === '*' ? '∗' : note.origin_iso}→
           {note.destination_iso === '*' ? '∗' : note.destination_iso}
         </span>
-        {!compact && (
-          <span className="ml-1">
-            {t(note.headline_i18n_key, note.headline_i18n_key)}
-          </span>
-        )}
+        {!compact && <span className="ml-1">{headline}</span>}
       </button>
       {expanded && (
         <div className={`mt-1 max-w-md text-xs font-body p-2 rounded border ${STATUS_CLASS[note.status]}`}>
-          <p className="font-medium mb-1">
-            {t(note.headline_i18n_key, note.headline_i18n_key)}
-          </p>
-          <p className="text-navy/70">
-            {t(note.body_i18n_key, note.body_i18n_key)}
-          </p>
+          <p className="font-medium mb-1">{headline}</p>
+          {note.body && <p className="text-navy/70 whitespace-pre-line">{note.body}</p>}
         </div>
       )}
     </div>

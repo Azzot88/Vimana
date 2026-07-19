@@ -434,12 +434,10 @@ export default function NewTripPage() {
                   <p className="font-mono text-xs mb-1">
                     {n.origin_iso}→{n.destination_iso} [{n.status}/{n.severity}]
                   </p>
-                  <p className="font-medium mb-1">
-                    {t(n.headline_i18n_key, n.headline_i18n_key)}
-                  </p>
-                  <p className="text-navy/70">
-                    {t(n.body_i18n_key, n.body_i18n_key)}
-                  </p>
+                  <p className="font-medium mb-1">{n.headline}</p>
+                  {n.body && (
+                    <p className="text-navy/70 whitespace-pre-line">{n.body}</p>
+                  )}
                 </div>
               ))}
             </div>

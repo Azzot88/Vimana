@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
+from app.core.notice_pin import maybe_pin_route_note
 from app.core.signing import sign_deal_event
 from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.tasks.notifications import notify_deal_status
@@ -104,6 +105,10 @@ async def match_deal(
     inquiry = inquiry_result.scalar_one_or_none()
     if inquiry and inquiry.deal_id is None:
         inquiry.deal_id = deal.id
+
+    # T_UX.2 pt.4 — pin corridor note as system-message if the corridor is
+    # flagged. Informational only; never blocks the match.
+    await maybe_pin_route_note(db, deal, trip)
 
     await db.commit()
     await db.refresh(deal)

@@ -11,7 +11,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -52,8 +52,8 @@ class RouteNote(Base):
     severity: Mapped[NoticeSeverity] = mapped_column(
         SAEnum(NoticeSeverity), default=NoticeSeverity.info
     )
-    headline_i18n_key: Mapped[str] = mapped_column(String(100))
-    body_i18n_key: Mapped[str] = mapped_column(String(100))
+    headline: Mapped[str] = mapped_column(String(500), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
     active_from: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -69,7 +69,9 @@ class RouteNote(Base):
 
 
 class PlatformNotice(Base):
-    """Global always-visible disclaimer, keyed by i18n slug + placement."""
+    """Global always-visible disclaimer. `key` is a stable slug for referring
+    to a notice in code / analytics; `headline` + `body` hold the user-facing
+    text edited by the platform owner."""
 
     __tablename__ = "platform_notices"
 
@@ -81,6 +83,8 @@ class PlatformNotice(Base):
     target_surface: Mapped[NoticeSurface] = mapped_column(
         SAEnum(NoticeSurface), default=NoticeSurface.all
     )
+    headline: Mapped[str] = mapped_column(String(500), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
     active_from: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

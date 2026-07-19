@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { listPlatformNotices, type PlatformNotice } from '../api/notices'
 
 const SEVERITY_CLASS: Record<PlatformNotice['severity'], string> = {
@@ -12,11 +11,10 @@ interface Props {
   surface?: PlatformNotice['target_surface']
 }
 
-/** T_UX.2 pt.2 — surface-scoped rendering of active platform notices.
- *  Uses `t(notice.key, notice.key)` — if translation is missing, the key
- *  itself is shown as fallback (superuser can write human-readable keys). */
+/** T_UX.2 pt.4 — renders active platform notices with direct text
+ *  (headline + optional body). No i18n key resolution — content is the
+ *  content the superuser wrote. */
 export default function PlatformNoticeBanner({ surface = 'all' }: Props) {
-  const { t } = useTranslation()
   const [notices, setNotices] = useState<PlatformNotice[]>([])
 
   useEffect(() => {
@@ -34,7 +32,8 @@ export default function PlatformNoticeBanner({ surface = 'all' }: Props) {
           key={n.id}
           className={`border rounded-lg px-3 py-2 text-sm font-body ${SEVERITY_CLASS[n.severity]}`}
         >
-          {t(n.key, n.key)}
+          <p className="font-medium">{n.headline || n.key}</p>
+          {n.body && <p className="text-xs mt-1 whitespace-pre-line opacity-80">{n.body}</p>}
         </div>
       ))}
     </div>

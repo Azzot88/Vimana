@@ -34,8 +34,8 @@ class RouteNoteOut(BaseModel):
     destination_iso: str
     status: str
     severity: str
-    headline_i18n_key: str
-    body_i18n_key: str
+    headline: str
+    body: str
     active_from: datetime
     active_until: datetime | None
 
@@ -45,6 +45,8 @@ class PlatformNoticeOut(BaseModel):
     key: str
     severity: str
     target_surface: str
+    headline: str
+    body: str
     active_from: datetime
     active_until: datetime | None
 
@@ -95,8 +97,8 @@ async def list_route_notes(
             destination_iso=n.destination_iso,
             status=n.status.value if hasattr(n.status, "value") else str(n.status),
             severity=n.severity.value if hasattr(n.severity, "value") else str(n.severity),
-            headline_i18n_key=n.headline_i18n_key,
-            body_i18n_key=n.body_i18n_key,
+            headline=n.headline,
+            body=n.body,
             active_from=n.active_from,
             active_until=n.active_until,
         )
@@ -138,6 +140,8 @@ async def list_platform_notices(
             target_surface=n.target_surface.value
             if hasattr(n.target_surface, "value")
             else str(n.target_surface),
+            headline=n.headline,
+            body=n.body,
             active_from=n.active_from,
             active_until=n.active_until,
         )
@@ -155,8 +159,8 @@ class RouteNoteCreate(BaseModel):
     destination_iso: str
     status: str = "attention"
     severity: str = "info"
-    headline_i18n_key: str
-    body_i18n_key: str
+    headline: str
+    body: str = ""
     active_until: datetime | None = None
 
 
@@ -165,8 +169,8 @@ class RouteNoteUpdate(BaseModel):
     destination_iso: str | None = None
     status: str | None = None
     severity: str | None = None
-    headline_i18n_key: str | None = None
-    body_i18n_key: str | None = None
+    headline: str | None = None
+    body: str | None = None
     active_until: datetime | None = None
 
 
@@ -186,8 +190,8 @@ async def create_route_note(
         destination_iso=body.destination_iso,
         status=status_enum,
         severity=severity_enum,
-        headline_i18n_key=body.headline_i18n_key,
-        body_i18n_key=body.body_i18n_key,
+        headline=body.headline,
+        body=body.body,
         active_until=body.active_until,
         created_by=current_user.id,
     )
@@ -200,8 +204,8 @@ async def create_route_note(
         destination_iso=note.destination_iso,
         status=note.status.value,
         severity=note.severity.value,
-        headline_i18n_key=note.headline_i18n_key,
-        body_i18n_key=note.body_i18n_key,
+        headline=note.headline,
+        body=note.body,
         active_from=note.active_from,
         active_until=note.active_until,
     )
@@ -231,10 +235,10 @@ async def update_route_note(
             note.severity = NoticeSeverity(body.severity)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-    if body.headline_i18n_key is not None:
-        note.headline_i18n_key = body.headline_i18n_key
-    if body.body_i18n_key is not None:
-        note.body_i18n_key = body.body_i18n_key
+    if body.headline is not None:
+        note.headline = body.headline
+    if body.body is not None:
+        note.body = body.body
     if body.active_until is not None:
         note.active_until = body.active_until
     await db.commit()
@@ -245,8 +249,8 @@ async def update_route_note(
         destination_iso=note.destination_iso,
         status=note.status.value,
         severity=note.severity.value,
-        headline_i18n_key=note.headline_i18n_key,
-        body_i18n_key=note.body_i18n_key,
+        headline=note.headline,
+        body=note.body,
         active_from=note.active_from,
         active_until=note.active_until,
     )
@@ -271,6 +275,8 @@ class PlatformNoticeCreate(BaseModel):
     key: str
     severity: str = "info"
     target_surface: str = "all"
+    headline: str
+    body: str = ""
     active_until: datetime | None = None
 
 
@@ -295,6 +301,8 @@ async def create_platform_notice(
         key=body.key,
         severity=severity_enum,
         target_surface=surface_enum,
+        headline=body.headline,
+        body=body.body,
         active_until=body.active_until,
         created_by=current_user.id,
     )
@@ -306,6 +314,8 @@ async def create_platform_notice(
         key=notice.key,
         severity=notice.severity.value,
         target_surface=notice.target_surface.value,
+        headline=notice.headline,
+        body=notice.body,
         active_from=notice.active_from,
         active_until=notice.active_until,
     )
