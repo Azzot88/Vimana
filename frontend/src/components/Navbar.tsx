@@ -48,9 +48,14 @@ export default function Navbar() {
               </NavLink>
             )}
             {user?.role === 'superuser' && (
-              <NavLink to="/admin/users" className={linkClass}>
-                {t('nav.users')}
-              </NavLink>
+              <>
+                <NavLink to="/admin/users" className={linkClass}>
+                  {t('nav.users')}
+                </NavLink>
+                <NavLink to="/admin/notices" className={linkClass}>
+                  {t('nav.notices')}
+                </NavLink>
+              </>
             )}
           </div>
         </div>

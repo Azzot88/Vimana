@@ -6,7 +6,18 @@
     "profile": "Profile",
     "disputes": "Disputes",
     "users": "Users",
+    "notices": "Notices",
     "logout": "Sign out"
+  },
+  "admin": {
+    "panelTitle": "Administration",
+    "panelHint": "Restricted to arbiters and platform owner.",
+    "disputes": "Disputes",
+    "disputesDesc": "Review open disputes and escrow decisions.",
+    "users": "Users",
+    "usersDesc": "Manage users, roles, and bulk actions.",
+    "notices": "Route notes",
+    "noticesDesc": "Corridor advisories and platform-wide banners."
   },
   "dispute": {
     "openButton": "Open dispute",

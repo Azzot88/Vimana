@@ -8,6 +8,7 @@ import { me, updateMe, getTelegramLink, type UserUpdate } from '../api/auth'
 import { createInvite, listConnections, listMyInvites, type Connection, type MyInvite } from '../api/social'
 import api from '../api/client'
 import AddressForm from '../components/AddressForm'
+import AdminPanelSection from '../components/AdminPanelSection'
 import CountryCodeSelect from '../components/CountryCodeSelect'
 import KeypairSection from '../components/KeypairSection'
 import MonoText from '../components/MonoText'
@@ -219,6 +220,8 @@ export default function ProfilePage() {
       </div>
 
       <UBASection />
+
+      <AdminPanelSection />
 
       <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <div className="flex items-center justify-between">
