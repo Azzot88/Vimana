@@ -64,11 +64,13 @@ test('invite flow: Alice creates → Bob accepts → connection visible', async 
       throw new Error(`Accept invite failed HTTP ${acceptResp.status()} — ${acceptBody.slice(0, 200)}`)
     }
 
-    // Wait for the actual success card by visible text, not body-scrape —
-    // that way a stray double-render can't leave us reading the error state.
+    // Wait for the specific success line — one that only appears in the
+    // success card, so `getByText` in strict-mode picks exactly one element.
+    // (Earlier a broader regex matched both the message AND the "Go to
+    // profile" button, blowing up on the multiple-match check.)
     await bobPage.waitForLoadState('domcontentloaded')
     await bobPage
-      .getByText(/связь установлена|contact added|перейти в профиль/i)
+      .getByText('Контакт добавлен в ваш профиль')
       .waitFor({ timeout: 8_000 })
       .catch(async () => {
         const bodyDump = (await bobPage.locator('body').innerText()).slice(0, 200)
