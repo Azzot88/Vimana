@@ -22,12 +22,16 @@ async def test_login_rate_limit_triggers_429(client, enable_rate_limit):
         "/api/auth/register",
         json={"email": email, "password": "rl-pass-1", "display_name": "RL"},
     )
+    # slowapi limit is 60/minute (matches nginx guard). Fire 65 attempts to
+    # ensure the limit trips; loop bails early once 429 is seen.
     codes = []
-    for _ in range(8):
+    for _ in range(65):
         resp = await client.post(
             "/api/auth/login", json={"login": email, "password": "wrong-pass"}
         )
         codes.append(resp.status_code)
+        if resp.status_code == 429:
+            break
     assert 429 in codes, codes
 
 

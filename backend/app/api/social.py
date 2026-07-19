@@ -111,12 +111,14 @@ async def accept_invite(
         .values(used_by=current_user.id)
     )
     if claim.rowcount == 0:
-        # Race — either another user claimed it, or the same user claimed
-        # concurrently. Reload and check.
-        await db.rollback()
-        recheck = await db.execute(select(InviteLink).where(InviteLink.token == token))
-        fresh = recheck.scalar_one()
-        if fresh.used_by == current_user.id:
+        # Race — either another user claimed between our SELECT and UPDATE,
+        # or the same user claimed concurrently (double-fire). Read only the
+        # winning user_id column — avoids ORM refresh + greenlet issues.
+        recheck = await db.execute(
+            select(InviteLink.used_by).where(InviteLink.token == token)
+        )
+        winner_id = recheck.scalar_one_or_none()
+        if winner_id == current_user.id:
             return {"ok": True}
         raise HTTPException(status_code=409, detail="Invite already used")
 
