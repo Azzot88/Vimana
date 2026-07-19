@@ -33,7 +33,14 @@ from app.main import app
 # EXPOSE_DOCS=false hides /openapi.json at the HTTP layer, but FastAPI still
 # generates the schema in memory — `app.openapi()` returns it as a dict.
 # Passing `app=app` tells schemathesis to route calls through ASGI.
-schema = schemathesis.from_dict(app.openapi(), app=app)
+#
+# FastAPI defaults to OpenAPI 3.1.0; schemathesis 3.39 only fully supports
+# 3.0.x. We downgrade the version string + force the 3.0 loader. Any true
+# 3.1-only features (e.g. `type: [string, null]`) would trip the fuzzer —
+# we haven't hit any yet.
+_raw_schema = app.openapi()
+_raw_schema["openapi"] = "3.0.3"
+schema = schemathesis.from_dict(_raw_schema, app=app, force_schema_version="30")
 
 
 @schema.parametrize()
