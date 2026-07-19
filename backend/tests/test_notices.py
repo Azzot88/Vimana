@@ -163,6 +163,17 @@ async def test_endpoints_public_no_auth_required(client, session_maker):
     assert r2.status_code == 200
 
 
+async def test_platform_notices_invalid_surface_rejected(client):
+    """T_TEST.4 regression — invalid `surface` param must 422, not 500.
+
+    Found by schemathesis fuzz: string 'null' was passed straight to a
+    Postgres enum comparison → asyncpg InvalidTextRepresentation → 500.
+    Fix: typed as NoticeSurface so FastAPI validates before DB call.
+    """
+    r = await client.get("/api/platform-notices?surface=not_a_valid_surface")
+    assert r.status_code == 422, f"expected 422, got {r.status_code}: {r.text}"
+
+
 # ─────────────────────────────────────────────────────────────
 # T_UX.2 pt.2 — superuser CRUD tests
 # ─────────────────────────────────────────────────────────────

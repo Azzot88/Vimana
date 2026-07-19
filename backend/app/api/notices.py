@@ -108,14 +108,17 @@ async def list_route_notes(
 
 @router.get("/platform-notices", response_model=list[PlatformNoticeOut])
 async def list_platform_notices(
-    surface: str | None = Query(
+    surface: NoticeSurface | None = Query(
         default=None,
-        description="Filter by surface (footer / trip_card / deal_page). Omit for all.",
+        description="Filter by surface (footer / trip_card / deal_page / all). Omit for all.",
     ),
     db: AsyncSession = Depends(get_db),
 ):
     """Active platform-wide notices. `surface` filter matches either the
-    specific value OR `all` (both are relevant for the caller's screen)."""
+    specific value OR `all` (both are relevant for the caller's screen).
+
+    Typed as `NoticeSurface` so FastAPI 422s on unknown values before we
+    hand a bad string to the Postgres enum. (Found via T_TEST.4 fuzz.)"""
     now = datetime.now(tz=timezone.utc)
     stmt = select(PlatformNotice).where(
         PlatformNotice.active_from <= now,
@@ -124,11 +127,11 @@ async def list_platform_notices(
             PlatformNotice.active_until > now,
         ),
     )
-    if surface:
+    if surface is not None:
         stmt = stmt.where(
             or_(
                 PlatformNotice.target_surface == surface,
-                PlatformNotice.target_surface == "all",
+                PlatformNotice.target_surface == NoticeSurface.all,
             )
         )
     rows = (await db.execute(stmt)).scalars().all()
