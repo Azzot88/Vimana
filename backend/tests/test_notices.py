@@ -329,7 +329,7 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
             "destination": unique_dest,
             "depart_at": (datetime.now(tz=timezone.utc) + timedelta(days=2)).isoformat(),
             "arrive_at": (datetime.now(tz=timezone.utc) + timedelta(days=3)).isoformat(),
-            "capacity_kg": 5,
+            "capacity": 5,
         },
     )
     assert trip_resp.status_code == 201, trip_resp.json()
@@ -414,7 +414,7 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
             "destination": dest,
             "depart_at": (datetime.now(tz=timezone.utc) + timedelta(days=2)).isoformat(),
             "arrive_at": (datetime.now(tz=timezone.utc) + timedelta(days=3)).isoformat(),
-            "capacity_kg": 5,
+            "capacity": 5,
         },
     )
     trip_id = trip.json()["id"]
