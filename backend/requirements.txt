@@ -50,3 +50,5 @@ pytest==8.3.4
 pytest-asyncio==0.24.0
 # T_TEST.5 — property-based tests for crypto/math (threshold, UBA, signing)
 hypothesis==6.122.3
+# T_TEST.4 — OpenAPI contract fuzzing (in-process ASGI, no external server)
+schemathesis==3.39.5
