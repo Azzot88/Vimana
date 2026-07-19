@@ -24,21 +24,16 @@ pt.2 follow-ups:
 """
 from __future__ import annotations
 
-import os
-
-# schemathesis reads openapi from /openapi.json — force it open regardless of
-# .env EXPOSE_DOCS value.
-os.environ["EXPOSE_DOCS"] = "true"
-
 import pytest
 import schemathesis
 from hypothesis import settings
 
 from app.main import app
 
-# schemathesis loads the schema at collection time — the FastAPI factory has
-# already executed once by the time we import `app`.
-schema = schemathesis.from_asgi("/openapi.json", app)
+# EXPOSE_DOCS=false hides /openapi.json at the HTTP layer, but FastAPI still
+# generates the schema in memory — `app.openapi()` returns it as a dict.
+# Passing `app=app` tells schemathesis to route calls through ASGI.
+schema = schemathesis.from_dict(app.openapi(), app=app)
 
 
 @schema.parametrize()
