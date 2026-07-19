@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
-@limiter.limit("10/minute")
+@limiter.limit("60/minute")
 async def register(request: Request, body: UserCreate, db: AsyncSession = Depends(get_db)):
     if not body.email and not body.phone:
         raise HTTPException(status_code=422, detail="email or phone is required")
@@ -57,7 +57,7 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
 
 
 @router.post("/login", response_model=Token)
-@limiter.limit("5/minute")
+@limiter.limit("60/minute")
 async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db)):
     user: User | None = None
     login_val = body.login.strip()
