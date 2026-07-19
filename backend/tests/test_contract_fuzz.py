@@ -24,11 +24,32 @@ pt.2 follow-ups:
 """
 from __future__ import annotations
 
+import warnings
+
 import pytest
 import schemathesis
 from hypothesis import settings
 
 from app.main import app
+
+# schemathesis 3.39 still uses jsonschema.RefResolver internally, which
+# jsonschema >= 4.18 deprecated. Not our code, fixed on their side in 4.x.
+# Silence at import time so the warnings don't spam every test run.
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module=r"schemathesis\..*",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=r".*RefResolver.*",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=r".*RefResolutionError.*",
+)
 
 # EXPOSE_DOCS=false hides /openapi.json at the HTTP layer, but FastAPI still
 # generates the schema in memory — `app.openapi()` returns it as a dict.
@@ -49,9 +70,10 @@ def test_no_server_errors(case):
     """No endpoint returns 500 for any generated input.
 
     `deadline=None` because Hypothesis's default 200ms deadline is too tight
-    for ASGI + DB roundtrips.
+    for ASGI + DB roundtrips. `case.call()` uses the ASGI transport
+    automatically because the schema was created with `app=app`.
     """
-    response = case.call_asgi()
+    response = case.call()
     assert response.status_code < 500, (
         f"5xx from {case.method} {case.path}\n"
         f"  body: {case.body!r}\n"
