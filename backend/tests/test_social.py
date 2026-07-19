@@ -62,6 +62,26 @@ async def test_accept_reused_invite_conflicts(client, carrier_headers):
     assert dup.status_code == 409
 
 
+async def test_accept_invite_is_idempotent_for_same_user(client, carrier_headers):
+    """Same user re-accepting must return 200 (not 409).
+
+    Fixes race triggered by React StrictMode double-mount + real-world
+    double-click / axios retry. The connection is already created; the second
+    call should be a silent no-op.
+    """
+    invite = await client.post("/api/invites", headers=carrier_headers, json={})
+    token = invite.json()["token"]
+
+    friend = await _register_and_login(client, unique_email("idem"))
+    first = await client.post(f"/api/invites/{token}/accept", headers=friend)
+    assert first.status_code == 200
+    assert first.json() == {"ok": True}
+
+    second = await client.post(f"/api/invites/{token}/accept", headers=friend)
+    assert second.status_code == 200, f"expected idempotent 200, got {second.status_code}"
+    assert second.json() == {"ok": True}
+
+
 async def test_accept_unknown_invite_returns_404(client, carrier_headers):
     friend_headers = await _register_and_login(client, unique_email("nobody"))
     resp = await client.post(

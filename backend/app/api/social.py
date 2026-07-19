@@ -99,6 +99,10 @@ async def accept_invite(
         raise HTTPException(status_code=410, detail="Invite expired")
     if invite.creator_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot accept your own invite")
+    # Idempotent per user — re-accept by the same user is a no-op success.
+    # Guards against double-click, React StrictMode double-effect, retry.
+    if invite.used_by == current_user.id:
+        return {"ok": True}
 
     # Atomic claim: only unclaimed invite can be updated
     claim = await db.execute(
@@ -107,7 +111,13 @@ async def accept_invite(
         .values(used_by=current_user.id)
     )
     if claim.rowcount == 0:
+        # Race — either another user claimed it, or the same user claimed
+        # concurrently. Reload and check.
         await db.rollback()
+        recheck = await db.execute(select(InviteLink).where(InviteLink.token == token))
+        fresh = recheck.scalar_one()
+        if fresh.used_by == current_user.id:
+            return {"ok": True}
         raise HTTPException(status_code=409, detail="Invite already used")
 
     try:
