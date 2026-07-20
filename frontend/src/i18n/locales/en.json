@@ -96,9 +96,23 @@
     "send": "Send",
     "sending": "Sending...",
     "error": "Error",
+    "errorGeneric": "Something went wrong. Please try again.",
     "close": "Close",
     "search": "Search…",
-    "copied": "Copied"
+    "copied": "Copied",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "address": {
+    "sectionTitle": "Receiving addresses",
+    "add": "Add address",
+    "empty": "No addresses yet. Add one so people know where to deliver.",
+    "label": "Label",
+    "labelPlaceholder": "Home, Office, Mom's place…",
+    "default": "Default",
+    "makeDefault": "Make default",
+    "confirmDelete": "Delete address \"{{label}}\"?",
+    "pickerTitle": "Which address to share?"
   },
   "mode": {
     "switchToSend": "Switch to Send",
@@ -319,6 +333,9 @@
   },
   "profile": {
     "title": "Profile",
+    "editButton": "Edit",
+    "editTitle": "Edit profile",
+    "editHint": "Manage saved addresses in the Receiving addresses section.",
     "level": "Business Activity Level",
     "levelPhase": "Phase 3",
     "levelNote": "Available in next phase",

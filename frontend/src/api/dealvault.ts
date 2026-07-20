@@ -115,8 +115,11 @@ export const createMessage = async (
   return api.post<VaultMessage>(`/api/deals/${dealId}/dealvault/messages`, body)
 }
 
-export const shareAddressInVault = (dealId: string) =>
-  api.post<VaultMessage>(`/api/deals/${dealId}/dealvault/messages/share-address`)
+export const shareAddressInVault = (dealId: string, addressId?: string) =>
+  api.post<VaultMessage>(
+    `/api/deals/${dealId}/dealvault/messages/share-address`,
+    addressId ? { address_id: addressId } : {},
+  )
 
 export const uploadAttachment = (
   dealId: string,
