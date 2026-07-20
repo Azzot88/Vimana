@@ -244,7 +244,7 @@
 5. Trace артефакты на R2 30 дней.
 6. 5 backend-тестов (`test_admin_users_cleanup.py`): filter, delete cascade, forbidden non-superuser, cannot delete superuser/self, Celery deletes stale ≥24ч + preserves fresh.
 
-### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server ✅ pt.1 skeleton
+### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server ✅ pt.1 + pt.2 MVP
 
 **Контекст.** Стороннние AI-агенты (Claude, GPT, Nostr-native клиенты) читают рейсы через стандартные протоколы: (A) Nostr publish (T3.5), (B) MCP server для Claude/Anthropic (T_AGENT.1).
 
@@ -259,14 +259,21 @@
 - [x] `mcp-server/README.md` — как подключить в Claude Desktop config.
 - [x] **Nostr путь** (Nostr-slope) — уже реализован в T3.5 (agents подключаются к `wss://vimana.dealvault.club/relay`, фильтр `#t=vimana #t=trip`).
 
-**pt.2 — доработка (отложено):**
+**pt.2 — auth + rate-limit + search + metrics ✅**
 
-- [ ] `search_trips(text_query)` — полнотекстовый поиск через Nostr relay backfeed.
-- [ ] Auth: `MCP_API_KEY` env для проверки, сейчас open (mitigation: bind на localhost/compose network only).
-- [ ] Rate-limit 60 tool-calls/min per API key.
-- [ ] Метрики `mcp_tool_call_count` per tool.
+- [x] `MCP_API_KEY` env — если задан, каждый tool call должен содержать matching `api_key` arg → 401-эквивалент. Если пустой — dev mode, всё пропускается (backwards compat).
+- [x] Rate-limit `MCP_RATE_LIMIT` (default 60) calls/минуту per key через sliding-window deque. `_anon` bucket для unauthed режима.
+- [x] `search_trips(query, limit?)` — client-side substring search по origin/destination/carrier_name/categories. Полнотекстовый через Nostr subscribe backfeed — pt.3 (нужен NOSTR_PUBLISH_ENABLED + relay subscription).
+- [x] `get_mcp_metrics()` tool — in-process per-tool counters + rejection reasons (auth / rate_limit). Persistence и Prometheus scrape — pt.3.
+- [x] README обновлён — секции Auth, Rate limit, Metrics + pt.3 roadmap.
+
+**pt.3 — deferred:**
+
+- [ ] Nostr subscribe backfeed для реального full-text search.
+- [ ] Метрики persistence (Postgres или Prometheus scrape endpoint).
+- [ ] Per-user MCP tokens tied to Vimana accounts («my trips only»).
+- [ ] SSE transport (сейчас stdio-only, ограничено локальным subprocess'ом).
 - [ ] Backend-тесты через subprocess-запуск MCP + fake stdio.
-- [ ] Секция «Agentic interface» в `PRD/README.md` — как ставить в Claude Desktop / Claude Code.
 
 **Acceptance MVP ✅:** `docker compose --profile mcp up -d mcp-server` стартует контейнер. При подключении в Claude Desktop через stdio → `list_tools` возвращает 2 tools + описания; `call_tool('list_trips', {origin: 'SVO'})` возвращает форматированный список активных рейсов.
 
@@ -394,7 +401,7 @@
 - Device-list в профиле (superuser может revoke конкретное устройство).
 - Suspicious-activity detection (impossible-travel = login из RU + LA за 10 мин → force logout всех сессий).
 
-### T_TEST.4 — API contract + fuzzing (schemathesis) ✅ pt.1 MVP
+### T_TEST.4 — API contract + fuzzing (schemathesis) ✅ pt.1 + pt.2 MVP
 
 **Активация:** ✅ pt.1 закрыт 2026-07-19 (перед Фазой 4). См. `PRD/PROJECT.md §7.4`.
 
@@ -406,11 +413,13 @@
 - [x] **Найден и починен реальный баг**: `GET /api/platform-notices?surface=X` принимал `str | None`, на `"null"` (fuzz'а) → asyncpg InvalidTextRepresentation → 500. Fix: тип `NoticeSurface | None` → FastAPI/Pydantic 422 до DB. Регрессия `test_platform_notices_invalid_surface_rejected` в `test_notices.py`.
 - [x] Acceptance для pt.1: **86 test cases across ~50 endpoints × 15 examples ≈ 750 requests → 0 unhandled 5xx**. ~33 сек прогон.
 
-**pt.2 — authed fuzz (отложено)**
+**pt.2 — authed fuzz ✅**
 
-- [ ] Bearer-token injection через schemathesis auth hooks (`schemathesis.auth.on_before_call`).
-- [ ] Раздельные test-runs: `test_no_5xx_unauthed` + `test_no_5xx_authed_user` + `test_no_5xx_authed_superuser`.
-- [ ] `case.call_and_validate(checks=(status_code_conformance,))` — проверка что endpoint'ы возвращают только объявленные в OpenAPI status codes.
+- [x] Session-scoped `pytest_asyncio.fixture` `fuzz_user_token` — register + login regular user раз на сессию, возвращает Bearer.
+- [x] Session-scoped `fuzz_superuser_token` — register + promote в superuser (raw SQL update role) + re-login.
+- [x] Три parametrize'а на одной schema: `test_no_server_errors_unauthed` (pt.1) + `test_no_server_errors_authed_user` + `test_no_server_errors_authed_superuser`. `case.call(headers={Authorization: Bearer <token>})`.
+- [x] `max_examples=10` для authed (vs 15 для unauthed) — балансируем время прогона (2 доп pass'а по ~30 сек каждый).
+- [ ] `case.call_and_validate(checks=(status_code_conformance,))` — проверка declared status codes — deferred в pt.3 (OpenAPI auto-schema имеет gaps, много false positives).
 
 **pt.3 — TS drift check (отложено)**
 
