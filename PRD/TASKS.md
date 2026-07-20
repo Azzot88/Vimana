@@ -401,6 +401,53 @@
 - Device-list в профиле (superuser может revoke конкретное устройство).
 - Suspicious-activity detection (impossible-travel = login из RU + LA за 10 мин → force logout всех сессий).
 
+### T_UX.4 — Multiple addresses + Edit profile modal + avatars + landing on logo ✅ MVP
+
+**Контекст.** Профиль-UX стал плоским: один инлайн-адрес получения, никакой Edit-кнопки, всё редактируется по месту, логотип «Vimana» вёл на dashboard, marketing-landing простаивал. Reworked за 4 инкремента.
+
+**A — Backend addresses (2026-07-20)**
+
+- [x] Модель `ReceivingAddress(id, user_id, label, country_iso, city, city_geoname_id, street, postal_code, note, is_default, created_at)` + partial-unique index `(user_id) WHERE is_default IS TRUE`.
+- [x] Миграция `0023` — expand: создаёт таблицу, бэкфилит одну «Default»-строку каждому юзеру с заполненным legacy `receiving_country_iso`. Старые `User.receiving_*` **остаются** (contract-миграция на удаление колонок — отдельным релизом).
+- [x] 5 endpoints: `GET /me/addresses`, `POST /me/addresses` (первый auto-default), `PATCH /me/addresses/{id}`, `POST /me/addresses/{id}/default` (обнуляет старый default), `DELETE /me/addresses/{id}` (при удалении default → auto-promote следующего по created_at).
+- [x] `POST /deals/{id}/dealvault/messages/share-address` + `POST /inquiries/{id}/messages/share-address` теперь принимают `{"address_id": uuid?}`. Разрешение: указанный → default → legacy fallback → 422.
+- [x] 10 backend-тестов (`test_addresses.py`): empty list, first auto-default, second not default, is_default clears previous, /default endpoint, update, delete promotes another, delete last, cannot touch others', country_iso normalized uppercase.
+
+**B — Frontend profile refresh + avatars (2026-07-20)**
+
+- [x] `<AddressesSection>` карточками с inline edit (Add/Edit/Delete/Make default).
+- [x] `<AddressFormFields>` — reusable form (label + country + city autocomplete + street + postal + note).
+- [x] `<EditProfileModal>` — модалка по кнопке «✎ Edit» вверху /profile: 64×64 avatar preview + Upload/Remove photo + name + phone. Адреса — отдельно в своей секции.
+- [x] Two-column Bento layout на /profile: identity/UBA/Verification/Trust слева, Addresses/Contacts/Keypair/Invites/Notifications справа. Admin panel full-width под.
+- [x] Аватарки: миграция `0024` (`users.avatar_key VARCHAR(255)`), `POST/DELETE /me/avatar` (multipart, jpeg/png/webp, max 3 MB, streaming SHA + size-guard). R2 бакет тот же что для DealVault attachments. `MeOut.avatar_url` = свежий presigned URL, минтится per-response через `core/avatar_url.py::me_out_with_avatar`. 5 backend-тестов (`test_avatar.py`).
+- [x] ProfilePage identity-карточка показывает 48×48 avatar или fallback на инициал.
+
+**C — Chat address picker (2026-07-20)**
+
+- [x] `<ShareAddressModal>` (переиспользуемый) — открывается в DealVaultPage и InquiryPanel. Радио-список карточек user'ских адресов, default предвыбран. Убрана старая `confirm() + auto-default` логика — теперь всегда явный выбор.
+- [x] Old handlers переписаны на модалку — сохранены только `onShare(addressId)` callback'и в parent'ах.
+
+**D — Marketing landing on logo click (2026-07-20)**
+
+- [x] Existing `<LandingPage>` (Bento с route example, DealVault log, boarding pass, УБА scorecard, escrow, network, corridor, Nostr, progress, missions) больше не редиректит authed-юзеров.
+- [x] Navbar лого `to="/"` (было `/dashboard`) — единый home для всех.
+- [x] CTA в navbar landing'а: unauthed → «Request Early Access» (waitlist модалка), authed → «Open Dashboard». i18n `landing.ctaDashboard` в EN+RU.
+
+**Acceptance ✅ (2026-07-20 prod deploy + 7/7 Playwright smoke):**
+1. Логотип «Vimana» на любой странице ведёт на `/` (landing).
+2. `/profile` — 2 колонки на desktop, 1 на phone, Edit-кнопка справа от заголовка.
+3. Аватар загружается через модалку, показывается в profile identity-карточке.
+4. В правой колонке Addresses: Add / Edit / Delete / Make default — inline формы.
+5. В чате сделки/inquiry кнопка «📍 Share address» → picker с default предвыбранным.
+6. Legacy `share-address` без `address_id` продолжает работать для юзеров, ни разу не открывавших профиль после деплоя.
+
+**Follow-up (pt.5):**
+1. Celery janitor для orphaned R2 avatars после DELETE.
+2. Удаление `User.receiving_*` legacy колонок отдельной миграцией (contract-фаза).
+3. i18n для остальных 4 языков (pl/fr/es/ua) — сейчас EN + RU.
+4. Client-side resize/crop аватарки перед загрузкой (browser Canvas API).
+5. Multiple avatars / alternate identities для carrier vs sender-режимов.
+
 ### T_TEST.4 — API contract + fuzzing (schemathesis) ✅ pt.1 + pt.2 MVP
 
 **Активация:** ✅ pt.1 закрыт 2026-07-19 (перед Фазой 4). См. `PRD/PROJECT.md §7.4`.

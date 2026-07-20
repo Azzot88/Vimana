@@ -2,5 +2,5 @@
 // Examples: 0.01.6 → 0.01.12 → 0.02.1
 // Update this after each completed task in TASKS.md
 // Phase 2 fully closed (T2.1 – T2.4). Now on Phase 3.
-// T_UX.4 C+D — chat address picker + landing on logo.
+// T_UX.4 fully closed (addresses + avatars + edit modal + landing on logo).
 export const APP_VERSION = '0.03.11'
