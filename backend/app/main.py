@@ -93,12 +93,16 @@ async def _reject_null_bytes(request: Request, call_next):
     """T_TEST.4 pt.2 — reject requests containing NUL bytes (`\\x00`) in
     query string or JSON body. Postgres UTF-8 columns reject NULs at driver
     level with a 500 (`CharacterNotInRepertoireError`); fail-fast at 400
-    instead. No legitimate input contains NUL.
+    instead.
 
     Detects three forms:
-      - raw `\\x00` byte
+      - raw `\\x00` byte in query string bytes or JSON body
       - URL-encoded `%00` in the query string (any case)
       - JSON-escaped `\\u0000` inside a string literal
+
+    Multipart/form-data (file uploads) is skipped: binary payloads legitimately
+    contain NUL bytes (photos, PDFs, etc.). The individual field validators
+    on those endpoints already guard the text portions.
     """
     raw_query = request.scope.get("query_string", b"")
     if b"\x00" in raw_query or b"%00" in raw_query.lower():
@@ -107,19 +111,23 @@ async def _reject_null_bytes(request: Request, call_next):
             content={"detail": "NUL byte in query string"},
         )
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        body = await request.body()
-        lower = body.lower()
-        if b"\x00" in body or b"\\u0000" in lower:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "NUL byte in request body"},
-            )
+        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        # Only inspect textual JSON bodies; multipart/form + octet-stream may
+        # carry binary that legitimately contains NUL.
+        if content_type in ("application/json", "application/json; charset=utf-8", ""):
+            body = await request.body()
+            lower = body.lower()
+            if b"\x00" in body or b"\\u0000" in lower:
+                return JSONResponse(
+                    status_code=400,
+                    content={"detail": "NUL byte in request body"},
+                )
 
-        # Re-inject the body so downstream handlers can read it again.
-        async def receive():
-            return {"type": "http.request", "body": body, "more_body": False}
+            # Re-inject the body so downstream handlers can read it again.
+            async def receive():
+                return {"type": "http.request", "body": body, "more_body": False}
 
-        request._receive = receive
+            request._receive = receive
     return await call_next(request)
 
 
