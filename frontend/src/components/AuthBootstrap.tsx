@@ -41,6 +41,26 @@ export default function AuthBootstrap({ children }: Props) {
     hydrate()
   }, [hydrate])
 
+  // pt.3 — cross-tab sync. The `storage` event fires in OTHER tabs when
+  // localStorage changes here — perfect for propagating logout / login.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'token') return
+      const currentAuth = useAuthStore.getState().authState
+      if (e.newValue === null && currentAuth === 'authenticated') {
+        // Another tab logged us out — silent redirect to /login.
+        logout('multi_tab')
+      } else if (e.newValue && currentAuth !== 'authenticated') {
+        // Another tab logged in — sync the token into Zustand (hydrate reads
+        // from state, not localStorage), then trigger the standard rehydrate.
+        useAuthStore.setState({ token: e.newValue })
+        hydrate()
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [hydrate, logout])
+
   // pt.2 — activity tracking (debounced) + idle checker.
   useEffect(() => {
     if (authState !== 'authenticated') return

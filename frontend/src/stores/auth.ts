@@ -11,7 +11,7 @@ interface AuthStore {
   /** Last activity timestamp (ms since epoch). Updated by AuthBootstrap. */
   lastActivityAt: number
   setAuth: (user: User, token: string) => void
-  logout: (reason?: 'inactivity' | 'manual') => void
+  logout: (reason?: 'inactivity' | 'manual' | 'multi_tab') => void
   switchMode: () => Promise<void>
   /** T_UX.3 pt.1 — call once on app boot. Reads localStorage token, hits
    *  /api/auth/me to populate user. On 401 → clean logout. */
@@ -31,9 +31,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   logout: (reason) => {
     localStorage.removeItem('token')
     set({ user: null, token: null, authState: 'anonymous' })
-    if (reason === 'inactivity' && typeof window !== 'undefined') {
-      // Full page nav so any stale state elsewhere is wiped.
-      window.location.replace('/login?reason=inactivity')
+    if (typeof window !== 'undefined') {
+      if (reason === 'inactivity') {
+        // Full page nav so any stale state elsewhere is wiped.
+        window.location.replace('/login?reason=inactivity')
+      } else if (reason === 'multi_tab') {
+        // Silent redirect — user knows they logged out in another tab, no
+        // need for a scary banner.
+        window.location.replace('/login')
+      }
     }
   },
   switchMode: async () => {

@@ -335,7 +335,7 @@
 5. community notes — user-suggested notes с модерацией.
 6. Multi-hop — рейсы с промежуточными посадками, expansion на транзитные страны.
 
-### T_UX.3 — Auth rehydrate on reload + inactivity logout ✅ MVP pt.1 + pt.2
+### T_UX.3 — Auth rehydrate on reload + inactivity logout ✅ MVP pt.1 + pt.2 + pt.3
 
 **Контекст.** Обнаружено при написании T_TEST.3 Playwright recipient-спека:
 после hard-nav (`page.goto` / открытие ссылки `/join/deal/:token` в новой
@@ -361,9 +361,12 @@
 - [x] JWT expiry — **Option A** (frontend-only): чистим `localStorage`, backend JWT остаётся валидным до natural expiry.
 - [x] i18n `auth.inactivityWarningTitle/Body/LoggedOut/stayLoggedIn/logoutNow` в EN + RU.
 
-**pt.3 — Multi-tab sync (nice to have)**
+**pt.3 — Multi-tab sync ✅**
 
-- [ ] `storage` event listener: если другая вкладка сделала logout (`localStorage.removeItem('token')`) → эта вкладка тоже logout'ит. Иначе одна вкладка logout, другая продолжает работать со старой session.
+- [x] `storage` event listener в `<AuthBootstrap>`: другая вкладка сделала `localStorage.removeItem('token')` → эта вкладка вызывает `logout('multi_tab')` → silent redirect на `/login` (без `?reason=` баннера — пользователь сам логаутнулся где-то ещё).
+- [x] Симметрия для login: если в другой вкладке появился `token` (было anonymous) → синхронизируем `useAuthStore.setState({ token })` + `hydrate()` → эта вкладка становится authenticated.
+- [x] `logout` reason расширен: `'inactivity' | 'manual' | 'multi_tab'`. multi_tab делает silent redirect (без URL param'ов).
+- [x] Playwright regression `frontend/e2e/specs/multi-tab-logout.spec.ts` — открывает 2 page в одном browser context, register в tab A, hard-nav /profile в tab B, `evaluate(localStorage.removeItem('token'))` в tab A → tab B редиректит на /login без `reason=`.
 
 **Backend поддержка (минимум для pt.2 Option B):**
 
@@ -373,9 +376,9 @@
 
 **Тесты:**
 
-- [ ] Backend: `/auth/logout` blacklist'ит токен → следующий запрос с ним → 401.
+- [ ] Backend: `/auth/logout` blacklist'ит токен → следующий запрос с ним → 401 (backend Option B — pt.4).
 - [ ] Frontend (vitest): mocked `localStorage.token` + mocked `/auth/me` → store rehydrates → user set.
-- [ ] Playwright (T_TEST.3 pt.2): open two tabs → logout in one → other becomes unauthenticated within 1 сек.
+- [x] Playwright (T_TEST.3 pt.2 + pt.3): `multi-tab-logout.spec.ts` — 2 page в одном context, logout в одном → второй редиректит.
 
 **Acceptance:**
 1. User логинится, закрывает вкладку, открывает по прямой ссылке `/join/deal/:token` в новой вкладке → рендерит invite-flow (не redirect на login).
