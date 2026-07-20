@@ -7,12 +7,17 @@ When sender creates a deal from the trip, `POST /api/deals/match` links
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.address import AddressNotSetError, format_address_message
+from app.core.address import (
+    AddressNotSetError,
+    format_address_message,
+    resolve_share_address,
+)
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.rate_limit import limiter
@@ -163,6 +168,10 @@ async def post_message(
     )
 
 
+class ShareAddressBody(BaseModel):
+    address_id: uuid.UUID | None = None
+
+
 @router.post(
     "/inquiries/{inquiry_id}/messages/share-address",
     response_model=InquiryMessageOut,
@@ -172,13 +181,15 @@ async def post_message(
 async def share_address(
     inquiry_id: uuid.UUID,
     request: Request,
+    body: ShareAddressBody = ShareAddressBody(),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """T1.26 — share user's receiving address into the inquiry chat."""
+    """T1.26 / T_UX.4 A — share a receiving address into the inquiry chat."""
     await _get_inquiry_as_participant(inquiry_id, current_user, db)
     try:
-        text = format_address_message(current_user)
+        view = await resolve_share_address(db, current_user, body.address_id)
+        text = format_address_message(view)
     except AddressNotSetError:
         raise HTTPException(
             status_code=422,

@@ -478,6 +478,51 @@ async def _ensure_notices_tables(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE route_notes DROP COLUMN {legacy_col}"))
 
 
+async def _ensure_receiving_addresses(engine) -> None:
+    """T_UX.4 A schema fix: `receiving_addresses` table + partial-unique
+    index on (user_id) WHERE is_default. Idempotent."""
+    async with engine.begin() as conn:
+        exists = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name = 'receiving_addresses'"
+                )
+            )
+        ).fetchone()
+        if not exists:
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE receiving_addresses (
+                        id UUID PRIMARY KEY,
+                        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        label VARCHAR(60) NOT NULL,
+                        country_iso VARCHAR(2) NOT NULL,
+                        city VARCHAR(150),
+                        city_geoname_id INTEGER,
+                        street VARCHAR(255),
+                        postal_code VARCHAR(20),
+                        note VARCHAR(500),
+                        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                    """
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX ix_receiving_addresses_user_id ON receiving_addresses(user_id)"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX uq_receiving_addresses_user_default "
+                    "ON receiving_addresses(user_id) WHERE is_default IS TRUE"
+                )
+            )
+
+
 async def _ensure_deal_participants(engine) -> None:
     """T3.3 schema fix: dealparticipantrole enum + deal_participants table."""
     async with engine.begin() as conn:
@@ -771,6 +816,7 @@ async def test_engine():
     await _ensure_publish_metrics_table(engine)
     await _ensure_deal_participants(engine)
     await _ensure_notices_tables(engine)
+    await _ensure_receiving_addresses(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _seed_default_categories(engine)

@@ -1,3 +1,4 @@
+from app.models.address import ReceivingAddress
 from app.models.user import User
 from app.models.social import InviteLink, Connection
 from app.models.marketplace import Trip, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
@@ -15,7 +16,7 @@ from app.models.verification import (
 from app.models.waitlist import WaitlistEntry
 
 __all__ = [
-    "User",
+    "User", "ReceivingAddress",
     "InviteLink", "Connection",
     "Trip", "Order", "TripStatus", "OrderStatus", "Category", "DEFAULT_CATEGORIES",
     "TripInquiry", "InquiryMessage",

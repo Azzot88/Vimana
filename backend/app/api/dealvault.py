@@ -3,12 +3,17 @@ import io
 import uuid
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
-from app.core.address import AddressNotSetError, format_address_message
+from app.core.address import (
+    AddressNotSetError,
+    format_address_message,
+    resolve_share_address,
+)
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.rate_limit import limiter
@@ -191,6 +196,10 @@ async def create_message(
     return _build_message_out(msg, skip_attachments=True)
 
 
+class ShareAddressBody(BaseModel):
+    address_id: uuid.UUID | None = None
+
+
 @router.post(
     "/{deal_id}/dealvault/messages/share-address",
     response_model=MessageOut,
@@ -200,14 +209,17 @@ async def create_message(
 async def share_address(
     deal_id: uuid.UUID,
     request: Request,
+    body: ShareAddressBody = ShareAddressBody(),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """T1.26 — share user's receiving address into the DealVault chat as a
-    system-message. Body-less; server reads current user's profile."""
+    """T1.26 / T_UX.4 A — share a receiving address into the DealVault chat
+    as a system-message. `address_id` picks a specific one; omit to use the
+    default; falls back to legacy `User.receiving_*` for un-migrated users."""
     await _get_deal_as_participant(deal_id, current_user, db)
     try:
-        text = format_address_message(current_user)
+        view = await resolve_share_address(db, current_user, body.address_id)
+        text = format_address_message(view)
     except AddressNotSetError:
         raise HTTPException(
             status_code=422,
