@@ -336,6 +336,8 @@
     "editButton": "Edit",
     "editTitle": "Edit profile",
     "editHint": "Manage saved addresses in the Receiving addresses section.",
+    "avatarUpload": "Upload photo",
+    "avatarRemove": "Remove photo",
     "level": "Business Activity Level",
     "levelPhase": "Phase 3",
     "levelNote": "Available in next phase",

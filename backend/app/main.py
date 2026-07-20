@@ -16,6 +16,7 @@ from app.api.addresses import router as addresses_router
 from app.api.admin import router as admin_router
 from app.api.airports import router as airports_router
 from app.api.auth import router as auth_router
+from app.api.avatar import router as avatar_router
 from app.api.categories import router as categories_router
 from app.api.cities import router as cities_router
 from app.api.dealvault import router as dealvault_router
@@ -194,6 +195,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(addresses_router, prefix="/api", tags=["addresses"])
+app.include_router(avatar_router, prefix="/api", tags=["avatar"])
 app.include_router(keypair_router, prefix="/api", tags=["keypair"])
 app.include_router(social_router, prefix="/api", tags=["social"])
 app.include_router(trips_router, prefix="/api/trips", tags=["trips"])

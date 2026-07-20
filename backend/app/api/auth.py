@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.avatar_url import me_out_with_avatar
 from app.core.database import get_db
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
@@ -106,8 +107,8 @@ async def logout(token: str = Depends(_oauth2_scheme)):
 
 @router.get("/me", response_model=MeOut)
 async def me(current_user: User = Depends(get_current_user)):
-    """Owner view — includes private `receiving_*` fields."""
-    return current_user
+    """Owner view — includes private `receiving_*` fields + presigned avatar URL."""
+    return me_out_with_avatar(current_user)
 
 
 _NOT_NULL_UPDATE_FIELDS = {
@@ -135,4 +136,4 @@ async def update_me(
         setattr(current_user, field, value)
     await db.commit()
     await db.refresh(current_user)
-    return current_user
+    return me_out_with_avatar(current_user)

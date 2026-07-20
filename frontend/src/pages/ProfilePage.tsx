@@ -120,11 +120,19 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-navy flex items-center justify-center">
-                <span className="text-ivory font-display font-bold text-lg">
-                  {user?.display_name?.[0]?.toUpperCase() ?? '?'}
-                </span>
-              </div>
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.display_name}
+                  className="w-12 h-12 rounded-full object-cover border border-navy/10"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-navy flex items-center justify-center">
+                  <span className="text-ivory font-display font-bold text-lg">
+                    {user?.display_name?.[0]?.toUpperCase() ?? '?'}
+                  </span>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="font-display font-semibold text-lg text-navy truncate">
                   {user?.display_name}

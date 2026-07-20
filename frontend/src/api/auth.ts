@@ -46,7 +46,20 @@ export interface User {
   receiving_street?: string | null
   receiving_postal_code?: string | null
   receiving_note?: string | null
+  // T_UX.4 B — presigned R2 URL, minted per /me response. null if not set.
+  avatar_url?: string | null
 }
+
+
+export const uploadAvatar = (file: File) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return api.post<User>('/api/me/avatar', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 
 export interface UserUpdate {
   display_name?: string

@@ -683,7 +683,7 @@ async def _ensure_nostr_event_columns(engine) -> None:
 
 
 async def _ensure_receiving_address_columns(engine) -> None:
-    """T1.26 schema fix: 6 nullable receiving_* columns on users. Idempotent."""
+    """T1.26 + T_UX.4 B schema fix: nullable columns on users. Idempotent."""
     async with engine.begin() as conn:
         for col, ddl in (
             ("receiving_country_iso", "VARCHAR(2)"),
@@ -692,6 +692,7 @@ async def _ensure_receiving_address_columns(engine) -> None:
             ("receiving_street", "VARCHAR(255)"),
             ("receiving_postal_code", "VARCHAR(20)"),
             ("receiving_note", "VARCHAR(500)"),
+            ("avatar_key", "VARCHAR(255)"),
         ):
             row = (
                 await conn.execute(

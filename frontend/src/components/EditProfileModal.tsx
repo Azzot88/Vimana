@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parsePhoneNumberFromString, getCountryCallingCode } from 'libphonenumber-js/min'
 import type { CountryCode } from 'libphonenumber-js/min'
-import { updateMe } from '../api/auth'
+import { deleteAvatar, updateMe, uploadAvatar } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import CountryCodeSelect from './CountryCodeSelect'
 
@@ -28,6 +28,8 @@ export default function EditProfileModal({ open, onClose }: Props) {
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open || !user) return
@@ -39,6 +41,32 @@ export default function EditProfileModal({ open, onClose }: Props) {
   }, [open, user])
 
   if (!open) return null
+
+  const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarBusy(true)
+    setError('')
+    try {
+      const { data } = await uploadAvatar(file)
+      setAuth(data, token!)
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('common.errorGeneric') as string)
+    } finally {
+      setAvatarBusy(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  const handleAvatarDelete = async () => {
+    setAvatarBusy(true)
+    try {
+      const { data } = await deleteAvatar()
+      setAuth(data, token!)
+    } catch { /* silent */ }
+    finally { setAvatarBusy(false) }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -78,6 +106,49 @@ export default function EditProfileModal({ open, onClose }: Props) {
         <h3 className="font-display font-semibold text-lg text-navy">
           {t('profile.editTitle')}
         </h3>
+
+        <div className="flex items-center gap-4">
+          {user?.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={user.display_name}
+              className="w-16 h-16 rounded-full object-cover border border-navy/10"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-navy flex items-center justify-center">
+              <span className="text-ivory font-display font-bold text-2xl">
+                {user?.display_name?.[0]?.toUpperCase() ?? '?'}
+              </span>
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={avatarBusy}
+              className="text-xs font-body text-cyan hover:underline disabled:opacity-50"
+            >
+              {avatarBusy ? t('common.sending') : t('profile.avatarUpload')}
+            </button>
+            {user?.avatar_url && (
+              <button
+                type="button"
+                onClick={handleAvatarDelete}
+                disabled={avatarBusy}
+                className="text-xs font-body text-red-600 hover:underline disabled:opacity-50 text-left"
+              >
+                {t('profile.avatarRemove')}
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarPick}
+            />
+          </div>
+        </div>
 
         <div>
           <label className="block text-xs font-body font-medium text-navy/60 mb-1">

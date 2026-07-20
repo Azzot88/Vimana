@@ -105,6 +105,8 @@ class MeOut(UserOut):
     receiving_street: str | None = None
     receiving_postal_code: str | None = None
     receiving_note: str | None = None
+    # T_UX.4 B — presigned R2 URL, minted per response. None if not set.
+    avatar_url: str | None = None
 
 
 class Token(BaseModel):

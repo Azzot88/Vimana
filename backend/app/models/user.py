@@ -61,3 +61,6 @@ class User(Base):
     receiving_street: Mapped[str | None] = mapped_column(String(255), nullable=True)
     receiving_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     receiving_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # T_UX.4 B — R2 object key for the user's avatar. Presigned URL is
+    # generated on-the-fly, never stored.
+    avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
