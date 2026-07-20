@@ -6,7 +6,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -87,13 +87,24 @@ async def create_address(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # If this is going to be the default, clear anyone else's default first.
-    if body.is_default:
+    # Count existing FIRST — autoflush after db.add() would include the new
+    # row in a later SELECT and defeat the "first-address-auto-default" rule.
+    prior_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(ReceivingAddress)
+            .where(ReceivingAddress.user_id == current_user.id)
+        )
+    ).scalar_one()
+
+    is_default = body.is_default or prior_count == 0
+    if is_default and prior_count > 0:
         await db.execute(
             update(ReceivingAddress)
             .where(ReceivingAddress.user_id == current_user.id)
             .values(is_default=False)
         )
+
     addr = ReceivingAddress(
         user_id=current_user.id,
         label=body.label,
@@ -103,21 +114,9 @@ async def create_address(
         street=body.street,
         postal_code=body.postal_code,
         note=body.note,
-        is_default=body.is_default,
+        is_default=is_default,
     )
     db.add(addr)
-    # If there are no addresses yet AND is_default wasn't requested, promote
-    # this one automatically — user always needs a "default" to share.
-    if not body.is_default:
-        existing_count = (
-            await db.execute(
-                select(ReceivingAddress).where(
-                    ReceivingAddress.user_id == current_user.id
-                )
-            )
-        ).scalars().all()
-        if not existing_count:
-            addr.is_default = True
     await db.commit()
     await db.refresh(addr)
     return _to_out(addr)
