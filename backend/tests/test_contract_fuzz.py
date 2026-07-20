@@ -32,10 +32,11 @@ import pytest_asyncio
 import schemathesis
 from hypothesis import settings
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.main import app
-from app.models.user import User
 
 # schemathesis 3.39 still uses jsonschema.RefResolver internally, which
 # jsonschema >= 4.18 deprecated. Not our code, fixed on their side in 4.x.
@@ -113,19 +114,32 @@ async def fuzz_user_token():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def fuzz_superuser_token(session_maker):
+async def fuzz_superuser_token():
     """Register + promote to superuser once for the whole session. Exercises
-    admin-only endpoints past both auth and permission gates."""
+    admin-only endpoints past both auth and permission gates.
+
+    Uses a fully isolated engine for the role UPDATE — sharing the
+    conftest's session_maker leaves asyncpg connections in a stuck state
+    ("another operation is in progress") when override_db later tries to
+    reuse the same pool. Direct SQL avoids ORM identity-map complications.
+    """
+    from tests.conftest import TEST_DATABASE_URL
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        token, email = await _register_and_login(ac, "super")
-        async with session_maker() as db:
-            u = (await db.execute(select(User).where(User.email == email))).scalar_one()
-            u.role = "superuser"
-            await db.commit()
-        # Re-login so the token payload reflects the promotion (JWT doesn't
-        # carry role — but we still want a fresh token in case anything else
-        # cares).
+        _token, email = await _register_and_login(ac, "super")
+
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("UPDATE users SET role = 'superuser' WHERE email = :email"),
+                {"email": email},
+            )
+    finally:
+        await engine.dispose()
+
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         relogin = await ac.post(
             "/api/auth/login", json={"login": email, "password": "fuzz-pass-1"}
         )
