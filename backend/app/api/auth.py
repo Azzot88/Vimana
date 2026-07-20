@@ -110,6 +110,17 @@ async def me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+_NOT_NULL_UPDATE_FIELDS = {
+    "display_name",
+    "notify_email",
+    "notify_telegram",
+    "notify_whatsapp",
+    "active_mode",
+    "can_carry",
+    "can_send",
+}
+
+
 @router.patch("/me", response_model=MeOut)
 async def update_me(
     body: UserUpdate,
@@ -117,6 +128,10 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     for field, value in body.model_dump(exclude_unset=True).items():
+        if value is None and field in _NOT_NULL_UPDATE_FIELDS:
+            raise HTTPException(
+                status_code=422, detail=f"'{field}' cannot be null"
+            )
         setattr(current_user, field, value)
     await db.commit()
     await db.refresh(current_user)

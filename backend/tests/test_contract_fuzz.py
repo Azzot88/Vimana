@@ -77,6 +77,10 @@ def test_no_server_errors_unauthed(case):
     automatically because the schema was created with `app=app`.
     """
     response = case.call()
+    # 503 is a legitimate documented state (e.g. "telegram not configured",
+    # "nostr publish disabled") — only real 5xx (500/501/502/504) count as bugs.
+    if response.status_code == 503:
+        return
     assert response.status_code < 500, (
         f"5xx from {case.method} {case.path}\n"
         f"  body: {case.body!r}\n"
@@ -149,6 +153,10 @@ def test_no_server_errors_authed_user(case, fuzz_user_token):
     """
     headers = {"Authorization": f"Bearer {fuzz_user_token}"}
     response = case.call(headers=headers)
+    # 503 is a legitimate documented state (e.g. "telegram not configured",
+    # "nostr publish disabled") — only real 5xx (500/501/502/504) count as bugs.
+    if response.status_code == 503:
+        return
     assert response.status_code < 500, (
         f"5xx (authed user) from {case.method} {case.path}\n"
         f"  body: {case.body!r}\n"
@@ -166,6 +174,10 @@ def test_no_server_errors_authed_superuser(case, fuzz_superuser_token):
     """
     headers = {"Authorization": f"Bearer {fuzz_superuser_token}"}
     response = case.call(headers=headers)
+    # 503 is a legitimate documented state (e.g. "telegram not configured",
+    # "nostr publish disabled") — only real 5xx (500/501/502/504) count as bugs.
+    if response.status_code == 503:
+        return
     assert response.status_code < 500, (
         f"5xx (authed superuser) from {case.method} {case.path}\n"
         f"  body: {case.body!r}\n"

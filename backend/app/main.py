@@ -88,6 +88,34 @@ async def _request_id_middleware(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def _reject_null_bytes(request: Request, call_next):
+    """T_TEST.4 pt.2 — reject requests containing NUL bytes (`\\x00`) in
+    query string or JSON body. Postgres UTF-8 columns reject NULs at driver
+    level with a 500 (`CharacterNotInRepertoireError`); fail-fast at 400
+    instead. No legitimate input contains NUL.
+    """
+    if "\x00" in request.url.query:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "NUL byte in query string"},
+        )
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        body = await request.body()
+        if b"\x00" in body:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "NUL byte in request body"},
+            )
+
+        # Re-inject the body so downstream handlers can read it again.
+        async def receive():
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        request._receive = receive
+    return await call_next(request)
+
+
 def _req_id(request: Request) -> str:
     return getattr(request.state, "request_id", "")
 
