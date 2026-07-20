@@ -75,6 +75,9 @@ export const login = (payload: LoginPayload) =>
 export const me = () =>
   api.get<User>('/api/auth/me')
 
+export const logout = () =>
+  api.post<void>('/api/auth/logout')
+
 export const updateMe = (payload: UserUpdate) =>
   api.patch<User>('/api/auth/me', payload)
 

@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -19,19 +20,22 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(subject: str, expires_delta: timedelta | None = None) -> str:
+    """Signs a JWT with a random `jti` so it can be individually revoked
+    (T_UX.3 pt.4a — Redis blacklist)."""
     expire = datetime.now(timezone.utc) + (
         expires_delta if expires_delta is not None else timedelta(days=_DEFAULT_EXPIRE_DAYS)
     )
-    payload = {"sub": subject, "exp": expire}
+    payload = {"sub": subject, "exp": expire, "jti": uuid.uuid4().hex}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=_ALGORITHM)
 
 
-def decode_access_token(token: str) -> str:
+def decode_access_token(token: str) -> dict:
+    """Decodes and validates a JWT. Returns the payload dict on success,
+    raises 401 on invalid/expired signature or missing `sub`."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[_ALGORITHM])
-        sub: str | None = payload.get("sub")
-        if sub is None:
+        if payload.get("sub") is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return sub
+        return payload
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")

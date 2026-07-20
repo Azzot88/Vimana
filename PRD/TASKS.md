@@ -368,11 +368,15 @@
 - [x] `logout` reason расширен: `'inactivity' | 'manual' | 'multi_tab'`. multi_tab делает silent redirect (без URL param'ов).
 - [x] Playwright regression `frontend/e2e/specs/multi-tab-logout.spec.ts` — открывает 2 page в одном browser context, register в tab A, hard-nav /profile в tab B, `evaluate(localStorage.removeItem('token'))` в tab A → tab B редиректит на /login без `reason=`.
 
-**Backend поддержка (минимум для pt.2 Option B):**
+**Backend поддержка (pt.4a — Option B) ✅**
 
-- [ ] `POST /api/auth/logout` — простой endpoint, добавляет `jti` (JWT ID) в Redis blacklist с TTL = remaining JWT lifetime.
-- [ ] `get_current_user` dependency проверяет blacklist перед acceptance.
-- [ ] Alembic + модель — не нужны (blacklist в Redis).
+- [x] `create_access_token` теперь кладёт `jti` (random UUID) в JWT payload.
+- [x] `decode_access_token` возвращает **весь payload dict** (было: только sub).
+- [x] `app/core/token_blacklist.py` — async Redis client (`redis>=5.0`), `blacklist_jti(jti, ttl)` + `is_blacklisted(jti)`. Ключ `auth:blacklist:<jti>` с TTL = remaining JWT lifetime → авто-очистка после natural expiry. Fail-soft на Redis-outage (лог + вернуть False).
+- [x] `POST /api/auth/logout` — 204. Декодирует токен из Bearer, кладёт jti в blacklist. Идемпотентно: invalid/expired → тоже 204.
+- [x] `get_current_user` проверяет blacklist до resolve юзера → 401 «Token revoked» на revoked jti.
+- [x] Frontend `stores/auth.ts::logout` дёргает `POST /api/auth/logout` fire-and-forget перед `localStorage.removeItem`. `multi_tab` reason НЕ дёргает (оригинальная вкладка уже сделала запрос).
+- [x] `backend/tests/test_logout_blacklist.py` — 5 тестов: logout → /me 401, garbage token → 204, double logout → 204/204, other user's token unaffected (jti scoping), re-login после logout → новый working token.
 
 **Тесты:**
 

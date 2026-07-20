@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { User } from '../api/auth'
-import { me, updateMe } from '../api/auth'
+import { logout as logoutRequest, me, updateMe } from '../api/auth'
 
 export type AuthState = 'loading' | 'authenticated' | 'anonymous'
 
@@ -29,6 +29,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ user, token, authState: 'authenticated', lastActivityAt: Date.now() })
   },
   logout: (reason) => {
+    // T_UX.3 pt.4a — revoke server-side (Redis blacklist) BEFORE dropping
+    // the token from localStorage. Fire-and-forget: if the network is down
+    // or the token already expired, we still want the local logout to
+    // finish. `multi_tab` skips this: the tab that originally logged out
+    // already made the call; we only mirror state locally.
+    if (reason !== 'multi_tab') {
+      logoutRequest().catch(() => {
+        // Swallow — logout must always succeed locally.
+      })
+    }
     localStorage.removeItem('token')
     set({ user: null, token: null, authState: 'anonymous' })
     if (typeof window !== 'undefined') {

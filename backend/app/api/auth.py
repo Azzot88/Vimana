@@ -1,4 +1,7 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,9 +9,12 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.core.token_blacklist import blacklist_jti
 from app.models.user import User
 from app.schemas.user import MeOut, Token, UserCreate, UserLogin, UserOut, UserUpdate
+
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 router = APIRouter()
 
@@ -75,6 +81,27 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
 
     token = create_access_token(str(user.id))
     return Token(access_token=token)
+
+
+@router.post("/logout", status_code=204)
+async def logout(token: str = Depends(_oauth2_scheme)):
+    """T_UX.3 pt.4a — revoke the presenting JWT via Redis blacklist.
+
+    Idempotent by nature: an already-invalid or already-blacklisted token
+    resolves to a no-op 204. We decode with jwt directly (not
+    `get_current_user`) so an expired token still gets a clean 204 response
+    — no point in erroring out on logout of a dead token.
+    """
+    try:
+        payload = decode_access_token(token)
+    except HTTPException:
+        return  # invalid/expired — nothing to revoke, client can drop token
+    jti = payload.get("jti")
+    exp = payload.get("exp")
+    if not jti or not exp:
+        return
+    ttl = int(exp - datetime.now(timezone.utc).timestamp())
+    await blacklist_jti(jti, ttl)
 
 
 @router.get("/me", response_model=MeOut)
