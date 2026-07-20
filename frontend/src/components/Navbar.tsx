@@ -24,7 +24,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         <div className="flex items-center gap-6">
           <Link
-            to="/dashboard"
+            to="/"
             className="font-display font-bold text-navy text-lg tracking-tight hover:text-cyan transition-colors"
           >
             Vimana

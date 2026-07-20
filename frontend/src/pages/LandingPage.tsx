@@ -257,10 +257,9 @@ export default function LandingPage() {
   const [successEmail, setSuccessEmail] = useState('')
   const [submitError, setSubmitError] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (token) navigate('/dashboard', { replace: true })
-  }, [token, navigate])
+  // T_UX.4 D — landing is the "home" for every visitor now; authed users
+  // can still see it via the logo. Nav CTA switches to Dashboard for them.
+  const isAuthed = !!token
 
   const openModal = () => {
     setModalOpen(true)
@@ -310,7 +309,15 @@ export default function LandingPage() {
         <span className="lp-nav-tag">SACRED LOGISTICS · V0.01.17 · PHASE 1</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <LanguageSwitcher />
-          <button className="lp-cta" onClick={openModal}>{t('landing.cta')}</button>
+          {isAuthed ? (
+            <button className="lp-cta" onClick={() => navigate('/dashboard')}>
+              {t('landing.ctaDashboard')}
+            </button>
+          ) : (
+            <button className="lp-cta" onClick={openModal}>
+              {t('landing.cta')}
+            </button>
+          )}
         </div>
       </nav>
 

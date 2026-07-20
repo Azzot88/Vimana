@@ -9,6 +9,7 @@ import {
 } from '../api/inquiry'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressMessage } from './AddressCard'
+import ShareAddressModal from './ShareAddressModal'
 
 interface Props {
   tripId: string
@@ -25,6 +26,7 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [shareOpen, setShareOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -160,22 +162,9 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
         <div className="border-t border-navy/10 px-3 pt-2">
           <button
             type="button"
-            onClick={async () => {
-              if (!inquiryId || !user?.receiving_country_iso) {
-                setError(t('chat.shareAddress.notSet'))
-                return
-              }
-              if (!window.confirm(t('chat.shareAddress.confirm') as string)) return
-              setSending(true)
+            onClick={() => {
               setError('')
-              try {
-                const { data: msg } = await shareAddressInInquiry(inquiryId)
-                setMessages((prev) => [...prev, msg])
-              } catch {
-                setError(t('chat.shareAddress.error'))
-              } finally {
-                setSending(false)
-              }
+              setShareOpen(true)
             }}
             disabled={sending || !inquiryId}
             className="text-xs font-body text-cyan hover:underline disabled:opacity-40"
@@ -205,6 +194,16 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
           </button>
         </form>
       </aside>
+
+      <ShareAddressModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        onShare={async (addressId) => {
+          if (!inquiryId) return
+          const { data: msg } = await shareAddressInInquiry(inquiryId, addressId)
+          setMessages((prev) => [...prev, msg])
+        }}
+      />
     </>
   )
 }

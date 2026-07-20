@@ -17,6 +17,7 @@ import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
+import ShareAddressModal from '../components/ShareAddressModal'
 
 const KIND_LABEL: Record<AttachmentKind, string> = {
   handoff_photo: 'Фото передачи',
@@ -36,6 +37,7 @@ export default function DealVaultPage() {
   const [error, setError] = useState<string>('')
   const [uploadKind, setUploadKind] = useState<AttachmentKind>('handoff_photo')
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
   const [parties, setParties] = useState<{
     e2e: E2EParties | null
     senderId: string | null
@@ -315,24 +317,11 @@ export default function DealVaultPage() {
             </label>
             <button
               type="button"
-              onClick={async () => {
-                if (!dealId || !user?.receiving_country_iso) {
-                  setError(t('chat.shareAddress.notSet'))
-                  return
-                }
-                if (!window.confirm(t('chat.shareAddress.confirm') as string)) return
-                setSending(true)
+              onClick={() => {
                 setError('')
-                try {
-                  const { data } = await shareAddressInVault(dealId)
-                  setMessages((prev) => [...prev, data])
-                } catch {
-                  setError(t('chat.shareAddress.error'))
-                } finally {
-                  setSending(false)
-                }
+                setShareOpen(true)
               }}
-              disabled={sending}
+              disabled={sending || !dealId}
               className="border border-cyan/40 text-cyan rounded-lg px-3 py-2 min-h-[2.5rem] text-xs font-body hover:bg-cyan/10 transition-colors disabled:opacity-40"
             >
               📍 {t('chat.shareAddress.button')}
@@ -365,6 +354,16 @@ export default function DealVaultPage() {
           onClose={() => setPreview(null)}
         />
       )}
+
+      <ShareAddressModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        onShare={async (addressId) => {
+          if (!dealId) return
+          const { data } = await shareAddressInVault(dealId, addressId)
+          setMessages((prev) => [...prev, data])
+        }}
+      />
     </div>
   )
 }
