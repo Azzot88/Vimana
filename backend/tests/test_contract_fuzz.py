@@ -31,12 +31,11 @@ import pytest
 import pytest_asyncio
 import schemathesis
 from hypothesis import settings
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import NullPool
 
+from app.core.keypair import encrypt_nsec, generate_keypair
+from app.core.security import create_access_token, hash_password
 from app.main import app
+from app.models.user import User
 
 # schemathesis 3.39 still uses jsonschema.RefResolver internally, which
 # jsonschema >= 4.18 deprecated. Not our code, fixed on their side in 4.x.
@@ -91,59 +90,53 @@ def test_no_server_errors_unauthed(case):
 # ─────────────────────────────────────────────────────────────
 
 
-async def _register_and_login(ac: AsyncClient, prefix: str) -> str:
-    email = f"fuzz-{prefix}-{uuid.uuid4().hex[:8]}@e2e.vimana.local"
-    await ac.post(
-        "/api/auth/register",
-        json={"email": email, "password": "fuzz-pass-1", "display_name": prefix.title()},
-    )
-    login = await ac.post(
-        "/api/auth/login", json={"login": email, "password": "fuzz-pass-1"}
-    )
-    return login.json()["access_token"], email
+async def _create_user_direct(session_maker, prefix: str, role: str = "user") -> str:
+    """Insert a user row directly into the test DB (bypass HTTP + FastAPI +
+    override_db timing). Returns a signed JWT for that user.
 
-
-@pytest_asyncio.fixture(scope="session")
-async def fuzz_user_token():
-    """Register a plain user once for the whole session. Bearer used to
-    fuzz endpoints past the auth gate."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        token, _email = await _register_and_login(ac, "user")
-        return token
-
-
-@pytest_asyncio.fixture(scope="session")
-async def fuzz_superuser_token():
-    """Register + promote to superuser once for the whole session. Exercises
-    admin-only endpoints past both auth and permission gates.
-
-    Uses a fully isolated engine for the role UPDATE — sharing the
-    conftest's session_maker leaves asyncpg connections in a stuck state
-    ("another operation is in progress") when override_db later tries to
-    reuse the same pool. Direct SQL avoids ORM identity-map complications.
+    Why not use `_register_and_login` via ASGI? Session-scoped fixtures run
+    BEFORE function-scoped `override_db` (autouse). At that point FastAPI's
+    `get_db` still points at the production DB — the ASGI register would
+    write to the wrong place, JWT would reference a non-existent user in
+    the test DB, endpoints would 401 (looked like "passing" fuzz).
     """
-    from tests.conftest import TEST_DATABASE_URL
+    email = f"fuzz-{prefix}-{uuid.uuid4().hex[:8]}@e2e.vimana.local"
+    nsec_hex, npub_hex = generate_keypair()
+    nsec_nonce, nsec_ct = encrypt_nsec(nsec_hex)
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        _token, email = await _register_and_login(ac, "super")
-
-    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
-    try:
-        async with engine.begin() as conn:
-            await conn.execute(
-                text("UPDATE users SET role = 'superuser' WHERE email = :email"),
-                {"email": email},
-            )
-    finally:
-        await engine.dispose()
-
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        relogin = await ac.post(
-            "/api/auth/login", json={"login": email, "password": "fuzz-pass-1"}
+    async with session_maker() as db:
+        user = User(
+            email=email,
+            password_hash=hash_password("fuzz-pass-1"),
+            display_name=f"Fuzz {prefix.title()}",
+            can_carry=True,
+            can_send=True,
+            active_mode="sender",
+            nostr_pubkey=npub_hex,
+            nsec_encrypted=nsec_ct,
+            nsec_nonce=nsec_nonce,
+            key_self_custody=False,
+            role=role,
         )
-        return relogin.json()["access_token"]
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        user_id = str(user.id)
+
+    return create_access_token(user_id)
+
+
+@pytest_asyncio.fixture(scope="session")
+async def fuzz_user_token(session_maker):
+    """Regular user token — cached for the whole session."""
+    return await _create_user_direct(session_maker, "user", role="user")
+
+
+@pytest_asyncio.fixture(scope="session")
+async def fuzz_superuser_token(session_maker):
+    """Superuser token — cached for the whole session. Role set at insert
+    time so we don't have to update afterwards."""
+    return await _create_user_direct(session_maker, "super", role="superuser")
 
 
 @schema.parametrize()
