@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -158,22 +158,24 @@ async def list_platform_notices(
 
 
 class RouteNoteCreate(BaseModel):
-    origin_iso: str
-    destination_iso: str
+    # Length caps mirror the DB columns (VARCHAR(3) / VARCHAR(500)) so we
+    # 422 at the API layer instead of surfacing a 500 from Postgres.
+    origin_iso: str = Field(min_length=1, max_length=3)
+    destination_iso: str = Field(min_length=1, max_length=3)
     status: str = "attention"
     severity: str = "info"
-    headline: str
-    body: str = ""
+    headline: str = Field(min_length=1, max_length=500)
+    body: str = Field(default="", max_length=10_000)
     active_until: datetime | None = None
 
 
 class RouteNoteUpdate(BaseModel):
-    origin_iso: str | None = None
-    destination_iso: str | None = None
+    origin_iso: str | None = Field(default=None, max_length=3)
+    destination_iso: str | None = Field(default=None, max_length=3)
     status: str | None = None
     severity: str | None = None
-    headline: str | None = None
-    body: str | None = None
+    headline: str | None = Field(default=None, max_length=500)
+    body: str | None = Field(default=None, max_length=10_000)
     active_until: datetime | None = None
 
 

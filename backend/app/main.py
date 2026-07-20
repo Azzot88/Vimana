@@ -94,15 +94,22 @@ async def _reject_null_bytes(request: Request, call_next):
     query string or JSON body. Postgres UTF-8 columns reject NULs at driver
     level with a 500 (`CharacterNotInRepertoireError`); fail-fast at 400
     instead. No legitimate input contains NUL.
+
+    Detects three forms:
+      - raw `\\x00` byte
+      - URL-encoded `%00` in the query string (any case)
+      - JSON-escaped `\\u0000` inside a string literal
     """
-    if "\x00" in request.url.query:
+    raw_query = request.scope.get("query_string", b"")
+    if b"\x00" in raw_query or b"%00" in raw_query.lower():
         return JSONResponse(
             status_code=400,
             content={"detail": "NUL byte in query string"},
         )
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         body = await request.body()
-        if b"\x00" in body:
+        lower = body.lower()
+        if b"\x00" in body or b"\\u0000" in lower:
             return JSONResponse(
                 status_code=400,
                 content={"detail": "NUL byte in request body"},
