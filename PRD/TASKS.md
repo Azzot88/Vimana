@@ -29,7 +29,7 @@
 > - [TASKS_ARCHIVE_01.md](TASKS_ARCHIVE_01.md) — T0.1 … T3.5 pt.2 (Фазы 0–3.5, все ✅ MVP)
 >
 > **Стабы для закрытых задач с открытыми зависимостями:**
-> - **T2.1** ✅ MVP (archived) — Peer Identity Verification. Открытый child: `T2.1 pt.3` (decline_polite copy — см. ниже + T_UX.1 UI).
+> - **T2.1** ✅ MVP (archived) — Peer Identity Verification. Child `T2.1 pt.3` ✅ MVP (decline_polite copy — см. ниже + T_UX.1 UI). Открытых child'ов нет.
 > - **T2.2 pt.1** ✅ (archived) — Custodial keypair + management UI. **T2.2 pt.2** ✅ NIP-01 signing (archived).
 > - **T2.3** ✅ MVP (archived) — Threshold 2-of-3 e2e для DealVault. Follow-ups в архиве (Inquiry чат, attachments chunk-encrypt, NIP-44 v2).
 > - **T2.4** ✅ MVP (archived) — Trust Graph (WoT). Follow-ups: Redis-кэш BFS, UserBadge на TripCard, hourly Celery counters.
@@ -277,12 +277,13 @@
 
 **Acceptance MVP ✅:** `docker compose --profile mcp up -d mcp-server` стартует контейнер. При подключении в Claude Desktop через stdio → `list_tools` возвращает 2 tools + описания; `call_tool('list_trips', {origin: 'SVO'})` возвращает форматированный список активных рейсов.
 
-### T2.1 pt.3 — decline_polite sender copy
+### T2.1 pt.3 — decline_polite sender copy ✅ MVP
 
 *(child T2.1; см. также T_UX.1 где UI компонент)*
 
-- [ ] Backend: убедиться что `VerificationRequest.status = declined_polite` отдаётся в API как есть (проверить schema).
-- [ ] Frontend UI-компонент — см. T_UX.1.
+- [x] Backend: `declined_polite` отдаётся как есть — `VerificationRequestStatus` это `str`-enum, JSON = `"declined_polite"`. `VerificationRequestOut.status` / `.target_role` типизированы enum'ами вместо голого `str`, чтобы OpenAPI объявлял допустимые значения (зеркало TS-юнионов `RequestStatus` / `TargetRole`). JSON-вывод не изменился.
+- [x] `GET /deals/{id}/verification-requests` — источник баннера — покрыт 5 тестами (был без покрытия): точный предикат баннера (`status=declined_polite` + `target_role=carrier` + `resolved_at`), видимость обоими участниками, порядок newest-first, outsider → 403, несуществующая сделка → 404.
+- [x] Frontend UI-компонент — сделан в T_UX.1 (`VerificationDeclineBanner.tsx`, рендер под `isSender && carrierPoliteDecline` в `DealPage.tsx`).
 
 ### T_UX.2 — Route notes + platform disclaimers ✅ MVP
 

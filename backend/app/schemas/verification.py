@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.models.verification import VerificationRequestStatus, VerificationTargetRole
+
 
 class VerificationRequestCreate(BaseModel):
     target_role: str  # 'sender' | 'carrier'
@@ -12,8 +14,11 @@ class VerificationRequestOut(BaseModel):
     id: uuid.UUID
     deal_id: uuid.UUID
     requested_by_id: uuid.UUID
-    target_role: str
-    status: str
+    # Typed as enums (not bare `str`) so OpenAPI advertises the exact values —
+    # `RequestStatus` / `TargetRole` in frontend/src/api/verification.ts are the
+    # mirror of these. JSON stays identical: both are `str`-enums.
+    target_role: VerificationTargetRole
+    status: VerificationRequestStatus
     created_at: datetime
     resolved_at: datetime | None
     model_config = ConfigDict(from_attributes=True)

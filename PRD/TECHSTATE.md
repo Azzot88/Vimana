@@ -37,7 +37,7 @@
 | Dual role (can_carry/can_send/active_mode) + RBAC (Permission enum + Role) | 1 | ✅ готово (T1.24) |
 | NewTripPage redesign (Bento + hook-points для EXP-03/04) | 1 | ✅ готово (T1.25) |
 | Receiving Address в профиле + share-in-chat | 1 | ✅ готово (T1.26) |
-| Peer Identity Verification (P2P KYC) | 2 | ✅ MVP (T2.1: backend + frontend, custodial only. OCR/OFAC — stub, self-custody 422 до T2.3) |
+| Peer Identity Verification (P2P KYC) | 2 | ✅ MVP (T2.1: backend + frontend, custodial only. OCR/OFAC — stub, self-custody 422 до T2.3. pt.3 закрыт: `VerificationRequestOut` типизирован enum'ами + list-endpoint покрыт тестами) |
 | Trust Graph (Web-of-Trust) | 2 | ✅ MVP (T2.4: TrustEdge + auto dealt_with/invited + BFS endpoints + denormalized counts + UI. Follow-up: Redis-кэш, UserBadge на TripCard) |
 | Keypair + Nostr-совместимость (D10: A+D) | 2 | ✅ MVP (pt.1 custodial + UI; pt.2 NIP-01 event format + NIP-07 signing + Claim self-custody end-to-end) |
 | Threshold 2-of-3 encryption (замена at-rest из T1.21) | 2 | ✅ MVP (T2.3: NIP-04 wrap of Shamir shares + read_packages для нормального read; `/arbiter-reveal` с audit-event; DealVault e2e-путь, Inquiry — follow-up) |
@@ -199,6 +199,7 @@
 | OperatorAccessGrant (T3.2) — модель + auto-create на open_dispute + explicit grant/revoke endpoints + gate на arbiter vault read (нужен ≥1 active grant) | `backend/app/{models/deal,api/admin}.py`, миграция `0017_operator_access_grants` |
 | Verification container encryption (T2.1) — AES-256-GCM key = owner's nsec[:32], custodial-only | `backend/app/core/verification.py` |
 | Verification endpoints (T2.1) — create/respond/submit/escalate/self-upload/public listing/revoke | `backend/app/api/verification.py` |
+| Polite-decline контракт (T2.1 pt.3) — `GET /deals/{id}/verification-requests` = единственный источник для sender-баннера; `VerificationRequestOut.status`/`.target_role` типизированы enum'ами → OpenAPI объявляет значения, TS-юнионы подкреплены контрактом | `backend/app/schemas/verification.py`, `backend/tests/test_verification.py`, `frontend/src/{api/verification.ts,pages/DealPage.tsx,components/VerificationDeclineBanner.tsx}` |
 | Verification frontend components — VerificationSection (profile), VerificationBadgeChip, RequestModal, RespondModal | `frontend/src/components/Verification*.tsx` |
 | Trust Graph core (T2.4) — BFS до глубины 6, sybil-guard, symmetric add_dealt_with/add_invited, refresh_trust_counts | `backend/app/core/trust.py` |
 | Trust Graph endpoints (T2.4) — /me/trust-circle, /users/{id}/trust-metrics | `backend/app/api/trust.py` |

@@ -1,4 +1,5 @@
 """T2.1 — peer identity verification MVP tests."""
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -344,3 +345,103 @@ async def test_subject_can_revoke_own_auto_badge(client, sender_headers, seed_se
     )
     assert rev.status_code == 200
     assert rev.json()["revoked_at"] is not None
+
+
+# ─────────────────────────────────────────────────────────────
+# Deal-scoped request listing — source for the sender banner (T2.1 pt.3)
+# ─────────────────────────────────────────────────────────────
+
+
+async def _polite_declined_deal(client, carrier_headers, sender_headers) -> str:
+    """Sender asks for the carrier's ID, carrier politely declines."""
+    deal_id = await _make_active_deal(client, carrier_headers, sender_headers)
+    req = await client.post(
+        f"/api/deals/{deal_id}/verification",
+        headers=sender_headers,
+        json={"target_role": "carrier"},
+    )
+    await client.post(
+        f"/api/deals/{deal_id}/verification/{req.json()['id']}/respond",
+        headers=carrier_headers,
+        json={"action": "declined_polite"},
+    )
+    return deal_id
+
+
+async def test_list_requests_exposes_polite_decline_to_sender(
+    client, carrier_headers, sender_headers
+):
+    """Exact predicate `<VerificationDeclineBanner>` depends on (DealPage.tsx).
+
+    The status must reach the client as the raw `declined_polite` string —
+    not a Python enum repr, not a translated label.
+    """
+    deal_id = await _polite_declined_deal(client, carrier_headers, sender_headers)
+
+    resp = await client.get(
+        f"/api/deals/{deal_id}/verification-requests", headers=sender_headers
+    )
+    assert resp.status_code == 200, resp.text
+    matches = [
+        r
+        for r in resp.json()
+        if r["status"] == "declined_polite" and r["target_role"] == "carrier"
+    ]
+    assert len(matches) == 1
+    assert matches[0]["resolved_at"] is not None
+
+
+async def test_list_requests_visible_to_both_participants(
+    client, carrier_headers, sender_headers
+):
+    deal_id = await _polite_declined_deal(client, carrier_headers, sender_headers)
+
+    as_carrier = await client.get(
+        f"/api/deals/{deal_id}/verification-requests", headers=carrier_headers
+    )
+    assert as_carrier.status_code == 200
+    assert [r["status"] for r in as_carrier.json()] == ["declined_polite"]
+
+
+async def test_list_requests_newest_first(client, carrier_headers, sender_headers):
+    deal_id = await _polite_declined_deal(client, carrier_headers, sender_headers)
+    await client.post(
+        f"/api/deals/{deal_id}/verification",
+        headers=carrier_headers,
+        json={"target_role": "sender"},
+    )
+
+    resp = await client.get(
+        f"/api/deals/{deal_id}/verification-requests", headers=sender_headers
+    )
+    rows = resp.json()
+    assert len(rows) == 2
+    stamps = [r["created_at"] for r in rows]
+    assert stamps == sorted(stamps, reverse=True)
+
+
+async def test_list_requests_outsider_forbidden(
+    client, carrier_headers, sender_headers
+):
+    deal_id = await _polite_declined_deal(client, carrier_headers, sender_headers)
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
+
+    email = unique_email("nosy")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "Nosy"},
+    )
+    token = await _login(client, email)
+
+    resp = await client.get(
+        f"/api/deals/{deal_id}/verification-requests",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+
+
+async def test_list_requests_unknown_deal_404(client, sender_headers):
+    resp = await client.get(
+        f"/api/deals/{uuid.uuid4()}/verification-requests", headers=sender_headers
+    )
+    assert resp.status_code == 404
