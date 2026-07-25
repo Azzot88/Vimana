@@ -1,13 +1,35 @@
 import hashlib
+import struct
 import uuid as uuidlib
+import zlib
 
 from app.api.dealvault import MAX_UPLOAD_SIZE
 
-# Minimal 1x1 PNG (magic + IHDR + IDAT + IEND) — passes MIME whitelist
-PNG_1X1 = bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
-    "890000000d49444154789c626001000000050001a5f645400000000049454e44ae426082"
-)
+
+def _make_png_1x1() -> bytes:
+    """Minimal VALID 1x1 RGBA PNG, built programmatically so the chunk CRCs
+    are correct by construction. The previous hand-crafted hex had a broken
+    IDAT checksum — it passed the old MIME-whitelist era but T3.8's decode
+    validation (rightly) rejects it."""
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(data))
+            + tag
+            + data
+            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)  # 1x1, 8-bit, RGBA
+    idat = zlib.compress(b"\x00\xff\x00\x00\xff")  # filter 0 + one red pixel
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", ihdr)
+        + chunk(b"IDAT", idat)
+        + chunk(b"IEND", b"")
+    )
+
+
+PNG_1X1 = _make_png_1x1()
 
 
 async def _create_message(client, headers, deal_id) -> str:

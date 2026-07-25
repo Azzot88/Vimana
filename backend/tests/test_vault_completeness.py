@@ -18,11 +18,8 @@ from app.models.deal import Deal, DealEvent, DealEventType, DealVaultMessage
 from app.models.user import User
 from tests.conftest import SEED_PASSWORD, _login, unique_email
 
-# Minimal 1x1 PNG — passes the MIME whitelist (same bytes as attachments suite).
-PNG_1X1 = bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
-    "890000000d49444154789c626001000000050001a5f645400000000049454e44ae426082"
-)
+# Valid 1x1 PNG — built programmatically there (T3.8 decode validation).
+from tests.test_dealvault_attachments import PNG_1X1
 
 
 # ─────────────────────────────────────────────────────────────
