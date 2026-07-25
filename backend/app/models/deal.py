@@ -31,6 +31,12 @@ class DealEventType(str, enum.Enum):
     dispute_opened = "dispute_opened"
     arbiter_opened = "arbiter_opened"
     dispute_resolved = "dispute_resolved"
+    # T3.7 — vault-content chain events: the chain covers messages/files/identity,
+    # not just status transitions.
+    message_added = "message_added"
+    file_added = "file_added"
+    sealed = "sealed"
+    identity_ref = "identity_ref"
 
 
 class DisputeStatus(str, enum.Enum):
@@ -56,6 +62,12 @@ class Deal(Base):
     carrier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     recipient_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     status: Mapped[DealStatus] = mapped_column(SAEnum(DealStatus), default=DealStatus.draft)
+    # T3.7 — set when the vault is sealed (deal closed). While set,
+    # `append_deal_event` refuses everything except `dispute_opened`
+    # (which unseals). Re-sealed on dispute resolution that closes the deal.
+    sealed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -121,6 +133,12 @@ class DealChainAnchor(Base):
     entry_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
     nostr_event_id: Mapped[str] = mapped_column(String(64), nullable=False)
     nostr_pubkey: Mapped[str] = mapped_column(String(64), nullable=False)
+    # T3.7 — anchoring backend this row was published through. Only 'nostr' is
+    # implemented; 'ipfs' / 'ots' are reserved so new backends are a row-writer
+    # away, not a schema migration (D-DVLT-PROTOCOL).
+    backend: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="nostr", server_default="nostr"
+    )
     # {relay_url: accepted} as reported by the relays at publish time.
     relays: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

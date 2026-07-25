@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -19,9 +19,10 @@ from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.permissions import Permission, require_perm
-from app.core.deal_chain import append_deal_event
+from app.core.deal_chain import append_deal_event, content_hash_of
 from app.core.signing import sign_vault_message
 from app.models.deal import (
+    Attachment,
     Deal,
     DealChainAnchor,
     DealEvent,
@@ -96,6 +97,11 @@ async def open_dispute(
     db.add(OperatorAccessGrant(dispute_id=dispute.id, granted_by=current_user.id))
 
     deal.status = DealStatus.disputed
+    # T3.7 — a dispute may open after closing (problems surface post-confirm);
+    # `dispute_opened` is the one event type the seal guard admits, and it
+    # unseals the vault so evidence can be appended. The chain records both
+    # the seal and this unseal — nothing is hidden.
+    deal.sealed_at = None
     await append_deal_event(
         db,
         deal_id=deal_id,
@@ -245,6 +251,38 @@ async def resolve_dispute(
         )
         if body.closes_deal:
             deal.status = DealStatus.closed
+            # T3.7 — a closing verdict re-seals the vault (mirror of
+            # confirm_deal): seal event first, then `sealed_at`.
+            message_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(DealVaultMessage)
+                    .where(DealVaultMessage.deal_id == deal.id)
+                )
+            ).scalar_one()
+            file_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(Attachment)
+                    .join(
+                        DealVaultMessage,
+                        Attachment.message_id == DealVaultMessage.id,
+                    )
+                    .where(DealVaultMessage.deal_id == deal.id)
+                )
+            ).scalar_one()
+            await append_deal_event(
+                db,
+                deal_id=deal.id,
+                event_type=DealEventType.sealed,
+                actor_id=current_user.id,
+                payload={
+                    "message_count": message_count,
+                    "file_count": file_count,
+                },
+                author=current_user,
+            )
+            deal.sealed_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(dispute)
@@ -290,7 +328,9 @@ async def arbiter_read_vault(
                 detail="No active access grant — both parties revoked consent",
             )
 
-    # Audit trail: DealEvent + system-message in the chat
+    # Audit trail: DealEvent + system-message in the chat. `arbiter_opened` is
+    # chained even on a sealed vault (audit events pass the seal guard); the
+    # chat system-message is content, so it is skipped once sealed (T3.7).
     now = datetime.now(timezone.utc)
     await append_deal_event(
         db,
@@ -300,14 +340,33 @@ async def arbiter_read_vault(
         payload={"dispute_id": str(dispute.id) if dispute else None, "at": now.isoformat()},
         author=current_user,
     )
-    dispute_ref = f"#{str(dispute.id)[:8]}" if dispute else "(direct)"
-    sys_msg = DealVaultMessage(
-        deal_id=deal_id,
-        sender_id=None,  # system message; nostr_sig stays None
-        text=f"⚖️ Arbiter opened conversation for dispute {dispute_ref}",
-        is_system=True,
-    )
-    db.add(sys_msg)
+    deal = await db.get(Deal, deal_id)
+    if deal is not None and deal.sealed_at is None:
+        dispute_ref = f"#{str(dispute.id)[:8]}" if dispute else "(direct)"
+        sys_msg = DealVaultMessage(
+            deal_id=deal_id,
+            sender_id=None,  # system message; nostr_sig stays None
+            text=f"⚖️ Arbiter opened conversation for dispute {dispute_ref}",
+            is_system=True,
+        )
+        db.add(sys_msg)
+        # T3.7 — chain the system message like any other vault content.
+        await db.flush()
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.message_added,
+            actor_id=current_user.id,
+            payload={
+                "message_id": str(sys_msg.id),
+                "content_hash": content_hash_of(
+                    sys_msg.text_ciphertext, sys_msg.text_nonce
+                ),
+                "msg_event_id": sys_msg.nostr_event_id,
+                "is_e2e": False,
+            },
+            author=current_user,
+        )
     await db.commit()
 
     stmt = (

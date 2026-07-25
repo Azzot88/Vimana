@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,10 +11,23 @@ from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.notice_pin import maybe_pin_route_note
-from app.core.deal_chain import append_deal_event, verify_chain
+from app.core.deal_chain import (
+    SealedError,
+    append_deal_event,
+    content_hash_of,
+    verify_chain,
+    verify_content,
+)
 from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.tasks.notifications import notify_deal_status
-from app.models.deal import Deal, DealChainAnchor, DealEventType, DealStatus
+from app.models.deal import (
+    Attachment,
+    Deal,
+    DealChainAnchor,
+    DealEventType,
+    DealStatus,
+    DealVaultMessage,
+)
 from app.models.marketplace import Category, Order, OrderStatus, Trip, TripInquiry, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
@@ -109,7 +122,25 @@ async def match_deal(
 
     # T_UX.2 pt.4 — pin corridor note as system-message if the corridor is
     # flagged. Informational only; never blocks the match.
-    await maybe_pin_route_note(db, deal, trip)
+    pinned = await maybe_pin_route_note(db, deal, trip)
+    if pinned is not None:
+        # T3.7 — vault content is chained from birth, system messages included.
+        await db.flush()
+        await append_deal_event(
+            db,
+            deal_id=deal.id,
+            event_type=DealEventType.message_added,
+            actor_id=current_user.id,
+            payload={
+                "message_id": str(pinned.id),
+                "content_hash": content_hash_of(
+                    pinned.text_ciphertext, pinned.text_nonce
+                ),
+                "msg_event_id": pinned.nostr_event_id,
+                "is_e2e": False,
+            },
+            author=current_user,
+        )
 
     await db.commit()
     await db.refresh(deal)
@@ -170,14 +201,17 @@ async def add_event(
     if event_type in status_map:
         deal.status = status_map[event_type]
 
-    event = await append_deal_event(
-        db,
-        deal_id=deal.id,
-        event_type=event_type,
-        actor_id=current_user.id,
-        payload=body.payload,
-        author=current_user,
-    )
+    try:
+        event = await append_deal_event(
+            db,
+            deal_id=deal.id,
+            event_type=event_type,
+            actor_id=current_user.id,
+            payload=body.payload,
+            author=current_user,
+        )
+    except SealedError:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
 
     await db.commit()
     await db.refresh(event)
@@ -219,6 +253,36 @@ async def confirm_deal(
         actor_id=current_user.id,
         author=current_user,
     )
+
+    # T3.7 — closing seals the vault: one final chained entry recording what
+    # the vault contained, then `sealed_at` blocks all further appends (except
+    # `dispute_opened`, which unseals — see deal_chain._ALLOWED_WHEN_SEALED).
+    # The seal event is appended *before* `sealed_at` is set so the guard
+    # doesn't refuse its own seal.
+    message_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(DealVaultMessage)
+            .where(DealVaultMessage.deal_id == deal.id)
+        )
+    ).scalar_one()
+    file_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Attachment)
+            .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
+            .where(DealVaultMessage.deal_id == deal.id)
+        )
+    ).scalar_one()
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.sealed,
+        actor_id=current_user.id,
+        payload={"message_count": message_count, "file_count": file_count},
+        author=current_user,
+    )
+    deal.sealed_at = datetime.now(timezone.utc)
 
     # T2.4 — Trust graph: `dealt_with` edge on close (symmetric).
     await add_dealt_with(db, deal)
@@ -282,6 +346,15 @@ class ChainStatusOut(BaseModel):
     anchored_hash: str | None = None
     anchor_event_id: str | None = None
     anchored_at: datetime | None = None
+    # T3.7 — seal + content coverage. Coverage is honest about pre-T3.7 data:
+    # messages/files created before chaining exist but were never chained.
+    sealed_at: datetime | None = None
+    total_messages: int = 0
+    chained_messages: int = 0
+    total_files: int = 0
+    chained_files: int = 0
+    content_ok: bool = True
+    content_mismatches: list[dict] = []
 
 
 @router.get("/{deal_id}/chain", response_model=ChainStatusOut)
@@ -316,6 +389,36 @@ async def get_deal_chain(
         raise HTTPException(status_code=403, detail="Not a deal participant")
 
     result = await verify_chain(db, deal_id)
+
+    # T3.7 — content pointers + coverage. `verify_chain` proves the log is
+    # intact; `verify_content` proves the log still points at the stored
+    # messages/files it was written for.
+    content = await verify_content(db, deal_id)
+    total_messages = (
+        await db.execute(
+            select(func.count())
+            .select_from(DealVaultMessage)
+            .where(DealVaultMessage.deal_id == deal_id)
+        )
+    ).scalar_one()
+    total_files = (
+        await db.execute(
+            select(func.count())
+            .select_from(Attachment)
+            .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
+            .where(DealVaultMessage.deal_id == deal_id)
+        )
+    ).scalar_one()
+    result = {
+        **result,
+        "sealed_at": deal.sealed_at,
+        "total_messages": total_messages,
+        "chained_messages": content["checked_messages"],
+        "total_files": total_files,
+        "chained_files": content["checked_files"],
+        "content_ok": content["content_ok"],
+        "content_mismatches": content["mismatches"],
+    }
 
     anchor = (
         (

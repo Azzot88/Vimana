@@ -795,6 +795,25 @@ async def _ensure_dealevent_types(engine) -> None:
             )
 
 
+async def _ensure_vault_completeness(engine) -> None:
+    """T3.7: vault-content event types + deal seal + anchor backend.
+    Mirrors migration 0026 for the long-lived test DB. Idempotent."""
+    async with engine.begin() as conn:
+        for value in ("message_added", "file_added", "sealed", "identity_ref"):
+            await conn.execute(
+                text(f"ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS '{value}'")
+            )
+        await conn.execute(
+            text("ALTER TABLE deals ADD COLUMN IF NOT EXISTS sealed_at TIMESTAMPTZ NULL")
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE deal_chain_anchors ADD COLUMN IF NOT EXISTS backend "
+                "VARCHAR(16) NOT NULL DEFAULT 'nostr'"
+            )
+        )
+
+
 async def _ensure_deal_event_chain(engine) -> None:
     """T3.6: seq/entry_hash/prev_hash on deal_events + deal_chain_anchors.
 
@@ -902,6 +921,7 @@ async def test_engine():
     await _ensure_role_column(engine)
     await _ensure_dealevent_types(engine)
     await _ensure_deal_event_chain(engine)
+    await _ensure_vault_completeness(engine)
     await _ensure_encrypted_messages(engine)
     await _ensure_inquiry_tables(engine)
     await _ensure_dual_role(engine)

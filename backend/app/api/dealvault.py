@@ -19,11 +19,12 @@ from app.core.pagination import Page, clamp_limit, paginate_asc
 from app.core.rate_limit import limiter
 import base64
 
+from app.core.deal_chain import SealedError, append_deal_event, content_hash_of
 from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, upload_file
 from app.core.threshold import E2EPayload, nip04_decrypt
-from app.models.deal import Attachment, AttachmentKind, Deal, DealVaultMessage
+from app.models.deal import Attachment, AttachmentKind, Deal, DealEventType, DealVaultMessage
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
 
@@ -76,6 +77,40 @@ async def _get_deal_as_participant(
     if row is None:
         raise HTTPException(status_code=403, detail="Not a deal participant")
     return deal
+
+
+def _ensure_not_sealed(deal: Deal) -> None:
+    """T3.7 — a sealed vault takes no new content. Early check for a clean 409;
+    `append_deal_event` re-checks under the advisory lock as the race-safe
+    backstop (see `_chain_message`)."""
+    if deal.sealed_at is not None:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
+
+
+async def _chain_message(db, msg: DealVaultMessage, actor: User) -> None:
+    """T3.7 — chain a freshly-flushed vault message in the same transaction.
+
+    The chain entry carries `content_hash` over the stored bytes (works for e2e
+    without decryption) and the message's own `nostr_event_id`, binding the
+    author's signature into the chain. Deleting or editing the message row is
+    detectable from then on (`verify_content`).
+    """
+    try:
+        await append_deal_event(
+            db,
+            deal_id=msg.deal_id,
+            event_type=DealEventType.message_added,
+            actor_id=actor.id,
+            payload={
+                "message_id": str(msg.id),
+                "content_hash": content_hash_of(msg.text_ciphertext, msg.text_nonce),
+                "msg_event_id": msg.nostr_event_id,
+                "is_e2e": msg.is_e2e,
+            },
+            author=actor,
+        )
+    except SealedError:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
 
 
 def _build_message_out(
@@ -161,7 +196,8 @@ async def create_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _get_deal_as_participant(deal_id, current_user, db)
+    deal = await _get_deal_as_participant(deal_id, current_user, db)
+    _ensure_not_sealed(deal)
 
     if body.e2e_payload is not None:
         if body.text is not None:
@@ -190,6 +226,10 @@ async def create_message(
         )
     sign_vault_message(msg, current_user, body.nostr_sig, body.nostr_created_at)
     db.add(msg)
+    # T3.7 — flush so the message has an id, then chain it in the same
+    # transaction: message and its chain entry commit or roll back together.
+    await db.flush()
+    await _chain_message(db, msg, current_user)
     await db.commit()
     await db.refresh(msg)
 
@@ -216,7 +256,8 @@ async def share_address(
     """T1.26 / T_UX.4 A — share a receiving address into the DealVault chat
     as a system-message. `address_id` picks a specific one; omit to use the
     default; falls back to legacy `User.receiving_*` for un-migrated users."""
-    await _get_deal_as_participant(deal_id, current_user, db)
+    deal = await _get_deal_as_participant(deal_id, current_user, db)
+    _ensure_not_sealed(deal)
     try:
         view = await resolve_share_address(db, current_user, body.address_id)
         text = format_address_message(view)
@@ -233,6 +274,8 @@ async def share_address(
     )
     sign_vault_message(msg, current_user)
     db.add(msg)
+    await db.flush()
+    await _chain_message(db, msg, current_user)
     await db.commit()
     await db.refresh(msg)
     return MessageOut(
@@ -264,7 +307,8 @@ async def upload_attachment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _get_deal_as_participant(deal_id, current_user, db)
+    deal = await _get_deal_as_participant(deal_id, current_user, db)
+    _ensure_not_sealed(deal)
 
     msg = await db.get(DealVaultMessage, message_id)
     if not msg or msg.deal_id != deal_id:
@@ -322,6 +366,28 @@ async def upload_attachment(
         kind=attachment_kind,
     )
     db.add(attachment)
+    # T3.7 — chain the file in the same transaction as its row. `file_hash`
+    # was already streamed above; the chain entry pins it so a swapped or
+    # deleted attachment row is detectable (`verify_content`).
+    await db.flush()
+    try:
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.file_added,
+            actor_id=current_user.id,
+            payload={
+                "attachment_id": str(attachment.id),
+                "message_id": str(message_id),
+                "file_hash": file_hash,
+                "kind": attachment_kind.value,
+                "size_bytes": total,
+                "mime": content_type,
+            },
+            author=current_user,
+        )
+    except SealedError:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
     await db.commit()
     await db.refresh(attachment)
 

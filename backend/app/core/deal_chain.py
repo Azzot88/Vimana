@@ -82,7 +82,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.signing import sign_deal_event
-from app.models.deal import DealEvent, DealEventType
+from app.models.deal import Attachment, Deal, DealEvent, DealEventType, DealVaultMessage
 from app.models.user import User
 
 #: Hashed in place of `prev_hash` for a deal's first entry. Stored as NULL.
@@ -93,9 +93,42 @@ HASH_SIZE = 32
 _PRESENT = b"\x01"
 _ABSENT = b"\x00"
 
+#: T3.7 — event types accepted on a sealed deal. The seal freezes *content*
+#: (messages, files, status transitions), not the audit trail:
+#: - `dispute_opened` — a dispute may open after closing (problems surface
+#:   post-confirm); it unseals the vault at the API layer. The chain records
+#:   both the seal and the unseal, so nothing is hidden by the exception.
+#: - `arbiter_opened` — arbiter access must stay on the record even for a
+#:   sealed vault; refusing it would mean either losing the audit trail or
+#:   blocking reads. Audit entries extend the chain past the `sealed` marker
+#:   but change no content — verification treats the seal event's seq as the
+#:   content boundary.
+_ALLOWED_WHEN_SEALED = frozenset(
+    {DealEventType.dispute_opened, DealEventType.arbiter_opened}
+)
+
 
 class ChainError(RuntimeError):
     """Raised when the chain cannot be extended or a payload cannot be hashed."""
+
+
+class SealedError(ChainError):
+    """Raised on append to a sealed deal. API layers map this to 409."""
+
+
+def content_hash_of(ciphertext: bytes | None, nonce: bytes | None) -> str:
+    """T3.7 — sha256 over a vault message's stored bytes (ciphertext || nonce).
+
+    Hashing the *stored* bytes keeps verification decryption-free: for e2e
+    messages the server never sees plaintext yet can still prove the blob is
+    the one that was chained. Consequence (D-DVLT-PROTOCOL): rotating
+    `MESSAGE_ENCRYPTION_KEY` must be envelope-style (re-wrap the key), never a
+    re-encryption of the data — that would invalidate every content hash.
+    """
+    h = hashlib.sha256()
+    h.update(bytes(ciphertext) if ciphertext is not None else b"")
+    h.update(bytes(nonce) if nonce is not None else b"")
+    return h.hexdigest()
 
 
 def canonical_json(obj: Any) -> str:
@@ -213,6 +246,16 @@ async def append_deal_event(
     """
     await _lock_deal(db, deal_id)
 
+    # T3.7 — a sealed vault accepts no new entries except a dispute opening
+    # (which unseals it at the API layer). Checked under the advisory lock so
+    # a concurrent seal cannot race past it.
+    if event_type not in _ALLOWED_WHEN_SEALED:
+        sealed_at = (
+            await db.execute(select(Deal.sealed_at).where(Deal.id == deal_id))
+        ).scalar_one_or_none()
+        if sealed_at is not None:
+            raise SealedError(f"deal {deal_id} is sealed — append refused")
+
     head = await head_of(db, deal_id)
     seq = 1 if head is None else head[0] + 1
     prev_hash = None if head is None else head[1]
@@ -320,4 +363,78 @@ def _broken(events: list[DealEvent], seq: int, reason: str) -> dict:
         "head_hash": bytes(events[-1].entry_hash).hex(),
         "broken_at": seq,
         "reason": reason,
+    }
+
+
+async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
+    """T3.7 — check chained content pointers against the stored content.
+
+    `verify_chain` proves the *log* is intact; this proves the log still points
+    at the *content* it was written for: every `message_added` entry's
+    `content_hash` must match the stored ciphertext bytes, every `file_added`
+    entry's `file_hash` must match the attachment row. A deleted message or a
+    swapped ciphertext shows up here even though the chain itself verifies.
+
+    Returns `{content_ok, mismatches, checked_messages, checked_files}` where
+    each mismatch is `{seq, kind, ref_id, reason}`. R2 object integrity is out
+    of scope — clients compare a download against `file_hash` themselves.
+    """
+    db.expire_all()
+
+    events = (
+        (
+            await db.execute(
+                select(DealEvent)
+                .where(
+                    DealEvent.deal_id == deal_id,
+                    DealEvent.event_type.in_(
+                        [DealEventType.message_added, DealEventType.file_added]
+                    ),
+                )
+                .order_by(DealEvent.seq.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    mismatches: list[dict] = []
+    checked_messages = 0
+    checked_files = 0
+
+    for evt in events:
+        payload = evt.payload or {}
+        if evt.event_type == DealEventType.message_added:
+            checked_messages += 1
+            ref = payload.get("message_id")
+            msg = await db.get(DealVaultMessage, uuid.UUID(ref)) if ref else None
+            if msg is None or msg.deal_id != deal_id:
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "message", "ref_id": ref, "reason": "message missing"}
+                )
+                continue
+            recomputed = content_hash_of(msg.text_ciphertext, msg.text_nonce)
+            if recomputed != payload.get("content_hash"):
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "message", "ref_id": ref, "reason": "content hash mismatch"}
+                )
+        else:
+            checked_files += 1
+            ref = payload.get("attachment_id")
+            att = await db.get(Attachment, uuid.UUID(ref)) if ref else None
+            if att is None:
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "file", "ref_id": ref, "reason": "attachment missing"}
+                )
+                continue
+            if att.file_hash != payload.get("file_hash"):
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "file", "ref_id": ref, "reason": "file hash mismatch"}
+                )
+
+    return {
+        "content_ok": not mismatches,
+        "mismatches": mismatches,
+        "checked_messages": checked_messages,
+        "checked_files": checked_files,
     }
