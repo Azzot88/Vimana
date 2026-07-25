@@ -240,7 +240,7 @@ async def submit_document(
     if current_user.id != _target_user_id(deal, req):
         raise HTTPException(status_code=403, detail="You are not the target of this request")
 
-    doc_bytes = await _read_upload(file)
+    doc_bytes, detected_mime = await _read_upload(file)
     container = await _make_container(
         db, owner=current_user, blob=doc_bytes, doc_type=doc_type, doc_country=doc_country
     )
@@ -256,6 +256,21 @@ async def submit_document(
     )
     req.status = VerificationRequestStatus.verified
     req.resolved_at = datetime.now(timezone.utc)
+
+    # T3.9 (D-DVLT-PROTOCOL) — identity data lives in BOTH vaults: the
+    # canonical encrypted container above (owner-only) and a full copy inside
+    # the deal (participant-visible attachment), linked through the chain by
+    # a shared doc_hash. All of it commits atomically with the badge.
+    await _copy_document_into_vault(
+        db,
+        deal_id=deal_id,
+        actor=current_user,
+        doc_bytes=doc_bytes,
+        mime=detected_mime,
+        container=container,
+        badge_id=badge.id,
+    )
+
     await db.commit()
     await db.refresh(badge)
     return badge
@@ -342,7 +357,7 @@ async def self_upload(
     current_user: User = Depends(require_perm(Permission.IDENTITY_SELF_UPLOAD)),
     db: AsyncSession = Depends(get_db),
 ):
-    doc_bytes = await _read_upload(file)
+    doc_bytes, _ = await _read_upload(file)
     container = await _make_container(
         db, owner=current_user, blob=doc_bytes, doc_type=doc_type, doc_country=doc_country
     )
@@ -457,7 +472,9 @@ async def revoke_badge(
 # ─────────────────────────────────────────────────────────────
 
 
-async def _read_upload(file: UploadFile) -> bytes:
+async def _read_upload(file: UploadFile) -> tuple[bytes, str]:
+    """Returns `(bytes, detected_mime)` — the MIME comes from signature
+    sniffing (T3.8), never from the client's Content-Type header."""
     total = 0
     hasher = hashlib.sha256()
     buf = io.BytesIO()
@@ -482,13 +499,13 @@ async def _read_upload(file: UploadFile) -> bytes:
     from app.core.file_validation import FileValidationError, validate_document
 
     try:
-        validate_document(data)
+        detected_mime = validate_document(data)
     except FileValidationError as exc:
         raise HTTPException(
             status_code=422,
             detail=f"Document failed content validation: {exc.reason}",
         )
-    return data
+    return data, detected_mime
 
 
 async def _make_container(
@@ -516,3 +533,101 @@ async def _make_container(
     db.add(container)
     await db.flush()
     return container
+
+
+async def _copy_document_into_vault(
+    db: AsyncSession,
+    *,
+    deal_id: uuid.UUID,
+    actor: User,
+    doc_bytes: bytes,
+    mime: str,
+    container: "IdentityContainer",
+    badge_id: uuid.UUID,
+) -> None:
+    """T3.9 — mirror a just-verified identity document into the deal vault.
+
+    Creates, in the caller's transaction:
+    - a system chat message ("identity document verified…"),
+    - an `identity_doc` Attachment with the plaintext copy in R2
+      (participant-visible; the canonical container stays owner-encrypted),
+    - three chain entries: `message_added`, `file_added`, `identity_ref`.
+
+    `identity_ref.doc_hash` == `Attachment.file_hash` == `IdentityContainer
+    .doc_hash` — the triple match is what `verify_content` later re-checks,
+    so a swapped copy is detectable even though the chain itself is intact.
+    """
+    from app.api.dealvault import MIME_TO_EXT
+    from app.core.deal_chain import SealedError, append_deal_event, content_hash_of
+    from app.core.signing import sign_vault_message
+    from app.core.storage import upload_file
+    from app.models.deal import Attachment, AttachmentKind, DealEventType, DealVaultMessage
+
+    msg = DealVaultMessage(
+        deal_id=deal_id,
+        sender_id=actor.id,
+        text="🪪 Identity document verified and added to the vault",
+        is_system=True,
+    )
+    sign_vault_message(msg, actor)
+    db.add(msg)
+    await db.flush()
+
+    ext = MIME_TO_EXT.get(mime, "")
+    r2_key = f"deals/{deal_id}/identity/{uuid.uuid4().hex}{ext}"
+    upload_file(doc_bytes, r2_key, mime)
+    attachment = Attachment(
+        message_id=msg.id,
+        r2_key=r2_key,
+        file_hash=container.doc_hash,  # sha256 of the same plaintext bytes
+        kind=AttachmentKind.identity_doc,
+    )
+    db.add(attachment)
+    await db.flush()
+
+    try:
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.message_added,
+            actor_id=actor.id,
+            payload={
+                "message_id": str(msg.id),
+                "content_hash": content_hash_of(msg.text_ciphertext, msg.text_nonce),
+                "msg_event_id": msg.nostr_event_id,
+                "is_e2e": False,
+            },
+            author=actor,
+        )
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.file_added,
+            actor_id=actor.id,
+            payload={
+                "attachment_id": str(attachment.id),
+                "message_id": str(msg.id),
+                "file_hash": attachment.file_hash,
+                "kind": AttachmentKind.identity_doc.value,
+                "size_bytes": len(doc_bytes),
+                "mime": mime,
+            },
+            author=actor,
+        )
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.identity_ref,
+            actor_id=actor.id,
+            payload={
+                "container_id": str(container.id),
+                "attachment_id": str(attachment.id),
+                "badge_id": str(badge_id),
+                "doc_hash": container.doc_hash,
+                "doc_type": container.doc_type,
+                "doc_country": container.doc_country,
+            },
+            author=actor,
+        )
+    except SealedError:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")

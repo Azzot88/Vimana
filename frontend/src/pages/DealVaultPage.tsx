@@ -24,6 +24,7 @@ const KIND_LABEL: Record<AttachmentKind, string> = {
   receipt_photo: 'Фото получения',
   doc: 'Документ',
   payment_receipt: 'Чек оплаты',
+  identity_doc: 'Документ личности',
 }
 
 export default function DealVaultPage() {

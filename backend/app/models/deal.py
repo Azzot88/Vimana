@@ -50,6 +50,10 @@ class AttachmentKind(str, enum.Enum):
     receipt_photo = "receipt_photo"
     doc = "doc"
     payment_receipt = "payment_receipt"
+    # T3.9 — full copy of a verified identity document, created ONLY by the
+    # verification flow (not uploadable via the generic attachment endpoint:
+    # it has no entry in ALLOWED_MIME_BY_KIND, so a manual attempt gets 415).
+    identity_doc = "identity_doc"
 
 
 class Deal(Base):

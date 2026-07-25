@@ -5,7 +5,7 @@ import { encryptE2E, type E2EPayload } from '../lib/threshold'
 import { getKeypairStatus } from './keypair'
 import { getArbiterInfo } from './threshold'
 
-export type AttachmentKind = 'handoff_photo' | 'receipt_photo' | 'doc' | 'payment_receipt'
+export type AttachmentKind = 'handoff_photo' | 'receipt_photo' | 'doc' | 'payment_receipt' | 'identity_doc'
 
 export interface Attachment {
   id: string

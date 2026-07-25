@@ -388,7 +388,11 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
                 .where(
                     DealEvent.deal_id == deal_id,
                     DealEvent.event_type.in_(
-                        [DealEventType.message_added, DealEventType.file_added]
+                        [
+                            DealEventType.message_added,
+                            DealEventType.file_added,
+                            DealEventType.identity_ref,
+                        ]
                     ),
                 )
                 .order_by(DealEvent.seq.asc())
@@ -401,9 +405,41 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
     mismatches: list[dict] = []
     checked_messages = 0
     checked_files = 0
+    checked_identity = 0
 
     for evt in events:
         payload = evt.payload or {}
+        if evt.event_type == DealEventType.identity_ref:
+            # T3.9 — triple match: chain payload == deal attachment copy ==
+            # canonical IdentityContainer. Any divergence between the two
+            # vaults (or a deleted row) surfaces here.
+            from app.models.verification import IdentityContainer
+
+            checked_identity += 1
+            ref_hash = payload.get("doc_hash")
+            att_ref = payload.get("attachment_id")
+            att = await db.get(Attachment, uuid.UUID(att_ref)) if att_ref else None
+            if att is None:
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "identity", "ref_id": att_ref, "reason": "identity attachment missing"}
+                )
+            elif att.file_hash != ref_hash:
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "identity", "ref_id": att_ref, "reason": "identity copy hash mismatch"}
+                )
+            cont_ref = payload.get("container_id")
+            cont = (
+                await db.get(IdentityContainer, uuid.UUID(cont_ref)) if cont_ref else None
+            )
+            if cont is None:
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "identity", "ref_id": cont_ref, "reason": "identity container missing"}
+                )
+            elif cont.doc_hash != ref_hash:
+                mismatches.append(
+                    {"seq": evt.seq, "kind": "identity", "ref_id": cont_ref, "reason": "identity container hash mismatch"}
+                )
+            continue
         if evt.event_type == DealEventType.message_added:
             checked_messages += 1
             ref = payload.get("message_id")
@@ -437,4 +473,5 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
         "mismatches": mismatches,
         "checked_messages": checked_messages,
         "checked_files": checked_files,
+        "checked_identity": checked_identity,
     }

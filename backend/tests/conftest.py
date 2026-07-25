@@ -800,13 +800,16 @@ async def _ensure_dealevent_types(engine) -> None:
 
 
 async def _ensure_vault_completeness(engine) -> None:
-    """T3.7: vault-content event types + deal seal + anchor backend.
-    Mirrors migration 0026 for the long-lived test DB. Idempotent."""
+    """T3.7/T3.9: vault-content event types + deal seal + anchor backend +
+    identity_doc attachment kind. Mirrors migrations 0026 + 0027. Idempotent."""
     async with engine.begin() as conn:
         for value in ("message_added", "file_added", "sealed", "identity_ref"):
             await conn.execute(
                 text(f"ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS '{value}'")
             )
+        await conn.execute(
+            text("ALTER TYPE attachmentkind ADD VALUE IF NOT EXISTS 'identity_doc'")
+        )
         await conn.execute(
             text("ALTER TABLE deals ADD COLUMN IF NOT EXISTS sealed_at TIMESTAMPTZ NULL")
         )
