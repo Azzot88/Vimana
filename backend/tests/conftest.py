@@ -987,6 +987,7 @@ async def _get_or_create_user(
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user:
+        changed = False
         # T2.1/T2.2 backfill for seed users created before keypair migration.
         # Idempotent: only fills what's missing, never rotates existing key.
         if not user.nostr_pubkey or user.nsec_encrypted is None:
@@ -996,6 +997,14 @@ async def _get_or_create_user(
             user.nsec_encrypted = ct
             user.nsec_nonce = nonce
             user.key_self_custody = False
+            changed = True
+        # Speed: rehash seeds stored at prod's 12 rounds down to the test-env
+        # cost (bcrypt embeds rounds in the hash, so old hashes stay slow to
+        # verify on every login regardless of BCRYPT_ROUNDS).
+        if not user.password_hash.startswith("$2b$04$"):
+            user.password_hash = hash_password(SEED_PASSWORD)
+            changed = True
+        if changed:
             await db.commit()
             await db.refresh(user)
         return user
