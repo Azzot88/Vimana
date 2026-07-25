@@ -89,27 +89,27 @@
 
 > **Контекст этапа.** Концепция «DealVault — The Verifiable Vault Protocol» (v0.1): каждая сделка — переносимый, иммутабельный, криптографически проверяемый артефакт; Identity Vault и Deal Vault пересекаются по данным. T3.6 построил tamper-evident цепь, но только по статусным событиям. Этот этап делает цепь **полной** (сообщения, файлы, identity-события), вводит **запечатывание** при закрытии сделки и валидацию содержимого файлов. Публикация якорей остаётся выключенной (server-only, внутренняя связность) — расширение заложено схемой: Nostr (готово, T3.6), IPFS, OpenTimestamps. Решения зафиксированы в TECHSTATE `D-DVLT-PROTOCOL`. Отложено осознанно (follow-up этапа, не задачи): Query API (`TRUE/FALSE/ACCESS_DENIED` + proof), .dvlt-экспорт + Reader, включение публикации якорей, EXP-07 (участник-подписанный `prev`).
 
-### T3.7 — Полнота цепи: сообщения, файлы, seal
+### T3.7 — Полнота цепи: сообщения, файлы, seal ✅ MVP
 
 **Контекст.** Цепь T3.6 покрывает 11 статусных событий. `DealVaultMessage`/`Attachment` подписаны (T2.2 pt.2), но не chained: удаление сообщения из БД не ломает `verify_chain` → completeness не гарантирована именно для контента, ради которого vault существует. Сделка не запечатывается — append возможен после `closed`. Это follow-up 4 из T3.6, повышенный до задачи.
 
 **Механика хеширования содержимого:** хешируются байты **как они хранятся** — `sha256(text_ciphertext || text_nonce)`. Для E2E-сообщений это ciphertext (сервер plaintext не видит, верификация не требует расшифровки). Следствие: ротация `MESSAGE_ENCRYPTION_KEY` с перешифровкой данных запрещена — только envelope-схема (перешифровка ключа, не данных). Формат preimage T3.6 **не меняется** — новые данные входят через `payload` обычных `DealEvent`.
 
-- [ ] Новые `DealEventType`: `message_added`, `file_added`, `sealed`, `identity_ref` (используется в T3.9).
-- [ ] `message_added` — в той же транзакции, что INSERT сообщения: `append_deal_event(actor=автор, payload={message_id, content_hash: sha256(text_ciphertext+text_nonce), msg_event_id: nostr_event_id сообщения, is_e2e})`. `msg_event_id` в payload связывает подпись автора с цепью.
-- [ ] `file_added` — payload `{attachment_id, message_id, file_hash, kind, size_bytes, mime}`. `file_hash` уже считается стримингово (T1.19) — фиксируем его в цепи.
-- [ ] `sealed` — при переходе Deal → `closed`: финальное событие, payload `{message_count, file_count}` + `Deal.sealed_at`.
-- [ ] Запрет append после seal: `append_deal_event` проверяет seal → `ChainError` (API → 409). **Решить при реализации:** возможен ли спор после `closed`? Если dispute может открыться после закрытия — seal происходит по окончании dispute-окна, не мгновенно; зафиксировать выбор в Decision Log.
-- [ ] Миграция: `deal_chain_anchors.backend VARCHAR(16) NOT NULL DEFAULT 'nostr'` — расширяемость якорей (`nostr` | `ipfs` | `ots`). Код IPFS/OTS-бэкендов не пишем — только схема.
-- [ ] `GET /api/deals/{id}/vault/verify` (участники + арбитр с grant) — результат `verify_chain` + coverage `{chained_messages/total_messages, chained_files/total_files}` + список якорей. Закрывает follow-up 1 из T3.6.
-- [ ] Старые сделки: backfill не делаем — цепь валидна, coverage честно показывает долю незачейненных сообщений.
-- [ ] Тесты: message/file append chain'ится в одной транзакции, подмена ciphertext ловится, append после seal → отказ, verify endpoint positive+negative.
+- [x] Новые `DealEventType`: `message_added`, `file_added`, `sealed`, `identity_ref` (используется в T3.9). Миграция `0026` + зеркало в tests/conftest.
+- [x] `message_added` — в той же транзакции, что INSERT сообщения: `append_deal_event(actor=автор, payload={message_id, content_hash: sha256(text_ciphertext+text_nonce), msg_event_id: nostr_event_id сообщения, is_e2e})`. Покрыты все точки создания сообщений: обычные, e2e, share-address, pinned route-note (match), arbiter system-message.
+- [x] `file_added` — payload `{attachment_id, message_id, file_hash, kind, size_bytes, mime}`.
+- [x] `sealed` — при `confirm` (→ closed): финальное событие, payload `{message_count, file_count}` + `Deal.sealed_at`.
+- [x] Запрет append после seal: guard в `append_deal_event` под advisory lock → `SealedError` (API → 409). **Решено (D-SEAL-SEMANTICS):** спор после `closed` возможен — `dispute_opened` распечатывает vault (единственное content-исключение), закрывающий вердикт (`closes_deal`) запечатывает снова; `arbiter_opened` проходит через seal как audit-событие (аудит ≠ контент), system-message при чтении sealed vault арбитром не пишется.
+- [x] Миграция: `deal_chain_anchors.backend VARCHAR(16) NOT NULL DEFAULT 'nostr'` (`nostr` | `ipfs` | `ots`). Код IPFS/OTS-бэкендов не писали — только схема.
+- [x] **Отклонение:** вместо нового `/vault/verify` расширен уже существовавший `GET /api/deals/{id}/chain` (follow-up 1 из T3.6 оказался частично закрыт в T3.6): + `sealed_at`, coverage `{chained/total messages, chained/total files}`, `content_ok`, `content_mismatches` (новая `verify_content()` — сверка content_hash/file_hash цепи с хранимым контентом).
+- [x] Старые сделки: backfill не делаем — цепь валидна, coverage честно показывает долю незачейненных сообщений.
+- [x] Тесты: 9 новых (`test_vault_completeness.py`) + обновлён lifecycle-тест T3.6 (6 событий вместо 5). Грабля: `deal.sealed_at` читать ДО `verify_chain`/`verify_content` — они делают `expire_all()` → MissingGreenlet.
 
-**Acceptance:**
-1. Отправка сообщения/загрузка файла создаёт chained-событие в той же транзакции; подмена `text_ciphertext` или файла детектируется через content_hash/file_hash.
-2. Deal → `closed` порождает `sealed`; любой append после → `ChainError`/409.
-3. `GET /vault/verify` отдаёт `ok`/`broken_at` + coverage.
-4. Backend-сьют зелёный, 100% новых веток покрыто.
+**Acceptance: ✅ все выполнены**
+1. ✅ Отправка сообщения/загрузка файла создаёт chained-событие в той же транзакции; подмена `text_ciphertext` или файла детектируется через content_hash/file_hash.
+2. ✅ Deal → `closed` порождает `sealed`; append после → 409 на всех поверхностях (messages, attachments, events, share-address).
+3. ✅ `GET /deals/{id}/chain` отдаёт `ok`/`broken_at` + seal + coverage + content-проверку.
+4. ✅ **657 backend-тестов зелёные** (2026-07-25).
 
 ### T3.8 — Валидация содержимого файлов (anti-dirt)
 

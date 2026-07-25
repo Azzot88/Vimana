@@ -6,4 +6,5 @@
 // T2.1 pt.3 closed — a Phase 2 leftover, but the version is a monotonic progress
 // counter, so it keeps counting inside the current phase instead of going back.
 // T3.6 closed — deal_events hash chain + Nostr anchoring.
-export const APP_VERSION = '0.03.13'
+// T3.7 closed — vault content chain (messages/files/seal) + verify_content.
+export const APP_VERSION = '0.03.14'
