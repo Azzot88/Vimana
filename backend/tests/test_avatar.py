@@ -10,6 +10,9 @@ import io
 
 from tests.conftest import SEED_PASSWORD, unique_email
 
+# T3.8 — uploads are content-validated now, so fixtures must be real images.
+from tests.test_dealvault_attachments import PNG_1X1
+
 
 async def _register_and_login(client) -> dict:
     email = unique_email("av")
@@ -25,8 +28,8 @@ async def _register_and_login(client) -> dict:
 
 async def test_upload_avatar_persists_key(client):
     hdr = await _register_and_login(client)
-    # 32 bytes is enough for a fake PNG — content-type check gates first.
-    files = {"file": ("me.png", io.BytesIO(b"\x89PNG\r\n" + b"\x00" * 26), "image/png")}
+    # T3.8: content is validated (signature + decode) — must be a real PNG.
+    files = {"file": ("me.png", io.BytesIO(PNG_1X1), "image/png")}
     r = await client.post("/api/me/avatar", headers=hdr, files=files)
     assert r.status_code == 200, r.text
     me_r = await client.get("/api/auth/me", headers=hdr)
@@ -55,7 +58,7 @@ async def test_upload_rejects_oversized_via_content_length(client):
 
 async def test_delete_avatar_clears_key(client):
     hdr = await _register_and_login(client)
-    files = {"file": ("me.jpg", io.BytesIO(b"\xff\xd8\xff\xe0"), "image/jpeg")}
+    files = {"file": ("me.png", io.BytesIO(PNG_1X1), "image/png")}
     await client.post("/api/me/avatar", headers=hdr, files=files)
     r = await client.delete("/api/me/avatar", headers=hdr)
     assert r.status_code == 200

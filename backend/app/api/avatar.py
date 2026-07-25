@@ -3,6 +3,7 @@ that stores DealVault attachments."""
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.avatar_url import me_out_with_avatar
+from app.core.file_validation import FileValidationError, validate_upload
 from app.core.storage import upload_file
 from app.models.user import User
 from app.schemas.user import MeOut
@@ -60,6 +62,19 @@ async def upload_avatar(
                 detail=f"File too large. Max {_MAX_AVATAR_SIZE // 1024 // 1024} MB",
             )
         buf.write(chunk)
+
+    # T3.8 — same content validation as DealVault uploads: signature + decode.
+    try:
+        validate_upload(buf.getvalue(), ct)
+    except FileValidationError as exc:
+        logging.getLogger(__name__).warning(
+            "avatar rejected: user=%s declared=%s size=%d reason=%s",
+            current_user.id, ct, total, exc.reason,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"File content failed validation: {exc.reason}",
+        )
 
     ext = _ALLOWED_MIME[ct]
     key = f"avatars/{current_user.id}/{uuid.uuid4().hex}.{ext}"

@@ -40,7 +40,10 @@ def _upload_form(kind: str = "passport", country: str = "AE") -> dict:
 
 
 def _fake_doc_bytes() -> bytes:
-    return b"fake-passport-image-data" * 100
+    # T3.8: document uploads are content-validated (signature + decode), so
+    # the fixture must be a real image, not arbitrary bytes.
+    from tests.test_dealvault_attachments import PNG_1X1
+    return PNG_1X1
 
 
 # ─────────────────────────────────────────────────────────────

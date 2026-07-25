@@ -45,6 +45,10 @@ pycountry==24.6.1
 # PDF generation (boarding pass)
 weasyprint==63.0
 
+# T3.8 — image decode validation for uploads (already a transitive dep of
+# weasyprint; pinned explicitly because file_validation.py imports it directly)
+Pillow==11.0.0
+
 # Tests
 pytest==8.3.4
 pytest-asyncio==0.24.0

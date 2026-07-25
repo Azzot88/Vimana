@@ -473,7 +473,22 @@ async def _read_upload(file: UploadFile) -> bytes:
             )
         hasher.update(chunk)
         buf.write(chunk)
-    return buf.getvalue()
+    data = buf.getvalue()
+
+    # T3.8 — identity documents had no content validation at all. The declared
+    # MIME is not even looked at here: the real type is sniffed from the bytes
+    # (photo or PDF), images must fully decode. Runs before encryption, so
+    # dirt never reaches an IdentityContainer.
+    from app.core.file_validation import FileValidationError, validate_document
+
+    try:
+        validate_document(data)
+    except FileValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Document failed content validation: {exc.reason}",
+        )
+    return data
 
 
 async def _make_container(

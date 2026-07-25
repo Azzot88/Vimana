@@ -1,5 +1,6 @@
 import hashlib
 import io
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
@@ -20,6 +21,7 @@ from app.core.rate_limit import limiter
 import base64
 
 from app.core.deal_chain import SealedError, append_deal_event, content_hash_of
+from app.core.file_validation import FileValidationError, validate_upload
 from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, upload_file
@@ -27,6 +29,8 @@ from app.core.threshold import E2EPayload, nip04_decrypt
 from app.models.deal import Attachment, AttachmentKind, Deal, DealEventType, DealVaultMessage
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -353,6 +357,21 @@ async def upload_attachment(
         buffer.write(chunk)
 
     file_hash = hasher.hexdigest()
+
+    # T3.8 — validate the bytes against the declared type BEFORE the R2 write:
+    # signature whitelist + full image decode. Metadata only in the log.
+    try:
+        validate_upload(buffer.getvalue(), content_type)
+    except FileValidationError as exc:
+        logger.warning(
+            "upload rejected: deal=%s user=%s kind=%s declared=%s size=%d reason=%s",
+            deal_id, current_user.id, kind, content_type, total, exc.reason,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"File content failed validation: {exc.reason}",
+        )
+
     # Extension derived from MIME (whitelisted), never from user-supplied filename
     ext = MIME_TO_EXT.get(content_type, "")
     r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
