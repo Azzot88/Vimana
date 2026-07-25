@@ -15,6 +15,8 @@
 
 ## Записи
 
+- **2026-07-25 · FIX** · Фаззер (T_TEST.4) поймал необработанный 500: `city_geoname_id=2^31` пролетал в asyncpg (колонка int32) → добавлены границы `ge=1, le=2147483647` в `api/addresses.py` + `schemas/user.py` (теперь 422). Тест-прогоны ускорены 490→312 с (`BCRYPT_ROUNDS=4` только в pytest-процессе + `synchronous_commit=off` для vimana_test) + маркер `fuzz`: повседневный `pytest -m "not fuzz"`, полный — обязателен перед закрытием задачи. Детали: TECHSTATE §3.
+
 - **2026-07-25 · MILESTONE** · 🎉 **T3.8 закрыт — контент-валидация загрузок (ЭТАП 3.6)**. `core/file_validation.py`: whitelist magic-bytes (jpeg/png/webp/heic/pdf) + полный Pillow-decode изображений; exe/полиглот под именем `.jpg` → 422 до записи в R2. 4 поверхности: DealVault attachments, avatar, verification-документы (там проверок не было вообще; MIME сниффится из байтов). Pillow==10.4.0. Валидатор сразу поймал битый PNG_1X1 в тестах (CRC IDAT) — фикстура генерится программно. **696 тестов зелёные** (20+ новых). Детали: TECHSTATE §3, TASKS T3.8.
 
 - **2026-07-25 · MILESTONE** · 🎉 **T3.7 закрыт — полнота цепи DealVault (ЭТАП 3.6)**. Цепь теперь покрывает контент: `message_added` (sha256 хранимых ciphertext+nonce — E2E верифицируется без расшифровки), `file_added`, `sealed`, `identity_ref` (задел T3.9). Confirm запечатывает vault (append → 409), спор распечатывает, закрывающий вердикт запечатывает снова (D-SEAL-SEMANTICS). `verify_content()` ловит delete/swap контента при интактной цепи; `GET /deals/{id}/chain` + seal/coverage. `deal_chain_anchors.backend` (nostr|ipfs|ots). Миграция `0026`. **657 тестов зелёные** (9 новых). Детали: TECHSTATE §3, TASKS T3.7.
