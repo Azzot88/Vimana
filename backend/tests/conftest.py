@@ -850,21 +850,33 @@ async def _ensure_deal_event_chain(engine) -> None:
                 payload=_json.loads(row.payload) if row.payload is not None else None,
                 prev_hash=prev_hash,
             )
-            await conn.execute(
-                text(
-                    "UPDATE deal_events SET seq = :seq, "
-                    "entry_hash = decode(:entry_hash, 'hex'), "
-                    "prev_hash = CASE WHEN :prev_hash IS NULL THEN NULL "
-                    "ELSE decode(:prev_hash, 'hex') END "
-                    "WHERE id = :id"
-                ),
-                {
-                    "seq": seq,
-                    "entry_hash": entry_hash.hex(),
-                    "prev_hash": prev_hash.hex() if prev_hash is not None else None,
-                    "id": row.id,
-                },
-            )
+            # asyncpg can't infer parameter type when the same $N sits in
+            # both branches of a CASE (NULL is untyped, decode()→bytea). Split.
+            if prev_hash is None:
+                await conn.execute(
+                    text(
+                        "UPDATE deal_events SET seq = :seq, "
+                        "entry_hash = decode(:entry_hash, 'hex'), "
+                        "prev_hash = NULL "
+                        "WHERE id = :id"
+                    ),
+                    {"seq": seq, "entry_hash": entry_hash.hex(), "id": row.id},
+                )
+            else:
+                await conn.execute(
+                    text(
+                        "UPDATE deal_events SET seq = :seq, "
+                        "entry_hash = decode(:entry_hash, 'hex'), "
+                        "prev_hash = decode(:prev_hash, 'hex') "
+                        "WHERE id = :id"
+                    ),
+                    {
+                        "seq": seq,
+                        "entry_hash": entry_hash.hex(),
+                        "prev_hash": prev_hash.hex(),
+                        "id": row.id,
+                    },
+                )
             prev_by_deal[row.deal_id] = entry_hash
 
         await conn.execute(text("ALTER TABLE deal_events ALTER COLUMN seq SET NOT NULL"))
