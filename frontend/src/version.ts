@@ -8,4 +8,5 @@
 // T3.6 closed — deal_events hash chain + Nostr anchoring.
 // T3.7 closed — vault content chain (messages/files/seal) + verify_content.
 // T3.8 closed — upload content validation (signatures + image decode).
-export const APP_VERSION = '0.03.15'
+// T3.9 closed — identity ↔ deal intersection (identity_doc copy + identity_ref).
+export const APP_VERSION = '0.03.16'

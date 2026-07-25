@@ -126,21 +126,23 @@
 
 **Acceptance: ✅ все выполнены** — exe/скрипт под именем `.jpg` → 422 на всех поверхностях; валидные jpeg/png/webp/heic/pdf проходят; **696 backend-тестов зелёные** (2026-07-25).
 
-### T3.9 — Identity ↔ Deal пересечение (identity_ref + копия документа в сделке)
+### T3.9 — Identity ↔ Deal пересечение (identity_ref + копия документа в сделке) ✅ MVP
 
 **Контекст + решение владельца (D-DVLT-PROTOCOL).** Данные identity, внесённые в сделку, живут в обоих vault'ах: канонический документ — в `IdentityContainer` владельца (переиспользуемый, уже так с T2.1), **полная копия — в сделке** (vault самодостаточен), связь — событие `identity_ref` в цепи через общий `doc_hash`.
 
-- [ ] Новый `AttachmentKind.identity_doc`; копия документа сохраняется как Attachment сделки (R2, streaming SHA-256, валидация T3.8). Доступ — участники сделки (существующий gate); канонический контейнер — только владелец.
-- [ ] `identity_ref` событие: payload `{container_id, attachment_id, doc_hash, badge_id?, doc_type, doc_country}`. `doc_hash` обязан совпадать у контейнера, attachment'а и payload'а.
-- [ ] Verification upload flow (T2.1) в контексте сделки: контейнер + бейдж (как раньше) + attachment-копия + `identity_ref` — одна транзакция.
-- [ ] DealVault UI: system-message «Документ верифицирован и добавлен в vault» + бейдж.
-- [ ] Тесты: тройное совпадение doc_hash, подмена копии ловится verify, self-custody path (422 как в T2.1 — без изменений).
+- [x] `AttachmentKind.identity_doc` (миграция `0027` + зеркало в conftest); копия — Attachment на system-сообщении, R2, `file_hash` = sha256 plaintext-байтов. Доступ — участники сделки; канонический контейнер — только владелец. Через generic-endpoint kind не загружается (нет в MIME-whitelist → 415).
+- [x] `identity_ref`: payload `{container_id, attachment_id, badge_id, doc_hash, doc_type, doc_country}` — тройное совпадение `doc_hash` (цепь == копия == контейнер) проверяется расширенным `verify_content()` (reasons: identity copy/container hash mismatch, missing).
+- [x] `submit-document` (T2.1): контейнер + бейдж + копия + system-message + 3 события цепи (`message_added`/`file_added`/`identity_ref`) — одна транзакция (`_copy_document_into_vault`). `_read_upload` теперь возвращает `(bytes, detected_mime)` из T3.8-сниффинга. Sealed deal → 409. Self-upload вне сделки — без изменений (нет событий цепи).
+- [x] UI: system-message «🪪 Identity document verified and added to the vault» + label «Документ личности» для kind.
+- [x] Тесты: 6 в `test_identity_ref.py` (тройной hash-match, подмена копии — двойная детекция через file_added+identity_ref, удаление контейнера, self-upload без событий, generic-upload → 415).
 
-**Acceptance:** после upload в сделке существуют IdentityContainer + Attachment-копия + `identity_ref` в цепи; `doc_hash` совпадает во всех трёх местах; подмена копии детектируется `GET /vault/verify`.
+**Acceptance: ✅ все выполнены** — IdentityContainer + Attachment-копия + `identity_ref` в цепи, `doc_hash` совпадает во всех трёх местах, подмена детектируется `GET /deals/{id}/chain`. **702 backend-теста зелёные** (2026-07-25).
 
 ### T3.10 — DealVault: маркетинговая презентация + лендинг
 
 **Контекст.** Сразу после закрытия T3.9 — публичная упаковка концепции «Verifiable Vault Protocol»: преза + секция лендинга на базе Concept v0.1 и реализованного (полная цепь, seal, identity-пересечение, якоря).
+
+**Процесс (решение владельца, 2026-07-25):** это будет **версия 1**. Затем владелец подключит другие инструменты/скиллы, будет собрана альтернативная версия — и обе сравниваются перед публикацией. v1 не публикуется как финал без сравнения.
 
 - [ ] Презентация концепции (структура: проблема доверия → Vault ≠ база данных → Identity/Deal Vault → immutability + подписи + якоря → roadmap: Query, .dvlt, IPFS/OTS).
 - [ ] Секция/страница на лендинге (DESIGNGUIDELINES + Bento).
