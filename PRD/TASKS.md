@@ -352,6 +352,34 @@
 5. Trace артефакты на R2 30 дней.
 6. 5 backend-тестов (`test_admin_users_cleanup.py`): filter, delete cascade, forbidden non-superuser, cannot delete superuser/self, Celery deletes stale ≥24ч + preserves fresh.
 
+**pt.3 — Full E2E business flows (14 спеков, план 2026-07-25):**
+
+Текущие 7 спеков — smoke (регистрация, рендер, guard'ы, multi-tab). pt.3 покрывает бизнес-флоу сквозняком через UI. Приёмы: multi-context (sender/carrier/arbiter в одном тесте), `setInputFiles` (upload из байтов), download-перехват + SHA-256 сверка, `page.request` (UI+API микс), `page.route` (сетевые сбои), `addInitScript` c фейковым `window.nostr` (self-custody без расширения — headless не грузит extensions).
+
+**P0 — ядро сделки (реализовать первым пакетом, после T3.8):**
+- [ ] 1. `deal-lifecycle.spec.ts` — carrier: рейс → sender: match → accept → handoff → received → confirm; статусы у обоих; после закрытия vault запечатан (ввод недоступен / «sealed»-ошибка). UI-покрытие T3.7.
+- [ ] 2. `chat-two-users.spec.ts` — sender пишет → carrier видит; system-messages рендерятся.
+- [ ] 3. `chat-file-upload.spec.ts` — PNG через `setInputFiles` → превью в чате, lightbox, файл виден второй стороне.
+- [ ] 4. `dirty-file-rejected.spec.ts` — MZ-байты как `photo.jpg` → человекочитаемая ошибка, файла в чате нет. UI-покрытие T3.8.
+- [ ] 5. `download-verify-hash.spec.ts` — скачать вложение → SHA-256 скачанного == `file_hash` из API == hash в `/chain`. Демо верифицируемости DealVault.
+
+**P1 — доверие и споры:**
+- [ ] 6. `verification-flow.spec.ts` — carrier запрашивает документы → sender грузит PNG-паспорт → badge в профиле.
+- [ ] 7. `declined-polite.spec.ts` — перевозчик вежливо отклоняет → нейтральный баннер у отправителя, без штрафов.
+- [ ] 8. `dispute-reseal.spec.ts` (3 контекста) — dispute после закрытия → чат распечатан → evidence-фото → arbiter claim + resolve(closes_deal) → снова sealed. UI-покрытие D-SEAL-SEMANTICS.
+- [ ] 9. `share-address.spec.ts` — picker адреса → 📍-сообщение в чате.
+- [ ] 10. `chain-verify.spec.ts` — после сделки `page.request GET /chain`: ok=true, coverage полный, sealed_at установлен. UI-badge — после follow-up 2 из T3.6.
+
+**P2 — платформа:**
+- [ ] 11. `mobile-viewport.spec.ts` — `devices['iPhone 14']`: Bento 1 колонка, BottomNav, тач-зоны.
+- [ ] 12. `i18n-switch.spec.ts` — RU↔EN, сохранение выбора после reload.
+- [ ] 13. `network-chaos.spec.ts` — `page.route` abort `/api/deals/*` → нет белого экрана, есть сообщение об ошибке.
+- [ ] 14. `fake-nip07-e2e.spec.ts` — инъекция `window.nostr` → self-custody E2E сообщение шифруется/расшифровывается в браузере.
+
+Ограничения (зафиксировано): email-флоу не проверяем (нет ящика); реальное NIP-07-расширение — только persistent context (обходим инъекцией); a11y/visual regression — не здесь (T_TEST.8/T_TEST.9).
+
+**Acceptance pt.3:** P0-пакет (5 спеков) зелёный против prod ≤ 3 мин; P1/P2 — по мере, каждый спек самоочищается через `@e2e.vimana.local` convention.
+
 ### T_AGENT.1 — Агентский интерфейс: Nostr publish + MCP server ✅ pt.1 + pt.2 MVP
 
 **Контекст.** Стороннние AI-агенты (Claude, GPT, Nostr-native клиенты) читают рейсы через стандартные протоколы: (A) Nostr publish (T3.5), (B) MCP server для Claude/Anthropic (T_AGENT.1).
