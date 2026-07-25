@@ -119,7 +119,11 @@ def find_unanchored_heads(db: Session, limit: int = 100) -> list[tuple[uuid.UUID
     Includes deals that have never been anchored (`anchored_seq IS NULL`).
     """
     heads = (
-        select(DealEvent.deal_id, func.max(DealEvent.seq).label("head_seq"))
+        select(
+            DealEvent.deal_id,
+            func.max(DealEvent.seq).label("head_seq"),
+            func.max(DealEvent.timestamp).label("head_ts"),
+        )
         .group_by(DealEvent.deal_id)
         .subquery()
     )
@@ -131,6 +135,9 @@ def find_unanchored_heads(db: Session, limit: int = 100) -> list[tuple[uuid.UUID
         .group_by(DealChainAnchor.deal_id)
         .subquery()
     )
+    # Newest chain activity first — fair to hot deals under a `limit` cap and
+    # a stable order for tests inspecting specific deals. UUID as secondary
+    # so ties within the same timestamp resolve deterministically.
     rows = db.execute(
         select(heads.c.deal_id, heads.c.head_seq)
         .select_from(
@@ -142,7 +149,7 @@ def find_unanchored_heads(db: Session, limit: int = 100) -> list[tuple[uuid.UUID
                 anchored.c.anchored_seq < heads.c.head_seq,
             )
         )
-        .order_by(heads.c.deal_id)
+        .order_by(heads.c.head_ts.desc(), heads.c.deal_id)
         .limit(limit)
     ).all()
     return [(row[0], int(row[1])) for row in rows]
