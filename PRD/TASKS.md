@@ -85,6 +85,67 @@
 4. **Chain для DealVault messages** аналогично DealEvent — сейчас vault-сообщения только signed, не chained.
 5. **Rotation** для `CHAIN_ANCHOR_NSEC` — при компрометации ключа нужен overlap period с двумя ключами.
 
+## 🔗 ЭТАП 3.6 — DealVault Protocol: полнота цепи + Identity-пересечение (Фаза 3.6)
+
+> **Контекст этапа.** Концепция «DealVault — The Verifiable Vault Protocol» (v0.1): каждая сделка — переносимый, иммутабельный, криптографически проверяемый артефакт; Identity Vault и Deal Vault пересекаются по данным. T3.6 построил tamper-evident цепь, но только по статусным событиям. Этот этап делает цепь **полной** (сообщения, файлы, identity-события), вводит **запечатывание** при закрытии сделки и валидацию содержимого файлов. Публикация якорей остаётся выключенной (server-only, внутренняя связность) — расширение заложено схемой: Nostr (готово, T3.6), IPFS, OpenTimestamps. Решения зафиксированы в TECHSTATE `D-DVLT-PROTOCOL`. Отложено осознанно (follow-up этапа, не задачи): Query API (`TRUE/FALSE/ACCESS_DENIED` + proof), .dvlt-экспорт + Reader, включение публикации якорей, EXP-07 (участник-подписанный `prev`).
+
+### T3.7 — Полнота цепи: сообщения, файлы, seal
+
+**Контекст.** Цепь T3.6 покрывает 11 статусных событий. `DealVaultMessage`/`Attachment` подписаны (T2.2 pt.2), но не chained: удаление сообщения из БД не ломает `verify_chain` → completeness не гарантирована именно для контента, ради которого vault существует. Сделка не запечатывается — append возможен после `closed`. Это follow-up 4 из T3.6, повышенный до задачи.
+
+**Механика хеширования содержимого:** хешируются байты **как они хранятся** — `sha256(text_ciphertext || text_nonce)`. Для E2E-сообщений это ciphertext (сервер plaintext не видит, верификация не требует расшифровки). Следствие: ротация `MESSAGE_ENCRYPTION_KEY` с перешифровкой данных запрещена — только envelope-схема (перешифровка ключа, не данных). Формат preimage T3.6 **не меняется** — новые данные входят через `payload` обычных `DealEvent`.
+
+- [ ] Новые `DealEventType`: `message_added`, `file_added`, `sealed`, `identity_ref` (используется в T3.9).
+- [ ] `message_added` — в той же транзакции, что INSERT сообщения: `append_deal_event(actor=автор, payload={message_id, content_hash: sha256(text_ciphertext+text_nonce), msg_event_id: nostr_event_id сообщения, is_e2e})`. `msg_event_id` в payload связывает подпись автора с цепью.
+- [ ] `file_added` — payload `{attachment_id, message_id, file_hash, kind, size_bytes, mime}`. `file_hash` уже считается стримингово (T1.19) — фиксируем его в цепи.
+- [ ] `sealed` — при переходе Deal → `closed`: финальное событие, payload `{message_count, file_count}` + `Deal.sealed_at`.
+- [ ] Запрет append после seal: `append_deal_event` проверяет seal → `ChainError` (API → 409). **Решить при реализации:** возможен ли спор после `closed`? Если dispute может открыться после закрытия — seal происходит по окончании dispute-окна, не мгновенно; зафиксировать выбор в Decision Log.
+- [ ] Миграция: `deal_chain_anchors.backend VARCHAR(16) NOT NULL DEFAULT 'nostr'` — расширяемость якорей (`nostr` | `ipfs` | `ots`). Код IPFS/OTS-бэкендов не пишем — только схема.
+- [ ] `GET /api/deals/{id}/vault/verify` (участники + арбитр с grant) — результат `verify_chain` + coverage `{chained_messages/total_messages, chained_files/total_files}` + список якорей. Закрывает follow-up 1 из T3.6.
+- [ ] Старые сделки: backfill не делаем — цепь валидна, coverage честно показывает долю незачейненных сообщений.
+- [ ] Тесты: message/file append chain'ится в одной транзакции, подмена ciphertext ловится, append после seal → отказ, verify endpoint positive+negative.
+
+**Acceptance:**
+1. Отправка сообщения/загрузка файла создаёт chained-событие в той же транзакции; подмена `text_ciphertext` или файла детектируется через content_hash/file_hash.
+2. Deal → `closed` порождает `sealed`; любой append после → `ChainError`/409.
+3. `GET /vault/verify` отдаёт `ok`/`broken_at` + coverage.
+4. Backend-сьют зелёный, 100% новых веток покрыто.
+
+### T3.8 — Валидация содержимого файлов (anti-dirt)
+
+**Контекст.** MIME берётся из заголовка клиента + whitelist (T1.19) — подделывается тривиально. Защиты от залива «грязи» (исполняемые, полиглоты, не-изображения под именем .jpg) нет.
+
+- [ ] Magic-bytes sniffing (puremagic/python-magic): реальный тип содержимого должен совпадать с заявленным MIME; MZ/ELF/shebang/HTML-сигнатуры → 422.
+- [ ] Изображения: Pillow `verify()` + полный decode — невалидный JPEG/PNG/WebP → 422.
+- [ ] PDF (`kind=doc`): проверка заголовка `%PDF-`.
+- [ ] Стриминговый SHA-256 и лимит 10 MB сохраняются; проверка до записи в R2.
+- [ ] Отклонённые загрузки логируются (метаданные, не содержимое).
+- [ ] Follow-up (не блокер): ClamAV-контейнер.
+
+**Acceptance:** exe/скрипт, переименованный в `.jpg` → 422; валидные jpeg/png/webp/pdf проходят; тест на каждый тип positive+negative; сьют зелёный.
+
+### T3.9 — Identity ↔ Deal пересечение (identity_ref + копия документа в сделке)
+
+**Контекст + решение владельца (D-DVLT-PROTOCOL).** Данные identity, внесённые в сделку, живут в обоих vault'ах: канонический документ — в `IdentityContainer` владельца (переиспользуемый, уже так с T2.1), **полная копия — в сделке** (vault самодостаточен), связь — событие `identity_ref` в цепи через общий `doc_hash`.
+
+- [ ] Новый `AttachmentKind.identity_doc`; копия документа сохраняется как Attachment сделки (R2, streaming SHA-256, валидация T3.8). Доступ — участники сделки (существующий gate); канонический контейнер — только владелец.
+- [ ] `identity_ref` событие: payload `{container_id, attachment_id, doc_hash, badge_id?, doc_type, doc_country}`. `doc_hash` обязан совпадать у контейнера, attachment'а и payload'а.
+- [ ] Verification upload flow (T2.1) в контексте сделки: контейнер + бейдж (как раньше) + attachment-копия + `identity_ref` — одна транзакция.
+- [ ] DealVault UI: system-message «Документ верифицирован и добавлен в vault» + бейдж.
+- [ ] Тесты: тройное совпадение doc_hash, подмена копии ловится verify, self-custody path (422 как в T2.1 — без изменений).
+
+**Acceptance:** после upload в сделке существуют IdentityContainer + Attachment-копия + `identity_ref` в цепи; `doc_hash` совпадает во всех трёх местах; подмена копии детектируется `GET /vault/verify`.
+
+### T3.10 — DealVault: маркетинговая презентация + лендинг
+
+**Контекст.** Сразу после закрытия T3.9 — публичная упаковка концепции «Verifiable Vault Protocol»: преза + секция лендинга на базе Concept v0.1 и реализованного (полная цепь, seal, identity-пересечение, якоря).
+
+- [ ] Презентация концепции (структура: проблема доверия → Vault ≠ база данных → Identity/Deal Vault → immutability + подписи + якоря → roadmap: Query, .dvlt, IPFS/OTS).
+- [ ] Секция/страница на лендинге (DESIGNGUIDELINES + Bento).
+- [ ] Тон: «Trust is derived from cryptographic evidence» — без обещаний невыключенных фич (публикация якорей — как roadmap, не как факт).
+
+**Acceptance:** преза согласована владельцем; лендинг-секция задеплоена; формулировки не заявляют невключённые механизмы как работающие.
+
 ## 💳 ЭТАП 4 — Карточные платежи + Regulatory KYC (Фаза 4)
 
 ### T4.1 — Классический regulatory KYC (person-level)
