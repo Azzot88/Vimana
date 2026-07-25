@@ -60,21 +60,35 @@ def _backfill_chain(conn) -> None:
             prev_hash=prev_hash,
         )
 
-        conn.execute(
-            sa.text(
-                "UPDATE deal_events SET seq = :seq, "
-                "entry_hash = decode(:entry_hash, 'hex'), "
-                "prev_hash = CASE WHEN :prev_hash IS NULL THEN NULL "
-                "ELSE decode(:prev_hash, 'hex') END "
-                "WHERE id = :id"
-            ),
-            {
-                "seq": seq,
-                "entry_hash": entry_hash.hex(),
-                "prev_hash": prev_hash.hex() if prev_hash is not None else None,
-                "id": row.id,
-            },
-        )
+        # Two separate statements — asyncpg can't infer parameter type when
+        # a param sits inside a CASE whose branches produce different types
+        # (both need to know the target type at plan time, and NULL is
+        # untyped). Splitting sidesteps `AmbiguousParameterError`.
+        if prev_hash is None:
+            conn.execute(
+                sa.text(
+                    "UPDATE deal_events SET seq = :seq, "
+                    "entry_hash = decode(:entry_hash, 'hex'), "
+                    "prev_hash = NULL "
+                    "WHERE id = :id"
+                ),
+                {"seq": seq, "entry_hash": entry_hash.hex(), "id": row.id},
+            )
+        else:
+            conn.execute(
+                sa.text(
+                    "UPDATE deal_events SET seq = :seq, "
+                    "entry_hash = decode(:entry_hash, 'hex'), "
+                    "prev_hash = decode(:prev_hash, 'hex') "
+                    "WHERE id = :id"
+                ),
+                {
+                    "seq": seq,
+                    "entry_hash": entry_hash.hex(),
+                    "prev_hash": prev_hash.hex(),
+                    "id": row.id,
+                },
+            )
         prev_by_deal[deal_key] = entry_hash
 
 
