@@ -168,6 +168,7 @@
 | Landing + Waitlist public route (T1.18) | `frontend/src/pages/LandingPage.tsx` |
 | Frontend smoke-тесты (7 кейсов через vitest) | `frontend/src/test/`, `frontend/src/**/*.test.tsx` |
 | Docker compose dev с nginx dynamic DNS resolver + SSL termination | `docker-compose.dev.yml`, `nginx/default.conf` |
+| **Деплой frontend после T_SEC.2 (D-STATIC-FRONTEND)** — в работающем контейнере НЕТ npm/node (multi-stage: `node:22-alpine` собирает → `nginx:1.27-alpine` раздаёт `dist/`), source volume-mount убран. `docker compose exec frontend npm run build` → «npm: executable file not found»; `restart frontend` НЕ подхватывает изменения исходников. Единственный способ выкатить фронт (включая один только `version.ts`): `docker compose -f docker-compose.dev.yml up -d --build frontend` | `frontend/Dockerfile`, `docker-compose.dev.yml` |
 | Nginx custom 502/503/504 page с auto-refresh + healthcheck-based startup (2026-07-14) | `nginx/_error.html`, `nginx/default.conf`, `docker-compose.dev.yml` |
 | Vite build vendor chunk splitting (react/i18n/phone) — main bundle < 500 kB | `frontend/vite.config.ts`, `frontend/package.json` |
 | Receiving Address helper (T1.26) + share-address message prefix `📍 SHARED ADDRESS` | `backend/app/core/address.py` |
