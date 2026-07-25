@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DealVault — чёрный ящик каждой доставки · Vimana</title>
+<!-- v1 · 2026-07-25 · T3.10 · русская версия, «человеческий язык» -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1626; --navy2:#16304F; --surface:#0F1E32;
+    --cyan:#58B0D9; --amber:#FF7A2F; --text:#E5E7EB; --muted:#9CA8B8;
+    --success:#16A34A; --radius:20px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--navy);color:var(--text);font-family:'Inter',sans-serif;line-height:1.6}
+  section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    padding:64px clamp(20px,7vw,120px);position:relative;border-bottom:1px solid rgba(88,176,217,.08)}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;line-height:1.15}
+  h1{font-size:clamp(34px,5.5vw,64px);font-weight:700}
+  h2{font-size:clamp(26px,3.6vw,42px);font-weight:600;margin-bottom:28px}
+  h3{font-size:20px;font-weight:600;margin-bottom:10px}
+  p{max-width:720px}
+  .lead{font-size:clamp(17px,1.6vw,21px);color:var(--muted)}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .num{position:absolute;top:40px;right:clamp(20px,7vw,120px);font-family:'IBM Plex Mono',monospace;
+    color:rgba(156,168,184,.45);font-size:13px;letter-spacing:.12em}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--cyan);border:1px solid rgba(88,176,217,.35);
+    border-radius:999px;padding:6px 14px;margin-bottom:26px}
+  .amber{color:var(--amber)} .cyan{color:var(--cyan)}
+  .bento{display:grid;gap:16px;margin-top:36px}
+  .cell{background:var(--surface);border:1px solid rgba(88,176,217,.12);border-radius:var(--radius);
+    padding:26px 24px}
+  .cell .ic{font-size:26px;margin-bottom:12px;display:block}
+  .cell p{font-size:15px;color:var(--muted)}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .stamp{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;
+    font-size:13px;color:var(--amber);border:1.5px dashed rgba(255,122,47,.5);border-radius:10px;
+    padding:10px 16px;margin-top:26px;letter-spacing:.06em}
+  .quote{border-left:3px solid var(--amber);padding:6px 0 6px 22px;margin:30px 0;
+    font-family:'Space Grotesk',sans-serif;font-size:clamp(19px,2vw,25px);font-weight:500;max-width:760px}
+  .soon{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--navy);background:var(--amber);border-radius:6px;
+    padding:3px 10px;margin-left:10px;vertical-align:middle}
+  .steps{counter-reset:s}
+  .steps .cell{position:relative;padding-top:54px}
+  .steps .cell::before{counter-increment:s;content:"0" counter(s);position:absolute;top:20px;left:24px;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--cyan);letter-spacing:.12em}
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px}
+  @media(max-width:820px){.vs{grid-template-columns:1fr}}
+  .vs .cell.bad{border-color:rgba(220,38,38,.25)}
+  .vs .cell.good{border-color:rgba(22,163,74,.35)}
+  .footer-line{margin-top:40px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
+  ul.plain{list-style:none;margin-top:14px}
+  ul.plain li{padding-left:26px;position:relative;margin-bottom:10px;color:var(--muted);font-size:15px}
+  ul.plain li::before{content:"✈";position:absolute;left:0;color:var(--cyan);font-size:13px;top:3px}
+</style>
+</head>
+<body>
+
+<!-- 1 · Титул -->
+<section>
+  <span class="num">01 / 10 · VIMANA</span>
+  <span class="tag">Vimana · Sacred Logistics</span>
+  <h1>DealVault —<br>чёрный ящик <span class="amber">каждой доставки</span></h1>
+  <p class="lead" style="margin-top:26px">Ваша посылка летит в чьём-то свободном чемодане.<br>
+  А доказательство каждого шага — остаётся в чёрном ящике. Навсегда.</p>
+  <div class="stamp">✈ ЗАПИСАНО · ЗАПЕЧАТАНО · ПРОВЕРЯЕМО</div>
+</section>
+
+<!-- 2 · Проблема -->
+<section>
+  <span class="num">02 / 10 · ПРОБЛЕМА</span>
+  <h2>Отдать ценное незнакомому человеку — страшно</h2>
+  <p class="lead">Люди уже возят документы, лекарства и посылки друг для друга — в чатах на десятки тысяч участников. Этот рынок существует давно. Но держится он на честном слове.</p>
+  <div class="bento g3">
+    <div class="cell"><span class="ic">🤝</span><h3>Всё на словах</h3><p>Договорились в переписке, передали из рук в руки. Если что-то пошло не так — доказательств нет.</p></div>
+    <div class="cell"><span class="ic">⚖️</span><h3>«Слово против слова»</h3><p>«Я отдал» — «А я не получал». Разбирать такое некому, и правда не побеждает.</p></div>
+    <div class="cell"><span class="ic">💸</span><h3>Деньги вперёд — кому?</h3><p>Платить до доставки рискует отправитель. После — рискует курьер. Оба нервничают.</p></div>
+  </div>
+</section>
+
+<!-- 3 · Что такое DealVault -->
+<section>
+  <span class="num">03 / 10 · РЕШЕНИЕ</span>
+  <h2>Как чёрный ящик в самолёте — только для вашей посылки</h2>
+  <p class="lead">У каждой доставки в Vimana есть своя запись: о чём договорились, кто что написал, фото передачи и получения, все документы. Эта запись устроена так, что её <b style="color:var(--text)">нельзя стереть или переписать задним числом</b>. Никому. Даже нам самим.</p>
+  <div class="quote">«Записанное — записано. Из песни слова не выкинешь, из чёрного ящика — страницу.»</div>
+  <p class="lead">Поэтому спор превращается из скандала в просмотр записи.</p>
+</section>
+
+<!-- 4 · Как проходит доставка -->
+<section>
+  <span class="num">04 / 10 · КАК ЭТО РАБОТАЕТ</span>
+  <h2>Четыре шага — и каждый оставляет след</h2>
+  <div class="bento g4 steps">
+    <div class="cell"><span class="ic">🤝</span><h3>Договорились</h3><p>Условия, цена и сроки зафиксированы в сделке — не «где-то в переписке».</p></div>
+    <div class="cell"><span class="ic">📸</span><h3>Передали</h3><p>Фото передачи попадает в чёрный ящик. С этой секунды его нельзя подменить.</p></div>
+    <div class="cell"><span class="ic">✈️</span><h3>Летит</h3><p>Обе стороны видят статус. Никаких «ну что там?» в три часа ночи.</p></div>
+    <div class="cell"><span class="ic">📦</span><h3>Получили</h3><p>Фото получения, подтверждение — и запись <b>запечатывается</b>, как конверт с сургучной печатью.</p></div>
+  </div>
+  <p class="footer-line">ПОСЛЕ ПЕЧАТИ ЗАПИСЬ НЕЛЬЗЯ ДОПОЛНИТЬ ИЛИ ИЗМЕНИТЬ — ТОЛЬКО ПРОЧИТАТЬ И ПРОВЕРИТЬ</p>
+</section>
+
+<!-- 5 · Люди и документы -->
+<section>
+  <span class="num">05 / 10 · КТО ЭТИ ЛЮДИ</span>
+  <h2>Вы видите, с кем имеете дело</h2>
+  <div class="bento g3">
+    <div class="cell"><span class="ic">🪪</span><h3>Документы — по-взрослому</h3><p>Можно попросить человека подтвердить личность документом. Документ сохраняется и у владельца, и в деле сделки — если что, всегда можно доказать, кто есть кто.</p></div>
+    <div class="cell"><span class="ic">📈</span><h3>Репутация делом</h3><p>Не звёздочки и не отзывы, которые можно накрутить, — а история реально завершённых доставок с фото.</p></div>
+    <div class="cell"><span class="ic">🔒</span><h3>Личное — личным</h3><p>Ваши документы не гуляют по сети: их видят только участники вашей сделки. Посторонним — никогда.</p></div>
+  </div>
+</section>
+
+<!-- 6 · Спор и арбитр -->
+<section>
+  <span class="num">06 / 10 · ЕСЛИ ЧТО-ТО ПОШЛО НЕ ТАК</span>
+  <h2>Спор решает не тот, кто громче, — а запись</h2>
+  <p class="lead">Открывается спор — подключается нейтральный арбитр. Он получает доступ к записи сделки <b style="color:var(--text)">только с вашего разрешения</b>, и даже сам факт того, что он её открыл, — записывается.</p>
+  <div class="bento g2 vs">
+    <div class="cell bad"><h3>Без Vimana</h3><p>Скандал в чате, скриншоты, взаимные обвинения, заблокировали друг друга. Правды нет.</p></div>
+    <div class="cell good"><h3>С Vimana</h3><p>Арбитр открывает запись: вот договорённость, вот фото передачи, вот кто что писал. Решение — по фактам.</p></div>
+  </div>
+</section>
+
+<!-- 7 · Деньги под защитой -->
+<section>
+  <span class="num">07 / 10 · ДЕНЬГИ</span>
+  <h2>Деньги ждут в защищённой ячейке <span class="soon">скоро</span></h2>
+  <p class="lead">Никаких «переведи вперёд и надейся». Оплата кладётся в защищённую ячейку — как в банковскую ячейку при сделке с квартирой:</p>
+  <div class="bento g3">
+    <div class="cell"><span class="ic">🔐</span><h3>Отправитель платит в ячейку</h3><p>Курьер видит: деньги есть, они зарезервированы. Но взять их пока нельзя.</p></div>
+    <div class="cell"><span class="ic">✅</span><h3>Доставка подтверждена</h3><p>Получатель подтвердил — ячейка открывается, курьер получает свои деньги.</p></div>
+    <div class="cell"><span class="ic">⚖️</span><h3>Спор?</h3><p>Ячейку открывает только решение арбитра — по записи чёрного ящика.</p></div>
+  </div>
+  <p class="footer-line">ВАЖНО: МЫ НЕ ДЕРЖИМ ВАШИ ДЕНЬГИ У СЕБЯ — ЯЧЕЙКА УСТРОЕНА ТАК, ЧТО ПЛАТФОРМА НЕ МОЖЕТ ЗАБРАТЬ ИХ СЕБЕ. ЗАПУСКАЕМ В БЛИЖАЙШИХ ВЕРСИЯХ.</p>
+</section>
+
+<!-- 8 · Для тех, кто летает -->
+<section>
+  <span class="num">08 / 10 · ВЫ ЛЕТИТЕ</span>
+  <h2>Свободные три килограмма в чемодане — это деньги</h2>
+  <p class="lead">Пилоты, бортпроводники, частые пассажиры — вы всё равно летите. Возьмите с собой конверт с документами или небольшую посылку и заработайте на билете.</p>
+  <ul class="plain">
+    <li><b>Вы защищены.</b> «Я отдал — вот фото из чёрного ящика». Никогда больше «слово против слова».</li>
+    <li><b>Вы решаете.</b> Сами выбираете, что берёте: только документы, только техника — категории под вашим контролем.</li>
+    <li><b>Вы видите отправителя.</b> Его историю доставок, а при желании — и документы.</li>
+    <li><b>Ваша репутация растёт делом.</b> Каждая завершённая доставка — плюс к вашему уровню и к цене ваших рейсов.</li>
+  </ul>
+</section>
+
+<!-- 9 · Для тех, кто отправляет -->
+<section>
+  <span class="num">09 / 10 · ВЫ ОТПРАВЛЯЕТЕ</span>
+  <h2>Документы, ценное, живое — из рук в руки</h2>
+  <p class="lead">Для владельцев бизнеса и всех, кому «обычной почтой» — страшно, долго или нельзя.</p>
+  <div class="bento g3">
+    <div class="cell"><span class="ic">📄</span><h3>Документы и образцы</h3><p>Контракт, доверенность, образец товара — долетит за часы, а не «за 5–10 рабочих дней», и с доказательством каждого шага.</p></div>
+    <div class="cell"><span class="ic">💎</span><h3>Ценное</h3><p>То, что не доверишь конвейеру: техника, запчасти, лекарства, подарки. В ручной клади, у конкретного человека, которого вы видели.</p></div>
+    <div class="cell"><span class="ic">🐾</span><h3>Животные</h3><p>Питомец летит на руках у заботливого человека — не в холодном багажном отсеке. Вы видите фото на каждом этапе пути.</p></div>
+  </div>
+</section>
+
+<!-- 10 · Не верьте на слово + финал -->
+<section>
+  <span class="num">10 / 10 · ГЛАВНОЕ</span>
+  <h2>Не верьте нам на слово. <span class="cyan">Проверьте.</span></h2>
+  <p class="lead">В каждой сделке есть кнопка «Проверить»: система при вас сверяет запись и показывает — цела ли она, всё ли на месте, не пытался ли кто-то что-то переписать. Так устроен весь DealVault: <b style="color:var(--text)">доверие здесь не обещание платформы, а свойство записи</b>.</p>
+  <div class="quote">Если обычная доставка говорит «поверьте нам» —<br>Vimana говорит «проверьте сами».</div>
+  <div class="stamp">✈ СТАРТ: КОРИДОР ОАЭ ↔ США</div>
+  <p class="footer-line">VIMANA · SACRED LOGISTICS — ЛЮДИ И ЕСТЬ СЕТЬ · WINGS OF TRUST</p>
+</section>
+
+</body>
+</html>
