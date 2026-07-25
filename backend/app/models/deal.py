@@ -62,7 +62,19 @@ class Deal(Base):
 
 
 class DealEvent(Base):
+    """T3.6 — every row is a link in its deal's tamper-evident hash chain.
+
+    `seq`/`entry_hash`/`prev_hash` are NOT NULL and assigned exclusively by
+    `app.core.deal_chain.append_deal_event`. Constructing a `DealEvent` directly
+    and adding it to the session fails at flush — that is deliberate: an
+    unchained event would be a hole in the arbitration record, and a loud
+    IntegrityError beats a silent gap.
+    """
+
     __tablename__ = "deal_events"
+    __table_args__ = (
+        UniqueConstraint("deal_id", "seq", name="uq_deal_events_deal_seq"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
@@ -73,7 +85,45 @@ class DealEvent(Base):
     nostr_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nostr_created_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Chain position within the deal, starting at 1. Gapless and monotonic.
+    seq: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    entry_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
+    # NULL for a deal's first entry (hashed as deal_chain.GENESIS_HASH).
+    prev_hash: Mapped[bytes | None] = mapped_column(LargeBinary(32), nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class DealChainAnchor(Base):
+    """T3.6 — a chain head published to third-party Nostr relays.
+
+    The hash chain proves nobody edited the log *behind our back*; it cannot
+    prove we did not rewrite it ourselves, since we assign `seq`. Publishing the
+    head to relays we do not control, signed by the platform key, puts someone
+    else's timestamp on it — after which the history behind that head is fixed.
+
+    One row per successfully published head. Rows are only written when at least
+    one relay accepted the event, so an unpublished head is simply retried on
+    the next tick.
+    """
+
+    __tablename__ = "deal_chain_anchors"
+    __table_args__ = (
+        UniqueConstraint("deal_id", "seq", name="uq_deal_chain_anchors_deal_seq"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"), index=True)
+    # Chain head at anchoring time: everything up to and including this seq is
+    # covered by `entry_hash`.
+    seq: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    entry_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
+    nostr_event_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    nostr_pubkey: Mapped[str] = mapped_column(String(64), nullable=False)
+    # {relay_url: accepted} as reported by the relays at publish time.
+    relays: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 

@@ -10,10 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.deal_chain import append_deal_event
 from app.core.keypair import decrypt_nsec
 from app.core.permissions import Permission, require_perm
 from app.core.threshold import get_arbiter_user_id, nip04_decrypt
-from app.models.deal import Deal, DealEvent, DealEventType, DealVaultMessage, Dispute
+from app.models.deal import Deal, DealEventType, DealVaultMessage, Dispute
 from app.models.user import User
 
 router = APIRouter()
@@ -139,13 +140,15 @@ async def arbiter_reveal(
             }
         )
 
-    audit = DealEvent(
+    # `author=None` keeps T2.3 behaviour: this entry was never Nostr-signed.
+    # It is still chained, so the reveal cannot be quietly dropped from the log.
+    audit = await append_deal_event(
+        db,
         deal_id=deal_id,
         event_type=DealEventType.arbiter_opened,
         actor_id=arbiter.id,
         payload={"kind": "arbiter_share_revealed", "count": len(revealed)},
     )
-    db.add(audit)
     await db.commit()
 
     return {"revealed": revealed, "audit_event_id": str(audit.id)}

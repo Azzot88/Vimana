@@ -2,7 +2,7 @@ from app.models.address import ReceivingAddress
 from app.models.user import User
 from app.models.social import InviteLink, Connection
 from app.models.marketplace import Trip, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
-from app.models.deal import Deal, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant, DealParticipant, DealParticipantRole
+from app.models.deal import Deal, DealChainAnchor, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant, DealParticipant, DealParticipantRole
 from app.models.metrics import PublishMetric
 from app.models.notices import (
     NoticeSeverity, NoticeSurface, PlatformNotice, RouteNote, RouteStatus,
@@ -23,7 +23,7 @@ __all__ = [
     "Deal", "DealEvent", "DealVaultMessage", "Attachment", "Dispute",
     "DealStatus", "DealEventType", "AttachmentKind", "DisputeStatus",
     "OperatorAccessGrant", "PublishMetric",
-    "DealParticipant", "DealParticipantRole",
+    "DealParticipant", "DealParticipantRole", "DealChainAnchor",
     "RouteNote", "RouteStatus", "PlatformNotice",
     "NoticeSeverity", "NoticeSurface",
     "IdentityContainer", "OwnerRole", "SanctionsList", "SanctionsStatus",

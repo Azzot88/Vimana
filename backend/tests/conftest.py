@@ -795,6 +795,90 @@ async def _ensure_dealevent_types(engine) -> None:
             )
 
 
+async def _ensure_deal_event_chain(engine) -> None:
+    """T3.6: seq/entry_hash/prev_hash on deal_events + deal_chain_anchors.
+
+    Mirrors migration 0025 for the long-lived `vimana_test` database, which
+    `create_all` cannot alter. Rows left over from earlier runs are chained in
+    `(timestamp, id)` order using the production hash function, so the NOT NULL
+    constraint can be applied without dropping test history.
+    """
+    import json as _json
+
+    from app.core.deal_chain import compute_entry_hash
+
+    async with engine.begin() as conn:
+        existing = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='deal_events' AND column_name='entry_hash'"
+                )
+            )
+        ).fetchone()
+        if existing:
+            return
+
+        await conn.execute(text("ALTER TABLE deal_events ADD COLUMN seq BIGINT"))
+        await conn.execute(text("ALTER TABLE deal_events ADD COLUMN entry_hash BYTEA"))
+        await conn.execute(text("ALTER TABLE deal_events ADD COLUMN prev_hash BYTEA"))
+
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT id::text AS id, deal_id::text AS deal_id, "
+                    "event_type::text AS event_type, actor_id::text AS actor_id, "
+                    "nostr_event_id, payload::text AS payload, timestamp "
+                    "FROM deal_events ORDER BY deal_id, timestamp, id"
+                )
+            )
+        ).fetchall()
+
+        seq_by_deal: dict[str, int] = {}
+        prev_by_deal: dict[str, bytes | None] = {}
+        for row in rows:
+            seq = seq_by_deal.get(row.deal_id, 0) + 1
+            seq_by_deal[row.deal_id] = seq
+            prev_hash = prev_by_deal.get(row.deal_id)
+            entry_hash = compute_entry_hash(
+                deal_id=uuid.UUID(row.deal_id),
+                seq=seq,
+                timestamp=row.timestamp,
+                event_type=row.event_type,
+                actor_id=uuid.UUID(row.actor_id) if row.actor_id else None,
+                nostr_event_id=row.nostr_event_id,
+                payload=_json.loads(row.payload) if row.payload is not None else None,
+                prev_hash=prev_hash,
+            )
+            await conn.execute(
+                text(
+                    "UPDATE deal_events SET seq = :seq, "
+                    "entry_hash = decode(:entry_hash, 'hex'), "
+                    "prev_hash = CASE WHEN :prev_hash IS NULL THEN NULL "
+                    "ELSE decode(:prev_hash, 'hex') END "
+                    "WHERE id = :id"
+                ),
+                {
+                    "seq": seq,
+                    "entry_hash": entry_hash.hex(),
+                    "prev_hash": prev_hash.hex() if prev_hash is not None else None,
+                    "id": row.id,
+                },
+            )
+            prev_by_deal[row.deal_id] = entry_hash
+
+        await conn.execute(text("ALTER TABLE deal_events ALTER COLUMN seq SET NOT NULL"))
+        await conn.execute(
+            text("ALTER TABLE deal_events ALTER COLUMN entry_hash SET NOT NULL")
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE deal_events ADD CONSTRAINT uq_deal_events_deal_seq "
+                "UNIQUE (deal_id, seq)"
+            )
+        )
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     _ensure_test_database()
@@ -805,6 +889,7 @@ async def test_engine():
     await _ensure_connections_unique(engine)
     await _ensure_role_column(engine)
     await _ensure_dealevent_types(engine)
+    await _ensure_deal_event_chain(engine)
     await _ensure_encrypted_messages(engine)
     await _ensure_inquiry_tables(engine)
     await _ensure_dual_role(engine)

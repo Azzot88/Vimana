@@ -21,10 +21,16 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.cleanup.cleanup_e2e_users",
         "schedule": 86400.0,
     },
+    # T3.6 — head-only, so one tick costs one event per deal that moved.
+    "anchor-deal-chains-hourly": {
+        "task": "app.tasks.chain_anchor.anchor_deal_chains",
+        "schedule": 3600.0,
+    },
 }
 celery_app.conf.task_routes = {
     "app.tasks.notifications.*": {"queue": "notifications"},
     "app.tasks.uba.*": {"queue": "notifications"},
     "app.tasks.nostr_whitelist.*": {"queue": "notifications"},
     "app.tasks.cleanup.*": {"queue": "notifications"},
+    "app.tasks.chain_anchor.*": {"queue": "notifications"},
 }

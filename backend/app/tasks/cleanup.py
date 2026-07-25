@@ -20,6 +20,7 @@ from app.core.database import SyncSessionLocal
 from app.models.deal import (
     Attachment,
     Deal,
+    DealChainAnchor,
     DealEvent,
     DealParticipant,
     DealVaultMessage,
@@ -88,6 +89,10 @@ def cleanup_e2e_users() -> dict:
                 delete(DealVaultMessage).where(DealVaultMessage.deal_id.in_(deal_ids))
             )
             db.execute(delete(DealEvent).where(DealEvent.deal_id.in_(deal_ids)))
+            # T3.6 — anchors FK to deals; drop them before the deal rows.
+            db.execute(
+                delete(DealChainAnchor).where(DealChainAnchor.deal_id.in_(deal_ids))
+            )
             dispute_ids = [
                 row[0]
                 for row in db.execute(

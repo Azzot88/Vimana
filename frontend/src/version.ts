@@ -5,4 +5,5 @@
 // T_UX.4 fully closed (addresses + avatars + edit modal + landing on logo).
 // T2.1 pt.3 closed — a Phase 2 leftover, but the version is a monotonic progress
 // counter, so it keeps counting inside the current phase instead of going back.
-export const APP_VERSION = '0.03.12'
+// T3.6 closed — deal_events hash chain + Nostr anchoring.
+export const APP_VERSION = '0.03.13'

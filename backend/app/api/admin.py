@@ -19,9 +19,11 @@ from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.permissions import Permission, require_perm
-from app.core.signing import sign_deal_event, sign_vault_message
+from app.core.deal_chain import append_deal_event
+from app.core.signing import sign_vault_message
 from app.models.deal import (
     Deal,
+    DealChainAnchor,
     DealEvent,
     DealEventType,
     DealStatus,
@@ -94,14 +96,14 @@ async def open_dispute(
     db.add(OperatorAccessGrant(dispute_id=dispute.id, granted_by=current_user.id))
 
     deal.status = DealStatus.disputed
-    dispute_event = DealEvent(
+    await append_deal_event(
+        db,
         deal_id=deal_id,
         event_type=DealEventType.dispute_opened,
         actor_id=current_user.id,
         payload={"reason": body.reason.strip()[:200]},
+        author=current_user,
     )
-    sign_deal_event(dispute_event, current_user)
-    db.add(dispute_event)
 
     await db.commit()
     await db.refresh(dispute)
@@ -233,14 +235,14 @@ async def resolve_dispute(
 
     deal = await db.get(Deal, dispute.deal_id)
     if deal:
-        resolved_event = DealEvent(
+        await append_deal_event(
+            db,
             deal_id=deal.id,
             event_type=DealEventType.dispute_resolved,
             actor_id=current_user.id,
             payload={"verdict": body.verdict[:500]},
+            author=current_user,
         )
-        sign_deal_event(resolved_event, current_user)
-        db.add(resolved_event)
         if body.closes_deal:
             deal.status = DealStatus.closed
 
@@ -290,14 +292,14 @@ async def arbiter_read_vault(
 
     # Audit trail: DealEvent + system-message in the chat
     now = datetime.now(timezone.utc)
-    opened_event = DealEvent(
+    await append_deal_event(
+        db,
         deal_id=deal_id,
         event_type=DealEventType.arbiter_opened,
         actor_id=current_user.id,
         payload={"dispute_id": str(dispute.id) if dispute else None, "at": now.isoformat()},
+        author=current_user,
     )
-    sign_deal_event(opened_event, current_user)
-    db.add(opened_event)
     dispute_ref = f"#{str(dispute.id)[:8]}" if dispute else "(direct)"
     sys_msg = DealVaultMessage(
         deal_id=deal_id,
@@ -435,6 +437,10 @@ async def delete_user(
             await db.execute(delete(Attachment).where(Attachment.message_id.in_(msg_ids)))
         await db.execute(delete(DealVaultMessage).where(DealVaultMessage.deal_id.in_(deal_ids)))
         await db.execute(delete(DealEvent).where(DealEvent.deal_id.in_(deal_ids)))
+        # T3.6 — anchors FK to deals; drop them before the deal rows.
+        await db.execute(
+            delete(DealChainAnchor).where(DealChainAnchor.deal_id.in_(deal_ids))
+        )
         dispute_ids = [
             r[0]
             for r in (

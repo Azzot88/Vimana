@@ -38,6 +38,53 @@
 > - **T3.3** ✅ MVP (archived) — Recipient role + custodial keypair + server-mediated decrypt. Follow-up: UI kick-out, encryptE2E авто-recipients.
 > - **T3.5 pt.1 + pt.2** ✅ MVP (archived) — Nostr publish bridge + strfry + NIP-42/WoT-gate + metrics + republish. Follow-up: **D-TRANSLATION** мультиязычный перевод описаний рейсов (pt.3).
 
+### T3.6 — Tamper-evident hash chain over DealEvents + Nostr anchoring ✅ MVP
+
+**Контекст.** До T3.6 `DealEvent` нёс `nostr_sig`/`nostr_event_id` (T2.2 pt.2) — подпись авторства одной записи. Она **не** доказывает три вещи, критичных для арбитража: (a) **completeness** — сервер мог не записать «неудобное» событие; (b) **ordering** — строки можно поменять местами; (c) **non-deletion** — удалённая строка не оставляет следа. Арбитраж опирается на DealVault как evidence layer, значит эти три бреши закрывать обязательно.
+
+**Threat model (важно, документировано в module docstring):** цепь защищает от того, у кого есть **write** к БД (компрометированный backup, SQL-инъекция, rogue DBA, restore из подделанного дампа). Она **не** защищает от самой платформы — `seq` присваиваем мы, теоретически можем пересчитать всю цепь. Именно поэтому Vimana одновременно арбитр (`ARBITER_USER_ID` + серверный nsec) **и** записчик — а это ровно та конфигурация, где «наш log сходится, мы проверили» проигрывающая сторона обязана оспорить. Пробел закрывается **за пределами** модуля `deal_chain`: `chain_anchor` периодически публикует head'ы в **третьесторонние** relay'и подписанные отдельным platform anchor ключом.
+
+**Модель + миграция:**
+
+- [x] Миграция `0025_deal_event_chain`: `deal_events` расширен `seq BIGINT NOT NULL`, `entry_hash BYTEA(32) NOT NULL`, `prev_hash BYTEA(32) NULL` + `UNIQUE(deal_id, seq)`. Backfill существующих строк в порядке `(timestamp, id)` per deal. **Backfill не ретроактивно tamper-evident** — до миграции строки не хешировались; backfill нужен только чтобы NOT NULL встал и новые entries было к чему цеплять.
+- [x] Новая таблица `deal_chain_anchors(id, deal_id, seq, entry_hash, nostr_event_id, nostr_pubkey, relays JSON, created_at)` + `UNIQUE(deal_id, seq)`. Одна строка на успешно опубликованный head.
+
+**`app/core/deal_chain.py` (316 строк):**
+
+- [x] `compute_entry_hash(deal_id, seq, timestamp, event_type, actor_id?, nostr_event_id?, payload, prev_hash)` — детерминистичный sha256 preimage: **fixed field order** (изменение → invalidate всех chain'ов; новая колонка + versioned migration, не edit). `deal_id` идёт первым (scope binding — entry из A нельзя переместить в B). Presence-байты `\x01`/`\x00` перед optional полями (иначе `actor_id=None` хешится как zero-UUID actor). `nostr_event_id` внутри preimage'а — связывает per-record signature с chain'ом (swap подписи → invalidate от entry дальше).
+- [x] `canonical_json(payload)` — `sort_keys=True, separators=(',',':')`. **Raises `ChainError`** на non-serializable payload — никогда не подставляет `{}` вместо реального значения.
+- [x] `append_deal_event(db, deal_id, event_type, actor, payload, nostr_sig?)` — единственный правильный путь создания `DealEvent`. Берёт transaction-scoped `pg_advisory_xact_lock` на deal → читает head → computes hash → INSERT. Advisory lock релизится и на commit и на rollback — нет explicit unlock который забудут.
+- [x] `DealEvent` конструктор + `db.add()` напрямую → падает на flush (NOT NULL по `seq`/`entry_hash`). Это deliberate: unchained event = дыра в записях, IntegrityError громче silent gap.
+- [x] `verify_chain(db, deal_id)` — recomputes все hash'и от genesis до head, ловит tamper.
+
+**`app/core/chain_anchor.py` (208 строк):**
+
+- [x] `anchor_pending_heads(db)` — обходит deals, у которых head опережает последний anchor. Один event per deal (не per entry — head покрывает всё под собой).
+- [x] Публикует NIP-01 event (kind 30453 vimana-chain-anchor, tags `[["d", deal_id], ["seq", str], ["h", hex(entry_hash)], ["t", "vimana"], ["t", "chain-anchor"]]`, content = canonical_json({...}) с полями).
+- [x] Signed через `CHAIN_ANCHOR_NSEC` env (64-hex). **Отдельный ключ** от `ARBITER_USER_ID` и от per-user keypairs — anchor это statement платформы о своих записях, mixing bluring кто про что attest'ит.
+- [x] `DealChainAnchor` row записывается только если ≥1 relay accepted. Failed publish → нет строки → следующий tick retry того же head.
+- [x] Evidential weight: `NOSTR_FRIENDLY_RELAYS` (третьесторонние), не `NOSTR_OWN_RELAY_URL` — своим strfry можно управлять, значит anchor только там ничего не доказывает. `DealChainAnchor.relays` = per-URL result map для аудита.
+
+**`app/tasks/chain_anchor.py`**: Celery beat, hourly. `CHAIN_ANCHOR_NSEC` unset ИЛИ `NOSTR_PUBLISH_ENABLED=false` → no-op.
+
+**Callsites переписаны на `append_deal_event`** (`api/{admin,deals,threshold}.py`) — раньше делали `db.add(DealEvent(...))` напрямую, теперь бы упало на NOT NULL. Тесты покрывают что во всех трёх code paths chain продолжается.
+
+**Тесты (`test_deal_chain.py`, 39):** hash determinism, canonical JSON (sorted+stripped/None), naive timestamp treated as UTC, non-serializable payload raises (not silent `{}`), presence-byte (None vs zero-UUID vs empty string), genesis GENESIS для первой записи, first entry starts at seq=1 с prev=None, second links to first, two appends в одной транзакции chain'ятся корректно, chains independent per deal, verify empty chain OK, verify intact, edited payload detected, deleted middle entry detected, rewritten prev_hash detected, reordered entries detected, advisory lock защищает от concurrent append race, `append_deal_event` возвращает entry с corectным `seq`/`hash`, каждый admin/threshold/deals callsite chain'ится, anchor tick публикует head, anchor row только при ≥1 relay accepted, failed publish → следующий tick retry, `CHAIN_ANCHOR_NSEC` unset → no-op, `NOSTR_PUBLISH_ENABLED=false` → no-op.
+
+**Acceptance:**
+1. Любой INSERT в `deal_events` через `append_deal_event` получает `seq = max(prev_seq)+1`, `entry_hash = sha256(preimage)`, `prev_hash = head.entry_hash`.
+2. `verify_chain(deal_id)` возвращает `True` для intact chain'а и `False` c detail'ом первой сломанной entry для tamper.
+3. При `CHAIN_ANCHOR_NSEC` + `NOSTR_PUBLISH_ENABLED=true` hourly task публикует все head'ы, изменившиеся с прошлого anchor.
+4. Прямое `db.add(DealEvent(...))` вне `append_deal_event` падает на flush — контракт вшит в схему, не в code review.
+5. **39 backend-тестов зелёные.**
+
+**Follow-up:**
+1. **Публичный endpoint verification** — `GET /api/deals/{id}/chain-proof` для арбитра/проигравшей стороны: отдаёт последние N entries + anchor CID/event_id для independent verification.
+2. **UI badge** на DealPage: «Chain verified · anchored at 2026-07-24 · 3 external relays». Клик → детальная страница с preimage'ами.
+3. **Merkle-tree аггрегация** через N deals для дешёвого anchoring (сейчас 1 event per deal per tick — не масштабируется на >1000 active deals/hour). Anchor одного merkle-root вместо N head'ов.
+4. **Chain для DealVault messages** аналогично DealEvent — сейчас vault-сообщения только signed, не chained.
+5. **Rotation** для `CHAIN_ANCHOR_NSEC` — при компрометации ключа нужен overlap period с двумя ключами.
+
 ## 💳 ЭТАП 4 — Карточные платежи + Regulatory KYC (Фаза 4)
 
 ### T4.1 — Классический regulatory KYC (person-level)
@@ -584,6 +631,24 @@
 - [ ] `chaos-report.md` со списком degradations vs graceful behavior.
 
 **Acceptance:** каждый сценарий → 503/degraded, не 500 crashed. Zero потерянных транзакций.
+
+### EXP-07 — Tamper-evident DealVault: хеш-цепь + внешнее закрепление 🧪 экспериментальное
+
+**Статус:** исследование, вне roadmap. Кода нет. Прототип узкой версии написан и отброшен до коммита.
+
+**Разбор целиком:** [BUZZ.md](BUZZ.md) — анализ внешнего проекта buzz (Nostr-релей, Apache 2.0) + вытекшая проработка доказательности DealVault.
+
+**Суть.** `DealEvent.nostr_sig` доказывает авторство одной записи, но не полноту, не порядок и не факт неудаления — а именно это нужно арбитру. Хеш-цепь их закрывает. Ключевая тонкость: custodial-подпись ставится нашим сервером нашим же ключом, поэтому против платформы она не доказывает ничего — а Vimana одновременно арбитр и хранитель записи. Отсюда обязательны две вещи: `prev` внутри подписываемого участником события и публикация головы цепи в сторонние релеи.
+
+- [ ] Решить 7 открытых вопросов из BUZZ.md §7 (публиковать ли 4802, непрозрачный `anchor_id`, разрешение развилки, подпись `prev` на кнопках, частота анкера, содержимое `/chain`, единая таблица цепи).
+- [ ] Единая таблица `deal_chain_entries` — одна цепь на сделку, включающая и сообщения, и события (взаимный порядок = предмет спора).
+- [ ] `prev` в теге NIP-01 `["prev","<hex>"]` — читаем сервером, подписан участником, контент остаётся непрозрачным.
+- [ ] Анкер головы цепи в `NOSTR_FRIENDLY_RELAYS` (kind 4803), под непрозрачным `anchor_id`.
+- [ ] `GET /deals/{id}/chain` — граница заверенности, а не одна зелёная галочка.
+
+**Зависимости:** требует `NOSTR_PUBLISH_ENABLED=true` (сейчас false — см. T3.5 follow-up). Не конфликтует с T2.3 (threshold) и T3.2 (grants).
+
+**Acceptance (когда/если активируется):** правка, удаление или перестановка любой записи ломает верификацию; участник с одним своим подписанным сообщением на руках может доказать состояние всей истории под ним без доступа к нашей БД.
 
 ### Follow-up: vite/esbuild security advisory
 

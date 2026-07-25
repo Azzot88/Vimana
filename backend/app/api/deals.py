@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -6,14 +7,14 @@ from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.notice_pin import maybe_pin_route_note
-from app.core.signing import sign_deal_event
+from app.core.deal_chain import append_deal_event, verify_chain
 from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.tasks.notifications import notify_deal_status
-from app.models.deal import Deal, DealEvent, DealEventType, DealStatus
+from app.models.deal import Deal, DealChainAnchor, DealEventType, DealStatus
 from app.models.marketplace import Category, Order, OrderStatus, Trip, TripInquiry, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
@@ -85,14 +86,14 @@ async def match_deal(
     order.trip_id = trip.id
     order.status = OrderStatus.matched
 
-    event = DealEvent(
+    await append_deal_event(
+        db,
         deal_id=deal.id,
         event_type=DealEventType.created,
         actor_id=current_user.id,
         payload={"trip_id": str(trip.id), "order_id": str(order.id)},
+        author=current_user,
     )
-    sign_deal_event(event, current_user)
-    db.add(event)
 
     # T1.22: link existing inquiry thread (if any) to the new deal so pre-deal
     # chat history is scoped to the deal afterwards.
@@ -129,14 +130,13 @@ async def accept_deal(
 
     deal.status = DealStatus.accepted
 
-    event = DealEvent(
+    await append_deal_event(
+        db,
         deal_id=deal.id,
         event_type=DealEventType.accepted,
         actor_id=current_user.id,
-        payload=None,
+        author=current_user,
     )
-    sign_deal_event(event, current_user)
-    db.add(event)
 
     await db.commit()
     await db.refresh(deal)
@@ -170,14 +170,14 @@ async def add_event(
     if event_type in status_map:
         deal.status = status_map[event_type]
 
-    event = DealEvent(
+    event = await append_deal_event(
+        db,
         deal_id=deal.id,
         event_type=event_type,
         actor_id=current_user.id,
         payload=body.payload,
+        author=current_user,
     )
-    sign_deal_event(event, current_user)
-    db.add(event)
 
     await db.commit()
     await db.refresh(event)
@@ -200,26 +200,25 @@ async def confirm_deal(
 
     deal.status = DealStatus.confirmed
 
-    confirmed_event = DealEvent(
+    # Two entries in one transaction: `append_deal_event` flushes, so the second
+    # call reads the first as its chain head and links to it.
+    await append_deal_event(
+        db,
         deal_id=deal.id,
         event_type=DealEventType.confirmed,
         actor_id=current_user.id,
-        payload=None,
+        author=current_user,
     )
-    sign_deal_event(confirmed_event, current_user)
-    db.add(confirmed_event)
-    await db.flush()
 
     deal.status = DealStatus.closed
 
-    closed_event = DealEvent(
+    await append_deal_event(
+        db,
         deal_id=deal.id,
         event_type=DealEventType.closed,
         actor_id=current_user.id,
-        payload=None,
+        author=current_user,
     )
-    sign_deal_event(closed_event, current_user)
-    db.add(closed_event)
 
     # T2.4 — Trust graph: `dealt_with` edge on close (symmetric).
     await add_dealt_with(db, deal)
@@ -270,6 +269,75 @@ async def get_deal(
         declared_value=order.declared_value if order else 0,
         currency=order.currency if order else "USD",
     )
+
+
+class ChainStatusOut(BaseModel):
+    ok: bool
+    length: int
+    head_seq: int | None = None
+    head_hash: str | None = None
+    broken_at: int | None = None
+    reason: str | None = None
+    anchored_seq: int | None = None
+    anchored_hash: str | None = None
+    anchor_event_id: str | None = None
+    anchored_at: datetime | None = None
+
+
+@router.get("/{deal_id}/chain", response_model=ChainStatusOut)
+async def get_deal_chain(
+    deal_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.6 — recompute the deal's hash chain and report its anchoring status.
+
+    Two independent claims, deliberately reported separately:
+
+    - `ok` — the log is internally consistent (nothing edited, reordered, or
+      removed *behind our back*).
+    - `anchored_seq` / `anchor_event_id` — how far the log has been published to
+      relays we do not control. Everything at or below `anchored_seq` can no
+      longer be rewritten by us either; anything above it is covered only by the
+      first claim.
+
+    A caller who needs proof rather than reassurance should compare
+    `anchored_hash` against the anchor event fetched from a third-party relay.
+
+    Access mirrors `GET /deals/{id}` (sender/carrier), plus superuser. Arbiter
+    access runs through the grant-gated admin surface — see follow-up in TASKS.
+    """
+    deal = await db.get(Deal, deal_id)
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    if current_user.id not in (deal.sender_id, deal.carrier_id) and not is_superuser(
+        current_user
+    ):
+        raise HTTPException(status_code=403, detail="Not a deal participant")
+
+    result = await verify_chain(db, deal_id)
+
+    anchor = (
+        (
+            await db.execute(
+                select(DealChainAnchor)
+                .where(DealChainAnchor.deal_id == deal_id)
+                .order_by(DealChainAnchor.seq.desc())
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if anchor is not None:
+        result = {
+            **result,
+            "anchored_seq": anchor.seq,
+            "anchored_hash": bytes(anchor.entry_hash).hex(),
+            "anchor_event_id": anchor.nostr_event_id,
+            "anchored_at": anchor.created_at,
+        }
+    return ChainStatusOut(**result)
 
 
 @router.get("", response_model=Page[DealOut])
