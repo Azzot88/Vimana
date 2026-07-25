@@ -5,6 +5,10 @@ from datetime import datetime, timedelta, timezone
 
 # Disable rate limiting before importing app modules that read the env at import time.
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+# T_TEST speed: bcrypt with 4 rounds (~1 ms vs ~250 ms at prod's 12). Applies
+# ONLY to this pytest process — the running backend keeps hashing real user
+# passwords at 12 rounds. Same algorithm, verify path identical.
+os.environ.setdefault("BCRYPT_ROUNDS", "4")
 # Deterministic AES-256 key for tests. Prod value must be set via env.
 os.environ.setdefault(
     "MESSAGE_ENCRYPTION_KEY",

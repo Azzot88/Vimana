@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -10,9 +11,16 @@ from app.core.config import settings
 _ALGORITHM = "HS256"
 _DEFAULT_EXPIRE_DAYS = 30
 
+# Work factor for password hashing. 12 (bcrypt default) in production — the
+# cost is the only thing standing between a leaked DB dump and a brute force.
+# The test process sets BCRYPT_ROUNDS=4 (~1 ms) via conftest env: same
+# algorithm, same verify path, just without the deliberate slowness — hundreds
+# of register/login calls per suite made 12 rounds the dominant test cost.
+_BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
+
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
