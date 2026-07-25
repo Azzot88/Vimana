@@ -254,6 +254,13 @@ async def verify_chain(db: AsyncSession, deal_id: uuid.UUID) -> dict:
 
     An empty chain is `ok` (a deal with no events yet is not a broken deal).
     """
+    # A caller may have updated rows via raw SQL after loading them through
+    # the ORM (that is exactly what tamper-detection tests do). With
+    # `expire_on_commit=False` the identity map still holds the pre-tamper
+    # values — dropping them forces a fresh SELECT so we hash what is
+    # actually in the DB, not what we happened to see last.
+    db.expire_all()
+
     events = (
         (
             await db.execute(
