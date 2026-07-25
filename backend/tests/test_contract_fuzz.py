@@ -37,6 +37,9 @@ from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models.user import User
 
+# Excluded from everyday runs via `-m "not fuzz"` (registered in pytest.ini).
+pytestmark = pytest.mark.fuzz
+
 # schemathesis 3.39 still uses jsonschema.RefResolver internally, which
 # jsonschema >= 4.18 deprecated. Not our code, fixed on their side in 4.x.
 warnings.filterwarnings(
