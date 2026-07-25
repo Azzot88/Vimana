@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -48,7 +48,9 @@ class UserUpdate(BaseModel):
     # T1.26 receiving address (private, updated only via /me)
     receiving_country_iso: str | None = None
     receiving_city: str | None = None
-    receiving_city_geoname_id: int | None = None
+    # int32 bound: Postgres INTEGER column — out-of-range dies in asyncpg as
+    # an unhandled 500 (schemathesis finding, same as addresses.py).
+    receiving_city_geoname_id: int | None = Field(default=None, ge=1, le=2_147_483_647)
     receiving_street: str | None = None
     receiving_postal_code: str | None = None
     receiving_note: str | None = None

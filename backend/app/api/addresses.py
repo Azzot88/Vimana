@@ -30,11 +30,16 @@ class AddressOut(BaseModel):
     created_at: datetime
 
 
+# Postgres INTEGER is int32 — without the bound a 2^31 value reaches asyncpg
+# and dies as an unhandled DataError/500 (found by schemathesis fuzz).
+_GEONAME_ID = Field(default=None, ge=1, le=2_147_483_647)
+
+
 class AddressCreate(BaseModel):
     label: str = Field(min_length=1, max_length=60)
     country_iso: str = Field(min_length=2, max_length=2)
     city: str | None = Field(default=None, max_length=150)
-    city_geoname_id: int | None = None
+    city_geoname_id: int | None = _GEONAME_ID
     street: str | None = Field(default=None, max_length=255)
     postal_code: str | None = Field(default=None, max_length=20)
     note: str | None = Field(default=None, max_length=500)
@@ -45,7 +50,7 @@ class AddressUpdate(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=60)
     country_iso: str | None = Field(default=None, min_length=2, max_length=2)
     city: str | None = Field(default=None, max_length=150)
-    city_geoname_id: int | None = None
+    city_geoname_id: int | None = _GEONAME_ID
     street: str | None = Field(default=None, max_length=255)
     postal_code: str | None = Field(default=None, max_length=20)
     note: str | None = Field(default=None, max_length=500)
