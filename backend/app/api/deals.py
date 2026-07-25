@@ -388,6 +388,11 @@ async def get_deal_chain(
     ):
         raise HTTPException(status_code=403, detail="Not a deal participant")
 
+    # Read before verify_chain/verify_content: both call `db.expire_all()`,
+    # after which touching `deal` attributes would trigger a sync refresh
+    # inside the async session (MissingGreenlet).
+    sealed_at = deal.sealed_at
+
     result = await verify_chain(db, deal_id)
 
     # T3.7 — content pointers + coverage. `verify_chain` proves the log is
@@ -411,7 +416,7 @@ async def get_deal_chain(
     ).scalar_one()
     result = {
         **result,
-        "sealed_at": deal.sealed_at,
+        "sealed_at": sealed_at,
         "total_messages": total_messages,
         "chained_messages": content["checked_messages"],
         "total_files": total_files,

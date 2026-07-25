@@ -576,10 +576,10 @@ async def test_deal_lifecycle_produces_a_valid_chain(
     async with session_maker() as db:
         result = await verify_chain(db, uuid.UUID(deal_id))
 
-    # created, accepted, handoff, confirmed, closed
+    # created, accepted, handoff, confirmed, closed + sealed (T3.7)
     assert result["ok"] is True
-    assert result["length"] == 5
-    assert [1, 2, 3, 4, 5] == list(range(1, result["head_seq"] + 1))
+    assert result["length"] == 6
+    assert [1, 2, 3, 4, 5, 6] == list(range(1, result["head_seq"] + 1))
 
 
 async def test_chain_endpoint_reports_status(
