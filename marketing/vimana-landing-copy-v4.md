@@ -25,6 +25,28 @@ Vimana — сервис для тех, кто передаёт что-то це�
 **Primary CTA (в hero):**
 Записаться на доступ
 
+**Brandmark (над H1, восстановлен после v4-редакции):**
+Vimana · Sacred Logistics
+
+---
+
+## PREFACE — Sacred Logistics *(новый блок между Hero и Section 1)*
+
+**Tag (маленькая amber-метка сверху):**
+Sacred Logistics
+
+**Big line (Space Grotesk, крупно):**
+Airlines move cargo.
+Vimana moves trust.
+
+**Support line (Space Grotesk, средне):**
+Sacred Logistics — перевозка, у которой есть свидетель.
+
+**Bridge line (моно, вниз):**
+↓ ниже — как это устроено
+
+*[Rationale: preface стоит между «что мы делаем» (hero, конкретика) и «как это выглядит в мире» (section 1). Это выход из hero в информационный слой через бренд-заявление. «Airlines move cargo. Vimana moves trust.» — самая сильная из трёх новых формулировок, работает как манифест. «Sacred Logistics — перевозка, у которой есть свидетель» — переводит английский суббренд в русский смысл одной строкой. Читатель уходит вниз с понятной эмоцией.]*
+
 ---
 
 ## SECTION 1 — Как это устроено сейчас
@@ -168,6 +190,27 @@ Vimana — сервис для передачи документов, ценно
 
 ---
 
+## FOOTER *(обновлён с брендовыми слоями)*
+
+**Brand (крупно):**
+Vimana
+
+**Sub-tagline (моно, приглушённо):**
+Sacred Logistics
+
+**Signature (Space Grotesk, средне-крупно, финальный подпис):**
+Trust Takes Flight.
+
+**Fine print:**
+v4 · 2026
+
+*[Rationale по распределению трёх формулировок:
+— «Vimana · Sacred Logistics» — восстановлено в hero brandmark и в footer как суббренд.
+— «Airlines move cargo. Vimana moves trust.» — живёт в preface-блоке, где ей больше всего места для звучания. Не в hero (там уже пунчлайн «Мы не возим. Мы записываем.»), не в футере (перегруз).
+— «Trust Takes Flight.» — как последняя строка перед fine print. Эмоциональный подпис, который читатель уносит с собой.]*
+
+---
+
 ## Что учтено в v4 (сверка с двумя итерациями правок)
 
 | Правка | Где |
@@ -187,3 +230,6 @@ Vimana — сервис для передачи документов, ценно
 | Vimana как каталог рейсов + личка внутри | Секция 2 |
 | Уведомления в любимый мессенджер | Секция 2 |
 | Мост «нашёл в чате — привёл на платформу» | Секция 2 |
+| «Sacred Logistics» восстановлено в brandmark hero и в footer | Hero + Footer |
+| «Airlines move cargo. Vimana moves trust.» как preface-манифест | Новый блок Preface |
+| «Trust Takes Flight.» как эмоциональный signature внизу | Footer |

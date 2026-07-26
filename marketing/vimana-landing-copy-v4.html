@@ -35,6 +35,19 @@
   header.hero .anchor{margin-top:40px;font-family:'IBM Plex Mono',monospace;font-size:12px;
     color:var(--muted);letter-spacing:.14em}
 
+  /* Preface — brand statement между hero и информационными секциями */
+  section.preface{padding:96px 0;border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--navy) 0%,var(--surface) 100%)}
+  section.preface .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;
+    letter-spacing:.24em;color:var(--amber);text-transform:uppercase;margin-bottom:28px;display:block}
+  section.preface h2{font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.08;
+    font-size:clamp(34px,4.6vw,58px);letter-spacing:-.015em;color:var(--text);
+    margin-bottom:24px;max-width:820px}
+  section.preface p{font-family:'Space Grotesk',sans-serif;font-size:clamp(18px,1.9vw,22px);
+    color:var(--muted);max-width:640px;margin-bottom:0;font-weight:400}
+  section.preface p.bridge{font-family:'IBM Plex Mono',monospace;font-size:12px;
+    color:var(--muted);letter-spacing:.14em;margin-top:34px;text-transform:uppercase}
+
   /* Section — единый визуальный вес */
   section.s{padding:64px 0;border-top:1px solid var(--line)}
   section.s .waypoint{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
@@ -82,6 +95,8 @@
     font-weight:500;margin-bottom:14px}
   footer .tagline{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;
     color:var(--muted);text-transform:uppercase}
+  footer .signature{font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,2.6vw,32px);
+    font-weight:500;color:var(--text);margin-top:22px;letter-spacing:-.005em}
   footer .fine{margin-top:36px;font-family:'IBM Plex Mono',monospace;font-size:11px;
     color:rgba(156,168,184,.55);letter-spacing:.12em}
 </style>
@@ -90,13 +105,20 @@
 
 <header class="hero">
   <div class="container">
-    <span class="brandmark">Vimana</span>
+    <span class="brandmark">Vimana · Sacred Logistics</span>
     <h1>Мы не возим.<br>Мы <span style="color:var(--amber)">записываем</span>.</h1>
     <p class="sub">Vimana — сервис для тех, кто передаёт что-то ценное через попутчика. Возите вы сами, договариваетесь вы сами. А мы ведём такую запись каждого шага, чтобы через полгода никто не мог сказать «мы не договаривались».</p>
     <a href="#cta" class="hero-cta">Записаться на доступ</a>
     <p class="anchor">↓ 9 разделов ниже</p>
   </div>
 </header>
+
+<section class="preface"><div class="container">
+  <span class="tag">Sacred Logistics</span>
+  <h2>Airlines move cargo.<br>Vimana moves <span style="color:var(--amber)">trust</span>.</h2>
+  <p>Sacred Logistics — перевозка, у которой есть свидетель.</p>
+  <p class="bridge">↓ ниже — как это устроено</p>
+</div></section>
 
 <section class="s"><div class="container">
   <div class="waypoint">01 · Как это устроено сейчас</div>
@@ -195,7 +217,8 @@
 <footer>
   <div class="container">
     <div class="brand">Vimana</div>
-    <div class="tagline">Мы не возим. Мы записываем.</div>
+    <div class="tagline">Sacred Logistics</div>
+    <div class="signature">Trust Takes Flight.</div>
     <p class="fine">v4 · 2026</p>
   </div>
 </footer>
