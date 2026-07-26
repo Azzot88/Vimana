@@ -212,37 +212,42 @@
 >
 > **Состояние прода на 2026-07-26** (проверено запросами): 36 аккаунтов, из них 24 со служебным ключом, 12 без; арбитр и superuser **без ключей** — из-за чего `threshold` 2-of-3 сейчас не собирается (`api/threshold.py:40` требует `arbiter.nostr_pubkey`). Подписанных записей 0, identity-контейнеров 0, E2E-сообщений 0, опубликованных рейсов 0. Легаси-случая «ключ уже стал личностью» **не существует** — все ключи ничем не связаны, поэтому особой ветки для старых аккаунтов не нужно, нужен бэкфилл (T3.12).
 
-### T3.11 — Email-only регистрация + подтверждение кодом
+### T3.11 — Email-only регистрация + подтверждение кодом ✅ MVP
 
 **Контекст.** Сейчас `POST /api/auth/register` принимает email **или** phone (`app/api/auth.py:26`), email никак не подтверждается, `User.password_hash` NOT NULL. Задача убирает phone из auth-путей и вводит подтверждение владения ящиком по 6-значному коду. SMTP уже настроен (`SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_PORT`, ENVIRONMENT §секреты), `core/email.send_email()` работает с T1.7.
 
 **Схема (миграция `0028_email_verification`):**
-- [ ] `users.password_hash` → **nullable** (аккаунты из T3.13/T3.14 живут без пароля).
-- [ ] `users.email_verified_at TIMESTAMPTZ NULL`, `email_verification_code_hash VARCHAR(255) NULL`, `email_verification_expires_at TIMESTAMPTZ NULL`, `email_verification_attempts SMALLINT NOT NULL DEFAULT 0`, `email_verification_sent_at TIMESTAMPTZ NULL`.
-- [ ] Backfill: существующим юзерам с email → `email_verified_at = created_at`. Живых пользователей не выкидываем в «неподтверждённые».
+- [x] `users.password_hash` → **nullable** (аккаунты из T3.13/T3.14 живут без пароля).
+- [x] `users.email_verified_at TIMESTAMPTZ NULL`, `email_verification_code_hash VARCHAR(255) NULL`, `email_verification_expires_at TIMESTAMPTZ NULL`, `email_verification_attempts SMALLINT NOT NULL DEFAULT 0`, `email_verification_sent_at TIMESTAMPTZ NULL`.
+- [x] Backfill: существующим юзерам с email → `email_verified_at = created_at`. Живых пользователей не выкидываем в «неподтверждённые». На проде отработал: 13 из 13 аккаунтов с email помечены (2026-07-26).
 
 **Backend:**
-- [ ] `UserCreate`: `phone` удалён, `email` обязателен, `password` обязателен. `UserUpdate.phone` **остаётся** — телефон правится в профиле.
-- [ ] `UserLogin.login` — только email; ветка `if "@" in login_val` / `else` по phone удаляется (`app/api/auth.py:72-78`).
-- [ ] Код: 6 цифр через `secrets.randbelow(10**6)`, хранится **хешем** (`core.security.hash_password`), TTL 15 минут, максимум 5 попыток ввода — после исчерпания код инвалидируется целиком.
-- [ ] `POST /api/auth/email/request-code` → 202. Отправка — **через Celery-таск** `app.tasks.notifications.send_verification_code`, не из эндпоинта: `core/email.send_email()` — синхронный `smtplib` (`app/core/email.py:14`) и заблокирует event loop FastAPI.
-- [ ] `POST /api/auth/email/verify` `{code}` → ставит `email_verified_at`, чистит `code_hash`/`expires_at`/`attempts`. Повторный вызов на уже подтверждённом email — идемпотентный 200.
-- [ ] Rate-limit **на двух уровнях**: slowapi `5/hour` на `request-code` (ключ — user_id) + `limit_req` на `/api/auth/email/` в `nginx/default.conf`. Плюс cooldown 60 секунд между отправками через `email_verification_sent_at` → 429.
-- [ ] **Гейта нет.** Подтверждение не влияет ни на один эндпоинт: ни вход, ни `POST /trips`, ни `POST /deals/match` его не проверяют. Первая редакция задачи вводила «мягкий гейт» на создание сделок и рейсов — снято владельцем 2026-07-26 (решение №3): подтверждение адреса это безопасность, а не права. Единственная поверхность — UI.
-- [ ] `MeOut.email_verified: bool` — производное поле для баннера.
+- [x] `UserCreate`: `phone` удалён, `email` обязателен + валидатор формы адреса и нормализация в нижний регистр. `UserUpdate.phone` **остаётся** — телефон правится в профиле.
+- [x] `UserLogin.login` — только email; ветка по phone удалена. Дополнительно: `password_hash IS NULL` теперь явно отклоняется — раньше `verify_password(None)` упал бы, а с T3.13/T3.14 такие аккаунты появятся.
+- [x] Код: 6 цифр через `secrets.randbelow(10**6)`, хранится **хешем** (`core.security.hash_password`), TTL 15 минут, максимум 5 попыток — исчерпание **сжигает код целиком**, а не просто отклоняет попытку.
+- [x] `POST /api/auth/email/request-code` → 202. Отправка — **через Celery-таск** `app.tasks.notifications.send_verification_code`: `core/email.send_email()` синхронный `smtplib` и заблокировал бы event loop. Plaintext идёт аргументом таска — в БД только хеш, больше он нигде не существует.
+- [x] `POST /api/auth/email/verify` `{code}` → ставит `email_verified_at`, чистит состояние кода. Повторный вызов — идемпотентный 200.
+- [x] Rate-limit **на двух уровнях**: slowapi `5/hour` на `request-code` + `limit_req zone=email_verify_zone` на `/api/auth/email/` в `nginx/default.conf`. Плюс cooldown 60 с через `email_verification_sent_at` → 429.
+- [x] **Гейта нет.** Подтверждение не влияет ни на один эндпоинт: ни вход, ни `POST /trips`, ни `POST /deals/match` его не проверяют. Первая редакция задачи вводила «мягкий гейт» на создание сделок и рейсов — снято владельцем 2026-07-26 (решение №3): подтверждение адреса это безопасность, а не права. Единственная поверхность — UI.
+- [x] `MeOut.email_verified: bool` — производное свойство `User.email_verified`, читается через `model_validate(from_attributes=True)`.
 
 **Frontend:**
-- [ ] `RegisterPage.tsx` — только email + пароль + display_name. `CountryCodeSelect` и `libphonenumber-js` из формы регистрации уходят (в профиле остаются).
-- [ ] `LoginPage.tsx` — поле «Email», не «email или телефон».
-- [ ] Экран ввода кода после регистрации + баннер «Подтвердите email» в `Layout.tsx` при `!email_verified`, кнопка «Отправить заново» с учётом cooldown.
-- [ ] i18n EN/RU/UA. Тон — DESIGNGUIDELINES §9 (мягкие формулировки, не «ошибка доступа»).
+- [x] `RegisterPage.tsx` — телефона в форме не было уже с T1.11, поле не трогали. Изменён только переход после регистрации: на `/verify-email`, если адрес не подтверждён. `RegisterPayload.phone` удалён из типа — теперь `tsc` ловит попытку отправить телефон, а не бэкенд в рантайме.
+- [x] `LoginPage.tsx` — `auth.email` вместо `auth.emailOrPhone`, `type="email"`.
+- [x] `pages/VerifyEmailPage.tsx` (роут `/verify-email` внутри Layout) + `components/EmailVerifyBanner.tsx` в `Layout.tsx`. Баннер скрыт для аккаунтов **без** email: адрес не заявлен — подтверждать нечего.
+- [x] i18n — **все шесть локалей** (EN/RU/UA/PL/FR/ES), не только три: экран новый, fallback на EN для продукта с шестью языками не годится. Попутно во всех поправлен `errorDuplicate`, упоминавший телефон. Ключ `auth.emailOrPhone` остался неиспользуемым — на сборку не влияет.
 
 **E2E:**
-- [ ] Ничего не гейтится → T_TEST.3 не затронут вовсе. Тем не менее env `E2E_AUTO_VERIFY_EMAIL_DOMAINS` (список через запятую, по умолчанию **пусто**) помечает регистрации на этих доменах подтверждёнными сразу — чтобы тестовые прогоны не плодили коды, которые никто не читает. На dev = `e2e.vimana.local` (TLD `.local` не резолвится), на prod **не задаётся**: флаг «подтверждён» должен означать, что кто-то реально открыл ящик. Непустое значение → WARNING в лог на старте.
+- [x] Ничего не гейтится → T_TEST.3 не затронут вовсе. Тем не менее env `E2E_AUTO_VERIFY_EMAIL_DOMAINS` (список через запятую, по умолчанию **пусто**) помечает регистрации на этих доменах подтверждёнными сразу — чтобы тестовые прогоны не плодили коды, которые никто не читает. На dev = `e2e.vimana.local` (TLD `.local` не резолвится), на prod **не задаётся**: флаг «подтверждён» должен означать, что кто-то реально открыл ящик. Непустое значение → WARNING в лог на старте.
 
 **Тесты:** request-code (202 · cooldown 429 · без email → 422 · уже подтверждён) · verify (успех · неверный код · истёкший · исчерпание попыток сжигает код · идемпотентность) · код хранится хешем · регистрация с `phone` → 422 · логин по телефону → 401 · **неподтверждённый юзер публикует рейс → 201 и начинает сделку → не 403** · аккаунт без email работает как обычный · auto-verify домен не шлёт код · SMTP замокан (в реальный ящик не ходим).
 
-**Acceptance:** регистрация только email+пароль; код приходит письмом и подтверждается; подтверждение **не влияет ни на одно право** — незаподтверждённый пользователь делает всё то же самое, разница только в баннере; backend-сьют зелёный.
+**Отклонения от постановки:**
+- Переменная названа `E2E_AUTO_VERIFY_EMAIL_DOMAINS` (список через запятую), а не `..._DOMAIN` — тестам нужны два домена сразу.
+- Гейт был реализован и **снят в тот же день** по решению владельца. Тесты переписаны в обратную сторону: проверяют, что неподтверждённый пользователь публикует рейс и начинает сделку. Сделано намеренно — фича «подтвердите почту» склонна тихо отрастать обратно в проверку прав.
+- i18n сделан на шесть локалей вместо трёх (см. выше).
+
+**Acceptance: ✅ все выполнены** — регистрация только email+пароль; код приходит письмом и подтверждается; подтверждение не влияет ни на одно право, разница только в баннере. **728 backend-тестов зелёные** (полный прогон с fuzz, 2026-07-26).
 
 ### T3.12 — Служебный ключ vs личность: establish identity
 

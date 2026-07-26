@@ -9,4 +9,7 @@
 // T3.7 closed — vault content chain (messages/files/seal) + verify_content.
 // T3.8 closed — upload content validation (signatures + image decode).
 // T3.9 closed — identity ↔ deal intersection (identity_doc copy + identity_ref).
-export const APP_VERSION = '0.03.16'
+// T3.11 closed — email-only registration + confirmation code (Phase 3.7 opens).
+// Phase 3.7 keeps counting in the 03 series: the version is a monotonic
+// progress counter, not a phase label.
+export const APP_VERSION = '0.03.17'
