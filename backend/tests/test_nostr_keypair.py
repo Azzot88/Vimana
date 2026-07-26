@@ -110,7 +110,11 @@ async def test_claim_deletes_encrypted_nsec(client):
     assert exp.status_code == 404
 
 
-async def test_import_replaces_keypair_and_marks_self_custody(client):
+async def test_import_endpoint_is_gone(client):
+    """T3.12 — `import` accepted a bare npub with no proof of possession, which
+    under `D-KEY-IS-IDENTITY` is impersonation: paste a well-known npub, become
+    that identity. Replaced by `/me/identity/establish`, which demands a
+    signature over a one-time challenge."""
     from tests.conftest import SEED_PASSWORD, unique_email
     from app.core.keypair import generate_keypair
 
@@ -124,61 +128,17 @@ async def test_import_replaces_keypair_and_marks_self_custody(client):
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    foreign_nsec, foreign_npub = generate_keypair()
+    foreign_nsec, _ = generate_keypair()
     imp = await client.post(
         "/api/me/keypair/import",
         headers=headers,
         json={"nsec_hex": foreign_nsec},
     )
-    assert imp.status_code == 200
-    assert imp.json()["npub"] == foreign_npub
-    assert imp.json()["key_self_custody"] is True
-    assert imp.json()["has_encrypted_nsec"] is False
-
-
-async def test_import_npub_only_tracking(client):
-    from tests.conftest import SEED_PASSWORD, unique_email
-    from app.core.keypair import generate_keypair
-
-    email = unique_email("kp-track")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "T"},
-    )
-    login = await client.post(
-        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
-    )
-    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-
-    _, npub_only = generate_keypair()
-    imp = await client.post(
-        "/api/me/keypair/import",
-        headers=headers,
-        json={"npub_hex": npub_only},
-    )
-    assert imp.status_code == 200
-    assert imp.json()["npub"] == npub_only
-    assert imp.json()["key_self_custody"] is True
-
-
-async def test_import_requires_at_least_one_field(client):
-    from tests.conftest import SEED_PASSWORD, unique_email
-
-    email = unique_email("kp-empty")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "E"},
-    )
-    login = await client.post(
-        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
-    )
-    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-
-    resp = await client.post("/api/me/keypair/import", headers=headers, json={})
-    assert resp.status_code == 422
+    assert imp.status_code == 404
 
 
 async def test_bad_hex_rejected(client):
+    """Shape validation now lives on `establish`."""
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("kp-hex")
@@ -192,7 +152,14 @@ async def test_bad_hex_rejected(client):
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
     resp = await client.post(
-        "/api/me/keypair/import", headers=headers, json={"nsec_hex": "not-hex-really"}
+        "/api/me/identity/establish",
+        headers=headers,
+        json={
+            "npub_hex": "not-hex-really",
+            "challenge": "x" * 64,
+            "created_at": 0,
+            "sig": "a" * 128,
+        },
     )
     assert resp.status_code == 422
 

@@ -1,31 +1,100 @@
-"""T2.2 — user's Nostr keypair management (custodial ↔ self-custody).
+"""T3.12 — service key vs identity.
 
-Flow (per TECHSTATE D10, Variant A + D):
-- Register auto-generates keypair (see app.api.auth.register).
-- User can `export` → get nsec_hex (re-auth required).
-- After export, user may `claim` → server DELETES nsec_encrypted and sets
-  `key_self_custody=True`. Server can no longer sign — client must NIP-07 sign.
-- Alternatively, user can `import` a foreign nsec/npub → immediately
-  self-custody (server never stores foreign nsec).
+Until a user takes their own key, `nostr_pubkey` holds a **service key**: the
+platform generated it, still holds the nsec, and uses it to encrypt that user's
+vault contents and sign their records. It is not shown as "your key" and is
+never published outside. Identity begins at `establish`, and always with a
+*different* key.
+
+`POST /me/keypair/import` is **gone**. It set `nostr_pubkey` from a bare
+`npub_hex` with no proof of possession whatsoever. Once the key is the identity
+that is plain impersonation: paste a well-known npub, become that identity.
+
+`export` and `claim` are **deprecated and still here**, on purpose:
+
+- `claim` promotes the service key to an identity by deleting the server's copy
+  of the nsec. That nsec sat on our disks for the account's whole life, so "we
+  deleted our copy" is unprovable — an identity built on it is sovereign only
+  on the platform's word. `establish` replaces it.
+- `export` hands over the service key, which was never the user's to begin with.
+
+Both survive one more step because seven test modules obtain a known nsec
+through `export` and flip users to self-custody through `claim` in order to
+exercise NIP-07 signing, threshold encryption and self-custody publishing.
+Deleting them in the same commit as `establish` would have taken the crypto
+suite down with them. They go once those tests are migrated to `establish`.
+Neither is a security hole — `export` demands password re-auth and `claim`
+only discards the server's own copy.
 """
-from pydantic import BaseModel, ConfigDict, field_validator
-from fastapi import APIRouter, Body, Depends, HTTPException
+from __future__ import annotations
 
-from app.api.deps import get_current_user
-from app.core.database import get_db
-from app.core.keypair import decrypt_nsec, encrypt_nsec, npub_from_nsec
-from app.core.security import verify_password
-from app.models.user import User
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, field_validator
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
+from app.core.challenge import ChallengeUnavailable, consume_challenge, issue_challenge
+from app.core.challenge import CHALLENGE_TTL_SECONDS
+from app.core.database import get_db
+from app.core.identity import establish_blockers
+from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
+from app.core.keypair import decrypt_nsec
+from app.core.security import verify_password
+from app.models.user import User
+
 router = APIRouter()
+
+_CHALLENGE_SCOPE = "identity:establish"
 
 
 class KeypairStatus(BaseModel):
     npub: str | None
+    # T3.12 — the meaningful pair. `identity_established=False` means the npub
+    # above is a service key the platform holds, not the user's identity.
+    identity_established: bool
+    key_lost: bool
+    # DEPRECATED (T3.12) — kept so the existing crypto suite and frontend keep
+    # reading. `key_self_custody` is the same bit as `identity_established`;
+    # `has_encrypted_nsec` is its inverse for accounts that have any key at all.
     key_self_custody: bool
     has_encrypted_nsec: bool
     model_config = ConfigDict(from_attributes=False)
+
+
+class ChallengeOut(BaseModel):
+    challenge: str
+    expires_in: int
+    purpose: str
+
+
+class EstablishBody(BaseModel):
+    npub_hex: str
+    challenge: str
+    created_at: int
+    sig: str
+
+    @field_validator("npub_hex")
+    @classmethod
+    def _hex_64(cls, v: str) -> str:
+        v = v.strip().lower()
+        if len(v) != 64 or not all(c in "0123456789abcdef" for c in v):
+            raise ValueError("npub_hex must be 64 lowercase hex chars")
+        return v
+
+    @field_validator("sig")
+    @classmethod
+    def _sig_hex(cls, v: str) -> str:
+        v = v.strip().lower()
+        if len(v) != 128 or not all(c in "0123456789abcdef" for c in v):
+            raise ValueError("sig must be 128 lowercase hex chars")
+        return v
+
+
+class DeclareLostBody(BaseModel):
+    password: str
 
 
 class ExportBody(BaseModel):
@@ -37,38 +106,19 @@ class ExportResponse(BaseModel):
     npub_hex: str
 
 
-class ImportBody(BaseModel):
-    nsec_hex: str | None = None  # if provided, npub derived from it
-    npub_hex: str | None = None  # otherwise, only npub is stored (read-only tracking)
-
-    @field_validator("nsec_hex")
-    @classmethod
-    def _hex_64(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        v = v.strip().lower()
-        if len(v) != 64 or not all(c in "0123456789abcdef" for c in v):
-            raise ValueError("nsec_hex must be 64 lowercase hex chars")
-        return v
-
-    @field_validator("npub_hex")
-    @classmethod
-    def _npub_hex_64(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        v = v.strip().lower()
-        if len(v) != 64 or not all(c in "0123456789abcdef" for c in v):
-            raise ValueError("npub_hex must be 64 lowercase hex chars")
-        return v
+def _status(user: User) -> KeypairStatus:
+    return KeypairStatus(
+        npub=user.nostr_pubkey,
+        identity_established=user.identity_established,
+        key_lost=user.key_lost,
+        key_self_custody=user.key_self_custody,
+        has_encrypted_nsec=user.nsec_encrypted is not None,
+    )
 
 
 @router.get("/me/keypair/status", response_model=KeypairStatus)
 async def keypair_status(current_user: User = Depends(get_current_user)):
-    return KeypairStatus(
-        npub=current_user.nostr_pubkey,
-        key_self_custody=current_user.key_self_custody,
-        has_encrypted_nsec=current_user.nsec_encrypted is not None,
-    )
+    return _status(current_user)
 
 
 @router.post("/me/keypair/export", response_model=ExportResponse)
@@ -76,7 +126,8 @@ async def keypair_export(
     body: ExportBody = Body(...),
     current_user: User = Depends(get_current_user),
 ):
-    """Export nsec_hex — requires password re-auth. Idempotent (doesn't delete)."""
+    """DEPRECATED (T3.12) — hands over the service key. Removed once the crypto
+    test suite stops using it to obtain a known nsec."""
     if not current_user.password_hash or not verify_password(
         body.password, current_user.password_hash
     ):
@@ -84,9 +135,11 @@ async def keypair_export(
     if current_user.nsec_encrypted is None or current_user.nsec_nonce is None:
         raise HTTPException(
             status_code=404,
-            detail="No custodial nsec on this account (already self-custody)",
+            detail="No service nsec on this account (identity already established)",
         )
-    nsec_hex = decrypt_nsec(bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted))
+    nsec_hex = decrypt_nsec(
+        bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted)
+    )
     return ExportResponse(nsec_hex=nsec_hex, npub_hex=current_user.nostr_pubkey or "")
 
 
@@ -95,51 +148,128 @@ async def keypair_claim(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Confirm self-custody. Platform DELETES its copy of nsec."""
+    """DEPRECATED (T3.12) — promotes the service key instead of minting a new
+    one. Superseded by `POST /me/identity/establish`."""
     if current_user.key_self_custody:
-        # Already self-custody — idempotent
-        return KeypairStatus(
-            npub=current_user.nostr_pubkey,
-            key_self_custody=True,
-            has_encrypted_nsec=False,
-        )
+        return _status(current_user)  # idempotent
     current_user.nsec_encrypted = None
     current_user.nsec_nonce = None
     current_user.key_self_custody = True
     await db.commit()
-    return KeypairStatus(
-        npub=current_user.nostr_pubkey,
-        key_self_custody=True,
-        has_encrypted_nsec=False,
+    await db.refresh(current_user)
+    return _status(current_user)
+
+
+@router.post("/me/identity/challenge", response_model=ChallengeOut)
+async def identity_challenge(current_user: User = Depends(get_current_user)):
+    """Hand out a one-time nonce to sign. Requesting a new one invalidates the
+    previous — a reloaded page must not leave a signable stale nonce around."""
+    if current_user.identity_established:
+        raise HTTPException(status_code=409, detail="Identity already established")
+    try:
+        nonce = await issue_challenge(_CHALLENGE_SCOPE, str(current_user.id))
+    except ChallengeUnavailable:
+        raise HTTPException(status_code=503, detail="Challenge store unavailable")
+    return ChallengeOut(
+        challenge=nonce,
+        expires_in=CHALLENGE_TTL_SECONDS,
+        purpose=PURPOSE_ESTABLISH,
     )
 
 
-@router.post("/me/keypair/import", response_model=KeypairStatus)
-async def keypair_import(
-    body: ImportBody,
+@router.post("/me/identity/establish", response_model=KeypairStatus)
+async def identity_establish(
+    body: EstablishBody,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Replace generated keypair with a user-provided one. NEVER stores foreign nsec.
+    """Take ownership of the account's identity with a key the platform never saw.
 
-    Two modes:
-    - `nsec_hex` provided → derive npub, set self_custody=True, nsec is NOT stored on server.
-    - `npub_hex` only → tracking-only, self_custody=True, no signing possible server-side.
+    The server learns only the npub and a signature. Whether the key was
+    generated in the browser or came from a NIP-07 extension is invisible here
+    — and deliberately so: there is one code path, and it checks the only thing
+    that matters, that the caller controls the key.
     """
-    if body.nsec_hex:
-        npub = npub_from_nsec(body.nsec_hex)
-    elif body.npub_hex:
-        npub = body.npub_hex
-    else:
-        raise HTTPException(status_code=422, detail="nsec_hex or npub_hex required")
+    if current_user.identity_established:
+        raise HTTPException(status_code=409, detail="Identity already established")
+    if current_user.key_lost_at is not None:
+        raise HTTPException(status_code=403, detail="Account is retired (key lost)")
 
-    current_user.nostr_pubkey = npub
+    # Refuse before touching anything if the transition would strand data.
+    blockers = await establish_blockers(db, current_user)
+    if blockers:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot establish identity yet: " + "; ".join(blockers),
+        )
+
+    try:
+        ok = await consume_challenge(
+            _CHALLENGE_SCOPE, str(current_user.id), body.challenge
+        )
+    except ChallengeUnavailable:
+        raise HTTPException(status_code=503, detail="Challenge store unavailable")
+    if not ok:
+        raise HTTPException(status_code=401, detail="Challenge is unknown or used")
+
+    if not verify_proof(
+        body.npub_hex,
+        PURPOSE_ESTABLISH,
+        body.challenge,
+        body.created_at,
+        body.sig,
+    ):
+        raise HTTPException(status_code=401, detail="Invalid proof of key possession")
+
+    taken = await db.execute(
+        select(User).where(
+            User.nostr_pubkey == body.npub_hex, User.id != current_user.id
+        )
+    )
+    if taken.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="This key belongs to another account")
+
+    # The service key dies here: the platform keeps no copy of anything it can
+    # sign or decrypt for this user any more.
+    current_user.nostr_pubkey = body.npub_hex
     current_user.nsec_encrypted = None
     current_user.nsec_nonce = None
     current_user.key_self_custody = True
     await db.commit()
-    return KeypairStatus(
-        npub=npub,
-        key_self_custody=True,
-        has_encrypted_nsec=False,
-    )
+    await db.refresh(current_user)
+    return _status(current_user)
+
+
+@router.post("/me/identity/declare-lost", response_model=KeypairStatus)
+async def identity_declare_lost(
+    body: DeclareLostBody = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark the identity key as gone. One-way.
+
+    Re-auth is by password rather than by key proof for the obvious reason: the
+    key being unavailable is the thing being declared. Passwordless accounts
+    (T3.13/T3.14) need the step-up mechanism from T3.15 and are refused until
+    it exists — better an honest 409 than a route that trusts the session alone
+    for an irreversible action.
+    """
+    if not current_user.identity_established:
+        raise HTTPException(
+            status_code=409,
+            detail="No identity to lose — the platform still holds this account's key",
+        )
+    if current_user.key_lost_at is not None:
+        return _status(current_user)  # idempotent
+    if not current_user.password_hash:
+        raise HTTPException(
+            status_code=409,
+            detail="Passwordless accounts need step-up re-auth (T3.15)",
+        )
+    if not verify_password(body.password, current_user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+    current_user.key_lost_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(current_user)
+    return _status(current_user)
