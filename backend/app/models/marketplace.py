@@ -58,6 +58,12 @@ class Trip(Base):
     nostr_published_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # T3.12 — which key signed the published event. NIP-09 requires a deletion
+    # to be signed by the same key that published, so this cannot be inferred
+    # from the carrier's *current* key once they move to their own.
+    nostr_published_by_pubkey: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

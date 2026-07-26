@@ -32,11 +32,24 @@ class User(Base):
     can_carry: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     can_send: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     active_mode: Mapped[str] = mapped_column(String(10), default="sender", server_default="sender")
-    nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # T3.12 — unique because the key IS the identity (D-KEY-IS-IDENTITY). Still
+    # nullable: `core.service_keys.ensure_service_keys` backfills accounts that
+    # predate T2.2 on startup, and NOT NULL waits for a follow-up migration once
+    # prod shows none left.
+    nostr_pubkey: Mapped[str | None] = mapped_column(
+        String(64), unique=True, nullable=True
+    )
     # T2.2 — custodial nsec (AES-256-GCM). Deleted when user claims self-custody.
     nsec_encrypted: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     nsec_nonce: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     key_self_custody: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # T3.12 — terminal state. Set only for an account whose *identity* key is
+    # gone (self-custody). Losing the key is not losing access: a live passkey
+    # still signs the user in, but they can no longer sign or read their own
+    # encrypted history, and counterparties must see that.
+    key_lost_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     business_activity_level: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -94,6 +107,17 @@ class User(Base):
     email_verification_sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+    @property
+    def key_lost(self) -> bool:
+        """Public signal — a dead identity must not look like a live one."""
+        return self.key_lost_at is not None
+
+    @property
+    def identity_established(self) -> bool:
+        """True once the user holds their own key. Until then `nostr_pubkey` is
+        a service key the platform issued and still holds (T3.12)."""
+        return self.key_self_custody
 
     @property
     def email_verified(self) -> bool:

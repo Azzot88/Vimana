@@ -104,6 +104,9 @@ class UserOut(BaseModel):
     active_mode: str = "sender"
     role: str = "user"
     nostr_pubkey: str | None
+    # T3.12 — visible to counterparties on purpose: an account whose identity
+    # key is gone can no longer sign, and must not read as a live one.
+    key_lost: bool = False
     business_activity_level: float | None
     # T3.1 — level slug derived from business_activity_level via core.uba.level_of.
     # Populated by view-layer callers; None for stale/unrecomputed users.

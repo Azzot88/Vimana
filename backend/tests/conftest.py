@@ -422,6 +422,38 @@ async def _ensure_email_verification_columns(engine) -> None:
         )
 
 
+async def _ensure_identity_columns(engine) -> None:
+    """T3.12 pt.1 schema fix: users.key_lost_at + unique npub +
+    trips.nostr_published_by_pubkey. Mirrors migration 0029. Idempotent."""
+    async with engine.begin() as conn:
+        for table, col, ddl in (
+            ("users", "key_lost_at", "TIMESTAMPTZ"),
+            ("trips", "nostr_published_by_pubkey", "VARCHAR(64)"),
+        ):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='{table}' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(
+                    text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
+                )
+        await conn.execute(
+            text(
+                "DO $$ BEGIN "
+                "ALTER TABLE users ADD CONSTRAINT uq_users_nostr_pubkey "
+                "UNIQUE (nostr_pubkey); "
+                "EXCEPTION WHEN duplicate_table THEN NULL; "
+                "WHEN duplicate_object THEN NULL; "
+                "END $$;"
+            )
+        )
+
+
 async def _ensure_notices_tables(engine) -> None:
     """T_UX.2 schema fix: routestatus / noticeseverity / noticesurface enums
     + route_notes + platform_notices tables. Idempotent."""
@@ -968,6 +1000,7 @@ async def test_engine():
     await _ensure_receiving_address_columns(engine)
     await _ensure_nostr_keypair_columns(engine)
     await _ensure_email_verification_columns(engine)
+    await _ensure_identity_columns(engine)
     await _ensure_nostr_event_columns(engine)
     await _ensure_threshold_columns(engine)
     await _ensure_operator_access_grants(engine)

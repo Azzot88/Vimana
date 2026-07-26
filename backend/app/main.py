@@ -50,6 +50,16 @@ async def lifespan(app: FastAPI):
             await ensure_user_zero(db)
     except Exception:
         logger.exception("User Zero promotion failed on startup")
+    # T3.12 pt.1 — every account needs a service keypair. Separate try: a
+    # failure here must not take down the app, and it must not mask the one
+    # above.
+    try:
+        from app.core.service_keys import ensure_service_keys
+
+        async with AsyncSessionLocal() as db:
+            await ensure_service_keys(db)
+    except Exception:
+        logger.exception("Service key backfill failed on startup")
     # T3.11 — this setting hands out verified accounts without a mailbox. It
     # exists for the e2e suites and must be empty in production; say so loudly
     # rather than let a stray value ride along unnoticed.
