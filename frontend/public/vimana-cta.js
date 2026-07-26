@@ -86,19 +86,36 @@
     }
   }
 
-  function mountProgress() {
-    var bar = document.getElementById('progress');
-    if (!bar) return;
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      bar.style.display = 'none';
-      return;
-    }
+  /* Плавающая шапка: у самого верха она прозрачная и лежит поверх героя,
+   * после первого прокрута — уплотняется, получает фон и подложку из блюра.
+   * Полоска снизу показывает, сколько страницы прочитано.
+   * Один scroll-listener на оба эффекта: их состояние считается из одного
+   * и того же scrollY, разносить по двум подпискам незачем. */
+  function mountTopbar() {
+    var bar = document.getElementById('topbar');
+    var progress = document.querySelector('.topbar-progress');
+    var legacy = document.getElementById('progress'); // старые версии страниц
+    if (!bar && !progress && !legacy) return;
+
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var ticking = false;
+
     function update() {
-      var h = document.documentElement.scrollHeight - window.innerHeight;
-      bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+      var y = window.scrollY || window.pageYOffset || 0;
+      if (bar) {
+        // Порог, а не 0: иначе класс мигает на инерционном скролле у края.
+        if (y > 24) bar.classList.add('is-scrolled');
+        else bar.classList.remove('is-scrolled');
+      }
+      if (!reduce) {
+        var h = document.documentElement.scrollHeight - window.innerHeight;
+        var pct = (h > 0 ? (y / h) * 100 : 0) + '%';
+        if (progress) progress.style.width = pct;
+        if (legacy) legacy.style.width = pct;
+      }
       ticking = false;
     }
+
     window.addEventListener('scroll', function () {
       if (!ticking) {
         window.requestAnimationFrame(update);
@@ -110,7 +127,7 @@
 
   function init() {
     applyCta();
-    mountProgress();
+    mountTopbar();
   }
 
   if (document.readyState === 'loading') {
