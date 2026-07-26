@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vimana · Sacred Logistics</title>
+<!-- Финальная редакция копи · 2026-07-25.
+     База визуальная — v3b (равный вес секций, лендинг-скролл).
+     Разница: форматы блоков намеренно разные — список, поток шагов, контрастный
+     абзац, схема цепи, парные блоки «работает / пока нет». -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1626; --surface:#0F1E32; --surface2:#132842;
+    --cyan:#58B0D9; --amber:#FF7A2F; --text:#E5E7EB; --muted:#9CA8B8;
+    --line:rgba(88,176,217,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--navy);color:var(--text);font-family:'Inter',sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .container{max-width:880px;margin:0 auto;padding:0 clamp(20px,6vw,60px)}
+
+  /* HERO */
+  header.hero{padding:100px 0 60px}
+  .brandmark{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    letter-spacing:.24em;color:var(--cyan);text-transform:uppercase;margin-bottom:36px}
+  header.hero h1{font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.08;
+    font-size:clamp(38px,5.2vw,64px);letter-spacing:-.015em;margin-bottom:28px}
+  header.hero .sub{font-size:clamp(17px,1.7vw,20px);color:var(--muted);max-width:680px}
+  header.hero .anchor{margin-top:44px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    color:var(--muted);letter-spacing:.14em}
+
+  /* Beat separator */
+  .beat-band{padding:56px 0 24px;margin-top:20px}
+  .beat-band .container{border-top:1px solid var(--line);padding-top:40px}
+  .beat-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--amber);margin-bottom:14px}
+  .beat-title{font-family:'Space Grotesk',sans-serif;font-weight:500;
+    font-size:clamp(22px,2.3vw,28px);color:var(--text);letter-spacing:-.005em}
+
+  /* Section — единый визуальный вес */
+  section.s{padding:56px 0}
+  section.s .waypoint{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+    letter-spacing:.18em;margin-bottom:14px}
+  section.s h2{font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.2;
+    font-size:clamp(24px,2.9vw,34px);letter-spacing:-.005em;margin-bottom:18px;max-width:760px}
+  section.s p.answer{font-size:clamp(16px,1.5vw,18px);color:var(--text);max-width:720px;margin-bottom:26px}
+  section.s .block + .block{margin-top:16px}
+
+  /* Base block */
+  .block{background:var(--surface);border-radius:12px;padding:22px 26px;max-width:760px;
+    border-left:2px solid rgba(255,122,47,.35)}
+  .block .block-label{font-family:'IBM Plex Mono',monospace;font-size:11px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin-bottom:14px;display:block}
+  .block ul{list-style:none}
+  .block ul li{padding:8px 0 8px 22px;position:relative;color:var(--text);
+    font-size:15.5px;line-height:1.55;border-bottom:1px solid var(--line)}
+  .block ul li:last-child{border-bottom:none}
+  .block ul li::before{content:"·";position:absolute;left:6px;color:var(--cyan);font-weight:700;
+    font-size:20px;line-height:1.2}
+  .block ul li b{color:var(--text);font-weight:600}
+  .block p{color:var(--text);font-size:15.5px;line-height:1.65}
+  .block p + p{margin-top:10px}
+
+  /* Contrast variant — приглушённый фон, циан-акцент */
+  .block.contrast{background:var(--surface2);border-left-color:rgba(88,176,217,.4)}
+  .block.contrast .block-label{color:var(--cyan)}
+
+  /* Flow variant — нумерованный поток шагов */
+  .block.flow ol{list-style:none;counter-reset:step}
+  .block.flow ol li{counter-increment:step;padding:10px 0 10px 46px;position:relative;
+    color:var(--text);font-size:15.5px;line-height:1.55;border-bottom:1px solid var(--line)}
+  .block.flow ol li:last-child{border-bottom:none}
+  .block.flow ol li::before{content:counter(step,decimal-leading-zero);position:absolute;
+    left:0;top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--amber);
+    letter-spacing:.08em}
+  .block.flow ol li b{color:var(--text);font-weight:600}
+  .block.flow > p{margin-top:14px;color:var(--muted);font-size:15px}
+
+  /* Schema variant — ASCII-diagram */
+  .block.schema pre{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--cyan);
+    line-height:1.7;overflow-x:auto;padding:16px 18px;background:var(--navy);border-radius:8px;
+    border:1px solid var(--line);white-space:pre;margin-top:6px}
+  .block.schema > p{margin-top:14px}
+
+  /* Footer */
+  footer{padding:80px 0 120px;margin-top:40px;border-top:1px solid var(--line)}
+  footer .brand{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.4vw,42px);
+    font-weight:500;margin-bottom:16px}
+  footer .taglines{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;
+    color:var(--muted);text-transform:uppercase;margin-bottom:36px}
+  footer .cta{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:13px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--navy);background:var(--amber);
+    padding:14px 26px;border-radius:8px;text-decoration:none}
+  footer .fine{margin-top:40px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    color:rgba(156,168,184,.6);letter-spacing:.12em}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <span class="brandmark">Vimana · Sacred Logistics</span>
+    <h1>Сейчас над Атлантикой, в чьём-то чемодане,<br>летит <span style="color:var(--amber)">чужой конверт</span>.</h1>
+    <p class="sub">Инсулин для мамы. Контракт, который нужно подписать живой рукой. Кот, которого не сдают в багаж. Люди возят это друг другу давно — договариваясь в чатах и веря на слово. Vimana ничего в этом не меняет, кроме одного: у каждой передачи появляется запись, которую нельзя переписать задним числом незаметно. Ни сторонам. Ни нам.</p>
+    <p class="anchor">↓ читайте по порядку · 19 разделов, 4 такта</p>
+  </div>
+</header>
+
+<!-- ═══════════ ТАКТ 1 · РЫНОК, КОТОРЫЙ УЖЕ ЛЕТАЕТ ═══════════ -->
+<div class="beat-band"><div class="container">
+  <div class="beat-label">Такт 1 из 4</div>
+  <div class="beat-title">Рынок, который уже летает</div>
+</div></div>
+
+<section class="s"><div class="container">
+  <div class="waypoint">01 / 19</div>
+  <h2>Пока вы это читаете, кто-то в Абу-Даби принимает конверт для брата в Хьюстоне.</h2>
+  <p class="answer">Пилоты, бортпроводники, обычные пассажиры со свободными килограммами — везут для чужих людей документы, лекарства, деньги, свадебные платья. Каждый день. Через WhatsApp и Telegram. Без офиса, без квитанции, без страховки. Потому что нужно быстро — и потому что почта такое не берёт.</p>
+  <div class="block">
+    <span class="block-label">Что мы видели сами</span>
+    <ul>
+      <li>Чаты по одному коридору — <b>десятки тысяч участников</b></li>
+      <li>Сделка живёт в ленте пятнадцать минут и тонет под новыми сообщениями</li>
+      <li>Ни одна из этих передач не попадает ни в какую статистику. Статистики просто нет.</li>
+      <li>Мы пришли из такого чата. Эта страница — не про чужой рынок.</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">02 / 19</div>
+  <h2>Не «посылки». Конкретные вещи — каждая со своей историей.</h2>
+  <p class="answer">Никто не отправляет «просто груз». Всё привязано к дате, человеку, ситуации. И у каждого предмета — свой маленький сюжет.</p>
+  <div class="block">
+    <span class="block-label">Что летит в свободных килограммах</span>
+    <ul>
+      <li>Лекарство, которое дома стоит в разы дороже, чем там, откуда идёт рейс</li>
+      <li>Контракт, где подпись нужна живая и завтра</li>
+      <li>Кот, который не переживёт багажного отсека</li>
+      <li>Образец ткани для салона, ноутбук для мастерской, коробка лекарств родителям</li>
+      <li>Загранпаспорт со свежей визой: курьером — неделя, с пилотом — восемь часов</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">03 / 19</div>
+  <h2>Всё работает — ровно до первого раза, когда не работает.</h2>
+  <p class="answer">Пока обе стороны в порядке и на связи — красота. Красота заканчивается там, где договорённость живёт в переписке, которую любая сторона может почистить.</p>
+  <div class="block">
+    <span class="block-label">Типичные точки провала</span>
+    <ul>
+      <li>Договорились на сто. У машины услышали сто пятьдесят. Рейс через два часа. Соглашаетесь.</li>
+      <li>Фото передачи было в чате. Чат почистили. Теперь фото не было никогда.</li>
+      <li>Через полгода: «мы не договаривались, что перевес плачу я». И как доказать обратное?</li>
+      <li>Перевозчик пропал вместе с грузом. Идти некуда: для чата вы никто.</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">04 / 19</div>
+  <h2>«Я отдал». «А я не получал». Дальше — тишина.</h2>
+  <p class="answer">Это не спор. Это ситуация, в которой невозможно оказаться правым. У вас есть слова, у него есть слова, слов поровну.</p>
+  <div class="block contrast">
+    <span class="block-label">Кто выигрывает в такой ситуации</span>
+    <p>Тот, у кого больше свободного времени. Тот, кто напористее по телефону. Тот, у кого в общем чате больше знакомых, готовых «подтвердить». Тот, кто дожимает. Ни один из этих критериев не имеет отношения к тому, что на самом деле было.</p>
+  </div>
+</div></section>
+
+<!-- ═══════════ ТАКТ 2 · КАК ПРОХОДИТ ДОСТАВКА В VIMANA ═══════════ -->
+<div class="beat-band"><div class="container">
+  <div class="beat-label">Такт 2 из 4</div>
+  <div class="beat-title">Как проходит доставка в Vimana</div>
+</div></div>
+
+<section class="s"><div class="container">
+  <div class="waypoint">05 / 19</div>
+  <h2>Мы не стали переизобретать передачу. Мы её записали.</h2>
+  <p class="answer">Сделка в Vimana устроена так же, как в чате: кто-то летит, кто-то отправляет, они договариваются, встречаются, передают. Разница в том, что каждый шаг оставляет след — не потому, что кто-то не поленился его зафиксировать, а потому что иначе шаг не проходит.</p>
+  <div class="block contrast">
+    <span class="block-label">Чего Vimana не делает</span>
+    <p>Не возит грузы — это делают люди, которые и так летят. Не берёт на себя таможню и не решает за вас, что можно везти. Не выступает стороной сделки. Мы — слой доверия и учёта, а не перевозчик. Это записано в наших же правилах, и мы не собираемся выглядеть больше, чем есть.</p>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">06 / 19</div>
+  <h2>Семь шагов. На каждом что-то ложится в запись.</h2>
+  <p class="answer">Ни один из этих шагов не требует «не забыть сохранить доказательство». Запись собирается сама, попутно.</p>
+  <div class="block flow">
+    <span class="block-label">Сделка от начала до печати</span>
+    <ol>
+      <li><b>Рейс.</b> Перевозчик публикует то, чем и так летит: маршрут, дата, свободные килограммы, что готов брать.</li>
+      <li><b>Заявка.</b> Отправитель описывает груз и находит рейс под свои даты. Или наоборот — перевозчик находит заявку.</li>
+      <li><b>Мэтч.</b> Стороны соглашаются друг с другом. С этого момента открывается сделка — а вместе с ней Deal Vault, сейф этой доставки.</li>
+      <li><b>Договорённость.</b> Сумма, место встречи, условия — обсуждаются в чате сделки. Чат и есть часть сейфа, отдельно ничего вести не нужно.</li>
+      <li><b>Передача.</b> Фото груза, время, место. Обе стороны видят одно и то же.</li>
+      <li><b>Полёт и вручение.</b> Получатель — отдельный участник сделки, его приглашают в тот же чат. Он подтверждает приём.</li>
+      <li><b>Закрытие.</b> Сделка закрывается, сейф запечатывается. Добавить туда что-то после — уже нельзя.</li>
+    </ol>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">07 / 19</div>
+  <h2>Пока вы договариваетесь, запись уже пишется.</h2>
+  <p class="answer">Deal Vault — не кнопка «сохранить переписку в архив». Сообщение не может попасть в чат, минуя запись: сообщение и его отметка в цепи сохраняются одной операцией. Или оба, или ни одного.</p>
+  <div class="block">
+    <span class="block-label">Что уходит в сейф само</span>
+    <ul>
+      <li>Каждое сообщение — с точным временем и местом в очереди</li>
+      <li>Каждое фото и каждый файл — передача, получение, чек, бирка багажа</li>
+      <li>Документы, если стороны ими обменивались прямо в сделке</li>
+      <li>Каждая смена статуса: мэтч, согласие, передача, вылет, вручение, закрытие</li>
+      <li>Момент запечатывания — и, если случился спор, момент распечатывания тоже</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">08 / 19</div>
+  <h2>В сделке четыре роли. Три из них — люди, которые в ней участвуют.</h2>
+  <p class="answer">Сейф — не общий склад, куда заглядывают все желающие. У каждой сделки свой круг, и он маленький.</p>
+  <div class="block">
+    <span class="block-label">Кто и что видит</span>
+    <ul>
+      <li><b>Отправитель</b> — полный доступ к своей сделке</li>
+      <li><b>Перевозчик</b> — то же самое, со своей стороны</li>
+      <li><b>Получатель</b> — приглашается отправителем в чат сделки и подтверждает приём. Отдельный участник, а не «строка адреса»</li>
+      <li><b>Арбитр</b> — только если открыт спор и выдан доступ. Его вход в сейф записывается в ту же цепь: увидеть переписку тихо нельзя</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">09 / 19</div>
+  <h2>Деньги сегодня идут мимо нас. Говорим это прямо, а не мелким шрифтом.</h2>
+  <p class="answer">В нынешней версии Vimana оплата происходит между людьми — наличными, переводом, как принято на этом рынке сейчас. Мы не держим ваши деньги и не проводим платёж. Что мы делаем сегодня — фиксируем в сейфе договорённость о сумме и каждое её изменение по ходу сделки. «Мы так не договаривались» перестаёт быть вопросом памяти.</p>
+  <div class="block contrast">
+    <span class="block-label">Что будет с деньгами дальше</span>
+    <p>Платежи на платформе и эскроу с залогом — на дорожной карте, отдельными этапами, и мы к ним ещё не подошли. Пока это не работает — вы не увидите на этой странице ни «безопасной сделки», ни картинки с замочком над кошельком. Как только заработает — скажем той же строчкой, что и всё остальное.</p>
+  </div>
+</div></section>
+
+<!-- ═══════════ ТАКТ 3 · ЧТО ТАКОЕ СЕЙФ НА САМОМ ДЕЛЕ ═══════════ -->
+<div class="beat-band"><div class="container">
+  <div class="beat-label">Такт 3 из 4</div>
+  <div class="beat-title">Что такое сейф на самом деле</div>
+</div></div>
+
+<section class="s"><div class="container">
+  <div class="waypoint">10 / 19</div>
+  <h2>Сейф — не папка с файлами. Это цепь.</h2>
+  <p class="answer">Каждое событие сделки получает отпечаток — короткую строку, посчитанную из его содержимого. И в этот отпечаток входит отпечаток предыдущего события. Так события сцепляются в одну линию, где у каждого звена своё место и свой сосед.</p>
+  <div class="block schema">
+    <span class="block-label">Почему это меняет дело</span>
+<pre>события   [ мэтч ] → [ сообщение ] → [ фото ] → [ вручение ] → [ печать ]
+цепь        #a1c…  ↘   #7f2…      ↘   #b09…  ↘   #e34…     ↘   #d51…</pre>
+    <p>Тронули одно звено в середине — все следующие отпечатки перестают сходиться. Не «мы заметим и накажем». Просто арифметика перестаёт сходиться, и это видно при проверке.</p>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">11 / 19</div>
+  <h2>Мы не обещаем, что не будем менять записи. Мы говорим, что незаметно — не выйдет.</h2>
+  <p class="answer">Формально в базу данных можно залезть — так у любого, кто держит сервер, и мы не станем рассказывать иначе. Вопрос в том, что будет дальше.</p>
+  <div class="block contrast">
+    <span class="block-label">Разница, ради которой всё это строилось</span>
+    <p>«Мы обещаем не менять» — это про доверие к обещавшему. Обещания нарушают: иногда со зла, иногда после смены руководства, иногда просто по ошибке.</p>
+    <p>«Изменение видно» — это про конструкцию. Изменить строчку можно. Изменить её так, чтобы цепь по-прежнему сходилась, — нельзя, для этого пришлось бы пересобрать всё, что было после, у всех на виду. Первое годится для лендинга. Второе — для спора.</p>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">12 / 19</div>
+  <h2>Проверить содержимое можно, не читая его.</h2>
+  <p class="answer">Сообщения в сейфе зашифрованы. Отпечаток считается не с текста, а с тех самых зашифрованных байтов, которые лежат на диске. Поэтому проверка целостности не требует расшифровки — и никому не приходится открывать вашу переписку, чтобы убедиться, что её не трогали.</p>
+  <div class="block">
+    <span class="block-label">Что ловит такая проверка</span>
+    <ul>
+      <li><b>Удаление</b> сообщения или файла из середины сделки</li>
+      <li><b>Подмену</b> фото на другое — при том же имени и том же месте в переписке</li>
+      <li><b>Правку</b> текста задним числом</li>
+      <li><b>Перестановку</b> событий местами: время в цепи идёт только вперёд</li>
+      <li><b>Дописывание</b> события в прошлое</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">13 / 19</div>
+  <h2>Сделка закрылась — сейф запечатан. Открыть его обратно можно только громко.</h2>
+  <p class="answer">В момент, когда получатель подтвердил приём, сейф запечатывается: дописать в него больше нечего и незачем. Но проблемы иногда всплывают на следующий день — поэтому печать не абсолютна, а честна.</p>
+  <div class="block flow">
+    <span class="block-label">Как это работает</span>
+    <ol>
+      <li>Получение подтверждено → в цепь ложится <b>печать</b>. Дальше сделка не принимает новых записей.</li>
+      <li>Кто-то открыл спор → печать <b>снимается</b>, и это тоже становится событием в цепи. Стороны могут приложить то, что нужно арбитру.</li>
+      <li>Спор решён → сейф <b>запечатывается снова</b>, вторым событием.</li>
+    </ol>
+    <p>Ни распечатать, ни запечатать молча нельзя: обе операции остаются в записи навсегда. Печать замораживает содержимое сделки, но никогда не прячет историю доступа к ней.</p>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">14 / 19</div>
+  <h2>Ключ от вашей переписки разрезан на три части. У нас — одна.</h2>
+  <p class="answer">Ключ к содержимому сделки разделён между отправителем, перевозчиком и арбитром: чтобы открыть, нужны любые две части из трёх. Одной нашей — недостаточно. Это не обещание вести себя хорошо, это то, как сложены ключи.</p>
+  <div class="block">
+    <span class="block-label">Что это значит по ролям</span>
+    <ul>
+      <li><b>Стороны сделки</b> открывают свой сейф вдвоём — как и должно быть, они оба в этой доставке</li>
+      <li><b>Арбитр</b> — третья часть. Работает только вместе с одной из сторон и только по выданному доступу</li>
+      <li><b>Каждое открытие</b> арбитром пишется в цепь. Тихого чтения не бывает</li>
+      <li><b>Ваш собственный ключ</b> можно забрать себе: после этого нашей копии не остаётся, и подписывать события вы будете сами</li>
+    </ul>
+  </div>
+</div></section>
+
+<!-- ═══════════ ТАКТ 4 · ЧТО ЭТО МЕНЯЕТ НА ПРАКТИКЕ ═══════════ -->
+<div class="beat-band"><div class="container">
+  <div class="beat-label">Такт 4 из 4</div>
+  <div class="beat-title">Что это меняет на практике</div>
+</div></div>
+
+<section class="s"><div class="container">
+  <div class="waypoint">15 / 19</div>
+  <h2>Кто громче в переписке — теряет вес. Что показывает сейф — приобретает.</h2>
+  <p class="answer">Когда стороны не сходятся, спор смотрит арбитр. Он не «получает доступ к базе» — ему открывают конкретно эту сделку, и сам факт открытия ложится в ту же цепь, что и всё остальное. Разбирают не характеры, а последовательность событий.</p>
+  <div class="block">
+    <span class="block-label">Что перестаёт работать в споре</span>
+    <ul>
+      <li>Напор: «я всегда так делаю, меня все знают»</li>
+      <li>Скриншот из середины переписки, где обрезано начало</li>
+      <li>«Он мне это обещал, а потом стёр»</li>
+      <li>Численное превосходство знакомых в общем чате</li>
+      <li>Давление сроками: «решай сейчас, я в аэропорту»</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">16 / 19</div>
+  <h2>В каждой сделке есть проверка. Она даёт ответ, а не заверение.</h2>
+  <p class="answer">Не пресс-релиз, не миссия, не значок «secure» в подвале. Проверка проходит по цепи сделки и говорит: все ли звенья сходятся, всё ли содержимое на месте, где именно расхождение, если оно есть.</p>
+  <div class="block">
+    <span class="block-label">Что проверка отвечает сегодня</span>
+    <ul>
+      <li>Цепь сделки цела — или сломана, и на каком звене</li>
+      <li>Каждое сообщение и каждый файл на месте и совпадают со своим отпечатком</li>
+      <li>Сейф запечатан или открыт — и когда его печатали и распечатывали</li>
+      <li>Документ, показанный при передаче, — тот же самый, что лежит в профиле человека</li>
+    </ul>
+  </div>
+  <div class="block contrast">
+    <span class="block-label">Чего проверка пока не делает</span>
+    <p>Сегодня она проходит на нашем сервере — и это её честная граница. Чтобы проверять можно было и без нас, нужны две вещи: публикация отпечатков наружу и выгрузка сейфа отдельным файлом. Обе построены наполовину, обе на дорожной карте, обе пока выключены. До того дня мы не станем говорить, что от нас уже ничего не зависит.</p>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">17 / 19</div>
+  <h2>Что уже можно унести с собой — и чего пока нельзя.</h2>
+  <p class="answer">Мы строим Vimana так, чтобы однажды из неё можно было выйти, ничего не потеряв. Часть пути пройдена, часть — нет. Вот граница, честно.</p>
+  <div class="block">
+    <span class="block-label">Уже работает</span>
+    <ul>
+      <li>Свой ключ можно забрать в любой момент — наша копия при этом удаляется</li>
+      <li>Ключ обычный, совместимый с открытым протоколом: он ваш, а не «аккаунт в Vimana»</li>
+      <li>Профиль, связи и история сделок живут при вашем ключе, а не при нашем логине</li>
+    </ul>
+  </div>
+  <div class="block contrast">
+    <span class="block-label">Ещё нет</span>
+    <p>Выгрузки сейфа отдельным файлом, который открывается без нас, сегодня нет. Публикация отпечатков в открытую сеть построена, но выключена. Отдавать сейф в распределённое хранилище — этап дальше по карте. Всё это мы называем планом, а не функцией, ровно до того дня, когда вы сможете нажать и получить файл.</p>
+  </div>
+</div></section>
+
+<!-- ═══════════ РАЗРЕШЕНИЕ · С ЧЕГО НАЧИНАЕМ И КТО УЖЕ ЛЕТИТ ═══════════ -->
+<div class="beat-band"><div class="container">
+  <div class="beat-label">Разрешение</div>
+  <div class="beat-title">С чего начинаем и кто уже летит</div>
+</div></div>
+
+<section class="s"><div class="container">
+  <div class="waypoint">18 / 19</div>
+  <h2>Начинаем оттуда, где чемоданов и так летает больше всего.</h2>
+  <p class="answer">Дубай — Нью-Йорк. Абу-Даби — Хьюстон. Шарджа — Сан-Франциско. Плотный поток в обе стороны, большая диаспора, много малого бизнеса, которому регулярно нужно передать что-то лично. И тот самый чат, из которого мы сюда пришли.</p>
+  <div class="block">
+    <span class="block-label">Почему этот коридор — первый</span>
+    <ul>
+      <li>Десятки рейсов в день в обе стороны: почти всегда есть кто-то под ваши даты</li>
+      <li>Постоянный спрос диаспоры: лекарства, документы, подарки родителям</li>
+      <li>Малый бизнес, для которого неделя в логистике — это упущенная сделка</li>
+      <li>Между этими городами так уже возят. Не хватало только записи.</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">19 / 19</div>
+  <h2>У вас в чемодане есть место? Мы знаем, кому оно нужно.</h2>
+  <p class="answer">Пилоты, бортпроводники, частые пассажиры — вы всё равно летите. Возьмите то, что кому-то очень нужно доставить, и пусть свободные килограммы окупят часть билета. Сейф мы придумали не в последнюю очередь ради вас: «я отдал» перестаёт быть вашим личным риском.</p>
+  <div class="block">
+    <span class="block-label">Что вы получаете как перевозчик</span>
+    <ul>
+      <li><b>Условия</b> — маршрут, свободный вес, категории и цену за место назначаете вы сами</li>
+      <li><b>Защиту</b> — фото передачи и подтверждение получателя лежат в записи, которую нельзя почистить</li>
+      <li><b>Границы</b> — сами решаете, что берёте: только документы, только техника, ничего хрупкого</li>
+      <li><b>Историю</b> — каждая закрытая сделка остаётся при вас и вашем ключе, а не в чужой ленте</li>
+    </ul>
+  </div>
+</div></section>
+
+<footer>
+  <div class="container">
+    <div class="brand">Vimana</div>
+    <div class="taglines">Wings of Trust · Peer-to-Air · People are the Network</div>
+    <a class="cta" href="#">Забронировать место в первой волне</a>
+    <p class="fine">Sacred Logistics · Первый коридор: ОАЭ ↔ США · 2026</p>
+  </div>
+</footer>
+
+</body>
+</html>
