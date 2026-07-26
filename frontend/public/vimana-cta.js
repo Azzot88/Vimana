@@ -71,13 +71,19 @@
     return !!token && !expired(token);
   }
 
+  /* Кнопок на странице может быть несколько: у пятых версий CTA продублирован
+   * в шапке, в герое и в финальной секции. Переключаем все разом — иначе
+   * залогиненный увидит «Зайти в аккаунт» внизу и «Получить инвайт» сверху. */
   function applyCta() {
-    var cta = document.getElementById('vimana-cta');
-    if (!cta || !hasAccount()) return; // гостю оставляем разметку как есть
-    var label = cta.getAttribute('data-auth-label');
-    var href = cta.getAttribute('data-auth-href');
-    if (label) cta.textContent = label;
-    if (href) cta.setAttribute('href', href);
+    var nodes = document.querySelectorAll('[data-auth-label]');
+    if (!nodes.length || !hasAccount()) return; // гостю оставляем разметку как есть
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var label = el.getAttribute('data-auth-label');
+      var href = el.getAttribute('data-auth-href');
+      if (label) el.textContent = label;
+      if (href) el.setAttribute('href', href);
+    }
   }
 
   function mountProgress() {
