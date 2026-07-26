@@ -103,21 +103,28 @@ async def test_route_notes_expired_not_returned(client, session_maker):
 
 async def test_route_notes_ranks_specific_before_wildcards(client, session_maker):
     """Overlap: `*→X` + `US→X` — both returned, specific first."""
+    # Two hex chars is 256 possibilities against a table that accumulates across
+    # runs — the same code eventually comes up twice and the assertion below
+    # counts a previous run's notes. Match on the headlines this run created
+    # instead; the destination code only has to be valid, not unique.
     dest = f"X{uuid.uuid4().hex[:2].upper()}"
+    wild_headline = f"wild-{uuid.uuid4().hex[:6]}"
+    specific_headline = f"specific-{uuid.uuid4().hex[:6]}"
     await _add_route_note(
         session_maker,
         origin_iso="*",
         destination_iso=dest,
-        headline=f"wild-{uuid.uuid4().hex[:6]}",
+        headline=wild_headline,
     )
     await _add_route_note(
         session_maker,
         origin_iso="US",
         destination_iso=dest,
-        headline=f"specific-{uuid.uuid4().hex[:6]}",
+        headline=specific_headline,
     )
     resp = await client.get(f"/api/route-notes?origin=US&destination={dest}")
-    matched = [n for n in resp.json() if n["destination_iso"] == dest]
+    mine = {wild_headline, specific_headline}
+    matched = [n for n in resp.json() if n["headline"] in mine]
     assert len(matched) == 2
     # Specific match comes first (rank tuple).
     assert matched[0]["origin_iso"] == "US"
