@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vimana · одноволновая презентация (v2a)</title>
+<!-- v2a · 2026-07-25 · T3.10 · single-wave: слайд 3 = сильное утверждение, 5 = спад, 7-8 = пик, 9-10 = спокойствие -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1626; --navy2:#16304F; --surface:#0F1E32; --surface2:#132842;
+    --cyan:#58B0D9; --amber:#FF7A2F; --text:#E5E7EB; --muted:#9CA8B8;
+    --success:#16A34A; --radius:20px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--navy);color:var(--text);font-family:'Inter',sans-serif;line-height:1.55}
+  section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    padding:64px clamp(20px,7vw,140px);position:relative;border-bottom:1px solid rgba(88,176,217,.08)}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;line-height:1.12;letter-spacing:-.01em}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .num{position:absolute;top:36px;left:clamp(20px,7vw,140px);font-family:'IBM Plex Mono',monospace;
+    color:rgba(156,168,184,.45);font-size:12px;letter-spacing:.14em}
+  .wave{position:absolute;top:36px;right:clamp(20px,7vw,140px);font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.14em;color:var(--muted)}
+  .wave b{color:var(--amber);font-weight:500;letter-spacing:.2em}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--cyan);border:1px solid rgba(88,176,217,.35);
+    border-radius:999px;padding:6px 14px;margin-bottom:24px}
+  .amber{color:var(--amber)} .cyan{color:var(--cyan)}
+  .lead{max-width:760px}
+  .bento{display:grid;gap:14px;margin-top:32px}
+  .cell{background:var(--surface);border:1px solid rgba(88,176,217,.12);border-radius:var(--radius);
+    padding:22px 22px}
+  .cell .ic{font-size:22px;margin-bottom:10px;display:block}
+  .cell h3{font-size:17px;margin-bottom:8px;font-weight:600}
+  .cell p{font-size:14.5px;color:var(--muted)}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .stamp{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;color:var(--amber);border:1.5px dashed rgba(255,122,47,.5);border-radius:10px;
+    padding:9px 15px;margin-top:22px;letter-spacing:.06em}
+  .footer-line{margin-top:34px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.1em}
+
+  /* Intensity levels — типографика и цвет диктуют эмоциональный вес */
+  .lvl-low h1{font-size:clamp(30px,4.4vw,52px);font-weight:500;color:var(--text)}
+  .lvl-low .lead{font-size:clamp(16px,1.5vw,19px);color:var(--muted);margin-top:22px}
+
+  .lvl-mid h1{font-size:clamp(34px,5vw,58px);font-weight:600}
+  .lvl-mid .lead{font-size:clamp(17px,1.7vw,21px);color:var(--muted);margin-top:24px}
+
+  .lvl-high{background:linear-gradient(180deg,var(--navy),var(--surface2))}
+  .lvl-high h1{font-size:clamp(38px,5.5vw,64px);font-weight:700}
+  .lvl-high .lead{font-size:clamp(18px,1.8vw,22px);color:var(--text);margin-top:28px}
+
+  /* Пиковые слайды — монументальность через воздух и амбер */
+  .lvl-peak{background:linear-gradient(180deg,var(--surface2) 0%,var(--navy) 100%);
+    padding-top:120px;padding-bottom:120px}
+  .lvl-peak h1{font-size:clamp(48px,7vw,86px);font-weight:700;max-width:1100px;letter-spacing:-.02em}
+  .lvl-peak .amber-underline{border-bottom:3px solid var(--amber);padding-bottom:6px}
+  .lvl-peak .lead{font-size:clamp(19px,1.9vw,24px);color:var(--muted);margin-top:32px;max-width:720px}
+
+  .lvl-max{background:radial-gradient(ellipse at top,rgba(255,122,47,.09),transparent 65%),var(--navy);
+    padding-top:140px;padding-bottom:140px}
+  .lvl-max h1{font-size:clamp(54px,8vw,104px);font-weight:700;line-height:1.05;max-width:1200px;
+    letter-spacing:-.03em}
+  .lvl-max .lead{font-size:clamp(20px,2vw,26px);color:var(--muted);margin-top:36px;max-width:760px}
+
+  /* Спокойные финальные слайды */
+  .lvl-calm h1{font-size:clamp(30px,4vw,46px);font-weight:500;color:var(--text)}
+  .lvl-calm .lead{font-size:clamp(16px,1.5vw,19px);color:var(--muted);margin-top:22px}
+
+  ul.plain{list-style:none;margin-top:14px}
+  ul.plain li{padding-left:26px;position:relative;margin-bottom:9px;color:var(--muted);font-size:15px}
+  ul.plain li::before{content:"✈";position:absolute;left:0;color:var(--cyan);font-size:12px;top:4px}
+
+  .vault-note{margin-top:32px;padding:18px 22px;border-left:2px solid var(--amber);
+    background:rgba(255,122,47,.04);border-radius:0 8px 8px 0;max-width:720px;
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--muted);letter-spacing:.02em}
+  .vault-note b{color:var(--amber);font-weight:500}
+
+  .soon{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--navy);background:var(--amber);border-radius:6px;
+    padding:3px 10px;margin-left:10px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 · level 4/10 · opening -->
+<section class="lvl-low">
+  <span class="num">01 / 10</span><span class="wave">·  ·  ·  ·  ·  ·  ·  ·  ·  ·</span>
+  <span class="tag">Vimana · Sacred Logistics</span>
+  <h1>Ваша посылка летит<br>в чьём-то <span class="amber">свободном чемодане</span></h1>
+  <p class="lead">Пилоты, бортпроводники, частые пассажиры. Люди, которые всё равно летят вашим маршрутом — с местом в чемодане и готовностью взять с собой ваш конверт, ваше лекарство, вашего питомца.</p>
+</section>
+
+<!-- SLIDE 2 · level 5/10 · setup -->
+<section class="lvl-mid">
+  <span class="num">02 / 10</span><span class="wave">·  ·  <b>▲</b>  ·  ·  ·  ·  ·  ·  ·</span>
+  <h1>Этот рынок <span class="cyan">уже есть</span></h1>
+  <p class="lead">Люди возят документы, посылки и питомцев друг для друга — в чатах на десятки тысяч участников. Тысячи сделок каждый день. Реальные деньги, реальные вещи, реальное доверие. Но одно «но» — <b style="color:var(--text)">всё держится на честном слове</b>.</p>
+  <div class="bento g3">
+    <div class="cell"><span class="ic">🤝</span><h3>Договорились в чате</h3><p>Из рук в руки. Если что-то пошло не так — доказательств нет.</p></div>
+    <div class="cell"><span class="ic">💸</span><h3>Деньги вперёд</h3><p>До доставки рискует отправитель. После — курьер. Оба нервничают.</p></div>
+    <div class="cell"><span class="ic">⚖️</span><h3>«Слово против слова»</h3><p>Разбирать некому — и правда не побеждает.</p></div>
+  </div>
+</section>
+
+<!-- SLIDE 3 · level 9/10 · STRONG STATEMENT · vault-reveal 1 -->
+<section class="lvl-peak">
+  <span class="num">03 / 10</span><span class="wave">·  ·  ·  <b>▲</b>  ·  ·  ·  ·  ·  ·</span>
+  <span class="tag amber" style="color:var(--amber);border-color:rgba(255,122,47,.5)">Что делает Vimana</span>
+  <h1>У каждой доставки теперь есть <span class="amber-underline">сейф</span>.<br>Который никто не может переписать.</h1>
+  <p class="lead">Ни курьер. Ни отправитель. Ни арбитр. <b style="color:var(--text)">Ни мы.</b> Внутри сейфа — переписка, фото передачи, фото получения, документы, время, место. Всё, что было. Как было. Навсегда.</p>
+  <div class="vault-note"><b>СЕЙФ</b> — единица нашей платформы. Не аккаунт. Не чат. Не приложение. Сейф. И копия сейфа лежит у каждого участника сделки — не только у нас.</div>
+</section>
+
+<!-- SLIDE 4 · level 6/10 · practical descent · four steps -->
+<section class="lvl-mid">
+  <span class="num">04 / 10</span><span class="wave">·  ·  ·  ·  <b>▼</b>  ·  ·  ·  ·  ·</span>
+  <h1>Четыре шага. Каждый оставляет след.</h1>
+  <div class="bento g4">
+    <div class="cell"><span class="ic">🤝</span><h3>1 · Договорились</h3><p>Условия, цена, сроки — в сделке, а не «где-то в переписке».</p></div>
+    <div class="cell"><span class="ic">📸</span><h3>2 · Передали</h3><p>Фото передачи ложится в сейф. С этой секунды его нельзя подменить.</p></div>
+    <div class="cell"><span class="ic">✈️</span><h3>3 · Летит</h3><p>Обе стороны видят статус. Никаких «где посылка?» ночью.</p></div>
+    <div class="cell"><span class="ic">📦</span><h3>4 · Получили</h3><p>Фото получения — и сейф <b style="color:var(--text)">запечатывается</b>. Как конверт с сургучной печатью.</p></div>
+  </div>
+  <p class="footer-line">ПОСЛЕ ПЕЧАТИ СЕЙФ ТОЛЬКО ПРЕДЪЯВЛЯЕТСЯ И ПРОВЕРЯЕТСЯ — БОЛЬШЕ НЕ ДОПОЛНЯЕТСЯ</p>
+</section>
+
+<!-- SLIDE 5 · level 3/10 · SOFT · secondary detail -->
+<section class="lvl-low">
+  <span class="num">05 / 10</span><span class="wave">·  ·  ·  ·  ·  <b>▽</b>  ·  ·  ·  ·</span>
+  <h1>Вы видите, с кем имеете дело</h1>
+  <p class="lead">Не звёздочки, которые накрутили. Не отзывы, которые купили. Реальная история завершённых доставок — с фото, с датами, с суммами. Плюс: если попросите, человек подтвердит личность документом. Документ ляжет и в его сейф, и в сейф вашей сделки — не пропадёт.</p>
+</section>
+
+<!-- SLIDE 6 · level 7/10 · rise · dispute -->
+<section class="lvl-high">
+  <span class="num">06 / 10</span><span class="wave">·  ·  ·  ·  ·  ·  <b>▲</b>  ·  ·  ·</span>
+  <h1>Спор решает <span class="amber">не тот, кто громче</span>. А сейф.</h1>
+  <p class="lead">Открывается спор — подключается арбитр. Он получает доступ к сейфу <b style="color:var(--text)">только с вашего разрешения</b>. Даже сам факт, что арбитр открыл сейф, — записывается. Решение строится на том, что реально было, а не на том, кто убедительнее кричит.</p>
+</section>
+
+<!-- SLIDE 7 · level 9/10 · PEAK · No privileged role · vault-reveal 2 -->
+<section class="lvl-peak">
+  <span class="num">07 / 10</span><span class="wave">·  ·  ·  ·  ·  ·  ·  <b>▲</b>  ·  ·</span>
+  <span class="tag amber" style="color:var(--amber);border-color:rgba(255,122,47,.5)">Что важно понимать про Vimana</span>
+  <h1>Здесь <span class="amber-underline">нет никого сверху</span>.</h1>
+  <p class="lead">Ни администратора. Ни арбитра. Ни владельца платформы. Не «мы обещаем не смотреть» и не «мы обещаем не менять» — <b style="color:var(--text)">мы физически не можем</b>. Сейф так устроен. Впервые в цифровом сервисе никто не «сверху» вашей правды.</p>
+  <div class="vault-note">Сейф без привилегированной роли — <b>принцип, без которого Vimana невозможна</b>. Если бы мы могли править запись сделки, мы бы обманывали в тот же момент, когда вы приносите нам ценное.</div>
+</section>
+
+<!-- SLIDE 8 · level 10/10 · MAXIMUM PEAK · truth outlives · trust optional -->
+<section class="lvl-max">
+  <span class="num">08 / 10</span><span class="wave">·  ·  ·  ·  ·  ·  ·  ·  <b>▲</b>  ·</span>
+  <h1>Нам не обязательно <span class="amber">доверять</span>.<br>Сейф докажет всё сам.<br>И <span class="cyan">переживёт</span> нас.</h1>
+  <p class="lead">В каждой сделке — кнопка «Проверить»: система при вас сверяет сейф и показывает, всё ли на месте. Файл сейфа можно скачать и предъявить где угодно — он доказывает себя без нас. Даже если Vimana исчезнет завтра, ваши сейфы останутся у вас. Правда без срока годности.</p>
+</section>
+
+<!-- SLIDE 9 · level 5/10 · CALM · safe box / money -->
+<section class="lvl-calm">
+  <span class="num">09 / 10</span><span class="wave">·  ·  ·  ·  ·  ·  ·  ·  ·  <b>▽</b></span>
+  <h1>Деньги ждут в защищённой ячейке <span class="soon">скоро</span></h1>
+  <p class="lead">Как ячейка в банке при сделке с квартирой. Отправитель кладёт оплату — курьер видит, что деньги есть, но взять их пока нельзя. Получатель подтвердил — ячейка открывается. Спор — открывает только арбитр по записи из сейфа. <b style="color:var(--text)">Мы физически не держим ваши деньги — мы не можем их забрать себе.</b></p>
+</section>
+
+<!-- SLIDE 10 · level 3/10 · CALM FINAL · start + stamp -->
+<section class="lvl-calm">
+  <span class="num">10 / 10</span><span class="wave">·  ·  ·  ·  ·  ·  ·  ·  ·  ·</span>
+  <h1>Не всё грузится в контейнер.<br>Не всё требует веры.</h1>
+  <p class="lead">Документы. Ценное. Питомец, который не переживёт багажного отсека. Начинаем с коридора <b style="color:var(--text)">ОАЭ ↔ США</b>. Дальше — куда полетите вы.</p>
+  <div class="stamp">✈ WINGS OF TRUST · PEER-TO-AIR · PEOPLE ARE THE NETWORK</div>
+</section>
+
+</body>
+</html>

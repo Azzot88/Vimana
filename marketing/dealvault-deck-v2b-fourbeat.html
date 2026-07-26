@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vimana · четырёхтактная презентация (v2b)</title>
+<!-- v2b · 2026-07-25 · T3.10 · four-beat: пики на 4/8/12 равнозначны, 16 максимум, 17-19 успокоение -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1626; --navy2:#16304F; --surface:#0F1E32; --surface2:#132842;
+    --cyan:#58B0D9; --amber:#FF7A2F; --text:#E5E7EB; --muted:#9CA8B8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--navy);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5}
+  section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    padding:80px clamp(20px,7vw,140px);position:relative;border-bottom:1px solid rgba(88,176,217,.06)}
+  h1{font-family:'Space Grotesk',sans-serif;line-height:1.1;letter-spacing:-.01em;font-weight:600}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .num{position:absolute;top:32px;left:clamp(20px,7vw,140px);font-family:'IBM Plex Mono',monospace;
+    color:rgba(156,168,184,.4);font-size:11px;letter-spacing:.16em}
+  .beat{position:absolute;top:32px;right:clamp(20px,7vw,140px);font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+  .beat b{color:var(--amber);font-weight:500}
+  .amber{color:var(--amber)} .cyan{color:var(--cyan)}
+  .lead{margin-top:28px;max-width:640px;color:var(--muted);font-size:clamp(15px,1.5vw,18px)}
+  .vault-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--amber);
+    border:1px solid rgba(255,122,47,.4);border-radius:999px;padding:5px 12px;margin-bottom:28px}
+  .cyan-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);
+    border:1px solid rgba(88,176,217,.35);border-radius:999px;padding:5px 12px;margin-bottom:28px}
+
+  /* Волновые уровни интенсивности (1-8, финал =10) */
+  .l2 h1{font-size:clamp(28px,3.5vw,44px);font-weight:400;color:var(--muted);max-width:820px}
+  .l3 h1{font-size:clamp(32px,4vw,50px);font-weight:500;color:var(--text);max-width:900px}
+  .l4 h1{font-size:clamp(36px,4.6vw,56px);font-weight:500;color:var(--text);max-width:950px}
+  .l5 h1{font-size:clamp(40px,5vw,62px);font-weight:600;max-width:1000px}
+  .l6 h1{font-size:clamp(44px,5.6vw,70px);font-weight:600;max-width:1050px}
+  .l7 h1{font-size:clamp(48px,6.2vw,78px);font-weight:700;max-width:1100px}
+
+  /* Пиковые слайды (4, 8, 12) — равнозначные */
+  .peak{background:linear-gradient(180deg,var(--navy) 0%,var(--surface2) 100%);
+    padding-top:120px;padding-bottom:120px}
+  .peak h1{font-size:clamp(52px,7vw,92px);font-weight:700;line-height:1.05;
+    max-width:1200px;letter-spacing:-.02em}
+  .peak .amber-underline{border-bottom:3px solid var(--amber);padding-bottom:6px;display:inline-block}
+
+  /* Максимальный пик (16) */
+  .max-peak{background:radial-gradient(ellipse at 30% 30%,rgba(255,122,47,.12),transparent 60%),
+    radial-gradient(ellipse at 70% 70%,rgba(88,176,217,.08),transparent 60%),var(--navy);
+    padding-top:150px;padding-bottom:150px}
+  .max-peak h1{font-size:clamp(60px,9vw,124px);font-weight:700;line-height:1.02;
+    max-width:1300px;letter-spacing:-.03em}
+
+  /* Спокойное разрешение (17-19) */
+  .resolve h1{font-family:'Space Grotesk',sans-serif;font-weight:400;
+    font-size:clamp(30px,3.8vw,48px);color:var(--text);max-width:900px}
+  .stamp{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--amber);border:1.5px dashed rgba(255,122,47,.5);border-radius:10px;
+    padding:9px 15px;margin-top:26px;letter-spacing:.08em}
+
+  /* Vault-note - вкрапление про сейф на выбранных слайдах */
+  .vault-note{margin-top:28px;padding:14px 18px;border-left:2px solid var(--amber);
+    background:rgba(255,122,47,.04);border-radius:0 6px 6px 0;max-width:640px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted);letter-spacing:.02em;line-height:1.6}
+  .vault-note b{color:var(--amber);font-weight:500}
+
+  .soon{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--navy);background:var(--amber);border-radius:5px;
+    padding:2px 8px;margin-left:8px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ ТАКТ 1 · ПРОБЛЕМА ═══════════ -->
+
+<!-- S1 · l3 -->
+<section class="l3">
+  <span class="num">01 / 19  ·  ТАКТ 1</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Ваша посылка летит<br>в <span class="amber">чьём-то</span> свободном чемодане.</h1>
+</section>
+
+<!-- S2 · l4 -->
+<section class="l4">
+  <span class="num">02 / 19  ·  ТАКТ 1</span><span class="beat">·  ●  ·  ·</span>
+  <h1>И это работает. Уже сейчас.</h1>
+  <p class="lead">Тысячи людей возят документы, посылки, лекарства и питомцев друг для друга. В чатах на десятки тысяч участников. Каждый день.</p>
+</section>
+
+<!-- S3 · l6 -->
+<section class="l6">
+  <span class="num">03 / 19  ·  ТАКТ 1</span><span class="beat">·  ●  ●  ·</span>
+  <h1>Но всё держится <span class="amber">на честном слове.</span></h1>
+</section>
+
+<!-- S4 · PEAK 1 -->
+<section class="peak">
+  <span class="num">04 / 19  ·  ТАКТ 1  ·  ПИК</span><span class="beat">·  ●  ●  <b>▲</b></span>
+  <h1>«Я отдал».<br>«А я не получал».<br><span class="amber-underline">И правды нет.</span></h1>
+</section>
+
+<!-- ═══════════ ТАКТ 2 · ПРОЗРЕНИЕ · СЕЙФ ═══════════ -->
+
+<!-- S5 · l3 -->
+<section class="l3">
+  <span class="num">05 / 19  ·  ТАКТ 2</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Так было всегда.<br>Пока правда не становилась <span class="cyan">предметом</span>.</h1>
+</section>
+
+<!-- S6 · l4 -->
+<section class="l4">
+  <span class="num">06 / 19  ·  ТАКТ 2</span><span class="beat">·  ●  ·  ·</span>
+  <h1>Запечатанное письмо.<br>Нотариальный лист.<br>Подписанный чек.</h1>
+</section>
+
+<!-- S7 · l6 -->
+<section class="l6">
+  <span class="num">07 / 19  ·  ТАКТ 2</span><span class="beat">·  ●  ●  ·</span>
+  <h1>Предметы, которым<br><span class="amber">нельзя солгать.</span></h1>
+</section>
+
+<!-- S8 · PEAK 2 · vault-reveal -->
+<section class="peak">
+  <span class="num">08 / 19  ·  ТАКТ 2  ·  ПИК</span><span class="beat">·  ●  ●  <b>▲</b></span>
+  <span class="vault-tag">Основа Vimana</span>
+  <h1>У каждой сделки —<br>свой <span class="amber-underline">сейф</span>.</h1>
+  <div class="vault-note"><b>СЕЙФ</b> — единица нашей платформы. Не аккаунт. Не чат. Сейф — контейнер, в котором собирается правда о вашей доставке: переписка, фото, документы, время, место.</div>
+</section>
+
+<!-- ═══════════ ТАКТ 3 · МЕХАНИКА ═══════════ -->
+
+<!-- S9 · l3 -->
+<section class="l3">
+  <span class="num">09 / 19  ·  ТАКТ 3</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Копия сейфа —<br><span class="cyan">у каждого участника.</span></h1>
+  <p class="lead">Не только у нас. У вас. У курьера. У получателя. Три копии одной правды.</p>
+</section>
+
+<!-- S10 · l4 -->
+<section class="l4">
+  <span class="num">10 / 19  ·  ТАКТ 3</span><span class="beat">·  ●  ·  ·</span>
+  <h1>Внутри — всё, как было:</h1>
+  <p class="lead" style="font-size:clamp(17px,1.7vw,20px);color:var(--text);margin-top:32px">
+    фото передачи · фото получения · каждое сообщение<br>
+    в правильном порядке · время и место · документы</p>
+</section>
+
+<!-- S11 · l6 -->
+<section class="l6">
+  <span class="num">11 / 19  ·  ТАКТ 3</span><span class="beat">·  ●  ●  ·</span>
+  <h1>И <span class="amber">никто</span> не может<br>это переписать.</h1>
+</section>
+
+<!-- S12 · PEAK 3 · No privileged role -->
+<section class="peak">
+  <span class="num">12 / 19  ·  ТАКТ 3  ·  ПИК</span><span class="beat">·  ●  ●  <b>▲</b></span>
+  <span class="vault-tag">Принцип, без которого сейф не существует</span>
+  <h1>Ни курьер.<br>Ни арбитр.<br>Ни владелец Vimana.<br><span class="amber-underline">Даже мы.</span></h1>
+  <div class="vault-note">Не «мы обещаем не менять» — <b>мы физически не можем</b>. В сейфе нет привилегированной роли. Ни у кого нет прав сверху. Впервые в цифровом сервисе.</div>
+</section>
+
+<!-- ═══════════ ТАКТ 4 · СЛЕДСТВИЕ · МАКС ═══════════ -->
+
+<!-- S13 · l4 -->
+<section class="l4">
+  <span class="num">13 / 19  ·  ТАКТ 4</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Значит, спор — <br>это не крик.</h1>
+  <p class="lead">Арбитр открывает сейф — только с вашего разрешения. И даже сам факт, что открыл, — записывается. Решение по фактам, а не по громкости.</p>
+</section>
+
+<!-- S14 · l5 -->
+<section class="l5">
+  <span class="num">14 / 19  ·  ТАКТ 4</span><span class="beat">·  ●  ·  ·</span>
+  <h1>Деньги — в защищённой ячейке. <span class="soon">скоро</span></h1>
+  <p class="lead">Как в банковской ячейке при сделке с квартирой. Отправитель платит — курьер видит, но взять нельзя. Получатель подтвердил — открывается. <b style="color:var(--text)">Мы не держим ваши деньги. Мы физически не можем их забрать.</b></p>
+</section>
+
+<!-- S15 · l6 -->
+<section class="l6">
+  <span class="num">15 / 19  ·  ТАКТ 4</span><span class="beat">·  ●  ●  ·</span>
+  <h1>Сейф можно <span class="cyan">скачать</span>.<br>Файл. К себе на диск.</h1>
+  <p class="lead" style="max-width:680px">Предъявить где угодно. Проверить кем угодно. Он доказывает себя без нашего сервера.</p>
+</section>
+
+<!-- S16 · MAX PEAK -->
+<section class="max-peak">
+  <span class="num">16 / 19  ·  ТАКТ 4  ·  МАКСИМУМ</span><span class="beat">·  ●  ●  <b>▲▲▲</b></span>
+  <h1>Нам не обязательно<br><span class="amber">доверять.</span><br>Сейф докажет всё сам.<br>И <span class="cyan">переживёт</span> нас.</h1>
+</section>
+
+<!-- ═══════════ РАЗРЕШЕНИЕ · УСПОКОЕНИЕ ═══════════ -->
+
+<!-- S17 · resolve -->
+<section class="resolve">
+  <span class="num">17 / 19</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Старт — коридор <span class="cyan">ОАЭ ↔ США</span>.<br>Пилоты. Бортпроводники. Путешественники.</h1>
+</section>
+
+<!-- S18 · resolve -->
+<section class="resolve">
+  <span class="num">18 / 19</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Ваша срочная посылка,<br>документ, лекарство, питомец —<br>с <span class="amber">конкретным человеком</span>.</h1>
+</section>
+
+<!-- S19 · resolve final -->
+<section class="resolve">
+  <span class="num">19 / 19</span><span class="beat">·  ·  ·  ·</span>
+  <h1>Vimana.<br><span class="cyan">Wings of Trust.</span></h1>
+  <div class="stamp">✈ PEER-TO-AIR · PEOPLE ARE THE NETWORK</div>
+</section>
+
+</body>
+</html>
