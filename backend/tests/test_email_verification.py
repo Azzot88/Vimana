@@ -1,4 +1,8 @@
-"""T3.11 — email confirmation by code + the soft gate it feeds.
+"""T3.11 — email confirmation by code.
+
+Confirming gates nothing (owner's decision 2026-07-26) — the tests at the
+bottom pin that down, because a "verify your email" feature quietly growing
+back into a permission check is exactly the kind of drift nobody notices.
 
 Registrations here deliberately use a domain that is NOT in
 `E2E_AUTO_VERIFY_EMAIL_DOMAINS` (conftest sets `vimana.test` and
@@ -295,7 +299,7 @@ async def test_request_code_without_email(client, session_maker):
     assert resp.status_code == 422
 
 
-# ── soft gate ────────────────────────────────────────────────────────────────
+# ── verification gates nothing (owner's decision 2026-07-26) ─────────────────
 
 
 async def _trip_body() -> dict:
@@ -308,17 +312,19 @@ async def _trip_body() -> dict:
     }
 
 
-async def test_gate_blocks_trip_creation(client, fixed_code, captured_codes):
+async def test_unverified_user_can_publish_a_trip(client, fixed_code, captured_codes):
+    """An unproven address is a security question, not a capability one — it
+    must not cost the user anything they could otherwise do."""
     email = gated_email()
     await _register(client, email, can_carry=True)
     headers = await _headers(client, email)
 
     resp = await client.post("/api/trips", headers=headers, json=await _trip_body())
-    assert resp.status_code == 403
-    assert "verified" in resp.json()["detail"].lower()
+    assert resp.status_code == 201
 
 
-async def test_gate_blocks_deal_match(client, fixed_code, captured_codes):
+async def test_unverified_user_can_start_a_deal(client, fixed_code, captured_codes):
+    """404 for the made-up trip id — the point is that it is not a 403."""
     email = gated_email()
     await _register(client, email)
     headers = await _headers(client, email)
@@ -337,23 +343,12 @@ async def test_gate_blocks_deal_match(client, fixed_code, captured_codes):
             },
         },
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
-async def test_gate_opens_after_verification(client, fixed_code, captured_codes):
-    email = gated_email()
-    await _register(client, email, can_carry=True)
-    headers = await _headers(client, email)
-    await client.post(
-        "/api/auth/email/verify", headers=headers, json={"code": FIXED_CODE}
-    )
-
-    resp = await client.post("/api/trips", headers=headers, json=await _trip_body())
-    assert resp.status_code == 201
-
-
-async def test_account_without_email_is_not_gated(client, session_maker):
-    """No address claimed means nothing is in limbo — the gate must not fire."""
+async def test_account_without_email_works_normally(client, session_maker):
+    """T3.13/T3.14 accounts never claim an address and must not be nagged or
+    limited anywhere."""
     async with session_maker() as db:
         user = User(
             email=None,

@@ -79,7 +79,7 @@
     "hasAccount": "Already have an account?",
     "signUp": "Sign up",
     "signIn": "Sign in",
-    "errorDuplicate": "User with this email or phone already exists.",
+    "errorDuplicate": "An account with this email already exists.",
     "errorServer": "Server error. Please try again.",
     "errorCredentials": "Invalid login or password",
     "inactivityWarningTitle": "You'll be logged out soon",
@@ -87,6 +87,22 @@
     "inactivityLoggedOut": "Signed out due to inactivity. Please sign in again.",
     "stayLoggedIn": "Stay signed in",
     "logoutNow": "Log out now"
+  },
+  "verifyEmail": {
+    "title": "Confirm your email",
+    "sentTo": "We sent a 6-digit code to",
+    "why": "Nothing is locked until you do this. But this is the address we use to get you back into your account and to tell you what is happening with your deals — until it is confirmed, we cannot tell whether those messages reach you or someone else.",
+    "codeLabel": "Code from the email",
+    "submit": "Confirm",
+    "checking": "Checking...",
+    "resend": "Send a new code",
+    "resendIn": "You can request a new code in {{seconds}}s",
+    "resent": "A new code is on its way.",
+    "errorInvalid": "That code doesn't match, or it has expired. Request a new one if needed.",
+    "errorTooManyAttempts": "Too many attempts — this code is no longer valid. Request a new one.",
+    "errorCooldown": "A code was just sent. Give it a minute before asking for another.",
+    "bannerBody": "Your email isn't confirmed. It is the address for account recovery and deal notifications — confirm it so those actually reach you.",
+    "bannerCta": "Confirm now"
   },
   "common": {
     "loading": "Loading...",

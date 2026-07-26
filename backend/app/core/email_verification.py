@@ -8,18 +8,18 @@ Design notes:
 - `attempts` is per-issued-code. Hitting the cap burns the code outright
   instead of just refusing the guess — otherwise the cap only slows an attacker
   down, it does not stop them.
-- The gate this feeds is **soft**: an unverified email never blocks login, only
-  the actions that put the user in front of a counterparty (T3.11 acceptance).
-  An account with no email at all is not "unverified" — it has nothing to
-  prove; that is the T3.13/T3.14 path, and it passes the gate untouched.
+- **Verification gates nothing.** Owner's decision, 2026-07-26: an unproven
+  address is a security question, not a capability question. It never blocks
+  login, publishing a trip, or starting a deal. What it protects is the channel
+  itself — account recovery and deal notifications go to that address, and an
+  unproven one means we cannot tell whether they reach the right person.
+  Surfacing it is the UI's job (banner + code screen), not the API's.
 """
 from __future__ import annotations
 
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
-
-from fastapi import HTTPException
 
 from app.core.config import settings
 from app.core.security import hash_password, verify_password
@@ -151,16 +151,3 @@ def verify_code(user: User, code: str, *, now: datetime | None = None) -> None:
 
     user.email_verified_at = now
     _clear_code(user)
-
-
-def require_verified_email(user: User) -> None:
-    """Soft gate for actions that expose the user to a counterparty.
-
-    Deliberately a no-op for accounts without an email: they never claimed an
-    address, so there is nothing in limbo. Login is never gated here.
-    """
-    if user.email and user.email_verified_at is None:
-        raise HTTPException(
-            status_code=403,
-            detail="Email is not verified",
-        )

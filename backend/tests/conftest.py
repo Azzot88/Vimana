@@ -19,11 +19,10 @@ os.environ.setdefault(
     "NSEC_ENCRYPTION_KEY",
     base64.b64encode(b"vimana-nsec-key-32-bytes-length!").decode(),
 )
-# T3.11 — the suite registers ~70 users and immediately has them create trips
-# and deals, which the soft gate blocks until the address is proven. Both test
-# domains are auto-verified here instead of threading a code exchange through
-# every fixture. `test_email_verification.py` clears this setting where it
-# needs the real flow.
+# T3.11 — verification gates nothing, so the suite would pass either way. Both
+# test domains are auto-verified anyway so ~70 registrations stop minting and
+# bcrypt-hashing codes nobody reads. `test_email_verification.py` registers on
+# a domain outside this list where it needs the real flow.
 os.environ.setdefault(
     "E2E_AUTO_VERIFY_EMAIL_DOMAINS", "vimana.test,e2e.vimana.local"
 )
@@ -1042,8 +1041,9 @@ async def _get_or_create_user(
         if not user.password_hash.startswith("$2b$04$"):
             user.password_hash = hash_password(SEED_PASSWORD)
             changed = True
-        # T3.11 — seeds predate email verification; without this they trip the
-        # soft gate on every deal/trip they create.
+        # T3.11 — seeds predate email verification. Nothing depends on the flag
+        # behaviourally, but leaving them unverified would misrepresent the
+        # fixture state in any test that reads `/me`.
         if user.email_verified_at is None:
             user.email_verified_at = datetime.now(timezone.utc)
             changed = True
@@ -1067,7 +1067,7 @@ async def _get_or_create_user(
         nsec_encrypted=ct,
         nsec_nonce=nonce,
         key_self_custody=False,
-        email_verified_at=datetime.now(timezone.utc),  # T3.11 soft gate
+        email_verified_at=datetime.now(timezone.utc),  # T3.11
     )
     db.add(user)
     await db.commit()

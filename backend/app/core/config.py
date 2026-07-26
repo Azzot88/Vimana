@@ -19,10 +19,12 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_PORT: int = 587
 
-    # T3.11 — E2E escape hatch. Comma-separated list of email domains whose
-    # registrations are marked verified immediately, so the Playwright suite
-    # (T_TEST.3) and the pytest suite can create deals without a mailbox.
-    # MUST stay empty in production; `main.py` warns on startup if it is not.
+    # T3.11 — comma-separated email domains whose registrations are marked
+    # verified immediately, so the e2e suites stop minting confirmation codes
+    # nobody reads. Verification gates nothing, so this changes no behaviour
+    # beyond the banner — but it MUST stay empty in production: a verified flag
+    # is supposed to mean someone actually opened that mailbox. `main.py` warns
+    # on startup if it is set.
     E2E_AUTO_VERIFY_EMAIL_DOMAINS: str = ""
 
     TELEGRAM_BOT_TOKEN: str = ""

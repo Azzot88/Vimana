@@ -33,7 +33,10 @@ export default function RegisterPage() {
       localStorage.setItem('token', tokenData.access_token)
       const { data: user } = await me()
       setAuth(user, tokenData.access_token)
-      navigate('/')
+      // T3.11 — straight to the code screen unless the address is already
+      // proven (e2e auto-verify domain), so the first thing a new user sees is
+      // the one action standing between them and creating a deal.
+      navigate(user.email_verified ? '/' : '/verify-email')
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 409) {

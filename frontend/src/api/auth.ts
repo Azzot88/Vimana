@@ -2,8 +2,9 @@ import api from './client'
 
 export interface RegisterPayload {
   display_name: string
-  email?: string
-  phone?: string
+  // T3.11 — email is the only identifier. `phone` left the auth path entirely;
+  // it stays a profile contact field (see `UserUpdate`).
+  email: string
   password: string
   can_carry?: boolean
   can_send?: boolean
@@ -11,6 +12,7 @@ export interface RegisterPayload {
 }
 
 export interface LoginPayload {
+  /** An email address. Field name kept for wire compatibility. */
   login: string
   password: string
 }
@@ -48,7 +50,18 @@ export interface User {
   receiving_note?: string | null
   // T_UX.4 B — presigned R2 URL, minted per /me response. null if not set.
   avatar_url?: string | null
+  // T3.11 — only present on /me. False for an account with no email at all,
+  // which is NOT gated: nothing was claimed, so nothing is in limbo.
+  email_verified?: boolean
 }
+
+// T3.11 — email confirmation. `request-code` answers 202 with
+// {status: 'sent' | 'already_verified'}, or 429 while the cooldown holds.
+export const requestEmailCode = () =>
+  api.post<{ status: string }>('/api/auth/email/request-code')
+
+export const verifyEmail = (code: string) =>
+  api.post<{ status: string }>('/api/auth/email/verify', { code })
 
 
 export const uploadAvatar = (file: File) => {

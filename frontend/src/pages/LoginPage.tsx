@@ -51,10 +51,10 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              {t('auth.emailOrPhone')}
+              {t('auth.email')}
             </label>
             <input
-              type="text"
+              type="email"
               value={loginVal}
               onChange={(e) => setLoginVal(e.target.value)}
               required

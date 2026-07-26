@@ -119,9 +119,10 @@ class UserOut(BaseModel):
 
 class MeOut(UserOut):
     """Owner-only view — includes private receiving address."""
-    # T3.11 — drives the "confirm your email" banner. Derived from
-    # `User.email_verified_at`; an account without an email reads False and is
-    # not gated (see `core.email_verification.require_verified_email`).
+    # T3.11 — drives the "confirm your email" banner and nothing else:
+    # verification gates no endpoint. Derived from `User.email_verified_at`; an
+    # account with no email reads False, and the banner skips it (nothing was
+    # claimed, so nothing is pending).
     email_verified: bool = False
     receiving_country_iso: str | None = None
     receiving_city: str | None = None

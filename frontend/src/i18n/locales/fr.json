@@ -68,9 +68,25 @@
     "hasAccount": "Déjà un compte ?",
     "signUp": "S'inscrire",
     "signIn": "Se connecter",
-    "errorDuplicate": "Un utilisateur avec cet email ou téléphone existe déjà.",
+    "errorDuplicate": "Un compte avec cet email existe déjà.",
     "errorServer": "Erreur serveur. Veuillez réessayer.",
     "errorCredentials": "Identifiant ou mot de passe incorrect"
+  },
+  "verifyEmail": {
+    "title": "Confirmez votre email",
+    "sentTo": "Nous avons envoyé un code à 6 chiffres à",
+    "why": "Rien n'est bloqué en attendant. Mais c'est l'adresse par laquelle nous vous rendons l'accès à votre compte et vous informons de vos transactions — tant qu'elle n'est pas confirmée, nous ne savons pas si ces messages vous parviennent, à vous ou à quelqu'un d'autre.",
+    "codeLabel": "Code reçu par email",
+    "submit": "Confirmer",
+    "checking": "Vérification...",
+    "resend": "Envoyer un nouveau code",
+    "resendIn": "Nouveau code possible dans {{seconds}} s",
+    "resent": "Un nouveau code est en route.",
+    "errorInvalid": "Ce code ne correspond pas ou a expiré. Demandez-en un nouveau si besoin.",
+    "errorTooManyAttempts": "Trop de tentatives — ce code n'est plus valable. Demandez-en un nouveau.",
+    "errorCooldown": "Un code vient d'être envoyé. Attendez une minute avant d'en redemander un.",
+    "bannerBody": "Votre email n'est pas confirmé. C'est l'adresse pour la récupération du compte et les notifications de transactions — confirmez-la pour les recevoir.",
+    "bannerCta": "Confirmer"
   },
   "common": {
     "loading": "Chargement...",

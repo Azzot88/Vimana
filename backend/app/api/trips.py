@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.core.email_verification import require_verified_email
 from app.core.nostr_publish import (
     build_event as build_nostr_event,
     is_publish_enabled,
@@ -28,7 +27,6 @@ async def create_trip(
 ):
     if not current_user.can_carry:
         raise HTTPException(status_code=403, detail="Carrier capability required")
-    require_verified_email(current_user)  # T3.11 soft gate
 
     trip = Trip(
         carrier_id=current_user.id,

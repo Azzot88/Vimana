@@ -68,9 +68,25 @@
     "hasAccount": "Masz już konto?",
     "signUp": "Zarejestruj się",
     "signIn": "Zaloguj się",
-    "errorDuplicate": "Użytkownik z tym adresem email lub numerem telefonu już istnieje.",
+    "errorDuplicate": "Konto z tym adresem email już istnieje.",
     "errorServer": "Błąd serwera. Spróbuj ponownie.",
     "errorCredentials": "Nieprawidłowy login lub hasło"
+  },
+  "verifyEmail": {
+    "title": "Potwierdź adres email",
+    "sentTo": "Wysłaliśmy 6-cyfrowy kod na",
+    "why": "Nic nie jest zablokowane, dopóki tego nie zrobisz. Ale na ten adres przywracamy dostęp do konta i wysyłamy wszystko, co dotyczy Twoich transakcji — dopóki nie jest potwierdzony, nie wiemy, czy te wiadomości docierają do Ciebie, czy do kogoś innego.",
+    "codeLabel": "Kod z wiadomości",
+    "submit": "Potwierdź",
+    "checking": "Sprawdzamy...",
+    "resend": "Wyślij nowy kod",
+    "resendIn": "Nowy kod można zamówić za {{seconds}} s",
+    "resent": "Nowy kod został wysłany.",
+    "errorInvalid": "Kod nie pasuje albo wygasł. W razie potrzeby zamów nowy.",
+    "errorTooManyAttempts": "Za dużo prób — ten kod już nie działa. Zamów nowy.",
+    "errorCooldown": "Kod właśnie został wysłany. Odczekaj minutę przed kolejną prośbą.",
+    "bannerBody": "Adres email nie jest potwierdzony. Służy do odzyskiwania konta i powiadomień o transakcjach — potwierdź go, aby wiadomości docierały.",
+    "bannerCta": "Potwierdź"
   },
   "common": {
     "loading": "Ładowanie...",
