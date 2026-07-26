@@ -8,12 +8,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.avatar_url import me_out_with_avatar
 from app.core.database import get_db
+from app.core.email_verification import (
+    RESEND_COOLDOWN,
+    CodeExpired,
+    CodeInvalid,
+    CooldownActive,
+    NoCodeIssued,
+    TooManyAttempts,
+    is_auto_verify_domain,
+    issue_code,
+    normalize_email,
+    verify_code,
+)
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.core.token_blacklist import blacklist_jti
 from app.models.user import User
-from app.schemas.user import MeOut, Token, UserCreate, UserLogin, UserOut, UserUpdate
+from app.schemas.user import (
+    EmailVerifyBody,
+    MeOut,
+    Token,
+    UserCreate,
+    UserLogin,
+    UserOut,
+    UserUpdate,
+)
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -23,21 +43,11 @@ router = APIRouter()
 @router.post("/register", response_model=UserOut, status_code=201)
 @limiter.limit("60/minute")
 async def register(request: Request, body: UserCreate, db: AsyncSession = Depends(get_db)):
-    if not body.email and not body.phone:
-        raise HTTPException(status_code=422, detail="email or phone is required")
+    email = body.email  # normalized + shape-checked by the schema validator
 
-    email = body.email.strip().lower() if body.email else None
-    phone = body.phone.strip() if body.phone else None
-
-    if email:
-        existing = await db.execute(select(User).where(User.email == email))
-        if existing.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="email already registered")
-
-    if phone:
-        existing = await db.execute(select(User).where(User.phone == phone))
-        if existing.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="phone already registered")
+    existing = await db.execute(select(User).where(User.email == email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="email already registered")
 
     # T2.2 — custodial Nostr keypair generated at registration.
     # `nsec_encrypted` is DELETE-ed later when user claims self-custody.
@@ -46,7 +56,6 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
 
     user = User(
         email=email,
-        phone=phone,
         password_hash=hash_password(body.password),
         display_name=body.display_name,
         can_carry=body.can_carry,
@@ -57,27 +66,108 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
         nsec_nonce=nsec_nonce,
         key_self_custody=False,
     )
+    # T3.11 — E2E domain bypasses the mailbox entirely (empty setting in prod).
+    if is_auto_verify_domain(email):
+        user.email_verified_at = datetime.now(timezone.utc)
+
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    if user.email_verified_at is None:
+        _dispatch_code(user)
+        await db.commit()
+
     return user
+
+
+def _dispatch_code(user: User) -> None:
+    """Mint a code and hand it to Celery. Caller commits.
+
+    The plaintext travels through the broker because it exists nowhere else —
+    the column holds only a bcrypt hash. It is single-use and expires in
+    `CODE_TTL`.
+    """
+    code = issue_code(user)
+    from app.tasks.notifications import send_verification_code
+
+    try:
+        send_verification_code.delay(str(user.id), code)
+    except Exception:
+        # Broker unreachable in dev — the code is still stamped on the user and
+        # can be re-requested once the cooldown passes.
+        pass
+
+
+@router.post("/email/request-code", status_code=202)
+@limiter.limit("5/hour")
+async def request_email_code(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Idempotent-ish: already-verified is a 200-shaped no-op, not an error."""
+    if not current_user.email:
+        raise HTTPException(status_code=422, detail="Account has no email")
+    if current_user.email_verified_at is not None:
+        return {"status": "already_verified"}
+
+    try:
+        _dispatch_code(current_user)
+    except CooldownActive:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Wait {int(RESEND_COOLDOWN.total_seconds())}s before requesting a new code",
+        )
+    await db.commit()
+    return {"status": "sent"}
+
+
+@router.post("/email/verify")
+@limiter.limit("20/hour")
+async def verify_email(
+    request: Request,
+    body: EmailVerifyBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.email_verified_at is not None:
+        return {"status": "already_verified"}
+
+    try:
+        verify_code(current_user, body.code)
+    except (NoCodeIssued, CodeExpired) as exc:
+        await db.commit()  # persist the cleared code state
+        detail = "No code issued" if isinstance(exc, NoCodeIssued) else "Code expired"
+        raise HTTPException(status_code=400, detail=detail)
+    except TooManyAttempts:
+        await db.commit()
+        raise HTTPException(
+            status_code=429, detail="Too many attempts — request a new code"
+        )
+    except CodeInvalid:
+        await db.commit()  # persist the incremented attempt counter
+        raise HTTPException(status_code=400, detail="Invalid code")
+
+    await db.commit()
+    return {"status": "verified"}
 
 
 @router.post("/login", response_model=Token)
 @limiter.limit("60/minute")
 async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db)):
-    user: User | None = None
-    login_val = body.login.strip()
+    # T3.11 — email only. The phone branch is gone; a phone-shaped login simply
+    # matches nothing and falls through to the same 401 as a wrong password.
+    result = await db.execute(
+        select(User).where(User.email == normalize_email(body.login))
+    )
+    user = result.scalar_one_or_none()
 
-    if "@" in login_val:
-        email_lc = login_val.lower()
-        result = await db.execute(select(User).where(User.email == email_lc))
-        user = result.scalar_one_or_none()
-    else:
-        result = await db.execute(select(User).where(User.phone == login_val))
-        user = result.scalar_one_or_none()
-
-    if not user or not verify_password(body.password, user.password_hash):
+    # `password_hash` is nullable since T3.11 — a Nostr/Passkey account has no
+    # password and must not be loggable through this route at all.
+    if not user or not user.password_hash or not verify_password(
+        body.password, user.password_hash
+    ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token(str(user.id))

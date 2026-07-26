@@ -5,14 +5,25 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserCreate(BaseModel):
-    email: str | None = None
-    phone: str | None = None
+    """T3.11 — email + password only. `phone` is gone from the auth path
+    entirely; it stays a profile contact field (see `UserUpdate`)."""
+
+    email: str
     password: str
     display_name: str
     # T1.24: capability + initial mode. Everyone can both by default.
     can_carry: bool = True
     can_send: bool = True
     active_mode: str = "sender"
+
+    @field_validator("email")
+    @classmethod
+    def email_shape(cls, v: str) -> str:
+        from app.core.email_verification import is_valid_email, normalize_email
+
+        if not is_valid_email(v):
+            raise ValueError("Invalid email address")
+        return normalize_email(v)
 
     @field_validator("password")
     @classmethod
@@ -30,8 +41,15 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
+    """`login` is an email address. The field name is kept for wire
+    compatibility; the phone branch is gone (T3.11)."""
+
     login: str
     password: str
+
+
+class EmailVerifyBody(BaseModel):
+    code: str
 
 
 class UserUpdate(BaseModel):
@@ -101,6 +119,10 @@ class UserOut(BaseModel):
 
 class MeOut(UserOut):
     """Owner-only view — includes private receiving address."""
+    # T3.11 — drives the "confirm your email" banner. Derived from
+    # `User.email_verified_at`; an account without an email reads False and is
+    # not gated (see `core.email_verification.require_verified_email`).
+    email_verified: bool = False
     receiving_country_iso: str | None = None
     receiving_city: str | None = None
     receiving_city_geoname_id: int | None = None

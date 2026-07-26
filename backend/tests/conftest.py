@@ -19,6 +19,14 @@ os.environ.setdefault(
     "NSEC_ENCRYPTION_KEY",
     base64.b64encode(b"vimana-nsec-key-32-bytes-length!").decode(),
 )
+# T3.11 — the suite registers ~70 users and immediately has them create trips
+# and deals, which the soft gate blocks until the address is proven. Both test
+# domains are auto-verified here instead of threading a code exchange through
+# every fixture. `test_email_verification.py` clears this setting where it
+# needs the real flow.
+os.environ.setdefault(
+    "E2E_AUTO_VERIFY_EMAIL_DOMAINS", "vimana.test,e2e.vimana.local"
+)
 
 import psycopg2
 import pytest
@@ -387,6 +395,32 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
             ).fetchone()
             if not row:
                 await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+
+
+async def _ensure_email_verification_columns(engine) -> None:
+    """T3.11 schema fix: email verification state + password_hash nullable.
+    Mirrors migration 0028. Idempotent."""
+    async with engine.begin() as conn:
+        for col, ddl in (
+            ("email_verified_at", "TIMESTAMPTZ"),
+            ("email_verification_code_hash", "VARCHAR(255)"),
+            ("email_verification_expires_at", "TIMESTAMPTZ"),
+            ("email_verification_attempts", "SMALLINT NOT NULL DEFAULT 0"),
+            ("email_verification_sent_at", "TIMESTAMPTZ"),
+        ):
+            row = (
+                await conn.execute(
+                    text(
+                        f"SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name='users' AND column_name='{col}'"
+                    )
+                )
+            ).fetchone()
+            if not row:
+                await conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+        await conn.execute(
+            text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL")
+        )
 
 
 async def _ensure_notices_tables(engine) -> None:
@@ -934,6 +968,7 @@ async def test_engine():
     await _ensure_dual_role(engine)
     await _ensure_receiving_address_columns(engine)
     await _ensure_nostr_keypair_columns(engine)
+    await _ensure_email_verification_columns(engine)
     await _ensure_nostr_event_columns(engine)
     await _ensure_threshold_columns(engine)
     await _ensure_operator_access_grants(engine)
@@ -1007,6 +1042,11 @@ async def _get_or_create_user(
         if not user.password_hash.startswith("$2b$04$"):
             user.password_hash = hash_password(SEED_PASSWORD)
             changed = True
+        # T3.11 — seeds predate email verification; without this they trip the
+        # soft gate on every deal/trip they create.
+        if user.email_verified_at is None:
+            user.email_verified_at = datetime.now(timezone.utc)
+            changed = True
         if changed:
             await db.commit()
             await db.refresh(user)
@@ -1027,6 +1067,7 @@ async def _get_or_create_user(
         nsec_encrypted=ct,
         nsec_nonce=nonce,
         key_self_custody=False,
+        email_verified_at=datetime.now(timezone.utc),  # T3.11 soft gate
     )
     db.add(user)
     await db.commit()

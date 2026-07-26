@@ -35,12 +35,35 @@ async def test_register_duplicate_email(client, seed_carrier):
     assert resp.status_code == 409
 
 
-async def test_register_requires_email_or_phone(client):
+async def test_register_requires_email(client):
+    """T3.11 — email is the only identifier; phone left the auth path."""
     resp = await client.post(
         "/api/auth/register",
         json={"password": "test-password-1", "display_name": "No contact"},
     )
     assert resp.status_code == 422
+
+
+async def test_register_rejects_phone_only(client):
+    resp = await client.post(
+        "/api/auth/register",
+        json={
+            "phone": "+15550001111",
+            "password": "test-password-1",
+            "display_name": "Phone Only",
+        },
+    )
+    assert resp.status_code == 422
+
+
+async def test_login_by_phone_no_longer_works(client, seed_sender):
+    """A phone-shaped login matches no email and falls through to 401 —
+    the same answer a wrong password gets, so it leaks nothing."""
+    resp = await client.post(
+        "/api/auth/login",
+        json={"login": "+15550001111", "password": SEED_PASSWORD},
+    )
+    assert resp.status_code == 401
 
 
 async def test_login_success(client, seed_sender):

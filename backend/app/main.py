@@ -50,6 +50,17 @@ async def lifespan(app: FastAPI):
             await ensure_user_zero(db)
     except Exception:
         logger.exception("User Zero promotion failed on startup")
+    # T3.11 — this setting hands out verified accounts without a mailbox. It
+    # exists for the e2e suites and must be empty in production; say so loudly
+    # rather than let a stray value ride along unnoticed.
+    from app.core.email_verification import auto_verify_domains
+
+    if auto_verify_domains():
+        logger.warning(
+            "E2E_AUTO_VERIFY_EMAIL_DOMAINS is set (%s) — registrations on these "
+            "domains skip email verification. This must not be set in production.",
+            ", ".join(sorted(auto_verify_domains())),
+        )
     yield
 
 

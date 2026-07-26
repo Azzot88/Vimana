@@ -91,3 +91,31 @@ def check_upcoming_deadlines() -> None:
                 _notify_user(sender, msg)
             if carrier:
                 _notify_user(carrier, msg)
+
+
+@celery_app.task(name="app.tasks.notifications.send_verification_code")
+def send_verification_code(user_id: str, code: str) -> None:
+    """T3.11 — deliver an email confirmation code.
+
+    Runs as a task rather than inline because `core.email.send_email` is
+    synchronous `smtplib`: called from the request path it would block the
+    FastAPI event loop for the duration of the SMTP round-trip.
+
+    The plaintext code arrives as an argument — it exists nowhere else, the
+    column holds only a bcrypt hash. `notify_email` is deliberately NOT
+    consulted: this is not a notification the user opted into, it is the proof
+    of address they asked for.
+    """
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        send_email(
+            user.email,
+            "Vimana · Код подтверждения",
+            f"Ваш код подтверждения: {code}\n\n"
+            "Код действителен 15 минут. Если вы его не запрашивали — "
+            "просто проигнорируйте это письмо.",
+        )
