@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vimana — сервис ручной авиадоставки с записью каждого шага</title>
+<meta name="description" content="Vimana — сервис для передачи документов, ценного и живого через попутчиков. Мы не возим — мы ведём запись каждого шага сделки, которую не может изменить никто, включая нас.">
+<!-- v4 · 2026-07-25 · полный ресет.
+     10 секций (Hero + 9). Ключевое слово копи — «запись». CTA перекликается. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1626; --surface:#0F1E32; --surface2:#132842;
+    --cyan:#58B0D9; --amber:#FF7A2F; --text:#E5E7EB; --muted:#9CA8B8;
+    --line:rgba(88,176,217,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--navy);color:var(--text);font-family:'Inter',sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .container{max-width:880px;margin:0 auto;padding:0 clamp(20px,6vw,60px)}
+
+  /* HERO */
+  header.hero{padding:110px 0 70px}
+  .brandmark{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    letter-spacing:.24em;color:var(--cyan);text-transform:uppercase;margin-bottom:36px}
+  header.hero h1{font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.08;
+    font-size:clamp(38px,5.4vw,66px);letter-spacing:-.015em;margin-bottom:28px}
+  header.hero .sub{font-size:clamp(17px,1.7vw,20px);color:var(--muted);max-width:680px;margin-bottom:36px}
+  .hero-cta{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:13px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--navy);background:var(--amber);
+    padding:14px 26px;border-radius:8px;text-decoration:none}
+  header.hero .anchor{margin-top:40px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    color:var(--muted);letter-spacing:.14em}
+
+  /* Section — единый визуальный вес */
+  section.s{padding:64px 0;border-top:1px solid var(--line)}
+  section.s .waypoint{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+    letter-spacing:.18em;margin-bottom:14px;text-transform:uppercase}
+  section.s h2{font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.2;
+    font-size:clamp(26px,3.1vw,36px);letter-spacing:-.005em;margin-bottom:22px;max-width:760px}
+  section.s p{font-size:clamp(16px,1.5vw,18px);color:var(--text);max-width:720px;margin-bottom:18px}
+  section.s p:last-child{margin-bottom:0}
+  section.s p.answer{margin-bottom:26px}
+  section.s p.muted{color:var(--muted)}
+  section.s .lead-in{color:var(--muted);font-size:clamp(16px,1.5vw,17px);margin-bottom:14px;
+    font-family:'IBM Plex Mono',monospace;letter-spacing:.02em}
+
+  /* Sub-topic label — bold inline heading inside a section */
+  section.s h3{font-family:'Space Grotesk',sans-serif;font-weight:600;
+    font-size:clamp(19px,1.9vw,22px);color:var(--text);margin:26px 0 12px;letter-spacing:-.005em}
+  section.s h3:first-of-type{margin-top:0}
+
+  /* Base block */
+  .block{background:var(--surface);border-radius:12px;padding:22px 26px;max-width:760px;
+    border-left:2px solid rgba(255,122,47,.35);margin-top:8px}
+  .block + .block{margin-top:16px}
+  .block .block-label{font-family:'IBM Plex Mono',monospace;font-size:11px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin-bottom:16px;display:block}
+  .block ul{list-style:none}
+  .block ul li{padding:9px 0 9px 22px;position:relative;color:var(--text);
+    font-size:15.5px;line-height:1.55;border-bottom:1px solid var(--line)}
+  .block ul li:last-child{border-bottom:none}
+  .block ul li::before{content:"·";position:absolute;left:6px;color:var(--cyan);font-weight:700;
+    font-size:20px;line-height:1.2}
+  .block ul li b{color:var(--text);font-weight:600}
+  .block p{color:var(--text);font-size:15.5px;line-height:1.65;margin-bottom:0}
+
+  /* Section-level CTA */
+  .section-cta{margin-top:32px}
+  .section-cta a{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:13px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--navy);background:var(--amber);
+    padding:14px 26px;border-radius:8px;text-decoration:none}
+  .section-cta .alt{margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    color:var(--muted);letter-spacing:.1em}
+
+  /* Footer */
+  footer{padding:80px 0 100px;margin-top:40px;border-top:1px solid var(--line)}
+  footer .brand{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.4vw,42px);
+    font-weight:500;margin-bottom:14px}
+  footer .tagline{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;
+    color:var(--muted);text-transform:uppercase}
+  footer .fine{margin-top:36px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    color:rgba(156,168,184,.55);letter-spacing:.12em}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <span class="brandmark">Vimana</span>
+    <h1>Мы не возим.<br>Мы <span style="color:var(--amber)">записываем</span>.</h1>
+    <p class="sub">Vimana — сервис для тех, кто передаёт что-то ценное через попутчика. Возите вы сами, договариваетесь вы сами. А мы ведём такую запись каждого шага, чтобы через полгода никто не мог сказать «мы не договаривались».</p>
+    <a href="#cta" class="hero-cta">Записаться на доступ</a>
+    <p class="anchor">↓ 9 разделов ниже</p>
+  </div>
+</header>
+
+<section class="s"><div class="container">
+  <div class="waypoint">01 · Как это устроено сейчас</div>
+  <h2>Как это устроено сейчас</h2>
+  <p>Знакомый через знакомого летит завтра в нужный город. В большом чате находится тот, кто согласен взять ваш пакет за небольшую сумму. Договариваетесь в личке, встречаетесь в аэропорту, передаёте. Он летит, на той стороне ваш человек получает, отдаёт деньги, если ещё не отдали.</p>
+  <p>Работает — пока работает.</p>
+  <p>Когда работать перестаёт, оказывается: договорённости нигде не записаны, кроме переписки, которую любая сторона может почистить. Фото передачи было в чате — теперь его нет. Условия помнят по-разному. Кто прав — тот, у кого больше времени спорить и напора в разговоре.</p>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">02 · Что мы добавляем</div>
+  <h2>Что мы добавляем к этому</h2>
+  <p class="answer">Vimana — не логистическая компания. Мы не возим, не берём на себя таможню, не решаем за вас, что можно передавать. Что мы даём — две вещи, которых нет в разбросанных чатах.</p>
+
+  <h3>Каталог рейсов и личка внутри</h3>
+  <p>Перевозчик публикует то, чем и так летит: маршрут, дату, свободные килограммы, что готов брать. Отправитель находит рейс под свои даты, пишет в личку прямо здесь, договаривается. Всё в одном месте — не нужно вести пять чатов и три Telegram-канала. Уведомления можно завернуть в мессенджер, который у вас под рукой.</p>
+  <p>Или наоборот: если вы уже нашли человека в чате — приведите его сюда. Всё, что дальше, будет под записью, а не в переписке, которую любая сторона может почистить.</p>
+
+  <h3>Запись каждого шага</h3>
+  <p>Пока вы договариваетесь и передаёте, поверх сделки собирается запись. Написанное в неё не меняется. Никем.</p>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">03 · Что попадает в запись</div>
+  <h2>Что попадает в запись — само</h2>
+  <p class="answer">Не «нажмите, чтобы сохранить». Само, пока идёт сделка.</p>
+  <div class="block">
+    <span class="block-label">Из чего собирается запись</span>
+    <ul>
+      <li>Каждое сообщение переписки — со временем и в правильном порядке</li>
+      <li>Фото передачи, фото вручения, любые фотодоказательства по ходу дела</li>
+      <li>Адреса и геометки: где встретились, где вручили</li>
+      <li>Подтверждения приёма — от отправителя, от перевозчика, от получателя</li>
+      <li>Договорённая сумма и любое её изменение</li>
+      <li>Подтверждения передачи денег: наличными, электронным переводом, а когда мы включим оплату на платформе — и через нас</li>
+      <li>Документ, если попросили друг у друга подтверждение личности</li>
+    </ul>
+  </div>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">04 · Что записано — то остаётся</div>
+  <h2>Что записано — то остаётся</h2>
+  <p>У Vimana только одна операция с записью — добавить событие. Больше нет никаких. Ни «изменить», ни «переставить», ни «убрать» — этого нет. Не «нет в интерфейсе». Нет вообще.</p>
+  <p>Что написано пером — того не вырубишь топором. У нас — то же самое, только без топора. Ни у нас, ни у арбитра, ни у владельца платформы нет ни кнопки, ни функции, ни задней двери, ни служебного лаза, чтобы изменить то, что уже произошло между вами. Не хотим, не будем, не можем — и никого нельзя заставить.</p>
+  <p>Это не наше обещание — это свойство самой Vimana.</p>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">05 · Кто это видит</div>
+  <h2>Кто это видит</h2>
+  <p>Записанное в сделке видят только те, кто в неё вошли: двое договаривающихся и получатель, которого один из них пригласил третьим. Больше — никто. Ни другие пользователи Vimana, ни наши сотрудники, ни владелец платформы, ни поисковые машины.</p>
+  <p>Так продолжается ровно до одного события: пока кто-то из участников не пригласит арбитра. С этого момента арбитр тоже видит. И само это приглашение — тоже строка в записи.</p>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">06 · Если возник спор</div>
+  <h2>Если возник спор</h2>
+  <p>Спор — это конкретное действие. Любой из участников сделки приглашает арбитра. Согласия второй стороны для приглашения не нужно — если вы считаете, что вас обманывают, вам не должно быть нужно уговаривать обманщика позвать судью.</p>
+  <p>С момента приглашения арбитр видит переписку, фото, адреса, подтверждения — всё, что было в сделке. Разбирает не характеры, а последовательность событий: кто что писал, кто что подтвердил, что показывает фото передачи и фото вручения. Напор по телефону и знакомые в общем чате здесь не работают.</p>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">07 · Что мы не запрещаем</div>
+  <h2>Мы не запрещаем. Мы объясняем.</h2>
+  <p>Мы не таможня и не полиция. Мы не проверяем содержимое, не запрещаем категории и не решаем за вас, что кладут в чемодан. Но мы помогаем разобраться: какие правила существуют на конкретном маршруте, что везти легко, что везти нельзя, где нужны сопроводительные документы, какие лучшие практики у тех, кто возит регулярно.</p>
+  <p>Выбор — за вами. Наша задача: дать вам всё, что помогает выбрать правильно. И защитить вас после выбора — записью, которая на вашей стороне.</p>
+</div></section>
+
+<section class="s"><div class="container">
+  <div class="waypoint">08 · Что мы делаем прямо сейчас</div>
+  <h2>Что мы делаем прямо сейчас</h2>
+  <p class="answer">На этой странице нет ни одной картинки про «безопасные платежи» и «мы держим ваши деньги». Потому что мы платёж пока не проводим и деньги не держим. Оплата сегодня идёт между вами напрямую — наличными или электронным переводом. Мы фиксируем в записи, что и когда получено, — но в момент передачи денег между нами вас нет.</p>
+  <p class="answer">Три вещи в работе прямо сейчас:</p>
+  <div class="block">
+    <span class="block-label">Скоро в продукте</span>
+    <ul>
+      <li><b>Оплата на платформе.</b> Единый платёж внутри сделки, банковской картой.</li>
+      <li><b>Защищённая ячейка для денег.</b> Отправитель кладёт оплату внутрь сделки; курьер видит, что деньги есть, но взять их можно только после подтверждения получения. Не подтвердили — вернутся отправителю.</li>
+      <li><b>Выгрузка сделки отдельным файлом.</b> Можно скачать всю сделку с записью и показать кому угодно — юристу, страховой, партнёру. Открывается и проверяется без нас.</li>
+    </ul>
+  </div>
+  <p style="margin-top:22px;color:var(--muted)">Обо всём этом мы напишем ровно тем же тоном в тот день, когда каждая из вещей появится в продакшне.</p>
+</div></section>
+
+<section class="s" id="cta"><div class="container">
+  <div class="waypoint">09 · Записаться на доступ</div>
+  <h2>Vimana ещё не открыта. Но уже пишется.</h2>
+  <p>Мы работаем и открываем регистрацию, как только сможем принимать первых пользователей. Маршруты будут любые — их добавляет каждый перевозчик сам: где летит, когда, что готов брать. Ваш маршрут появится ровно тогда, когда кто-то полетит.</p>
+  <p>Оставьте почту — напишем в день, когда откроется регистрация. И потом, когда добавится что-то важное: платежи, ячейка, выгрузка сделки.</p>
+  <div class="section-cta">
+    <a href="#">Записаться на доступ</a>
+  </div>
+</div></section>
+
+<footer>
+  <div class="container">
+    <div class="brand">Vimana</div>
+    <div class="tagline">Мы не возим. Мы записываем.</div>
+    <p class="fine">v4 · 2026</p>
+  </div>
+</footer>
+
+</body>
+</html>
