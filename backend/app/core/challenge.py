@@ -17,6 +17,7 @@ T3.13 (login by Nostr key) reuses this with a different `scope`.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import secrets
 
@@ -29,7 +30,12 @@ logger = logging.getLogger(__name__)
 _KEY_PREFIX = "challenge:"
 CHALLENGE_TTL_SECONDS = 300
 
-_client: aioredis.Redis | None = None
+# Keyed by event loop, not a single module-level client. An asyncio Redis client
+# binds to the loop that created it, so a cached one raises "Event loop is
+# closed" the moment a second loop uses it. Production has exactly one loop and
+# behaves as a plain singleton; pytest-asyncio makes a fresh loop per test and
+# would otherwise see every request after the first fail.
+_clients: dict[int, tuple[asyncio.AbstractEventLoop, aioredis.Redis]] = {}
 
 
 class ChallengeUnavailable(RuntimeError):
@@ -37,10 +43,21 @@ class ChallengeUnavailable(RuntimeError):
 
 
 def _get_client() -> aioredis.Redis:
-    global _client
-    if _client is None:
-        _client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    return _client
+    loop = asyncio.get_running_loop()
+    # Drop clients whose loop is gone, or a long test session accumulates one
+    # idle connection pool per test. The client is not closed explicitly:
+    # `aclose()` is a coroutine and its loop is already dead, so there is
+    # nothing to await it on — releasing the reference lets GC take the socket.
+    for key, (cached_loop, _cached_client) in list(_clients.items()):
+        if cached_loop.is_closed():
+            _clients.pop(key, None)
+
+    entry = _clients.get(id(loop))
+    if entry is None:
+        client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        _clients[id(loop)] = (loop, client)
+        return client
+    return entry[1]
 
 
 def _key(scope: str, subject: str) -> str:
