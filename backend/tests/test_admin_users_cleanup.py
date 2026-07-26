@@ -141,17 +141,24 @@ async def test_delete_user_cannot_delete_superuser_or_self(client, session_maker
     assert "yourself" in r.json()["detail"].lower()
 
 
-def test_cleanup_e2e_users_task_deletes_stale(session_maker):
-    """Direct sync-call to the Celery task function — simulate stale user."""
+def test_cleanup_e2e_users_task_deletes_stale(sync_sessions):
+    """Direct sync-call to the Celery task function — simulate stale user.
+
+    `sync_sessions` (autouse, conftest) binds the task to the TEST database.
+    Without it this test seeds and prunes **production**: the task deletes users
+    and cascades through their deals, messages and trust edges. On 2026-07-26 an
+    unpatched run removed 22 real accounts from prod.
+    """
     import uuid
     from datetime import datetime, timedelta, timezone
 
     from sqlalchemy import select, text as sa_text
 
-    from app.core.database import SyncSessionLocal
     from app.core.security import hash_password
     from app.models.user import User
     from app.tasks.cleanup import E2E_MAX_AGE_HOURS, cleanup_e2e_users
+
+    SyncSessionLocal = sync_sessions
 
     old_ts = datetime.now(tz=timezone.utc) - timedelta(hours=E2E_MAX_AGE_HOURS + 1)
     stale_email = f"e2e-old-{uuid.uuid4().hex[:6]}@e2e.vimana.local"

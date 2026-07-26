@@ -1033,6 +1033,58 @@ async def override_db(session_maker):
 
 
 @pytest.fixture(autouse=True)
+def sync_sessions(monkeypatch):
+    """Point every Celery-task module's `SyncSessionLocal` at the TEST database.
+
+    `app.core.database.SyncSessionLocal` is built from `settings.DATABASE_URL`
+    — production. Overriding the async `get_db` dependency does not touch it,
+    so any task invoked directly from a test talks to live data. That is not
+    theoretical: on 2026-07-26 `cleanup_e2e_users` ran unpatched during a suite
+    run and deleted 22 real accounts from prod, cascading through their deals,
+    messages and trust edges.
+
+    Patching the *importing modules* rather than `app.core.database` matters —
+    each of them did `from app.core.database import SyncSessionLocal` and holds
+    its own reference. Autouse so a new task module cannot quietly reintroduce
+    the hole; add it to the tuple below when one appears.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine(
+        TEST_DATABASE_URL.replace("+asyncpg", "+psycopg2"), pool_pre_ping=True
+    )
+    maker = sessionmaker(engine, expire_on_commit=False)
+
+    from app.core import uba as core_uba
+    from app.tasks import (
+        chain_anchor,
+        cleanup,
+        nostr_publish,
+        nostr_whitelist,
+        notifications,
+        uba as tasks_uba,
+    )
+
+    for module in (
+        chain_anchor,
+        cleanup,
+        nostr_publish,
+        nostr_whitelist,
+        notifications,
+        tasks_uba,
+        core_uba,
+    ):
+        if hasattr(module, "SyncSessionLocal"):
+            monkeypatch.setattr(module, "SyncSessionLocal", maker)
+
+    # Yielded so tests that seed rows for a task can use the very same binding
+    # instead of reaching for `app.core.database.SyncSessionLocal` themselves.
+    yield maker
+    engine.dispose()
+
+
+@pytest.fixture(autouse=True)
 def _mute_celery(monkeypatch):
     from app.api import deals as deals_module
 
