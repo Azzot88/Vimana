@@ -55,10 +55,23 @@ async def aclose_current() -> None:
     if entry is None:
         return
     client = entry[1]
+
     closer = getattr(client, "aclose", None) or getattr(client, "close", None)
-    if closer is None:
-        return
-    try:
-        await closer()
-    except Exception as exc:  # a dead connection is still a closed connection
-        logger.debug("Redis client close failed: %s", exc)
+    if closer is not None:
+        try:
+            await closer()
+        except Exception as exc:  # a dead connection is still a closed one
+            logger.debug("Redis client close failed: %s", exc)
+
+    # Closing the client is not enough. Whether it also tears down the pool
+    # depends on `auto_close_connection_pool`, which differs across redis-py
+    # versions, and any connection the pool discarded mid-request (an errored
+    # one is dropped rather than returned) is already unreachable from the
+    # client. Those sockets are what raise in `__del__` after the loop dies, so
+    # disconnect the pool explicitly, in-use connections included.
+    pool = getattr(client, "connection_pool", None)
+    if pool is not None:
+        try:
+            await pool.disconnect(inuse_connections=True)
+        except Exception as exc:
+            logger.debug("Redis pool disconnect failed: %s", exc)

@@ -232,7 +232,7 @@ async def test_container_survives_the_transition(client, session_maker):
     content key wrapped to the new identity.
     """
     from app.core.threshold import nip04_decrypt
-    from app.core.verification import encrypt_container
+    from app.core.verification import encrypt_container, sha256_hex
     from app.models.verification import IdentityContainer
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -248,7 +248,10 @@ async def test_container_survives_the_transition(client, session_maker):
             owner_id=user.id,
             blob_encrypted=ct,
             blob_nonce=nonce,
-            doc_hash=uuid.uuid4().hex * 2,
+            # Must be the real hash of the plaintext — that is what upload
+            # stores (`_make_container`), and what the re-wrap self-check
+            # verifies against.
+            doc_hash=sha256_hex(document),
         )
         db.add(container)
         await db.commit()
@@ -341,7 +344,9 @@ async def test_failed_rewrap_leaves_the_account_untouched(
                 owner_id=user.id,
                 blob_encrypted=ct,
                 blob_nonce=nonce,
-                doc_hash=uuid.uuid4().hex * 2,  # never matches → self-check fails
+                # Deliberately not the hash of the document: stands in for a
+                # container the re-wrap cannot prove readable.
+                doc_hash=uuid.uuid4().hex * 2,
             )
         )
         await db.commit()
