@@ -172,6 +172,8 @@ export default function KeypairSection() {
           {t('profile.identity.title')}
         </h2>
         <span
+          data-testid="identity-state"
+          data-state={lost ? 'lost' : established ? 'own' : 'service'}
           className={`text-xs font-body px-2 py-0.5 rounded ${
             lost
               ? 'bg-navy/10 text-navy/50'
@@ -201,7 +203,9 @@ export default function KeypairSection() {
           <div className="text-xs font-body text-navy/50 mb-1">
             {t('profile.identity.npubLabel')}
           </div>
-          <MonoText className="text-xs text-navy break-all">{status.npub}</MonoText>
+          <MonoText className="text-xs text-navy break-all">
+            <span data-testid="identity-npub">{status.npub}</span>
+          </MonoText>
         </div>
       )}
 
@@ -215,6 +219,7 @@ export default function KeypairSection() {
       {!established && !lost && step === 'idle' && (
         <button
           type="button"
+          data-testid="identity-start"
           onClick={() => setStep('choose')}
           className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium"
         >
@@ -234,6 +239,7 @@ export default function KeypairSection() {
           </div>
           <button
             type="button"
+            data-testid="identity-generate"
             onClick={handleGenerate}
             className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium"
           >
@@ -302,6 +308,7 @@ export default function KeypairSection() {
           <label className="flex items-start gap-2 text-sm font-body text-navy">
             <input
               type="checkbox"
+              data-testid="identity-saved"
               checked={saved}
               onChange={(e) => setSaved(e.target.checked)}
               className="mt-1"
@@ -310,6 +317,7 @@ export default function KeypairSection() {
           </label>
           <button
             type="button"
+            data-testid="identity-confirm"
             onClick={handleConfirmGenerated}
             disabled={!saved || busy}
             className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"

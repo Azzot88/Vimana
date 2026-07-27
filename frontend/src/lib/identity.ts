@@ -43,13 +43,19 @@ export function generateKeypair(): Keypair {
   }
 }
 
-function proofEventId(
+/**
+ * The exact bytes both sides hash. Exported so a test can pin it: this string
+ * must match Python's `json.dumps(..., separators=(",", ":"),
+ * ensure_ascii=False)` byte for byte, and a drift shows up only as a 401 that
+ * reads like "wrong key" — the most expensive kind of bug to chase.
+ */
+export function canonicalProofEvent(
   npubHex: string,
   purpose: string,
   challenge: string,
   createdAt: number,
-): Uint8Array {
-  const serialized = JSON.stringify([
+): string {
+  return JSON.stringify([
     0,
     npubHex,
     createdAt,
@@ -60,7 +66,19 @@ function proofEventId(
     ],
     purpose,
   ])
-  return sha256(new TextEncoder().encode(serialized))
+}
+
+export function proofEventId(
+  npubHex: string,
+  purpose: string,
+  challenge: string,
+  createdAt: number,
+): Uint8Array {
+  return sha256(
+    new TextEncoder().encode(
+      canonicalProofEvent(npubHex, purpose, challenge, createdAt),
+    ),
+  )
 }
 
 /** Sign the challenge with a key we hold locally. */
