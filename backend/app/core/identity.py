@@ -23,24 +23,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.deal import Deal, DealVaultMessage
 from app.models.user import User
-from app.models.verification import IdentityContainer
 
 
 async def establish_blockers(db: AsyncSession, user: User) -> list[str]:
-    """Reasons the transition would destroy data, empty list if it is safe."""
+    """Reasons the transition would destroy data, empty list if it is safe.
+
+    Identity containers are no longer listed: pt.2b re-wraps them in place
+    (`core.verification.rewrap_container_to_identity`). What remains is the case
+    the server genuinely cannot fix on its own — see below.
+    """
     blockers: list[str] = []
 
-    containers = await db.scalar(
-        select(func.count())
-        .select_from(IdentityContainer)
-        .where(IdentityContainer.owner_id == user.id)
-    )
-    if containers:
-        blockers.append(
-            f"{containers} identity container(s) are encrypted with the service "
-            "key and cannot be re-wrapped yet"
-        )
-
+    # A read package is decrypted as ECDH(reader_priv, message_author_pub), so
+    # producing one readable by the new key needs ECDH(author_priv, new_pub) —
+    # the *author's* private key, which the platform does not have unless the
+    # author happens to be this same custodial user. Re-wrapping therefore
+    # cannot be done server-side without changing the stored format to carry a
+    # per-package sender pubkey, which touches dealvault, threshold and
+    # arbiter-reveal together. Until then, refuse rather than strand the vault.
     e2e_messages = await db.scalar(
         select(func.count())
         .select_from(DealVaultMessage)

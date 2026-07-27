@@ -429,6 +429,9 @@ async def _ensure_identity_columns(engine) -> None:
         for table, col, ddl in (
             ("users", "key_lost_at", "TIMESTAMPTZ"),
             ("trips", "nostr_published_by_pubkey", "VARCHAR(64)"),
+            # T3.12 pt.2b — mirrors migration 0030.
+            ("identity_containers", "key_envelope", "TEXT"),
+            ("identity_containers", "key_envelope_sender_pubkey", "VARCHAR(64)"),
         ):
             row = (
                 await conn.execute(

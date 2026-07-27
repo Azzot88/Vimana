@@ -43,7 +43,9 @@ from app.core.identity import establish_blockers
 from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
 from app.core.keypair import decrypt_nsec
 from app.core.security import verify_password
+from app.core.verification import rewrap_container_to_identity
 from app.models.user import User
+from app.models.verification import IdentityContainer
 
 router = APIRouter()
 
@@ -228,6 +230,31 @@ async def identity_establish(
     )
     if taken.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="This key belongs to another account")
+
+    # Move anything encrypted to the service key across *before* destroying it
+    # — this is the only moment both halves exist. Done inline rather than in a
+    # background task on purpose: if the re-wrap failed after the key was gone,
+    # the data would be unreadable forever, and no retry could fix it.
+    old_nsec_hex = None
+    if current_user.nsec_encrypted is not None and current_user.nsec_nonce is not None:
+        old_nsec_hex = decrypt_nsec(
+            bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted)
+        )
+    if old_nsec_hex and current_user.nostr_pubkey:
+        containers = (
+            await db.execute(
+                select(IdentityContainer).where(
+                    IdentityContainer.owner_id == current_user.id
+                )
+            )
+        ).scalars().all()
+        for container in containers:
+            rewrap_container_to_identity(
+                container,
+                old_nsec_hex=old_nsec_hex,
+                old_npub_hex=current_user.nostr_pubkey,
+                new_npub_hex=body.npub_hex,
+            )
 
     # The service key dies here: the platform keeps no copy of anything it can
     # sign or decrypt for this user any more.

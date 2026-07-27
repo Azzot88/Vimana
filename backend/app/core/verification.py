@@ -58,7 +58,14 @@ def encrypt_container(owner: User, plaintext: bytes) -> tuple[bytes, bytes]:
 
 
 def decrypt_container(owner: User, nonce: bytes, ciphertext: bytes) -> bytes:
-    """Decrypt for the owner (custodial only)."""
+    """Decrypt for the owner (custodial, legacy scheme only).
+
+    Callers must not reach here for a re-wrapped container — see
+    `rewrap_container_to_identity`. `api/verification.py` guards on
+    `key_envelope`; this is the belt to that braces, because feeding a
+    random-content-key blob into the nsec-derived key yields an
+    InvalidTag rather than anything readable.
+    """
     if owner.key_self_custody or owner.nsec_encrypted is None:
         raise ContainerEncryptionError(
             "Owner is self-custody — server can't decrypt"
@@ -66,6 +73,42 @@ def decrypt_container(owner: User, nonce: bytes, ciphertext: bytes) -> bytes:
     nsec_hex = decrypt_nsec(bytes(owner.nsec_nonce), bytes(owner.nsec_encrypted))
     aes_key = _nsec_to_aes_key(nsec_hex)
     return AESGCM(aes_key).decrypt(nonce, bytes(ciphertext), None)
+
+
+def rewrap_container_to_identity(
+    container,
+    *,
+    old_nsec_hex: str,
+    old_npub_hex: str,
+    new_npub_hex: str,
+) -> None:
+    """Move one container off the service key, in place.
+
+    Called during `establish`, at the only moment both halves exist: the
+    retiring service nsec (to read the document) and the new npub (to address
+    it to). Afterwards the platform can no longer open the container — which is
+    the point — but the owner can, client-side, with a key we never saw.
+
+    Idempotent by construction: a container that already carries an envelope is
+    left alone, so a retried transition cannot double-encrypt.
+    """
+    from app.core.threshold import nip04_encrypt
+
+    if container.key_envelope:
+        return
+
+    plaintext = AESGCM(_nsec_to_aes_key(old_nsec_hex)).decrypt(
+        bytes(container.blob_nonce), bytes(container.blob_encrypted), None
+    )
+
+    content_key = os.urandom(32)
+    nonce = os.urandom(12)
+    container.blob_encrypted = AESGCM(content_key).encrypt(nonce, plaintext, None)
+    container.blob_nonce = nonce
+    # Wrapped with the dying service key as sender; the owner completes the
+    # ECDH with their new private key and this recorded public one.
+    container.key_envelope = nip04_encrypt(content_key, old_nsec_hex, new_npub_hex)
+    container.key_envelope_sender_pubkey = old_npub_hex
 
 
 def sha256_hex(data: bytes) -> str:

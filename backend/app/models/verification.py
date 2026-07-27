@@ -10,7 +10,16 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Integer, LargeBinary, String, func
+from sqlalchemy import (
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -97,6 +106,14 @@ class IdentityContainer(Base):
     )
     blob_encrypted: Mapped[bytes] = mapped_column(LargeBinary)
     blob_nonce: Mapped[bytes] = mapped_column(LargeBinary)  # 12 bytes for AES-GCM
+    # T3.12 pt.2b — set once the owner takes their own key. When present, the
+    # blob is under a random content key wrapped NIP-04 to the owner; when NULL,
+    # the legacy scheme applies (AES key = owner's nsec). The sender pubkey is
+    # required because NIP-04 is ECDH: the reader needs the other half.
+    key_envelope: Mapped[str | None] = mapped_column(Text, nullable=True)
+    key_envelope_sender_pubkey: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     doc_hash: Mapped[str] = mapped_column(String(64))  # sha256 of raw doc bytes
     doc_country: Mapped[str | None] = mapped_column(String(2), nullable=True)
     doc_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
