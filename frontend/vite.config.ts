@@ -26,5 +26,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Scope vitest to `src/`. The default glob also swept `e2e/specs/*.spec.ts`,
+    // which belong to Playwright — a separate npm package with its own runner.
+    // Vitest collected them, called Playwright's `test()` outside a Playwright
+    // run, and reported eight failed suites that were never vitest's to run.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 })
