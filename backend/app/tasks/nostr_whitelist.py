@@ -48,6 +48,15 @@ def refresh_allowed_pubkeys() -> dict:
         ).all()
         pubkeys.update(r[0] for r in extra_rows if r[0])
 
+    # T3.12 — the platform's own publishing key. Every listing from a carrier
+    # who has not taken their identity yet is signed by it, so leaving it out
+    # would have our relay reject the bulk of our own traffic.
+    from app.core.nostr_publish import platform_publish_pubkey
+
+    platform_pubkey = platform_publish_pubkey()
+    if platform_pubkey:
+        pubkeys.add(platform_pubkey)
+
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
     except OSError:

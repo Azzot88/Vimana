@@ -25,7 +25,7 @@ from app.core.keypair import verify_event_id
 from app.core.metrics import bump_publish_metric, get_publish_metrics
 from app.core.nostr_publish import (
     NOSTR_KIND_TRIP,
-    build_event,
+    build_platform_trip_event,
     is_publish_enabled,
     publish_event,
 )
@@ -102,6 +102,8 @@ async def publish_signed_event(
     trip.nostr_event_id = body.id
     from datetime import datetime, timezone
     trip.nostr_published_at = datetime.now(tz=timezone.utc)
+    # T3.12 — the carrier signed this one, so only they can retract it later.
+    trip.nostr_published_by_pubkey = body.pubkey
     await db.commit()
 
     return {"event_id": body.id, "relays": results}
@@ -122,11 +124,16 @@ async def republish_trip(
     if carrier is None:
         raise HTTPException(status_code=404, detail="Carrier not found")
 
-    event = build_event(trip, carrier, "https://vimana.dealvault.club")
-    if event is None:
+    if carrier.key_self_custody:
         raise HTTPException(
             status_code=422,
-            detail="Carrier self-custody — republish only for custodial carriers",
+            detail="Carrier owns their key — only they can publish this listing",
+        )
+    event = build_platform_trip_event(trip, carrier, "https://vimana.dealvault.club")
+    if event is None:
+        raise HTTPException(
+            status_code=503,
+            detail="PLATFORM_PUBLISH_NSEC not configured",
         )
 
     results = await publish_event(event)
@@ -136,6 +143,7 @@ async def republish_trip(
     trip.nostr_event_id = event["id"]
     from datetime import datetime, timezone
     trip.nostr_published_at = datetime.now(tz=timezone.utc)
+    trip.nostr_published_by_pubkey = event["pubkey"]
     await db.commit()
     return {"event_id": event["id"], "relays": results, "forced": True}
 

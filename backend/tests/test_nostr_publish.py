@@ -10,8 +10,9 @@ import pytest
 from app.core.keypair import verify_event_id
 from app.core.nostr_publish import (
     NOSTR_KIND_TRIP,
-    build_event,
+    build_platform_trip_event,
     is_publish_enabled,
+    platform_publish_pubkey,
 )
 from app.core.signing import compute_event_id
 
@@ -73,11 +74,13 @@ async def test_build_event_produces_valid_nip01_signature(client, session_maker)
     async with session_maker() as db:
         t = await db.get(Trip, trip_id)
         carrier = await db.get(User, t.carrier_id)
-        event = build_event(t, carrier, "https://vimana.dealvault.club")
+        event = build_platform_trip_event(t, carrier, "https://vimana.dealvault.club")
 
     assert event is not None
     assert event["kind"] == NOSTR_KIND_TRIP
-    assert event["pubkey"] == carrier.nostr_pubkey
+    # T3.12 — authored by the platform, never by the carrier's service key.
+    assert event["pubkey"] == platform_publish_pubkey()
+    assert event["pubkey"] != carrier.nostr_pubkey
     # Recomputed id must match embedded id, and sig must verify against it.
     recomputed = compute_event_id(
         event["pubkey"],
@@ -143,15 +146,18 @@ async def test_nostr_event_endpoint_returns_event_when_enabled(client):
         os.environ.pop("NOSTR_PUBLISH_ENABLED", None)
 
 
-async def test_self_custody_carrier_gets_none_from_build_event(
-    client, session_maker
+async def test_publish_task_skips_a_carrier_who_owns_their_key(
+    client, session_maker, sync_sessions, monkeypatch
 ):
-    """Carrier without server-held nsec (pt.2 territory) → build_event → None."""
+    """T3.12 — the platform publishes *for* keyless carriers only. Once a
+    carrier holds their own key they publish themselves over NIP-07, and the
+    server has nothing it could sign with on their behalf."""
+    import os
+
     from app.models.marketplace import Trip
-    from app.models.user import User
+    from app.tasks.nostr_publish import publish_trip_to_nostr
 
     hdr = await _register_carrier(client)
-    # Claim self-custody (deletes nsec_encrypted server-side).
     claim = await client.post("/api/me/keypair/claim", headers=hdr)
     assert claim.status_code == 200
 
@@ -168,12 +174,18 @@ async def test_self_custody_carrier_gets_none_from_build_event(
     )
     trip_id = trip.json()["id"]
 
+    os.environ["NOSTR_PUBLISH_ENABLED"] = "true"
+    try:
+        result = publish_trip_to_nostr(trip_id)
+    finally:
+        os.environ.pop("NOSTR_PUBLISH_ENABLED", None)
+
+    assert "skipped" in result
+    assert "own" in result["skipped"]
+
     async with session_maker() as db:
         t = await db.get(Trip, trip_id)
-        carrier = await db.get(User, t.carrier_id)
-        event = build_event(t, carrier, "https://vimana.dealvault.club")
-
-    assert event is None
+        assert t.nostr_event_id is None
 
 
 async def test_trip_out_exposes_nostr_fields(client):

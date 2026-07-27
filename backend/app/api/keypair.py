@@ -47,6 +47,7 @@ from app.core.verification import (
     rewrap_container_to_identity,
     verify_container_envelope,
 )
+from app.models.marketplace import Trip
 from app.models.user import User
 from app.models.verification import IdentityContainer
 
@@ -299,6 +300,31 @@ async def identity_establish(
     current_user.key_self_custody = True
     await db.commit()
     await db.refresh(current_user)
+
+    # T3.12 pt.3 — listings the platform published on this carrier's behalf are
+    # signed by the platform key and say `carrier_pubkey: null`. Now that they
+    # have one, retract them so they can republish under their own name.
+    # kind-30402 is replaceable per (pubkey, d-tag), so an event from a
+    # different key does not supersede the platform's — it has to be deleted.
+    # Fire-and-forget: a listing that outlives its retraction is stale marketing
+    # copy, not evidence, and must not be able to fail the transition.
+    published = (
+        await db.execute(
+            select(Trip).where(
+                Trip.carrier_id == current_user.id,
+                Trip.nostr_event_id.isnot(None),
+            )
+        )
+    ).scalars().all()
+    if published:
+        from app.tasks.nostr_publish import delete_trip_from_nostr
+
+        for trip in published:
+            try:
+                delete_trip_from_nostr.delay(str(trip.id))
+            except Exception:  # broker down — the listing simply lingers
+                pass
+
     return _status(current_user)
 
 

@@ -9,9 +9,12 @@ Toggling:
 - `NOSTR_PUBLISH_ENABLED=true`  → publish to whitelist `NOSTR_FRIENDLY_RELAYS`.
 - `NOSTR_OWN_RELAY_URL`         → additionally publish to our strfry.
 
-Custodial signing only in pt.1: server decrypts the carrier's nsec via
-`NSEC_ENCRYPTION_KEY`. Self-custody carriers get their events skipped with a
-log line; pt.2 will refactor to NIP-07-driven client-side signing.
+Who signs (T3.12): the **platform**, always, for server-side publishing. A
+carrier's service key never signs anything that leaves the platform — it is
+destroyed when its owner takes their own identity, and an event signed by it
+would survive on relays we do not control, attributed to a pubkey belonging to
+nobody. Carriers who own their key publish through
+`POST /api/nostr/publish-signed`, signing in their own browser.
 """
 from __future__ import annotations
 
@@ -22,7 +25,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from app.core.keypair import decrypt_nsec, sign_event_id
+from app.core.keypair import sign_event_id
 from app.core.signing import compute_event_id
 from app.models.marketplace import Trip
 from app.models.user import User
@@ -62,6 +65,114 @@ def _tags(trip: Trip) -> list[list[str]]:
     return tags
 
 
+def get_platform_publish_nsec() -> str | None:
+    """Key the platform publishes trips under (T3.12).
+
+    Separate from `CHAIN_ANCHOR_NSEC` on purpose, for the same reason T3.6 kept
+    the anchor key apart from user keys: "this trip exists" and "this is our
+    unaltered chain head" are different claims, and one key making both blurs
+    who is attesting to what.
+    """
+    raw = os.getenv("PLATFORM_PUBLISH_NSEC", "").strip().lower()
+    if len(raw) != 64 or not all(c in "0123456789abcdef" for c in raw):
+        return None
+    return raw
+
+
+def platform_publish_pubkey() -> str | None:
+    nsec = get_platform_publish_nsec()
+    if nsec is None:
+        return None
+    from app.core.keypair import npub_from_nsec
+
+    return npub_from_nsec(nsec)
+
+
+def _platform_tags(trip: Trip) -> list[list[str]]:
+    """Trip tags plus an explicit statement of who published and on whose
+    behalf. The carrier is named, never impersonated: the event's `pubkey` is
+    the platform's, and nothing claims otherwise."""
+    return _tags(trip) + [
+        ["published_by", "platform"],
+        ["vimana_carrier", str(trip.carrier_id)],
+    ]
+
+
+def _platform_content(trip: Trip, carrier: User, platform_url: str) -> str:
+    return json.dumps(
+        {
+            "origin": trip.origin,
+            "destination": trip.destination,
+            "depart_at": trip.depart_at.isoformat(),
+            "capacity": trip.capacity,
+            "allowed_categories": trip.allowed_categories or [],
+            # Named, not signed for. `carrier_pubkey` stays null while the
+            # carrier has no identity of their own — a service key is not one,
+            # and putting it here would publish a key we are about to destroy.
+            "carrier_name": carrier.display_name,
+            "carrier_pubkey": None,
+            "published_by": "platform",
+            "platform_url": platform_url,
+        },
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def build_platform_trip_event(
+    trip: Trip, carrier: User, platform_url: str
+) -> dict[str, Any] | None:
+    """Trip listing authored by the platform. None if no platform key is set."""
+    nsec_hex = get_platform_publish_nsec()
+    if nsec_hex is None:
+        return None
+    from app.core.keypair import npub_from_nsec
+
+    pubkey = npub_from_nsec(nsec_hex)
+    ts = int(datetime.now(tz=timezone.utc).timestamp())
+    tags = _platform_tags(trip)
+    content = _platform_content(trip, carrier, platform_url)
+    event_id = compute_event_id(pubkey, ts, NOSTR_KIND_TRIP, tags, content)
+    return {
+        "id": event_id,
+        "pubkey": pubkey,
+        "created_at": ts,
+        "kind": NOSTR_KIND_TRIP,
+        "tags": tags,
+        "content": content,
+        "sig": sign_event_id(event_id, nsec_hex),
+    }
+
+
+def build_platform_deletion_event(target_event_id: str) -> dict[str, Any] | None:
+    """NIP-09 retraction of a platform-published listing.
+
+    Must be signed by the key that published: a deletion from anyone else is
+    ignored by relays. That is why `Trip.nostr_published_by_pubkey` exists —
+    once a carrier moves to their own key, the carrier's *current* key is no
+    longer the one that signed the listing.
+    """
+    nsec_hex = get_platform_publish_nsec()
+    if nsec_hex is None:
+        return None
+    from app.core.keypair import npub_from_nsec
+
+    pubkey = npub_from_nsec(nsec_hex)
+    ts = int(datetime.now(tz=timezone.utc).timestamp())
+    tags = [["e", target_event_id], ["k", str(NOSTR_KIND_TRIP)]]
+    content = "listing withdrawn"
+    event_id = compute_event_id(pubkey, ts, 5, tags, content)
+    return {
+        "id": event_id,
+        "pubkey": pubkey,
+        "created_at": ts,
+        "kind": 5,
+        "tags": tags,
+        "content": content,
+        "sig": sign_event_id(event_id, nsec_hex),
+    }
+
+
 def _content(trip: Trip, platform_url: str) -> str:
     return json.dumps(
         {
@@ -78,49 +189,12 @@ def _content(trip: Trip, platform_url: str) -> str:
     )
 
 
-def build_event(trip: Trip, carrier: User, platform_url: str) -> dict[str, Any] | None:
-    """Assemble a signed NIP-01 event dict. Returns None if the carrier has no
-    server-held keypair (self-custody or missing nsec — pt.2 covers that path)."""
-    if not carrier.nostr_pubkey or carrier.nsec_encrypted is None or carrier.nsec_nonce is None:
-        return None
-    ts = int(datetime.now(tz=timezone.utc).timestamp())
-    tags = _tags(trip)
-    content = _content(trip, platform_url)
-    event_id = compute_event_id(carrier.nostr_pubkey, ts, NOSTR_KIND_TRIP, tags, content)
-    nsec_hex = decrypt_nsec(bytes(carrier.nsec_nonce), bytes(carrier.nsec_encrypted))
-    sig = sign_event_id(event_id, nsec_hex)
-    return {
-        "id": event_id,
-        "pubkey": carrier.nostr_pubkey,
-        "created_at": ts,
-        "kind": NOSTR_KIND_TRIP,
-        "tags": tags,
-        "content": content,
-        "sig": sig,
-    }
-
-
-def build_deletion_event(
-    trip: Trip, carrier: User, target_event_id: str
-) -> dict[str, Any] | None:
-    """NIP-09 kind 5 delete request for a previously published trip."""
-    if not carrier.nostr_pubkey or carrier.nsec_encrypted is None or carrier.nsec_nonce is None:
-        return None
-    ts = int(datetime.now(tz=timezone.utc).timestamp())
-    tags = [["e", target_event_id], ["k", str(NOSTR_KIND_TRIP)]]
-    content = "trip cancelled"
-    event_id = compute_event_id(carrier.nostr_pubkey, ts, 5, tags, content)
-    nsec_hex = decrypt_nsec(bytes(carrier.nsec_nonce), bytes(carrier.nsec_encrypted))
-    sig = sign_event_id(event_id, nsec_hex)
-    return {
-        "id": event_id,
-        "pubkey": carrier.nostr_pubkey,
-        "created_at": ts,
-        "kind": 5,
-        "tags": tags,
-        "content": content,
-        "sig": sig,
-    }
+# T3.12 — `build_event` / `build_deletion_event` are gone. They signed with the
+# carrier's *service* key, which the platform holds and destroys the moment its
+# owner takes their own identity. An event signed by it outlives it on relays we
+# do not control, attributed to a pubkey that then belongs to nobody. Server-side
+# publishing is platform-signed (above); a carrier who owns their key publishes
+# through `POST /api/nostr/publish-signed`, signing in their own browser.
 
 
 async def _publish_one(url: str, event: dict, timeout_s: float = 5.0) -> bool:

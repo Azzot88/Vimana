@@ -9,7 +9,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.identity import require_live_identity
 from app.core.nostr_publish import (
-    build_event as build_nostr_event,
+    build_platform_trip_event as build_nostr_event,
     is_publish_enabled,
 )
 from app.core.pagination import Page, clamp_limit, paginate_desc
@@ -147,7 +147,7 @@ async def get_trip_nostr_event(
     )
     if event is None:
         raise HTTPException(
-            status_code=422,
-            detail="Carrier has no server-held nsec (self-custody carriers publish via NIP-07 in pt.2)",
+            status_code=503,
+            detail="PLATFORM_PUBLISH_NSEC not configured",
         )
     return event

@@ -26,6 +26,9 @@ os.environ.setdefault(
 os.environ.setdefault(
     "E2E_AUTO_VERIFY_EMAIL_DOMAINS", "vimana.test,e2e.vimana.local"
 )
+# T3.12 pt.3 — the platform's trip-publishing key. Deterministic and valid
+# (below the secp256k1 order); tests that need it absent clear it themselves.
+os.environ.setdefault("PLATFORM_PUBLISH_NSEC", "1" * 64)
 
 import psycopg2
 import pytest
