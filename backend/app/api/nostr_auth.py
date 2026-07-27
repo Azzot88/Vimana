@@ -16,17 +16,27 @@ Unknown key on login answers **404, not 401**. The distinction is deliberate:
 the client needs to tell "this key is not registered — offer signup" apart from
 "your signature did not check out". Creating an account silently on any valid
 signature would mean every stray signature mints a user.
-"""
-from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+Deliberately **no** `from __future__ import annotations` here. Combined with
+slowapi's `@limiter.limit` wrapper it leaves annotations as strings that FastAPI
+cannot resolve, so a Pydantic body parameter silently becomes a query scalar and
+every request answers `422 {"loc": ["query", "body"]}`. Each half is harmless on
+its own — `keypair.py` has the future import without rate limiting, `auth.py`
+has rate limiting without the future import — which is why this only shows up in
+a module that does both.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
 
-from app.core.challenge import ChallengeUnavailable, consume_challenge, issue_challenge
-from app.core.challenge import CHALLENGE_TTL_SECONDS
+from app.core.challenge import (
+    CHALLENGE_TTL_SECONDS,
+    ChallengeUnavailable,
+    consume_challenge,
+    issue_challenge,
+)
 from app.core.database import get_db
 from app.core.email_verification import (
     is_auto_verify_domain,
