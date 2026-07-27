@@ -1038,7 +1038,7 @@ async def override_db(session_maker):
     app.dependency_overrides.pop(get_db, None)
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture(autouse=True, loop_scope="function")
 async def _close_redis_clients():
     """Shut the shared Redis client down while its loop is still alive.
 
@@ -1046,8 +1046,16 @@ async def _close_redis_clients():
     Redis connection left for the garbage collector then raises inside its own
     finalizer — `loop.call_soon()` on a closed loop — which pytest reports as
     `PytestUnraisableExceptionWarning`, one per Redis call made after the first
-    loop died. Both `token_blacklist` and `challenge` now share one client, so
+    loop died. Both `token_blacklist` and `challenge` share one client, so
     closing it here covers every consumer.
+
+    `loop_scope="function"` is the whole point. `pytest.ini` sets
+    `asyncio_default_fixture_loop_scope = session`, so without it this fixture
+    runs in the *session* loop while the app under test ran in the *function*
+    loop — `aclose_current()` would look up the session loop, find nothing, and
+    return having closed exactly zero clients. Three separate attempts at these
+    warnings failed because of that, all of them operating on an empty dict in
+    the wrong loop.
     """
     yield
     from app.core.redis_client import aclose_current
