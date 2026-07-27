@@ -23,7 +23,13 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_clients: dict[int, tuple[asyncio.AbstractEventLoop, aioredis.Redis]] = {}
+# Keyed by the loop **object**, not `id(loop)`. An address is reused once its
+# loop is collected, so an id-keyed cache hands a new loop the client belonging
+# to a dead one: calls on it fail, and closing it closes nothing, which leaves
+# its connections to be finalised after their loop is gone. Over a few hundred
+# short-lived loops that happens constantly. Dict keys hold the loop alive, so
+# closed ones are evicted on every lookup.
+_clients: dict[asyncio.AbstractEventLoop, aioredis.Redis] = {}
 
 
 def get_client() -> aioredis.Redis:
@@ -31,16 +37,14 @@ def get_client() -> aioredis.Redis:
     # Forget clients whose loop died. They cannot be closed from here —
     # `aclose()` is a coroutine and their loop is gone — so anything that
     # creates short-lived loops should call `aclose_current()` on the way out.
-    for key, (cached_loop, _client) in list(_clients.items()):
-        if cached_loop.is_closed():
-            _clients.pop(key, None)
+    for cached_loop in [k for k in _clients if k.is_closed()]:
+        _clients.pop(cached_loop, None)
 
-    entry = _clients.get(id(loop))
-    if entry is None:
+    client = _clients.get(loop)
+    if client is None:
         client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        _clients[id(loop)] = (loop, client)
-        return client
-    return entry[1]
+        _clients[loop] = client
+    return client
 
 
 async def aclose_current() -> None:
@@ -51,10 +55,9 @@ async def aclose_current() -> None:
     buries real warnings.
     """
     loop = asyncio.get_running_loop()
-    entry = _clients.pop(id(loop), None)
-    if entry is None:
+    client = _clients.pop(loop, None)
+    if client is None:
         return
-    client = entry[1]
 
     closer = getattr(client, "aclose", None) or getattr(client, "close", None)
     if closer is not None:
