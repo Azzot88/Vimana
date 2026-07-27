@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { register, login, me } from '../api/auth'
+import NostrAuthButton from '../components/NostrAuthButton'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
@@ -118,6 +119,18 @@ export default function RegisterPage() {
             {loading ? t('auth.registering') : t('auth.register')}
           </button>
         </form>
+        <div className="mt-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-px bg-navy/10 flex-1" />
+            <span className="text-xs font-body text-navy/40">
+              {t('nostrAuth.or')}
+            </span>
+            <div className="h-px bg-navy/10 flex-1" />
+          </div>
+          {/* Signup by key still needs a name — the account has nothing else
+              to be known by, and there is no email to fall back on. */}
+          <NostrAuthButton mode="signup" displayName={displayName} />
+        </div>
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-navy/50">
             {t('auth.hasAccount')}{' '}

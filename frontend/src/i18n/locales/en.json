@@ -88,6 +88,18 @@
     "stayLoggedIn": "Stay signed in",
     "logoutNow": "Log out now"
   },
+  "nostrAuth": {
+    "or": "or",
+    "loginCta": "Sign in with a Nostr key",
+    "signupCta": "Create an account with a Nostr key",
+    "noExtension": "No Nostr extension detected",
+    "noExtensionHint": "A NIP-07 extension (Alby, nos2x and others) holds your key and signs on your behalf. Vimana never sees it.",
+    "needName": "Enter a name first — the account has nothing else to go by.",
+    "unknownKey": "This key has no account here yet. Create one on the sign-up page.",
+    "alreadyRegistered": "This key already has an account. Use sign in instead.",
+    "retired": "This account was retired after its key was declared lost.",
+    "badProof": "The signature did not check out. Try again."
+  },
   "verifyEmail": {
     "title": "Confirm your email",
     "sentTo": "We sent a 6-digit code to",

@@ -20,6 +20,10 @@ import { bytesToHex } from '@noble/hashes/utils'
 /** NIP-98 HTTP Auth kind, mirrored from the backend. */
 export const PROOF_KIND = 27235
 export const PURPOSE_ESTABLISH = 'vimana:identity:establish'
+/** T3.13 — distinct purposes so a signature collected for one flow is useless
+ *  in another. The purpose is part of the signed payload, not a query flag. */
+export const PURPOSE_LOGIN = 'vimana:identity:login'
+export const PURPOSE_SIGNUP = 'vimana:identity:signup'
 
 export interface Keypair {
   nsecHex: string

@@ -72,6 +72,18 @@
     "errorServer": "Błąd serwera. Spróbuj ponownie.",
     "errorCredentials": "Nieprawidłowy login lub hasło"
   },
+  "nostrAuth": {
+    "or": "lub",
+    "loginCta": "Zaloguj się kluczem Nostr",
+    "signupCta": "Załóż konto kluczem Nostr",
+    "noExtension": "Nie wykryto rozszerzenia Nostr",
+    "noExtensionHint": "Rozszerzenie NIP-07 (Alby, nos2x i inne) przechowuje Twój klucz i podpisuje w Twoim imieniu. Vimana go nie widzi.",
+    "needName": "Najpierw podaj nazwę — konto nie ma się po czym rozpoznać.",
+    "unknownKey": "Ten klucz nie ma tu jeszcze konta. Załóż je na stronie rejestracji.",
+    "alreadyRegistered": "Ten klucz ma już konto. Skorzystaj z logowania.",
+    "retired": "Konto zostało wycofane po zgłoszeniu utraty klucza.",
+    "badProof": "Podpis się nie zgadza. Spróbuj ponownie."
+  },
   "verifyEmail": {
     "title": "Potwierdź adres email",
     "sentTo": "Wysłaliśmy 6-cyfrowy kod na",

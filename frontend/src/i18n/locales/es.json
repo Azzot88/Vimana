@@ -72,6 +72,18 @@
     "errorServer": "Error del servidor. Inténtalo de nuevo.",
     "errorCredentials": "Login o contraseña incorrectos"
   },
+  "nostrAuth": {
+    "or": "o",
+    "loginCta": "Entrar con una clave Nostr",
+    "signupCta": "Crear una cuenta con una clave Nostr",
+    "noExtension": "No se detectó ninguna extensión de Nostr",
+    "noExtensionHint": "Una extensión NIP-07 (Alby, nos2x y otras) guarda tu clave y firma por ti. Vimana nunca la ve.",
+    "needName": "Escribe primero un nombre: la cuenta no tiene otra forma de identificarse.",
+    "unknownKey": "Esta clave todavía no tiene cuenta aquí. Créala en la página de registro.",
+    "alreadyRegistered": "Esta clave ya tiene cuenta. Usa el inicio de sesión.",
+    "retired": "Esta cuenta fue retirada tras declararse perdida su clave.",
+    "badProof": "La firma no cuadra. Inténtalo de nuevo."
+  },
   "verifyEmail": {
     "title": "Confirma tu email",
     "sentTo": "Enviamos un código de 6 dígitos a",

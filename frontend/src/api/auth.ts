@@ -55,6 +55,36 @@ export interface User {
   email_verified?: boolean
 }
 
+// T3.13 — sign in / sign up with a Nostr key. No password involved: the server
+// issues a one-time challenge and checks the signature against the claimed key.
+export interface NostrChallenge {
+  challenge: string
+  expires_in: number
+  purpose_login: string
+  purpose_signup: string
+}
+
+export interface NostrProof {
+  npub_hex: string
+  challenge: string
+  created_at: number
+  sig: string
+}
+
+export const nostrChallenge = (pubkeyHex: string) =>
+  api.post<NostrChallenge>('/api/auth/nostr/challenge', {
+    pubkey_hex: pubkeyHex,
+  })
+
+/** 404 `nostr_pubkey_unknown` means "this key has no account" — offer signup,
+ *  do not report it as a failed login. */
+export const nostrVerify = (proof: NostrProof) =>
+  api.post<TokenResponse>('/api/auth/nostr/verify', proof)
+
+export const nostrSignup = (
+  proof: NostrProof & { display_name: string; email?: string },
+) => api.post<{ user: User; token: TokenResponse }>('/api/auth/nostr/signup', proof)
+
 // T3.11 — email confirmation. `request-code` answers 202 with
 // {status: 'sent' | 'already_verified'}, or 429 while the cooldown holds.
 export const requestEmailCode = () =>

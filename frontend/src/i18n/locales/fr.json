@@ -72,6 +72,18 @@
     "errorServer": "Erreur serveur. Veuillez réessayer.",
     "errorCredentials": "Identifiant ou mot de passe incorrect"
   },
+  "nostrAuth": {
+    "or": "ou",
+    "loginCta": "Se connecter avec une clé Nostr",
+    "signupCta": "Créer un compte avec une clé Nostr",
+    "noExtension": "Aucune extension Nostr détectée",
+    "noExtensionHint": "Une extension NIP-07 (Alby, nos2x et autres) garde votre clé et signe à votre place. Vimana ne la voit jamais.",
+    "needName": "Indiquez d'abord un nom — le compte n'a rien d'autre pour être reconnu.",
+    "unknownKey": "Cette clé n'a pas encore de compte ici. Créez-en un sur la page d'inscription.",
+    "alreadyRegistered": "Cette clé a déjà un compte. Utilisez la connexion.",
+    "retired": "Ce compte a été retiré après la déclaration de perte de sa clé.",
+    "badProof": "La signature n'est pas valide. Réessayez."
+  },
   "verifyEmail": {
     "title": "Confirmez votre email",
     "sentTo": "Nous avons envoyé un code à 6 chiffres à",

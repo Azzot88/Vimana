@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { login, me } from '../api/auth'
+import NostrAuthButton from '../components/NostrAuthButton'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
@@ -89,6 +90,16 @@ export default function LoginPage() {
             {loading ? t('auth.logging') : t('auth.login')}
           </button>
         </form>
+        <div className="mt-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-px bg-navy/10 flex-1" />
+            <span className="text-xs font-body text-navy/40">
+              {t('nostrAuth.or')}
+            </span>
+            <div className="h-px bg-navy/10 flex-1" />
+          </div>
+          <NostrAuthButton mode="login" />
+        </div>
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-navy/50">
             {t('auth.noAccount')}{' '}

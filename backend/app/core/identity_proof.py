@@ -30,6 +30,11 @@ PROOF_KIND = 27235
 CLOCK_SKEW_SEC = 60
 
 PURPOSE_ESTABLISH = "vimana:identity:establish"
+# T3.13 — separate purposes so a proof cannot be carried between flows. The
+# purpose is *inside* the signed payload, so a signature collected for one of
+# these is worthless for the others even with a live challenge.
+PURPOSE_LOGIN = "vimana:identity:login"
+PURPOSE_SIGNUP = "vimana:identity:signup"
 
 
 def build_proof_event(
