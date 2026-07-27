@@ -12,4 +12,6 @@
 // T3.11 closed — email-only registration + confirmation code (Phase 3.7 opens).
 // Phase 3.7 keeps counting in the 03 series: the version is a monotonic
 // progress counter, not a phase label.
-export const APP_VERSION = '0.03.17'
+// T3.12 closed — service key vs identity: establish/declare-lost, vault
+// re-encryption, platform-key publishing.
+export const APP_VERSION = '0.03.18'
