@@ -38,7 +38,21 @@ from app.main import app
 from app.models.user import User
 
 # Excluded from everyday runs via `-m "not fuzz"` (registered in pytest.ini).
-pytestmark = pytest.mark.fuzz
+pytestmark = [
+    pytest.mark.fuzz,
+    # Hypothesis drives ~15 examples per endpoint inside a single test function,
+    # each on its own event loop. The autouse Redis teardown in conftest closes
+    # the client for the loop that is running when the *function* ends, so every
+    # earlier loop leaves a connection for the garbage collector — which then
+    # raises inside `AbstractConnection.__del__` because its loop is gone.
+    #
+    # Suppressed rather than fixed: the fix is to stop caching the client and
+    # open a connection per operation, and `is_blacklisted` runs on every
+    # authenticated request in production. Trading real latency there for a
+    # quieter test log is the wrong way round. Harmless — the sockets go when
+    # the process does.
+    pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning"),
+]
 
 # schemathesis 3.39 still uses jsonschema.RefResolver internally, which
 # jsonschema >= 4.18 deprecated. Not our code, fixed on their side in 4.x.
