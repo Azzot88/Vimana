@@ -75,6 +75,31 @@ def nip04_decrypt(nip04_ct: str, recipient_priv_hex: str, sender_xonly_pub_hex: 
         raise HTTPException(status_code=422, detail=f"NIP-04 decrypt: {exc}") from exc
 
 
+def envelope_parts(entry, default_sender_pubkey: str | None) -> tuple[str, str | None]:
+    """Split a stored NIP-04 envelope into (ciphertext, sender_pubkey).
+
+    Two shapes exist (T3.12 pt.2c):
+
+    - legacy `"<ct>"` — the sender was always the message author, so the caller
+      supplies it as `default_sender_pubkey`;
+    - `{"ct": "<ct>", "sender_pubkey": "<hex>"}` — carries its own sender.
+
+    The second shape exists because NIP-04 is ECDH: re-addressing an envelope to
+    a new key requires the *sender's* private key. When a user takes their own
+    identity, the platform re-wraps their envelopes using the retiring service
+    key as sender — which only works if the reader can be told that is who to
+    complete the exchange with. With sender pinned to the message author, that
+    re-wrap was impossible and such accounts could not migrate at all.
+    """
+    if isinstance(entry, dict):
+        return entry.get("ct", ""), entry.get("sender_pubkey")
+    return entry, default_sender_pubkey
+
+
+def make_envelope(ciphertext: str, sender_pubkey: str) -> dict:
+    return {"ct": ciphertext, "sender_pubkey": sender_pubkey}
+
+
 def get_arbiter_user_id() -> uuid.UUID | None:
     """Platform-arbiter selection via `ARBITER_USER_ID` env.
 

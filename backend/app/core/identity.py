@@ -18,7 +18,7 @@ would put a counterparty opposite someone who cannot sign a single record.
 from __future__ import annotations
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.deal import Deal, DealVaultMessage
@@ -28,35 +28,92 @@ from app.models.user import User
 async def establish_blockers(db: AsyncSession, user: User) -> list[str]:
     """Reasons the transition would destroy data, empty list if it is safe.
 
-    Identity containers are no longer listed: pt.2b re-wraps them in place
-    (`core.verification.rewrap_container_to_identity`). What remains is the case
-    the server genuinely cannot fix on its own — see below.
+    Currently always empty: identity containers move in pt.2b
+    (`core.verification.rewrap_container_to_identity`) and vault envelopes in
+    pt.2c (`rewrap_vault_envelopes` below). Kept as the single place to refuse
+    from — anything encrypted to the service key that a future feature adds
+    must either be re-wrapped here or listed here, and silently doing neither
+    is the failure mode this function exists to prevent.
     """
-    blockers: list[str] = []
+    return []
 
-    # A read package is decrypted as ECDH(reader_priv, message_author_pub), so
-    # producing one readable by the new key needs ECDH(author_priv, new_pub) —
-    # the *author's* private key, which the platform does not have unless the
-    # author happens to be this same custodial user. Re-wrapping therefore
-    # cannot be done server-side without changing the stored format to carry a
-    # per-package sender pubkey, which touches dealvault, threshold and
-    # arbiter-reveal together. Until then, refuse rather than strand the vault.
-    e2e_messages = await db.scalar(
-        select(func.count())
-        .select_from(DealVaultMessage)
+
+async def rewrap_vault_envelopes(
+    db: AsyncSession,
+    user: User,
+    *,
+    old_nsec_hex: str,
+    old_npub_hex: str,
+    new_npub_hex: str,
+) -> int:
+    """Re-address this user's e2e envelopes to their new key. Returns the count.
+
+    A read package is decrypted as ECDH(reader_priv, sender_pub). Re-addressing
+    one to a different reader needs the *sender's* private key — which the
+    platform does not have, since the sender is whoever wrote the message. The
+    way through is not to keep the original sender: the platform re-encrypts
+    with the retiring service key as sender and records that in the envelope
+    (pt.2c format). ECDH being symmetric, the user's new private key plus the
+    recorded service pubkey recovers the same session key.
+
+    Only entries addressed to *this* user are touched. Everyone else's packages
+    on the same message keep their sender and stay readable.
+
+    Raises `ValueError` if any re-wrap cannot be proven to round-trip, so the
+    caller's transaction rolls back with the service key still intact.
+    """
+    from app.core.threshold import envelope_parts, make_envelope, nip04_decrypt
+    from app.core.threshold import nip04_encrypt
+
+    rows = await db.execute(
+        select(DealVaultMessage, Deal)
         .join(Deal, Deal.id == DealVaultMessage.deal_id)
         .where(
             DealVaultMessage.is_e2e.is_(True),
-            or_(Deal.sender_id == user.id, Deal.carrier_id == user.id),
+            or_(
+                Deal.sender_id == user.id,
+                Deal.carrier_id == user.id,
+                Deal.recipient_id == user.id,
+            ),
         )
     )
-    if e2e_messages:
-        blockers.append(
-            f"{e2e_messages} end-to-end vault message(s) are addressed to the "
-            "service key and cannot be re-wrapped yet"
-        )
 
-    return blockers
+    rewrapped = 0
+    for msg, deal in rows.all():
+        if deal.sender_id == user.id:
+            key = "sender"
+        elif deal.carrier_id == user.id:
+            key = "carrier"
+        else:
+            key = f"recipient_{user.id}"
+
+        for field in ("read_packages", "wrapped_shares"):
+            stored = getattr(msg, field) or {}
+            entry = stored.get(key)
+            if entry is None:
+                continue
+
+            ciphertext, sender_pubkey = envelope_parts(entry, msg.nostr_pubkey)
+            if not sender_pubkey:
+                raise ValueError(
+                    f"message {msg.id}: {field}[{key}] has no sender pubkey"
+                )
+            plaintext = nip04_decrypt(ciphertext, old_nsec_hex, sender_pubkey)
+            new_ct = nip04_encrypt(plaintext, old_nsec_hex, new_npub_hex)
+
+            # Prove it round-trips before the sender key is destroyed. Symmetric
+            # ECDH lets the platform read what only the new owner will be able
+            # to read afterwards.
+            if nip04_decrypt(new_ct, old_nsec_hex, new_npub_hex) != plaintext:
+                raise ValueError(f"message {msg.id}: {field}[{key}] failed round-trip")
+
+            # JSON columns only register a change on reassignment.
+            updated = dict(stored)
+            updated[key] = make_envelope(new_ct, old_npub_hex)
+            setattr(msg, field, updated)
+            rewrapped += 1
+
+    return rewrapped
 
 
 def require_live_identity(user: User) -> None:

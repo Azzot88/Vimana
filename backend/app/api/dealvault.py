@@ -25,7 +25,7 @@ from app.core.file_validation import FileValidationError, validate_upload
 from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, upload_file
-from app.core.threshold import E2EPayload, nip04_decrypt
+from app.core.threshold import E2EPayload, envelope_parts, nip04_decrypt
 from app.models.deal import Attachment, AttachmentKind, Deal, DealEventType, DealVaultMessage
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
@@ -480,11 +480,17 @@ async def decrypt_message_for_me(
             status_code=422,
             detail="Server-mediated decrypt requires custodial nsec (self-custody users decrypt client-side)",
         )
-    if not msg.nostr_pubkey:
-        raise HTTPException(status_code=422, detail="Message has no writer pubkey — cannot verify NIP-04 sender")
+    # T3.12 pt.2c — a re-wrapped package names its own sender; a legacy one was
+    # always addressed from the message author.
+    ciphertext, sender_pubkey = envelope_parts(read_pkg, msg.nostr_pubkey)
+    if not sender_pubkey:
+        raise HTTPException(
+            status_code=422,
+            detail="Read package has no sender pubkey — cannot complete NIP-04 exchange",
+        )
 
     caller_nsec = decrypt_nsec(bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted))
-    session_key = nip04_decrypt(read_pkg, caller_nsec, msg.nostr_pubkey)
+    session_key = nip04_decrypt(ciphertext, caller_nsec, sender_pubkey)
 
     # Now AES-GCM decrypt the ciphertext with the recovered session_key.
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM

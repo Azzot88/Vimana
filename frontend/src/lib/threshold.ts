@@ -119,6 +119,22 @@ export async function encryptE2E(
  * `writerNpub` is the message author (whose privkey encrypted the NIP-04
  * envelope) — passed as `sender_pub` to `window.nostr.nip04.decrypt`.
  */
+/** A stored NIP-04 envelope. T3.12 pt.2c added the object shape so an envelope
+ *  can name its own sender: when a user takes their own key, the platform
+ *  re-addresses their envelopes from the retiring service key, and the reader
+ *  has to know whose public key completes the ECDH. Legacy bare strings were
+ *  always addressed from the message author. */
+export type StoredEnvelope = string | { ct: string; sender_pubkey: string }
+
+export function envelopeParts(
+  entry: StoredEnvelope,
+  defaultSenderPubkey: string,
+): { ct: string; senderPubkey: string } {
+  return typeof entry === 'string'
+    ? { ct: entry, senderPubkey: defaultSenderPubkey }
+    : { ct: entry.ct, senderPubkey: entry.sender_pubkey }
+}
+
 export async function decryptE2E(
   ciphertextB64: string,
   nonceB64: string,

@@ -8,6 +8,9 @@ export interface ArbiterInfo {
 export interface RevealMyShareOut {
   role: 'sender' | 'carrier'
   envelope: string
+  /** T3.12 pt.2c — whose public key completes the NIP-04 exchange. Null only if
+   *  the message author had no key at write time and the envelope names none. */
+  sender_pubkey: string | null
 }
 
 export interface ArbiterRevealOut {

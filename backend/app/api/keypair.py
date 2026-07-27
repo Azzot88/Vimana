@@ -39,7 +39,7 @@ from app.api.deps import get_current_user
 from app.core.challenge import ChallengeUnavailable, consume_challenge, issue_challenge
 from app.core.challenge import CHALLENGE_TTL_SECONDS
 from app.core.database import get_db
-from app.core.identity import establish_blockers
+from app.core.identity import establish_blockers, rewrap_vault_envelopes
 from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
 from app.core.keypair import decrypt_nsec
 from app.core.security import verify_password
@@ -291,6 +291,26 @@ async def identity_establish(
                         "your data is untouched"
                     ),
                 )
+
+        # T3.12 pt.2c — same move for e2e vault envelopes. Raises if any of them
+        # cannot be proven to round-trip, which rolls this transaction back with
+        # the service key still in place.
+        try:
+            await rewrap_vault_envelopes(
+                db,
+                current_user,
+                old_nsec_hex=old_nsec_hex,
+                old_npub_hex=current_user.nostr_pubkey,
+                new_npub_hex=body.npub_hex,
+            )
+        except (ValueError, HTTPException) as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Vault re-encryption self-check failed — identity not "
+                    f"changed, your data is untouched ({exc})"
+                ),
+            )
 
     # The service key dies here: the platform keeps no copy of anything it can
     # sign or decrypt for this user any more.

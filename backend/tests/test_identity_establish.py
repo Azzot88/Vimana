@@ -282,19 +282,32 @@ async def test_container_survives_the_transition(client, session_maker):
     assert plaintext == document
 
 
-async def test_establish_still_blocked_by_e2e_messages(
+async def test_e2e_read_package_survives_the_transition(
     client, session_maker, seed_deal
 ):
-    """The one case the server cannot fix on its own: a read package is
-    ECDH'd against the *message author's* key, and re-addressing it to a new
-    identity would need that author's private key."""
+    """pt.2c — the session key must still be recoverable afterwards, now with
+    the user's own key.
+
+    A read package is ECDH'd against its *sender*. The platform cannot produce
+    one from the original author (no access to that private key), so it
+    re-addresses the envelope from the retiring service key and records that as
+    the sender. Symmetric ECDH means the new owner can open it.
+    """
+    from app.core.keypair import decrypt_nsec
+    from app.core.threshold import envelope_parts, nip04_decrypt, nip04_encrypt
     from app.models.deal import Deal, DealVaultMessage
 
+    session_key = b"S" * 32
     email, headers = await _fresh_user(client, "idn-e2e")
+
     async with session_maker() as db:
         user = (
             await db.execute(select(User).where(User.email == email))
         ).scalar_one()
+        service_nsec = decrypt_nsec(
+            bytes(user.nsec_nonce), bytes(user.nsec_encrypted)
+        )
+        author_nsec, author_npub = generate_keypair()
         # A deal of this user's own, reusing the seed order/trip rows. The seed
         # deal itself is shared across the session and must not be mutated.
         own_deal = Deal(
@@ -305,23 +318,94 @@ async def test_establish_still_blocked_by_e2e_messages(
         )
         db.add(own_deal)
         await db.flush()
-        db.add(
-            DealVaultMessage(
-                deal_id=own_deal.id,
-                sender_id=user.id,
-                is_e2e=True,
-                read_packages={"sender": "ct?iv=iv"},
-            )
+        msg = DealVaultMessage(
+            deal_id=own_deal.id,
+            sender_id=user.id,
+            is_e2e=True,
+            nostr_pubkey=author_npub,
+            # Legacy shape: a bare string, sender implied to be the author.
+            read_packages={
+                "sender": nip04_encrypt(session_key, author_nsec, user.nostr_pubkey)
+            },
         )
+        db.add(msg)
         await db.commit()
+        msg_id = msg.id
 
-    nsec, npub = generate_keypair()
+    new_nsec, new_npub = generate_keypair()
     challenge = await _challenge(client, headers)
     resp = await client.post(
-        "/api/me/identity/establish", headers=headers, json=_sign(npub, nsec, challenge)
+        "/api/me/identity/establish",
+        headers=headers,
+        json=_sign(new_npub, new_nsec, challenge),
     )
-    assert resp.status_code == 409
-    assert "end-to-end" in resp.json()["detail"].lower()
+    assert resp.status_code == 200, resp.text
+
+    async with session_maker() as db:
+        stored = await db.get(DealVaultMessage, msg_id)
+        await db.refresh(stored)
+        entry = stored.read_packages["sender"]
+
+    assert isinstance(entry, dict), "envelope was not migrated to the new shape"
+    ciphertext, sender_pubkey = envelope_parts(entry, stored.nostr_pubkey)
+    assert sender_pubkey != author_npub, "sender must now be the service key"
+    # The new owner recovers the session key with a key the server never saw.
+    assert nip04_decrypt(ciphertext, new_nsec, sender_pubkey) == session_key
+
+
+async def test_other_participants_packages_are_left_alone(
+    client, session_maker, seed_deal, seed_carrier
+):
+    """Only the migrating user's envelope is touched — the counterparty keeps
+    reading theirs with the sender it always had."""
+    from app.core.threshold import nip04_encrypt
+    from app.models.deal import Deal, DealVaultMessage
+
+    email, headers = await _fresh_user(client, "idn-e2e-other")
+    async with session_maker() as db:
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        author_nsec, author_npub = generate_keypair()
+        own_deal = Deal(
+            order_id=seed_deal.order_id,
+            trip_id=seed_deal.trip_id,
+            sender_id=user.id,
+            carrier_id=seed_carrier.id,
+        )
+        db.add(own_deal)
+        await db.flush()
+        carrier_pkg = nip04_encrypt(
+            b"C" * 32, author_nsec, seed_carrier.nostr_pubkey
+        )
+        msg = DealVaultMessage(
+            deal_id=own_deal.id,
+            sender_id=user.id,
+            is_e2e=True,
+            nostr_pubkey=author_npub,
+            read_packages={
+                "sender": nip04_encrypt(b"S" * 32, author_nsec, user.nostr_pubkey),
+                "carrier": carrier_pkg,
+            },
+        )
+        db.add(msg)
+        await db.commit()
+        msg_id = msg.id
+
+    new_nsec, new_npub = generate_keypair()
+    challenge = await _challenge(client, headers)
+    resp = await client.post(
+        "/api/me/identity/establish",
+        headers=headers,
+        json=_sign(new_npub, new_nsec, challenge),
+    )
+    assert resp.status_code == 200, resp.text
+
+    async with session_maker() as db:
+        stored = await db.get(DealVaultMessage, msg_id)
+        await db.refresh(stored)
+
+    assert stored.read_packages["carrier"] == carrier_pkg
 
 
 async def test_failed_rewrap_leaves_the_account_untouched(

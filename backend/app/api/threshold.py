@@ -13,7 +13,7 @@ from app.core.database import get_db
 from app.core.deal_chain import append_deal_event
 from app.core.keypair import decrypt_nsec
 from app.core.permissions import Permission, require_perm
-from app.core.threshold import get_arbiter_user_id, nip04_decrypt
+from app.core.threshold import envelope_parts, get_arbiter_user_id, nip04_decrypt
 from app.models.deal import Deal, DealEventType, DealVaultMessage, Dispute
 from app.models.user import User
 
@@ -75,10 +75,14 @@ async def reveal_my_share(
     else:
         raise HTTPException(status_code=403, detail="Not a deal participant")
 
-    envelope = msg.wrapped_shares.get(role)
-    if envelope is None:
+    entry = msg.wrapped_shares.get(role)
+    if entry is None:
         raise HTTPException(status_code=404, detail=f"No wrapped share for {role}")
-    return {"role": role, "envelope": envelope}
+    # T3.12 pt.2c — the client needs to know whose key completes the ECDH. For
+    # legacy envelopes that is the message author; re-wrapped ones say so
+    # themselves.
+    ciphertext, sender_pubkey = envelope_parts(entry, msg.nostr_pubkey)
+    return {"role": role, "envelope": ciphertext, "sender_pubkey": sender_pubkey}
 
 
 @router.post("/disputes/{deal_id}/arbiter-reveal")
@@ -126,13 +130,15 @@ async def arbiter_reveal(
     revealed: list[dict] = []
     for msg in messages:
         shares = msg.wrapped_shares or {}
-        envelope = shares.get("arbiter")
-        if envelope is None:
+        entry = shares.get("arbiter")
+        if entry is None:
             continue
-        if not msg.nostr_pubkey:
-            # Author didn't have a keypair at write time — can't verify sender.
+        ciphertext, sender_pubkey = envelope_parts(entry, msg.nostr_pubkey)
+        if not sender_pubkey:
+            # No key to complete the ECDH with — author had none at write time
+            # and the envelope carries no sender of its own.
             continue
-        share_bytes = nip04_decrypt(envelope, arbiter_nsec_hex, msg.nostr_pubkey)
+        share_bytes = nip04_decrypt(ciphertext, arbiter_nsec_hex, sender_pubkey)
         revealed.append(
             {
                 "message_id": str(msg.id),

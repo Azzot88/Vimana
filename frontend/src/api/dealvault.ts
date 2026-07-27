@@ -1,7 +1,11 @@
 import api from './client'
 import type { Page } from './pagination'
 import { hasNip07Extension, signVaultMessageViaNip07 } from '../lib/nostr'
-import { encryptE2E, type E2EPayload } from '../lib/threshold'
+import {
+  encryptE2E,
+  type E2EPayload,
+  type StoredEnvelope,
+} from '../lib/threshold'
 import { getKeypairStatus } from './keypair'
 import { getArbiterInfo } from './threshold'
 
@@ -31,7 +35,9 @@ export interface VaultMessage {
   is_e2e?: boolean
   ciphertext_b64?: string | null
   nonce_b64?: string | null
-  read_packages?: { sender?: string; carrier?: string } | null
+  // T3.12 pt.2c — values may be a bare NIP-04 string (legacy, sender = message
+  // author) or an object naming its own sender. Read via `envelopeParts`.
+  read_packages?: Record<string, StoredEnvelope | undefined> | null
   attachments: Attachment[]
   created_at: string
 }

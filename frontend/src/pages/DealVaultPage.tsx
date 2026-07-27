@@ -12,7 +12,7 @@ import {
 } from '../api/dealvault'
 import api from '../api/client'
 import { inviteRecipient } from '../api/participants'
-import { decryptE2E } from '../lib/threshold'
+import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ImageLightbox from '../components/ImageLightbox'
@@ -101,9 +101,12 @@ export default function DealVaultPage() {
     for (const msg of messages) {
       if (!msg.is_e2e || decrypted[msg.id] !== undefined) continue
       if (!msg.ciphertext_b64 || !msg.nonce_b64 || !msg.read_packages) continue
-      const readPkg = msg.read_packages[myRole]
-      if (!readPkg || !msg.nostr_pubkey) continue
-      decryptE2E(msg.ciphertext_b64, msg.nonce_b64, readPkg, msg.nostr_pubkey)
+      const entry = msg.read_packages[myRole]
+      if (!entry || !msg.nostr_pubkey) continue
+      // T3.12 pt.2c — a re-wrapped envelope names its own sender; a legacy one
+      // was addressed from the message author.
+      const { ct, senderPubkey } = envelopeParts(entry, msg.nostr_pubkey)
+      decryptE2E(msg.ciphertext_b64, msg.nonce_b64, ct, senderPubkey)
         .then((plaintext) =>
           setDecrypted((prev) => ({ ...prev, [msg.id]: plaintext })),
         )
