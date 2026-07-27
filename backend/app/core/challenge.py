@@ -44,10 +44,10 @@ class ChallengeUnavailable(RuntimeError):
 
 def _get_client() -> aioredis.Redis:
     loop = asyncio.get_running_loop()
-    # Drop clients whose loop is gone, or a long test session accumulates one
-    # idle connection pool per test. The client is not closed explicitly:
-    # `aclose()` is a coroutine and its loop is already dead, so there is
-    # nothing to await it on — releasing the reference lets GC take the socket.
+    # Forget clients whose loop is gone so a long test session does not
+    # accumulate one idle pool per test. Closing them here is impossible —
+    # `aclose()` is a coroutine and their loop is dead — which is why callers
+    # that create loops should use `aclose_current_client()` on the way out.
     for key, (cached_loop, _cached_client) in list(_clients.items()):
         if cached_loop.is_closed():
             _clients.pop(key, None)
@@ -62,6 +62,30 @@ def _get_client() -> aioredis.Redis:
 
 def _key(scope: str, subject: str) -> str:
     return f"{_KEY_PREFIX}{scope}:{subject}"
+
+
+async def aclose_current_client() -> None:
+    """Close and forget the client bound to the running loop.
+
+    Exists because the alternative — letting GC take it after the loop dies —
+    raises inside `AbstractConnection.__del__`: the finalizer calls
+    `loop.call_soon()` on a closed loop. Harmless (the socket goes when the
+    process does) but it surfaces as `PytestUnraisableExceptionWarning`, one per
+    test. Anything that creates and discards event loops should call this on the
+    way out; a server with a single long-lived loop never needs it.
+    """
+    loop = asyncio.get_running_loop()
+    entry = _clients.pop(id(loop), None)
+    if entry is None:
+        return
+    client = entry[1]
+    closer = getattr(client, "aclose", None) or getattr(client, "close", None)
+    if closer is None:
+        return
+    try:
+        await closer()
+    except Exception as exc:  # a dead connection is still a closed connection
+        logger.debug("Redis challenge client close failed: %s", exc)
 
 
 async def issue_challenge(scope: str, subject: str) -> str:

@@ -1032,6 +1032,21 @@ async def override_db(session_maker):
     app.dependency_overrides.pop(get_db, None)
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _close_redis_clients():
+    """Shut the challenge store's Redis client down while its loop is alive.
+
+    pytest-asyncio gives each test a fresh loop and closes it afterwards. A
+    Redis connection left for the garbage collector then raises inside its own
+    finalizer — `loop.call_soon()` on a closed loop — which pytest reports as
+    `PytestUnraisableExceptionWarning`, one per test that touched Redis.
+    """
+    yield
+    from app.core.challenge import aclose_current_client
+
+    await aclose_current_client()
+
+
 @pytest.fixture(autouse=True)
 def sync_sessions(monkeypatch):
     """Point every Celery-task module's `SyncSessionLocal` at the TEST database.
