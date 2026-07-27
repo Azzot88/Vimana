@@ -14,4 +14,5 @@
 // progress counter, not a phase label.
 // T3.12 closed — service key vs identity: establish/declare-lost, vault
 // re-encryption, platform-key publishing.
-export const APP_VERSION = '0.03.18'
+// T3.13 closed — sign in / sign up with a Nostr key, no password path.
+export const APP_VERSION = '0.03.19'
