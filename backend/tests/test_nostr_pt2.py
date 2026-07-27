@@ -54,13 +54,12 @@ async def test_publish_signed_flow_end_to_end(client, session_maker):
     os.environ["NOSTR_PUBLISH_ENABLED"] = "true"
     os.environ["NOSTR_FRIENDLY_RELAYS"] = ""  # no outbound calls in tests
     try:
+        from tests.conftest import establish_identity
+
         hdr, email = await _register(client, "sp-c", carrier=True)
-        exp = await client.post(
-            "/api/me/keypair/export",
-            headers=hdr,
-            json={"password": SEED_PASSWORD},
-        )
-        keys = exp.json()
+        # T3.12 — the test generates the key and proves possession, exactly as a
+        # browser would. The server discloses nothing.
+        keys = await establish_identity(client, hdr)
 
         trip_id = await _make_trip(client, hdr)
         async with session_maker() as db:
@@ -131,11 +130,10 @@ async def test_publish_signed_rejects_bad_sig(client, session_maker):
 
     os.environ["NOSTR_PUBLISH_ENABLED"] = "true"
     try:
+        from tests.conftest import establish_identity
+
         hdr, _ = await _register(client, "bad-c", carrier=True)
-        exp = await client.post(
-            "/api/me/keypair/export", headers=hdr, json={"password": SEED_PASSWORD}
-        )
-        keys = exp.json()
+        keys = await establish_identity(client, hdr)
         trip_id = await _make_trip(client, hdr)
         created_at = int(datetime.now(tz=timezone.utc).timestamp())
         tags = [["d", trip_id]]
@@ -245,11 +243,10 @@ async def test_metrics_bump_after_publish(client, session_maker):
     os.environ["NOSTR_PUBLISH_ENABLED"] = "true"
     os.environ["NOSTR_FRIENDLY_RELAYS"] = ""  # empty → no publish → success is vacuously false
     try:
+        from tests.conftest import establish_identity
+
         hdr, _ = await _register(client, "mb-c", carrier=True)
-        exp = await client.post(
-            "/api/me/keypair/export", headers=hdr, json={"password": SEED_PASSWORD}
-        )
-        keys = exp.json()
+        keys = await establish_identity(client, hdr)
         trip_id = await _make_trip(client, hdr)
         async with session_maker() as db:
             trip = await db.get(Trip, trip_id)

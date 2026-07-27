@@ -62,13 +62,13 @@ async def _e2e_deal(client, session_maker):
     s_headers = {"Authorization": f"Bearer {s_login.json()['access_token']}"}
     s_status = await client.get("/api/me/keypair/status", headers=s_headers)
     sender_npub = s_status.json()["npub"]
-    # Export sender nsec so test can NIP-04-encrypt on their behalf.
-    s_exp = await client.post(
-        "/api/me/keypair/export",
-        headers=s_headers,
-        json={"password": SEED_PASSWORD},
-    )
-    sender_nsec = s_exp.json()["nsec_hex"]
+    # The sender stays custodial here — the point of this suite is the
+    # server-mediated path. The test needs their service nsec to NIP-04-encrypt
+    # on their behalf, and reads it the way the platform does (T3.12: `export`
+    # is gone, it handed users a key that was never theirs).
+    from tests.conftest import service_nsec_for_email
+
+    sender_nsec = await service_nsec_for_email(session_maker, s_email)
 
     # Carrier
     c_email = unique_email("e2e-c")

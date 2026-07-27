@@ -10,21 +10,20 @@ never published outside. Identity begins at `establish`, and always with a
 `npub_hex` with no proof of possession whatsoever. Once the key is the identity
 that is plain impersonation: paste a well-known npub, become that identity.
 
-`export` and `claim` are **deprecated and still here**, on purpose:
+`export` and `claim` are gone too:
 
-- `claim` promotes the service key to an identity by deleting the server's copy
+- `claim` promoted the service key to an identity by deleting the server's copy
   of the nsec. That nsec sat on our disks for the account's whole life, so "we
   deleted our copy" is unprovable — an identity built on it is sovereign only
-  on the platform's word. `establish` replaces it.
-- `export` hands over the service key, which was never the user's to begin with.
+  on the platform's word.
+- `export` handed over the service key, which was never the user's to begin
+  with.
 
-Both survive one more step because seven test modules obtain a known nsec
-through `export` and flip users to self-custody through `claim` in order to
-exercise NIP-07 signing, threshold encryption and self-custody publishing.
-Deleting them in the same commit as `establish` would have taken the crypto
-suite down with them. They go once those tests are migrated to `establish`.
-Neither is a security hole — `export` demands password re-auth and `claim`
-only discards the server's own copy.
+They outlived `import` by one step: seven test modules used them to obtain a
+known nsec and flip users to self-custody. Those tests now either call
+`establish` (when they want a self-custody account) or read the service key
+straight from the database (when the account must stay custodial) — which is
+honest about who can do that: the platform, not the user.
 """
 from __future__ import annotations
 
@@ -103,15 +102,6 @@ class DeclareLostBody(BaseModel):
     password: str
 
 
-class ExportBody(BaseModel):
-    password: str  # re-auth confirmation
-
-
-class ExportResponse(BaseModel):
-    nsec_hex: str
-    npub_hex: str
-
-
 def _status(user: User) -> KeypairStatus:
     return KeypairStatus(
         npub=user.nostr_pubkey,
@@ -124,45 +114,6 @@ def _status(user: User) -> KeypairStatus:
 
 @router.get("/me/keypair/status", response_model=KeypairStatus)
 async def keypair_status(current_user: User = Depends(get_current_user)):
-    return _status(current_user)
-
-
-@router.post("/me/keypair/export", response_model=ExportResponse)
-async def keypair_export(
-    body: ExportBody = Body(...),
-    current_user: User = Depends(get_current_user),
-):
-    """DEPRECATED (T3.12) — hands over the service key. Removed once the crypto
-    test suite stops using it to obtain a known nsec."""
-    if not current_user.password_hash or not verify_password(
-        body.password, current_user.password_hash
-    ):
-        raise HTTPException(status_code=401, detail="Invalid password")
-    if current_user.nsec_encrypted is None or current_user.nsec_nonce is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No service nsec on this account (identity already established)",
-        )
-    nsec_hex = decrypt_nsec(
-        bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted)
-    )
-    return ExportResponse(nsec_hex=nsec_hex, npub_hex=current_user.nostr_pubkey or "")
-
-
-@router.post("/me/keypair/claim", response_model=KeypairStatus)
-async def keypair_claim(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """DEPRECATED (T3.12) — promotes the service key instead of minting a new
-    one. Superseded by `POST /me/identity/establish`."""
-    if current_user.key_self_custody:
-        return _status(current_user)  # idempotent
-    current_user.nsec_encrypted = None
-    current_user.nsec_nonce = None
-    current_user.key_self_custody = True
-    await db.commit()
-    await db.refresh(current_user)
     return _status(current_user)
 
 

@@ -1309,5 +1309,68 @@ async def sender_headers(client, seed_sender) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+async def service_nsec_for_email(session_maker, email: str) -> str:
+    """Read an account's **service** nsec the way the platform reads it.
+
+    For tests that need to encrypt or sign as a user while leaving the account
+    custodial. `POST /me/keypair/export` used to serve this and is gone (T3.12):
+    it handed the user a key that was never theirs, and the flows below are
+    precisely the ones where the platform — not the user — holds it.
+
+    Doing it through the DB instead of an endpoint keeps that honest. There is
+    no API for this because no user should have one.
+    """
+    from app.core.keypair import decrypt_nsec
+
+    async with session_maker() as db:
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        return decrypt_nsec(bytes(user.nsec_nonce), bytes(user.nsec_encrypted))
+
+
+async def establish_identity(client: AsyncClient, headers: dict[str, str]) -> dict:
+    """Give this account its own key the way the app does, and hand the test the
+    private half. Returns `{"nsec_hex", "npub_hex"}`.
+
+    Replaces the old `POST /me/keypair/export` + `POST /me/keypair/claim` pair
+    the crypto suite used to get a known nsec and flip a user to self-custody.
+    Both are gone (T3.12): `export` handed over a key that was never the user's,
+    and `claim` promoted a key the platform had held all along — an identity
+    built on it is sovereign only on our word.
+
+    This does what a real client does: generate locally, prove possession over a
+    one-time challenge, send only the public half. The returned nsec is known to
+    the test because the *test* generated it, not because the server disclosed
+    anything — which is the property the whole phase is about.
+
+    Note the account's npub **changes** here. Read any npub after calling this,
+    never before.
+    """
+    from app.core.identity_proof import PURPOSE_ESTABLISH, proof_event_id
+    from app.core.keypair import generate_keypair, sign_event_id
+
+    nsec_hex, npub_hex = generate_keypair()
+
+    ch = await client.post("/api/me/identity/challenge", headers=headers)
+    ch.raise_for_status()
+    challenge = ch.json()["challenge"]
+
+    created_at = int(datetime.now(timezone.utc).timestamp())
+    event_id = proof_event_id(npub_hex, PURPOSE_ESTABLISH, challenge, created_at)
+    resp = await client.post(
+        "/api/me/identity/establish",
+        headers=headers,
+        json={
+            "npub_hex": npub_hex,
+            "challenge": challenge,
+            "created_at": created_at,
+            "sig": sign_event_id(event_id, nsec_hex),
+        },
+    )
+    resp.raise_for_status()
+    return {"nsec_hex": nsec_hex, "npub_hex": npub_hex}
+
+
 def unique_email(prefix: str = "user") -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}@vimana.test"

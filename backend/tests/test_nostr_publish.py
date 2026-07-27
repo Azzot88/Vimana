@@ -157,9 +157,10 @@ async def test_publish_task_skips_a_carrier_who_owns_their_key(
     from app.models.marketplace import Trip
     from app.tasks.nostr_publish import publish_trip_to_nostr
 
+    from tests.conftest import establish_identity
+
     hdr = await _register_carrier(client)
-    claim = await client.post("/api/me/keypair/claim", headers=hdr)
-    assert claim.status_code == 200
+    await establish_identity(client, hdr)
 
     trip = await client.post(
         "/api/trips",

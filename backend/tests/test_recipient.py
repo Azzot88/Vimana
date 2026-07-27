@@ -305,14 +305,15 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
         sender_npub = sender.nostr_pubkey
         carrier_npub = carrier.nostr_pubkey
         recipient_npub = recipient.nostr_pubkey
+        # The sender stays custodial — this suite exercises the server-mediated
+        # read. The test encrypts on their behalf with the service key, read the
+        # way the platform reads it (T3.12: `export` is gone; it handed the user
+        # a key that was never theirs).
+        from app.core.keypair import decrypt_nsec
 
-    # Export sender nsec to sign / encrypt in test.
-    exp = await client.post(
-        "/api/me/keypair/export",
-        headers=_deal["sender_headers"],
-        json={"password": SEED_PASSWORD},
-    )
-    sender_nsec = exp.json()["nsec_hex"]
+        sender_nsec = decrypt_nsec(
+            bytes(sender.nsec_nonce), bytes(sender.nsec_encrypted)
+        )
 
     # Build minimal e2e_payload with plaintext "hello recipient".
     session_key = _os.urandom(32)

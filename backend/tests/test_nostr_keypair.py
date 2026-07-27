@@ -58,10 +58,18 @@ async def test_nsec_never_plaintext_in_db(client, session_maker):
         assert not re.search(rb"[0-9a-f]{32,}", raw)
 
 
-async def test_export_requires_correct_password(client):
+async def test_export_and_claim_are_gone(client):
+    """T3.12 — both retired with `import`.
+
+    `export` handed over the service key, which was never the user's. `claim`
+    promoted that same key to an identity by deleting the server's copy — but it
+    had sat on our disks for the account's whole life, so "we deleted it" is
+    unprovable and the resulting identity is sovereign only on our word.
+    `POST /me/identity/establish` replaces both, and always with a new key.
+    """
     from tests.conftest import SEED_PASSWORD, unique_email
 
-    email = unique_email("kp-exp")
+    email = unique_email("kp-gone")
     await client.post(
         "/api/auth/register",
         json={"email": email, "password": SEED_PASSWORD, "display_name": "E"},
@@ -71,21 +79,18 @@ async def test_export_requires_correct_password(client):
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    bad = await client.post(
-        "/api/me/keypair/export", headers=headers, json={"password": "wrong-pw"}
-    )
-    assert bad.status_code == 401
-
-    ok = await client.post(
+    exp = await client.post(
         "/api/me/keypair/export", headers=headers, json={"password": SEED_PASSWORD}
     )
-    assert ok.status_code == 200
-    assert len(ok.json()["nsec_hex"]) == 64
-    assert len(ok.json()["npub_hex"]) == 64
+    assert exp.status_code == 404
+
+    claim = await client.post("/api/me/keypair/claim", headers=headers)
+    assert claim.status_code == 404
 
 
-async def test_claim_deletes_encrypted_nsec(client):
-    from tests.conftest import SEED_PASSWORD, unique_email
+async def test_establish_puts_the_account_in_self_custody(client):
+    """What `claim` used to assert, now via the path that actually exists."""
+    from tests.conftest import SEED_PASSWORD, establish_identity, unique_email
 
     email = unique_email("kp-claim")
     await client.post(
@@ -97,17 +102,13 @@ async def test_claim_deletes_encrypted_nsec(client):
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    claim = await client.post("/api/me/keypair/claim", headers=headers)
-    assert claim.status_code == 200
-    body = claim.json()
-    assert body["key_self_custody"] is True
-    assert body["has_encrypted_nsec"] is False
+    keys = await establish_identity(client, headers)
 
-    # Export after claim → 404
-    exp = await client.post(
-        "/api/me/keypair/export", headers=headers, json={"password": SEED_PASSWORD}
-    )
-    assert exp.status_code == 404
+    status = await client.get("/api/me/keypair/status", headers=headers)
+    body = status.json()
+    assert body["identity_established"] is True
+    assert body["has_encrypted_nsec"] is False
+    assert body["npub"] == keys["npub_hex"]
 
 
 async def test_import_endpoint_is_gone(client):
@@ -288,7 +289,9 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}
     )
     s_headers = {"Authorization": f"Bearer {s_login.json()['access_token']}"}
-    await client.post("/api/me/keypair/claim", headers=s_headers)
+    from tests.conftest import establish_identity
+
+    await establish_identity(client, s_headers)
 
     match = await client.post(
         "/api/deals/match",

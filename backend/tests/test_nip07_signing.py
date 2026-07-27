@@ -47,15 +47,11 @@ async def _matched_deal(client):
     )
     s_headers = {"Authorization": f"Bearer {s_login.json()['access_token']}"}
 
-    # Export nsec BEFORE claim so tests can sign; then claim self-custody.
-    exp = await client.post(
-        "/api/me/keypair/export",
-        headers=s_headers,
-        json={"password": SEED_PASSWORD},
-    )
-    assert exp.status_code == 200
-    keys = exp.json()
-    await client.post("/api/me/keypair/claim", headers=s_headers)
+    # T3.12 — one step instead of export-then-claim: the test generates the key,
+    # proves possession, and the account becomes self-custody holding it.
+    from tests.conftest import establish_identity
+
+    keys = await establish_identity(client, s_headers)
 
     match = await client.post(
         "/api/deals/match",
