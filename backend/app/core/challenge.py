@@ -17,75 +17,23 @@ T3.13 (login by Nostr key) reuses this with a different `scope`.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import secrets
 
-import redis.asyncio as aioredis
-
-from app.core.config import settings
+from app.core.redis_client import get_client as _get_client
 
 logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "challenge:"
 CHALLENGE_TTL_SECONDS = 300
 
-# Keyed by event loop, not a single module-level client. An asyncio Redis client
-# binds to the loop that created it, so a cached one raises "Event loop is
-# closed" the moment a second loop uses it. Production has exactly one loop and
-# behaves as a plain singleton; pytest-asyncio makes a fresh loop per test and
-# would otherwise see every request after the first fail.
-_clients: dict[int, tuple[asyncio.AbstractEventLoop, aioredis.Redis]] = {}
-
 
 class ChallengeUnavailable(RuntimeError):
     """Redis is unreachable — refuse rather than guess."""
 
 
-def _get_client() -> aioredis.Redis:
-    loop = asyncio.get_running_loop()
-    # Forget clients whose loop is gone so a long test session does not
-    # accumulate one idle pool per test. Closing them here is impossible —
-    # `aclose()` is a coroutine and their loop is dead — which is why callers
-    # that create loops should use `aclose_current_client()` on the way out.
-    for key, (cached_loop, _cached_client) in list(_clients.items()):
-        if cached_loop.is_closed():
-            _clients.pop(key, None)
-
-    entry = _clients.get(id(loop))
-    if entry is None:
-        client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        _clients[id(loop)] = (loop, client)
-        return client
-    return entry[1]
-
-
 def _key(scope: str, subject: str) -> str:
     return f"{_KEY_PREFIX}{scope}:{subject}"
-
-
-async def aclose_current_client() -> None:
-    """Close and forget the client bound to the running loop.
-
-    Exists because the alternative — letting GC take it after the loop dies —
-    raises inside `AbstractConnection.__del__`: the finalizer calls
-    `loop.call_soon()` on a closed loop. Harmless (the socket goes when the
-    process does) but it surfaces as `PytestUnraisableExceptionWarning`, one per
-    test. Anything that creates and discards event loops should call this on the
-    way out; a server with a single long-lived loop never needs it.
-    """
-    loop = asyncio.get_running_loop()
-    entry = _clients.pop(id(loop), None)
-    if entry is None:
-        return
-    client = entry[1]
-    closer = getattr(client, "aclose", None) or getattr(client, "close", None)
-    if closer is None:
-        return
-    try:
-        await closer()
-    except Exception as exc:  # a dead connection is still a closed connection
-        logger.debug("Redis challenge client close failed: %s", exc)
 
 
 async def issue_challenge(scope: str, subject: str) -> str:

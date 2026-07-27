@@ -6,7 +6,12 @@ cleared the frontend localStorage; a stolen JWT continued to work until its
 equal to the token's remaining lifetime — after natural expiry the key
 disappears on its own, no cleanup task needed.
 
-Uses `redis>=5.0` asyncio client that already ships with our requirements.
+Client comes from `core.redis_client`, cached per event loop. It used to be a
+module-level singleton, which bound it to whichever loop touched it first; under
+pytest-asyncio every subsequent test hit "Event loop is closed", the fail-soft
+branch below swallowed it, and revocation silently did nothing for the whole
+suite — tests about logout were passing without exercising the mechanism.
+
 Fails soft: if Redis is unreachable we default to "not blacklisted" and log —
 we would rather serve a stale-but-valid JWT than lock everyone out on a
 Redis outage. The natural-expiry backstop still applies.
@@ -15,21 +20,11 @@ from __future__ import annotations
 
 import logging
 
-import redis.asyncio as aioredis
-
-from app.core.config import settings
+from app.core.redis_client import get_client as _get_client
 
 logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "auth:blacklist:"
-_client: aioredis.Redis | None = None
-
-
-def _get_client() -> aioredis.Redis:
-    global _client
-    if _client is None:
-        _client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    return _client
 
 
 async def blacklist_jti(jti: str, ttl_seconds: int) -> None:

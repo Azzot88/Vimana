@@ -111,6 +111,38 @@ def rewrap_container_to_identity(
     container.key_envelope_sender_pubkey = old_npub_hex
 
 
+def verify_container_envelope(
+    container, *, sender_nsec_hex: str, recipient_npub_hex: str
+) -> bool:
+    """Prove the re-wrapped container is readable, before the old key is gone.
+
+    NIP-04 is ECDH, and ECDH is symmetric: the same shared secret comes out of
+    (sender_priv, recipient_pub) as out of (recipient_priv, sender_pub). So the
+    platform can open the envelope it just produced using the sender key it is
+    about to destroy — without ever holding the owner's new private key.
+
+    The proof goes all the way to the plaintext and checks it against the
+    `doc_hash` recorded at upload. Anything short of that — "the envelope
+    decodes", "the AES call did not raise" — would still allow committing a
+    container nobody can read, and after the service key is destroyed that
+    mistake is permanent.
+    """
+    from app.core.threshold import nip04_decrypt
+
+    if not container.key_envelope:
+        return False
+    try:
+        content_key = nip04_decrypt(
+            container.key_envelope, sender_nsec_hex, recipient_npub_hex
+        )
+        plaintext = AESGCM(content_key).decrypt(
+            bytes(container.blob_nonce), bytes(container.blob_encrypted), None
+        )
+    except Exception:
+        return False
+    return sha256_hex(plaintext) == container.doc_hash
+
+
 def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

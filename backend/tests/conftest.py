@@ -1037,17 +1037,19 @@ async def override_db(session_maker):
 
 @pytest_asyncio.fixture(autouse=True)
 async def _close_redis_clients():
-    """Shut the challenge store's Redis client down while its loop is alive.
+    """Shut the shared Redis client down while its loop is still alive.
 
     pytest-asyncio gives each test a fresh loop and closes it afterwards. A
     Redis connection left for the garbage collector then raises inside its own
     finalizer — `loop.call_soon()` on a closed loop — which pytest reports as
-    `PytestUnraisableExceptionWarning`, one per test that touched Redis.
+    `PytestUnraisableExceptionWarning`, one per Redis call made after the first
+    loop died. Both `token_blacklist` and `challenge` now share one client, so
+    closing it here covers every consumer.
     """
     yield
-    from app.core.challenge import aclose_current_client
+    from app.core.redis_client import aclose_current
 
-    await aclose_current_client()
+    await aclose_current()
 
 
 @pytest.fixture(autouse=True)

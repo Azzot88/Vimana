@@ -321,6 +321,49 @@ async def test_establish_still_blocked_by_e2e_messages(
     assert "end-to-end" in resp.json()["detail"].lower()
 
 
+async def test_failed_rewrap_leaves_the_account_untouched(
+    client, session_maker, monkeypatch
+):
+    """The safety property behind doing this inline: if the re-encryption
+    cannot be proven, nothing changes — the service key survives and the
+    document stays readable."""
+    from app.core.verification import encrypt_container
+    from app.models.verification import IdentityContainer
+
+    email, headers = await _fresh_user(client, "idn-fail")
+    async with session_maker() as db:
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        nonce, ct = encrypt_container(user, b"doc")
+        db.add(
+            IdentityContainer(
+                owner_id=user.id,
+                blob_encrypted=ct,
+                blob_nonce=nonce,
+                doc_hash=uuid.uuid4().hex * 2,  # never matches → self-check fails
+            )
+        )
+        await db.commit()
+        before_npub = user.nostr_pubkey
+
+    nsec, npub = generate_keypair()
+    challenge = await _challenge(client, headers)
+    resp = await client.post(
+        "/api/me/identity/establish", headers=headers, json=_sign(npub, nsec, challenge)
+    )
+    assert resp.status_code == 500
+    assert "untouched" in resp.json()["detail"].lower()
+
+    async with session_maker() as db:
+        after = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+    assert after.nostr_pubkey == before_npub
+    assert after.key_self_custody is False
+    assert after.nsec_encrypted is not None
+
+
 async def test_rewrap_is_idempotent(session_maker):
     """A retried transition must not double-encrypt the blob."""
     from app.core.keypair import generate_keypair as gen

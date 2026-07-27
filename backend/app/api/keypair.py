@@ -43,7 +43,10 @@ from app.core.identity import establish_blockers
 from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
 from app.core.keypair import decrypt_nsec
 from app.core.security import verify_password
-from app.core.verification import rewrap_container_to_identity
+from app.core.verification import (
+    rewrap_container_to_identity,
+    verify_container_envelope,
+)
 from app.models.user import User
 from app.models.verification import IdentityContainer
 
@@ -232,9 +235,24 @@ async def identity_establish(
         raise HTTPException(status_code=409, detail="This key belongs to another account")
 
     # Move anything encrypted to the service key across *before* destroying it
-    # — this is the only moment both halves exist. Done inline rather than in a
-    # background task on purpose: if the re-wrap failed after the key was gone,
-    # the data would be unreadable forever, and no retry could fix it.
+    # — this is the only moment both halves exist.
+    #
+    # Inline, in this request's transaction, rather than the Celery task the
+    # task description called for. Two reasons, and the first is decisive:
+    #
+    # 1. A background task can only start after this request commits, i.e.
+    #    after the service key is destroyed. If it then failed, no retry could
+    #    ever fix the data — the key needed to read it no longer exists.
+    #    Inline, any failure rolls the whole transaction back and the user is
+    #    left exactly as they were, still custodial.
+    # 2. Postgres gives the atomicity for free: the re-wrapped blobs and the
+    #    key swap land in one commit or neither does. A task would need its own
+    #    staging, resumption and reconciliation to approximate that.
+    #
+    # The cost is latency proportional to the number of containers. Acceptable
+    # while that number is small (zero in production today); if it ever grows,
+    # the answer is to stage the re-wrap *before* the key swap in a separate
+    # step, not to move this half behind a queue.
     old_nsec_hex = None
     if current_user.nsec_encrypted is not None and current_user.nsec_nonce is not None:
         old_nsec_hex = decrypt_nsec(
@@ -255,6 +273,23 @@ async def identity_establish(
                 old_npub_hex=current_user.nostr_pubkey,
                 new_npub_hex=body.npub_hex,
             )
+            # Prove it before burning the bridge. ECDH is symmetric, so the
+            # envelope we just wrote can be opened with the sender key we still
+            # hold; the check runs to the plaintext and compares `doc_hash`.
+            # A container that survives commit unreadable can never be fixed —
+            # the key that could have re-done the wrap is gone.
+            if not verify_container_envelope(
+                container,
+                sender_nsec_hex=old_nsec_hex,
+                recipient_npub_hex=body.npub_hex,
+            ):
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Re-encryption self-check failed — identity not changed, "
+                        "your data is untouched"
+                    ),
+                )
 
     # The service key dies here: the platform keeps no copy of anything it can
     # sign or decrypt for this user any more.
