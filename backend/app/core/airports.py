@@ -1,6 +1,7 @@
 import csv
 import math
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import pycountry
@@ -208,6 +209,35 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dlambda = math.radians(lon2 - lon1)
     a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
     return 2 * r * math.asin(math.sqrt(a))
+
+
+@lru_cache(maxsize=1)
+def _by_iata() -> dict[str, Airport]:
+    return {a.iata.upper(): a for a in _AIRPORTS if a.iata}
+
+
+def route_distance_km(origin: str, destination: str) -> float | None:
+    """Great-circle distance between two IATA codes, or None if unknown.
+
+    `Trip.origin` / `.destination` hold IATA codes — `AirportSelect` calls
+    `onChange(a.iata)`, so the form can only produce a code from the airport
+    index. The API schema is a plain `str` though, so a direct POST can put
+    anything there; `None` is the honest answer for those, not an exception.
+
+    Straight-line on purpose. Real flight tracks add roughly 3–7% for airway
+    routing and wind, and they only exist *after* the aircraft has flown —
+    a trip being published has no track to look up. More to the point, we are
+    measuring the **delivery route** (where the parcel goes), not the aircraft's
+    mileage: a carrier connecting through two hubs is still one Tbilisi →
+    Ulaanbaatar hop for our purposes. Anything shown to a user must therefore
+    say "straight line", never "kilometres flown".
+    """
+    index = _by_iata()
+    a = index.get((origin or "").strip().upper())
+    b = index.get((destination or "").strip().upper())
+    if a is None or b is None:
+        return None
+    return _haversine_km(a.lat, a.lon, b.lat, b.lon)
 
 
 def nearest(lat: float, lon: float, limit: int = 5) -> list[Airport]:
