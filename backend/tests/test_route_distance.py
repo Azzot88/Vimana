@@ -20,10 +20,17 @@ def test_known_route():
 
 def test_short_route():
     """Haversine exists because the naive arccos formula loses precision on
-    close points — check a short one lands sensibly. Tbilisi → Yerevan ~250 km."""
+    close points — check a short one lands sensibly.
+
+    Tbilisi → Yerevan is ~175 km great-circle. The first version of this test
+    asserted 200–320 because that is the *road* distance (~280 km through the
+    mountains) — a neat demonstration of the warning in `route_distance_km`:
+    straight line is not travelled distance, and on a short mountainous leg the
+    gap is 60%, not the 3–7% typical of long flights.
+    """
     d = route_distance_km("TBS", "EVN")
     assert d is not None
-    assert 200 < d < 320
+    assert 160 < d < 195
 
 
 def test_same_airport_is_zero():

@@ -224,8 +224,10 @@ def route_distance_km(origin: str, destination: str) -> float | None:
     index. The API schema is a plain `str` though, so a direct POST can put
     anything there; `None` is the honest answer for those, not an exception.
 
-    Straight-line on purpose. Real flight tracks add roughly 3–7% for airway
-    routing and wind, and they only exist *after* the aircraft has flown —
+    Straight-line on purpose. Real tracks add roughly 3–7% for airway routing
+    and wind on long flights — and far more on short ones over terrain: Tbilisi
+    → Yerevan is 175 km here and ~280 km by road. They also only exist *after*
+    the vehicle has moved —
     a trip being published has no track to look up. More to the point, we are
     measuring the **delivery route** (where the parcel goes), not the aircraft's
     mileage: a carrier connecting through two hubs is still one Tbilisi →
