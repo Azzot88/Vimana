@@ -88,6 +88,30 @@
     "stayLoggedIn": "Stay signed in",
     "logoutNow": "Log out now"
   },
+  "passkey": {
+    "loginCta": "Sign in with a passkey",
+    "signupCta": "Create an account with a passkey",
+    "unsupported": "This browser doesn't support passkeys.",
+    "needName": "Enter a name first — the account has nothing else to go by.",
+    "cancelled": "Cancelled — nothing was changed.",
+    "failed": "That didn't check out. Try again.",
+    "alreadyRegistered": "This device already has an account here. Use sign in.",
+    "deviceAlreadyAdded": "This device is already on your account.",
+    "retired": "This account was retired after its key was declared lost.",
+    "lastWayIn": "This is your last way to sign in. Add another device first — remove it now and nobody, including us, can let you back in.",
+    "sectionTitle": "Sign-in devices",
+    "sectionHint": "Each device signs in on its own. Removing one leaves your identity and every other device untouched.",
+    "empty": "No devices yet.",
+    "unnamedDevice": "Unnamed device",
+    "addCta": "Add this device",
+    "remove": "Remove",
+    "lastUsed": "last used",
+    "kind": {
+      "hardware_key": "Hardware key",
+      "synced_passkey": "Synced passkey",
+      "device_passkey": "This device only"
+    }
+  },
   "nostrAuth": {
     "or": "or",
     "loginCta": "Sign in with a Nostr key",

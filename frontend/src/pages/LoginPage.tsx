@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { login, me } from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
+import PasskeyAuthButton from '../components/PasskeyAuthButton'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
@@ -98,7 +99,10 @@ export default function LoginPage() {
             </span>
             <div className="h-px bg-navy/10 flex-1" />
           </div>
-          <NostrAuthButton mode="login" />
+          <div className="space-y-2">
+            <PasskeyAuthButton mode="login" />
+            <NostrAuthButton mode="login" />
+          </div>
         </div>
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-navy/50">

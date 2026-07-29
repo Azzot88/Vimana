@@ -72,6 +72,30 @@
     "errorServer": "Błąd serwera. Spróbuj ponownie.",
     "errorCredentials": "Nieprawidłowy login lub hasło"
   },
+  "passkey": {
+    "loginCta": "Zaloguj się kluczem passkey",
+    "signupCta": "Załóż konto kluczem passkey",
+    "unsupported": "Ta przeglądarka nie obsługuje passkey.",
+    "needName": "Najpierw podaj nazwę — konto nie ma się po czym rozpoznać.",
+    "cancelled": "Anulowano — nic nie zostało zmienione.",
+    "failed": "Nie zgadza się. Spróbuj ponownie.",
+    "alreadyRegistered": "To urządzenie ma tu już konto. Skorzystaj z logowania.",
+    "deviceAlreadyAdded": "To urządzenie jest już przypisane do Twojego konta.",
+    "retired": "Konto zostało wycofane po zgłoszeniu utraty klucza.",
+    "lastWayIn": "To Twój ostatni sposób logowania. Najpierw dodaj inne urządzenie — po usunięciu nikt, łącznie z nami, nie przywróci Ci dostępu.",
+    "sectionTitle": "Urządzenia do logowania",
+    "sectionHint": "Każde urządzenie loguje się samodzielnie. Usunięcie jednego nie narusza Twojej tożsamości ani pozostałych urządzeń.",
+    "empty": "Brak urządzeń.",
+    "unnamedDevice": "Urządzenie bez nazwy",
+    "addCta": "Dodaj to urządzenie",
+    "remove": "Usuń",
+    "lastUsed": "ostatnie logowanie",
+    "kind": {
+      "hardware_key": "Klucz sprzętowy",
+      "synced_passkey": "Synchronizowany passkey",
+      "device_passkey": "Tylko to urządzenie"
+    }
+  },
   "nostrAuth": {
     "or": "lub",
     "loginCta": "Zaloguj się kluczem Nostr",

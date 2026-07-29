@@ -8,6 +8,7 @@ import AdminPanelSection from '../components/AdminPanelSection'
 import AddressesSection from '../components/AddressesSection'
 import EditProfileModal from '../components/EditProfileModal'
 import KeypairSection from '../components/KeypairSection'
+import PasskeySection from '../components/PasskeySection'
 import MonoText from '../components/MonoText'
 import TrustCirclesSection from '../components/TrustCirclesSection'
 import UBASection from '../components/UBASection'
@@ -216,6 +217,7 @@ export default function ProfilePage() {
           </div>
 
           <KeypairSection />
+          <PasskeySection />
 
           <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">

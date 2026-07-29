@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { register, login, me } from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
+import PasskeyAuthButton from '../components/PasskeyAuthButton'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
@@ -129,7 +130,14 @@ export default function RegisterPage() {
           </div>
           {/* Signup by key still needs a name — the account has nothing else
               to be known by, and there is no email to fall back on. */}
-          <NostrAuthButton mode="signup" displayName={displayName} />
+          <div className="space-y-2">
+            <PasskeyAuthButton
+              mode="signup"
+              displayName={displayName}
+              email={email}
+            />
+            <NostrAuthButton mode="signup" displayName={displayName} />
+          </div>
         </div>
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-navy/50">

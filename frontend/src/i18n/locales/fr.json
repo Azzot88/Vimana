@@ -72,6 +72,30 @@
     "errorServer": "Erreur serveur. Veuillez réessayer.",
     "errorCredentials": "Identifiant ou mot de passe incorrect"
   },
+  "passkey": {
+    "loginCta": "Se connecter avec une passkey",
+    "signupCta": "Créer un compte avec une passkey",
+    "unsupported": "Ce navigateur ne prend pas en charge les passkeys.",
+    "needName": "Indiquez d'abord un nom — le compte n'a rien d'autre pour être reconnu.",
+    "cancelled": "Annulé — rien n'a été modifié.",
+    "failed": "La vérification a échoué. Réessayez.",
+    "alreadyRegistered": "Cet appareil a déjà un compte ici. Utilisez la connexion.",
+    "deviceAlreadyAdded": "Cet appareil est déjà rattaché à votre compte.",
+    "retired": "Ce compte a été retiré après la déclaration de perte de sa clé.",
+    "lastWayIn": "C'est votre dernier moyen de connexion. Ajoutez d'abord un autre appareil — une fois supprimé, personne, nous compris, ne pourra vous rendre l'accès.",
+    "sectionTitle": "Appareils de connexion",
+    "sectionHint": "Chaque appareil se connecte seul. En supprimer un ne touche ni votre identité ni les autres appareils.",
+    "empty": "Aucun appareil pour l'instant.",
+    "unnamedDevice": "Appareil sans nom",
+    "addCta": "Ajouter cet appareil",
+    "remove": "Supprimer",
+    "lastUsed": "dernière connexion",
+    "kind": {
+      "hardware_key": "Clé matérielle",
+      "synced_passkey": "Passkey synchronisée",
+      "device_passkey": "Cet appareil uniquement"
+    }
+  },
   "nostrAuth": {
     "or": "ou",
     "loginCta": "Se connecter avec une clé Nostr",
