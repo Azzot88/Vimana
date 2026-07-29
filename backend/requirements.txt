@@ -20,7 +20,12 @@ redis==5.2.0
 boto3==1.35.77
 
 # Cryptography (T1.21 at-rest AES-GCM + Phase 2 Nostr keypair)
-cryptography==44.0.0
+# 44.0.2, not 44.0.0: `webauthn` 2.5.2 requires >=44.0.2 and pip refuses to
+# resolve otherwise. Patch-level bump inside the same minor — bugfixes only, and
+# we use exactly three primitives from it (AES-GCM, AES-CBC, PKCS7 padding),
+# none of which changed. Kept as an exact pin rather than a range so builds stay
+# reproducible.
+cryptography==44.0.2
 coincurve==20.0.0
 
 # Sync DB driver (Celery tasks)
