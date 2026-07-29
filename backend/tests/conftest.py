@@ -1447,5 +1447,26 @@ async def establish_identity(client: AsyncClient, headers: dict[str, str]) -> di
     return {"nsec_hex": nsec_hex, "npub_hex": npub_hex}
 
 
+async def step_up_token(
+    client: AsyncClient,
+    headers: dict[str, str],
+    scope: str,
+    password: str = SEED_PASSWORD,
+) -> str:
+    """Obtain a step-up grant with a password proof (T3.15).
+
+    For tests whose subject is the guarded operation rather than the
+    confirmation itself. The other two proofs — passkey and Nostr signature —
+    are exercised in `test_step_up.py`.
+    """
+    resp = await client.post(
+        "/api/auth/step-up/verify",
+        headers=headers,
+        json={"scope": scope, "password": password},
+    )
+    resp.raise_for_status()
+    return resp.json()["step_up_token"]
+
+
 def unique_email(prefix: str = "user") -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}@vimana.test"

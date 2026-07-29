@@ -16,7 +16,7 @@ from sqlalchemy import select
 from app.core.identity_proof import PURPOSE_ESTABLISH, proof_event_id
 from app.core.keypair import generate_keypair, sign_event_id
 from app.models.user import User
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, step_up_token, unique_email
 
 PASSWORD = SEED_PASSWORD
 
@@ -512,19 +512,25 @@ async def test_rewrap_is_idempotent(session_maker):
 
 
 async def test_declare_lost_requires_an_identity(client):
+    """The identity check runs before the confirmation is spent — refusing an
+    impossible action beats making someone confirm it first."""
     _, headers = await _fresh_user(client)
     resp = await client.post(
-        "/api/me/identity/declare-lost", headers=headers, json={"password": PASSWORD}
+        "/api/me/identity/declare-lost", headers=headers, json={"step_up_token": "x"}
     )
     assert resp.status_code == 409
 
 
-async def test_declare_lost_wrong_password(client):
+async def test_declare_lost_needs_confirmation(client):
+    """T3.15 — a session token alone is not enough for an irreversible action.
+    Proof handling itself lives in `test_step_up.py`."""
     _, headers = await _fresh_user(client)
     await _establish(client, headers)
 
     resp = await client.post(
-        "/api/me/identity/declare-lost", headers=headers, json={"password": "nope"}
+        "/api/me/identity/declare-lost",
+        headers=headers,
+        json={"step_up_token": "not-a-real-grant"},
     )
     assert resp.status_code == 401
 
@@ -533,14 +539,21 @@ async def test_declare_lost_marks_account_and_is_idempotent(client):
     _, headers = await _fresh_user(client)
     await _establish(client, headers)
 
+    token = await step_up_token(client, headers, "declare_lost", PASSWORD)
     first = await client.post(
-        "/api/me/identity/declare-lost", headers=headers, json={"password": PASSWORD}
+        "/api/me/identity/declare-lost",
+        headers=headers,
+        json={"step_up_token": token},
     )
     assert first.status_code == 200
     assert first.json()["key_lost"] is True
 
+    # Already retired — short-circuits before the confirmation is looked at,
+    # so a spent token is fine here.
     second = await client.post(
-        "/api/me/identity/declare-lost", headers=headers, json={"password": PASSWORD}
+        "/api/me/identity/declare-lost",
+        headers=headers,
+        json={"step_up_token": token},
     )
     assert second.status_code == 200
     assert second.json()["key_lost"] is True
@@ -569,7 +582,9 @@ async def test_lost_key_cannot_publish_a_trip(client):
 
     await _establish(client, headers)
     await client.post(
-        "/api/me/identity/declare-lost", headers=headers, json={"password": PASSWORD}
+        "/api/me/identity/declare-lost",
+        headers=headers,
+        json={"step_up_token": await step_up_token(client, headers, "declare_lost", PASSWORD)},
     )
 
     resp = await client.post(
@@ -601,7 +616,9 @@ async def test_status_reports_the_three_states(client):
     assert after.json()["identity_established"] is True
 
     await client.post(
-        "/api/me/identity/declare-lost", headers=headers, json={"password": PASSWORD}
+        "/api/me/identity/declare-lost",
+        headers=headers,
+        json={"step_up_token": await step_up_token(client, headers, "declare_lost", PASSWORD)},
     )
     dead = await client.get("/api/me/keypair/status", headers=headers)
     assert dead.json()["key_lost"] is True

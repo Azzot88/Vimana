@@ -41,7 +41,7 @@ from app.core.database import get_db
 from app.core.identity import establish_blockers, rewrap_vault_envelopes
 from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
 from app.core.keypair import decrypt_nsec
-from app.core.security import verify_password
+from app.core.step_up import StepUpScope, consume as consume_step_up
 from app.core.verification import (
     rewrap_container_to_identity,
     verify_container_envelope,
@@ -99,7 +99,10 @@ class EstablishBody(BaseModel):
 
 
 class DeclareLostBody(BaseModel):
-    password: str
+    # T3.15 — confirmation now comes from step-up, which every account can
+    # produce. The old `password` field is gone: it locked passwordless
+    # accounts out of the one irreversible action they are most likely to need.
+    step_up_token: str
 
 
 def _status(user: User) -> KeypairStatus:
@@ -307,11 +310,11 @@ async def identity_declare_lost(
 ):
     """Mark the identity key as gone. One-way.
 
-    Re-auth is by password rather than by key proof for the obvious reason: the
-    key being unavailable is the thing being declared. Passwordless accounts
-    (T3.13/T3.14) need the step-up mechanism from T3.15 and are refused until
-    it exists — better an honest 409 than a route that trusts the session alone
-    for an irreversible action.
+    Confirmation comes from step-up (T3.15), not from a key proof: the key
+    being unavailable is the very thing being declared. Step-up accepts a
+    password, a passkey or a Nostr signature, so an account with no password —
+    exactly the kind most likely to lose a key — can finally do this. Until
+    T3.15 it answered 409 to them.
     """
     if not current_user.identity_established:
         raise HTTPException(
@@ -320,13 +323,9 @@ async def identity_declare_lost(
         )
     if current_user.key_lost_at is not None:
         return _status(current_user)  # idempotent
-    if not current_user.password_hash:
-        raise HTTPException(
-            status_code=409,
-            detail="Passwordless accounts need step-up re-auth (T3.15)",
-        )
-    if not verify_password(body.password, current_user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid password")
+    await consume_step_up(
+        str(current_user.id), StepUpScope.DECLARE_LOST, body.step_up_token
+    )
 
     current_user.key_lost_at = datetime.now(timezone.utc)
     await db.commit()

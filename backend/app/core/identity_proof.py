@@ -35,6 +35,13 @@ PURPOSE_ESTABLISH = "vimana:identity:establish"
 # these is worthless for the others even with a live challenge.
 PURPOSE_LOGIN = "vimana:identity:login"
 PURPOSE_SIGNUP = "vimana:identity:signup"
+# T3.15 — step-up. The scope is appended (`…:step-up:declare_lost`) so a
+# signature gathered to confirm one operation cannot authorise another.
+PURPOSE_STEP_UP_PREFIX = "vimana:identity:step-up"
+
+
+def step_up_purpose(scope: str) -> str:
+    return f"{PURPOSE_STEP_UP_PREFIX}:{scope}"
 
 
 def build_proof_event(

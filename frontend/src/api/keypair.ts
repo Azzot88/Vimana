@@ -28,8 +28,12 @@ export const requestIdentityChallenge = () =>
 export const establishIdentity = (proof: IdentityProof) =>
   api.post<KeypairStatus>('/api/me/identity/establish', proof)
 
-export const declareKeyLost = (password: string) =>
-  api.post<KeypairStatus>('/api/me/identity/declare-lost', { password })
+/** T3.15 — confirmation comes from step-up, not a password field: an account
+ *  with no password must be able to do this too. */
+export const declareKeyLost = (stepUpToken: string) =>
+  api.post<KeypairStatus>('/api/me/identity/declare-lost', {
+    step_up_token: stepUpToken,
+  })
 
 // T3.12 — `export`, `claim` and `import` are gone from the UI. `import` no
 // longer exists server-side at all: it accepted a bare npub with no proof of

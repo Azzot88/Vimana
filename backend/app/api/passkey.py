@@ -21,7 +21,7 @@ import secrets
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +43,7 @@ from app.core.email_verification import (
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token
+from app.core.step_up import StepUpScope, consume as consume_step_up
 from app.core.webauthn import (
     SCOPE_LOGIN,
     SCOPE_REGISTER,
@@ -442,9 +443,16 @@ async def list_credentials(
 @router.delete("/{credential_id}", status_code=204)
 async def delete_credential(
     credential_id: uuid.UUID,
+    step_up_token: str = Query(..., description="From POST /api/auth/step-up/verify"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """T3.15 — needs a fresh confirmation.
+
+    Removing a device is how an attacker with a live session would lock the
+    owner out: drop every credential but their own. A session token alone says
+    only that someone signed in at some point.
+    """
     cred = await db.get(WebAuthnCredential, credential_id)
     if cred is None or cred.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Credential not found")
@@ -464,6 +472,12 @@ async def delete_credential(
             status_code=409,
             detail="This is your last way to sign in — add another before removing it",
         )
+
+    # After the lock-out check, not before: refusing outright is more useful
+    # than making someone confirm an action that will be rejected anyway.
+    await consume_step_up(
+        str(current_user.id), StepUpScope.UNLINK_PASSKEY, step_up_token
+    )
 
     await db.delete(cred)
     await db.commit()
