@@ -15,4 +15,5 @@
 // T3.12 closed — service key vs identity: establish/declare-lost, vault
 // re-encryption, platform-key publishing.
 // T3.13 closed — sign in / sign up with a Nostr key, no password path.
-export const APP_VERSION = '0.03.19'
+// T3.14 closed — passkeys: several devices, one identity.
+export const APP_VERSION = '0.03.20'
