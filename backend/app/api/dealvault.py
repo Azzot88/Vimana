@@ -24,7 +24,7 @@ from app.core.deal_chain import SealedError, append_deal_event, content_hash_of
 from app.core.file_validation import FileValidationError, validate_upload
 from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
-from app.core.storage import get_presigned_url, upload_file
+from app.core.storage import get_presigned_url, presign_ttl_for_kind, upload_file
 from app.core.threshold import E2EPayload, envelope_parts, nip04_decrypt
 from app.models.deal import Attachment, AttachmentKind, Deal, DealEventType, DealVaultMessage
 from app.models.user import User
@@ -137,7 +137,9 @@ def _build_message_out(
                     file_hash=a.file_hash,
                     ipfs_cid=a.ipfs_cid,
                     kind=a.kind.value,
-                    url=get_presigned_url(a.r2_key),
+                    url=get_presigned_url(
+                        a.r2_key, expires=presign_ttl_for_kind(a.kind.value)
+                    ),
                     created_at=a.created_at,
                 )
             )
@@ -417,7 +419,9 @@ async def upload_attachment(
         file_hash=attachment.file_hash,
         ipfs_cid=attachment.ipfs_cid,
         kind=attachment.kind.value,
-        url=get_presigned_url(attachment.r2_key),
+        url=get_presigned_url(
+            attachment.r2_key, expires=presign_ttl_for_kind(attachment.kind.value)
+        ),
         created_at=attachment.created_at,
     )
 

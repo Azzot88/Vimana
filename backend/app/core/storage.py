@@ -30,7 +30,19 @@ def upload_file(file_bytes: bytes, key: str, content_type: str) -> str:
     return key
 
 
-def get_presigned_url(key: str, expires: int = 3600) -> str | None:
+# A presigned URL is a bearer token for one object: whoever holds the link can
+# fetch the file for its whole lifetime, with no session and no authorization
+# check. It leaks the ordinary ways links leak — browser history, a referrer, a
+# shared screenshot, a chat log.
+#
+# So the lifetime should match what the object is worth. An avatar living an
+# hour costs nothing. A passport scan living an hour is a different bet: the
+# window only has to be long enough to open the file once.
+PRESIGN_TTL_DEFAULT = 3600
+PRESIGN_TTL_SENSITIVE = 300
+
+
+def get_presigned_url(key: str, expires: int = PRESIGN_TTL_DEFAULT) -> str | None:
     if not settings.R2_ENDPOINT:
         return None
     client = get_s3_client()
@@ -39,6 +51,16 @@ def get_presigned_url(key: str, expires: int = 3600) -> str | None:
         Params={"Bucket": settings.R2_BUCKET, "Key": key},
         ExpiresIn=expires,
     )
+
+
+def presign_ttl_for_kind(kind: str | None) -> int:
+    """Short-lived link for identity documents, normal for everything else.
+
+    Keyed on `AttachmentKind`. `identity_doc` is the copy of a passport or ID
+    that T3.9 places inside a deal — the most sensitive bytes the platform
+    stores, and the ones a stale link hurts most.
+    """
+    return PRESIGN_TTL_SENSITIVE if kind == "identity_doc" else PRESIGN_TTL_DEFAULT
 
 
 def check_storage() -> dict:
