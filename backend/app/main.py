@@ -27,6 +27,7 @@ from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
 from app.api.nostr import router as nostr_router
 from app.api.nostr_auth import router as nostr_auth_router
+from app.api.passkey import router as passkey_router
 from app.api.notices import router as notices_router
 from app.api.participants import router as participants_router
 from app.api.threshold import router as threshold_router
@@ -228,6 +229,7 @@ app.include_router(nostr_router, prefix="/api/nostr", tags=["nostr"])
 # T3.13 — sits under /api/auth, not /api/nostr: this is a way to sign in, and
 # nginx rate-limits the auth surface as a whole.
 app.include_router(nostr_auth_router, prefix="/api/auth/nostr", tags=["auth"])
+app.include_router(passkey_router, prefix="/api/auth/passkey", tags=["auth"])
 app.include_router(participants_router, prefix="/api", tags=["participants"])
 app.include_router(notices_router, prefix="/api", tags=["notices"])
 app.include_router(uba_router, prefix="/api", tags=["uba"])
