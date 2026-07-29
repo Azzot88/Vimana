@@ -12,6 +12,7 @@ import {
   type PasskeyCredential,
 } from '../api/passkey'
 import { guessDeviceName } from './PasskeyAuthButton'
+import StepUpDialog from './StepUpDialog'
 
 /** T3.14 — the account's sign-in devices.
  *
@@ -24,6 +25,7 @@ export default function PasskeySection() {
   const [items, setItems] = useState<PasskeyCredential[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [pendingRemoval, setPendingRemoval] = useState<string | null>(null)
 
   const supported = browserSupportsWebAuthn()
 
@@ -75,10 +77,13 @@ export default function PasskeySection() {
     }
   }
 
-  const remove = async (id: string) => {
+  /** T3.15 — unlinking needs a fresh confirmation: dropping every device but
+   *  their own is how someone with a stolen session would lock the owner out. */
+  const remove = async (id: string, token: string) => {
     setError('')
+    setPendingRemoval(null)
     try {
-      await deletePasskey(id)
+      await deletePasskey(id, token)
       await load()
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status
@@ -130,7 +135,7 @@ export default function PasskeySection() {
               </div>
               <button
                 type="button"
-                onClick={() => remove(c.id)}
+                onClick={() => setPendingRemoval(c.id)}
                 className="text-xs font-body text-navy/50 hover:text-navy shrink-0"
               >
                 {t('passkey.remove')}
@@ -154,6 +159,16 @@ export default function PasskeySection() {
         <p className="text-xs font-body text-navy/50">
           {t('passkey.unsupported')}
         </p>
+      )}
+
+      {pendingRemoval && (
+        <StepUpDialog
+          scope="unlink_passkey"
+          title={t('passkey.remove') as string}
+          body={t('passkey.removeConfirm') as string}
+          onConfirm={(token) => remove(pendingRemoval, token)}
+          onCancel={() => setPendingRemoval(null)}
+        />
       )}
     </div>
   )

@@ -66,5 +66,9 @@ export const passkeySignupVerify = (payload: {
 export const listPasskeys = () =>
   api.get<PasskeyCredential[]>('/api/auth/passkey/')
 
-export const deletePasskey = (id: string) =>
-  api.delete(`/api/auth/passkey/${id}`)
+/** T3.15 — the grant goes in a header, never the query string: a URL ends up in
+ *  access logs, browser history and `Referer`. */
+export const deletePasskey = (id: string, stepUpToken: string) =>
+  api.delete(`/api/auth/passkey/${id}`, {
+    headers: { 'X-Step-Up-Token': stepUpToken },
+  })

@@ -90,12 +90,24 @@
     "unnamedDevice": "Urządzenie bez nazwy",
     "addCta": "Dodaj to urządzenie",
     "remove": "Usuń",
+    "removeConfirm": "Usunięcie urządzenia wymaga potwierdzenia — skradziona sesja nie może odebrać Ci sposobów logowania.",
     "lastUsed": "ostatnie logowanie",
     "kind": {
       "hardware_key": "Klucz sprzętowy",
       "synced_passkey": "Synchronizowany passkey",
       "device_passkey": "Tylko to urządzenie"
     }
+  },
+  "stepUp": {
+    "confirm": "Potwierdź",
+    "passwordPlaceholder": "Twoje hasło",
+    "passkeyHint": "Urządzenie poprosi o potwierdzenie.",
+    "nostrHint": "Rozszerzenie Nostr poprosi o podpis.",
+    "cancelled": "Anulowano — nic nie zostało zmienione.",
+    "errorFailed": "Nie zgadza się. Spróbuj ponownie.",
+    "errorLoad": "Nie udało się rozpocząć potwierdzenia. Spróbuj ponownie.",
+    "errorNoExtension": "Rozszerzenie Nostr nie odpowiedziało.",
+    "method": { "password": "Hasło", "passkey": "Passkey", "nostr": "Klucz Nostr" }
   },
   "nostrAuth": {
     "or": "lub",

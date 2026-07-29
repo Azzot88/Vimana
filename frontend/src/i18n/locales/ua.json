@@ -90,12 +90,24 @@
     "unnamedDevice": "Пристрій без назви",
     "addCta": "Додати цей пристрій",
     "remove": "Видалити",
+    "removeConfirm": "Відвʼязка пристрою потребує підтвердження — викрадена сесія не повинна вміти зняти ваші способи входу.",
     "lastUsed": "останній вхід",
     "kind": {
       "hardware_key": "Апаратний ключ",
       "synced_passkey": "Синхронізований passkey",
       "device_passkey": "Лише цей пристрій"
     }
+  },
+  "stepUp": {
+    "confirm": "Підтвердити",
+    "passwordPlaceholder": "Ваш пароль",
+    "passkeyHint": "Пристрій попросить підтвердження.",
+    "nostrHint": "Nostr-розширення попросить підписати.",
+    "cancelled": "Скасовано — нічого не змінено.",
+    "errorFailed": "Не збіглося. Спробуйте ще раз.",
+    "errorLoad": "Не вдалося почати підтвердження. Спробуйте ще раз.",
+    "errorNoExtension": "Nostr-розширення не відповіло.",
+    "method": { "password": "Пароль", "passkey": "Passkey", "nostr": "Nostr-ключ" }
   },
   "nostrAuth": {
     "or": "або",

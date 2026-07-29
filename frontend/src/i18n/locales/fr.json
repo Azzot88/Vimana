@@ -90,12 +90,24 @@
     "unnamedDevice": "Appareil sans nom",
     "addCta": "Ajouter cet appareil",
     "remove": "Supprimer",
+    "removeConfirm": "Retirer un appareil demande une confirmation — une session volée ne doit pas pouvoir supprimer vos moyens d accès.",
     "lastUsed": "dernière connexion",
     "kind": {
       "hardware_key": "Clé matérielle",
       "synced_passkey": "Passkey synchronisée",
       "device_passkey": "Cet appareil uniquement"
     }
+  },
+  "stepUp": {
+    "confirm": "Confirmer",
+    "passwordPlaceholder": "Votre mot de passe",
+    "passkeyHint": "Votre appareil vous demandera de confirmer.",
+    "nostrHint": "Votre extension Nostr vous demandera de signer.",
+    "cancelled": "Annulé — rien n a été modifié.",
+    "errorFailed": "La vérification a échoué. Réessayez.",
+    "errorLoad": "Impossible de démarrer la confirmation. Réessayez.",
+    "errorNoExtension": "Aucune extension Nostr n a répondu.",
+    "method": { "password": "Mot de passe", "passkey": "Passkey", "nostr": "Clé Nostr" }
   },
   "nostrAuth": {
     "or": "ou",

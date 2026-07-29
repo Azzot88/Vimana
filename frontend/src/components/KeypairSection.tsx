@@ -16,6 +16,7 @@ import {
 } from '../lib/identity'
 import { hasNip07Extension } from '../lib/nostr'
 import MonoText from './MonoText'
+import StepUpDialog from './StepUpDialog'
 
 /** T3.12 pt.4 — the account's key, in three honest states.
  *
@@ -41,7 +42,6 @@ export default function KeypairSection() {
   const [step, setStep] = useState<Step>('idle')
   const [generated, setGenerated] = useState<Keypair | null>(null)
   const [saved, setSaved] = useState(false)
-  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -67,7 +67,6 @@ export default function KeypairSection() {
     setStep('idle')
     setGenerated(null)
     setSaved(false)
-    setPassword('')
     setError('')
   }
 
@@ -119,20 +118,18 @@ export default function KeypairSection() {
   const handleUseNip07 = () =>
     submitProof((challenge) => signProofWithNip07(challenge))
 
-  const handleDeclareLost = async () => {
+  /** T3.15 — confirmation comes from step-up, so an account with no password
+   *  can do this too. It used to take a password field, which locked out
+   *  exactly the people most likely to lose a key. */
+  const handleDeclareLost = async (token: string) => {
     setBusy(true)
     setError('')
     try {
-      const { data } = await declareKeyLost(password)
+      const { data } = await declareKeyLost(token)
       setStatus(data)
       reset()
-    } catch (err: unknown) {
-      const st = (err as { response?: { status?: number } })?.response?.status
-      setError(
-        st === 401
-          ? (t('profile.identity.errorPassword') as string)
-          : (t('profile.identity.errorGeneric') as string),
-      )
+    } catch {
+      setError(t('profile.identity.errorGeneric') as string)
     } finally {
       setBusy(false)
     }
@@ -346,35 +343,13 @@ export default function KeypairSection() {
       )}
 
       {established && step === 'lost' && (
-        <div className="space-y-3">
-          <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
-            <p className="text-sm font-body text-navy">
-              {t('profile.identity.declareLostWarn')}
-            </p>
-          </div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t('profile.identity.passwordPlaceholder') as string}
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy"
-          />
-          <button
-            type="button"
-            onClick={handleDeclareLost}
-            disabled={busy || !password}
-            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"
-          >
-            {busy ? '…' : t('profile.identity.declareLostConfirm')}
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            className="w-full text-sm font-body text-navy/50"
-          >
-            {t('common.cancel')}
-          </button>
-        </div>
+        <StepUpDialog
+          scope="declare_lost"
+          title={t('profile.identity.declareLostCta') as string}
+          body={t('profile.identity.declareLostWarn') as string}
+          onConfirm={handleDeclareLost}
+          onCancel={reset}
+        />
       )}
     </div>
   )

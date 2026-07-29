@@ -90,12 +90,24 @@
     "unnamedDevice": "Dispositivo sin nombre",
     "addCta": "Añadir este dispositivo",
     "remove": "Quitar",
+    "removeConfirm": "Quitar un dispositivo requiere confirmación: una sesión robada no debe poder eliminar tus formas de entrar.",
     "lastUsed": "último acceso",
     "kind": {
       "hardware_key": "Llave física",
       "synced_passkey": "Passkey sincronizada",
       "device_passkey": "Solo este dispositivo"
     }
+  },
+  "stepUp": {
+    "confirm": "Confirmar",
+    "passwordPlaceholder": "Tu contraseña",
+    "passkeyHint": "Tu dispositivo te pedirá confirmación.",
+    "nostrHint": "Tu extensión de Nostr te pedirá firmar.",
+    "cancelled": "Cancelado: no se cambió nada.",
+    "errorFailed": "No cuadró. Inténtalo de nuevo.",
+    "errorLoad": "No se pudo iniciar la confirmación. Inténtalo de nuevo.",
+    "errorNoExtension": "Ninguna extensión de Nostr respondió.",
+    "method": { "password": "Contraseña", "passkey": "Passkey", "nostr": "Clave Nostr" }
   },
   "nostrAuth": {
     "or": "o",

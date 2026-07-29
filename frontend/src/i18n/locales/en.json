@@ -106,12 +106,24 @@
     "unnamedDevice": "Unnamed device",
     "addCta": "Add this device",
     "remove": "Remove",
+    "removeConfirm": "Removing a device needs confirmation — a stolen session must not be able to strip your ways in.",
     "lastUsed": "last used",
     "kind": {
       "hardware_key": "Hardware key",
       "synced_passkey": "Synced passkey",
       "device_passkey": "This device only"
     }
+  },
+  "stepUp": {
+    "confirm": "Confirm",
+    "passwordPlaceholder": "Your password",
+    "passkeyHint": "Your device will ask you to confirm.",
+    "nostrHint": "Your Nostr extension will ask you to sign.",
+    "cancelled": "Cancelled — nothing was changed.",
+    "errorFailed": "That did not check out. Try again.",
+    "errorLoad": "Could not start confirmation. Try again.",
+    "errorNoExtension": "No Nostr extension responded.",
+    "method": { "password": "Password", "passkey": "Passkey", "nostr": "Nostr key" }
   },
   "nostrAuth": {
     "or": "or",
