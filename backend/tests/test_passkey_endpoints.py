@@ -141,6 +141,25 @@ async def test_login_ceremony_cannot_be_spent_on_registration(client):
     assert "unknown or expired" in resp.json()["detail"].lower()
 
 
+async def test_malformed_credential_is_401_not_500(client):
+    """py_webauthn raises a whole family of parse errors that share no base
+    class — `InvalidJSONStructure`, `InvalidCBORData`, `UnsupportedAlgorithm`…
+    The first version of this suite caught them by name and a missing `rawId`
+    escaped as an unhandled 500 (2026-07-29). Anything past the library call is
+    untrusted input, so anything it raises is a client error."""
+    headers = await _register(client, prefix="pk-junk")
+    for junk in ({}, {"id": "x"}, {"rawId": "!!!not-base64!!!"}, {"rawId": "AAAA"}):
+        opts = await client.post(
+            "/api/auth/passkey/register/options", headers=headers
+        )
+        resp = await client.post(
+            "/api/auth/passkey/register/verify",
+            headers=headers,
+            json={"ceremony_id": opts.json()["ceremony_id"], "credential": junk},
+        )
+        assert resp.status_code == 401, f"{junk} → {resp.status_code}"
+
+
 async def test_login_with_unknown_credential_is_401(client):
     """Same answer as a bad signature — an unknown credential must not be
     distinguishable from an invalid one."""

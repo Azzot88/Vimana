@@ -99,15 +99,34 @@ def authentication_options() -> tuple[str, bytes]:
     return options_to_json(options), options.challenge
 
 
+class WebAuthnVerificationError(Exception):
+    """Anything the library rejected about a client-supplied credential.
+
+    py_webauthn raises a whole family — `InvalidRegistrationResponse`,
+    `InvalidJSONStructure`, `InvalidCBORData`, `InvalidPublicKeyStructure`,
+    `UnsupportedAlgorithm`… — and they do not share a base class. Catching
+    them by name means the list silently rots: a credential shape nobody
+    anticipated escapes as a 500 instead of a 401. That is what happened on the
+    first run of `test_ceremony_is_single_use` (2026-07-29).
+
+    So the boundary is drawn where it actually lies: everything on the far side
+    of these two calls is parsing untrusted input, and *any* failure there is
+    the client's problem. Our own bugs live on this side of the call and are
+    not swallowed.
+    """
+
+
 def verify_registration(*, credential: dict, expected_challenge: bytes):
-    """Raises `webauthn.helpers.exceptions.InvalidRegistrationResponse` on any
-    failure — the caller maps that to 401."""
-    return verify_registration_response(
-        credential=credential,
-        expected_challenge=expected_challenge,
-        expected_rp_id=settings.WEBAUTHN_RP_ID,
-        expected_origin=settings.WEBAUTHN_ORIGIN,
-    )
+    """Raises `WebAuthnVerificationError` on any failure — caller maps to 401."""
+    try:
+        return verify_registration_response(
+            credential=credential,
+            expected_challenge=expected_challenge,
+            expected_rp_id=settings.WEBAUTHN_RP_ID,
+            expected_origin=settings.WEBAUTHN_ORIGIN,
+        )
+    except Exception as exc:
+        raise WebAuthnVerificationError(str(exc)) from exc
 
 
 def verify_authentication(
@@ -117,19 +136,22 @@ def verify_authentication(
     public_key: bytes,
     current_sign_count: int,
 ):
-    """Raises `InvalidAuthenticationResponse` on failure.
+    """Raises `WebAuthnVerificationError` on failure — caller maps to 401.
 
     `require_user_verification=False` mirrors the PREFERRED policy above.
     """
-    return verify_authentication_response(
-        credential=credential,
-        expected_challenge=expected_challenge,
-        expected_rp_id=settings.WEBAUTHN_RP_ID,
-        expected_origin=settings.WEBAUTHN_ORIGIN,
-        credential_public_key=public_key,
-        credential_current_sign_count=current_sign_count,
-        require_user_verification=False,
-    )
+    try:
+        return verify_authentication_response(
+            credential=credential,
+            expected_challenge=expected_challenge,
+            expected_rp_id=settings.WEBAUTHN_RP_ID,
+            expected_origin=settings.WEBAUTHN_ORIGIN,
+            credential_public_key=public_key,
+            credential_current_sign_count=current_sign_count,
+            require_user_verification=False,
+        )
+    except Exception as exc:
+        raise WebAuthnVerificationError(str(exc)) from exc
 
 
 def sign_count_is_acceptable(stored: int, presented: int) -> bool:

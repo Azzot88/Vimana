@@ -26,10 +26,6 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
-from webauthn.helpers.exceptions import (
-    InvalidAuthenticationResponse,
-    InvalidRegistrationResponse,
-)
 
 from app.api.deps import get_current_user
 from app.core.challenge import (
@@ -51,6 +47,7 @@ from app.core.webauthn import (
     SCOPE_LOGIN,
     SCOPE_REGISTER,
     SCOPE_SIGNUP,
+    WebAuthnVerificationError,
     authentication_options,
     describe_device,
     registration_options,
@@ -195,7 +192,7 @@ async def register_verify(
             credential=body.credential,
             expected_challenge=base64url_to_bytes(stored),
         )
-    except (InvalidRegistrationResponse, ValueError, KeyError) as exc:
+    except WebAuthnVerificationError as exc:
         raise HTTPException(status_code=401, detail=f"Registration failed: {exc}")
 
     taken = await db.execute(
@@ -294,7 +291,7 @@ async def login_verify(
             public_key=bytes(cred.public_key),
             current_sign_count=cred.sign_count,
         )
-    except (InvalidAuthenticationResponse, ValueError, KeyError):
+    except WebAuthnVerificationError:
         raise HTTPException(status_code=401, detail="Authentication failed")
 
     if not sign_count_is_acceptable(cred.sign_count, result.new_sign_count):
@@ -363,7 +360,7 @@ async def signup_verify(
             credential=body.credential,
             expected_challenge=base64url_to_bytes(pending["challenge"]),
         )
-    except (InvalidRegistrationResponse, ValueError, KeyError) as exc:
+    except WebAuthnVerificationError as exc:
         raise HTTPException(status_code=401, detail=f"Registration failed: {exc}")
 
     taken = await db.execute(
