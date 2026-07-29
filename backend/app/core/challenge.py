@@ -51,6 +51,35 @@ async def issue_challenge(scope: str, subject: str) -> str:
     return nonce
 
 
+async def store_challenge(scope: str, subject: str, value: str) -> None:
+    """Store a challenge we did **not** generate.
+
+    WebAuthn (T3.14) mints its own challenge inside the options object, so
+    `issue_challenge` does not fit: we have to keep what the library produced,
+    not hand out our own nonce.
+    """
+    try:
+        await _get_client().set(_key(scope, subject), value, ex=CHALLENGE_TTL_SECONDS)
+    except Exception as exc:
+        logger.warning("Redis challenge SET failed (%s/%s): %s", scope, subject, exc)
+        raise ChallengeUnavailable() from exc
+
+
+async def take_challenge(scope: str, subject: str) -> str | None:
+    """Burn the stored challenge and return it.
+
+    For flows where the client does not echo the challenge back as a separate
+    field — WebAuthn buries it inside `clientDataJSON`, and the library needs
+    the expected value to compare against. Burning on read keeps the one-shot
+    property: a replay finds nothing.
+    """
+    try:
+        return await _get_client().getdel(_key(scope, subject))
+    except Exception as exc:
+        logger.warning("Redis challenge GETDEL failed (%s/%s): %s", scope, subject, exc)
+        raise ChallengeUnavailable() from exc
+
+
 async def consume_challenge(scope: str, subject: str, presented: str) -> bool:
     """Burn the stored nonce and report whether it matched.
 

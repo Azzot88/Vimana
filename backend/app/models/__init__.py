@@ -14,6 +14,7 @@ from app.models.verification import (
     VerificationRequestStatus, VerificationSource, VerificationTargetRole,
 )
 from app.models.waitlist import WaitlistEntry
+from app.models.webauthn import WebAuthnCredential
 
 __all__ = [
     "User", "ReceivingAddress",
@@ -31,4 +32,5 @@ __all__ = [
     "VerificationLevel", "VerificationRequest", "VerificationRequestStatus",
     "VerificationSource", "VerificationTargetRole",
     "WaitlistEntry",
+    "WebAuthnCredential",
 ]

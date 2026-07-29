@@ -425,6 +425,38 @@ async def _ensure_email_verification_columns(engine) -> None:
         )
 
 
+async def _ensure_webauthn_table(engine) -> None:
+    """T3.14 schema fix: webauthn_credentials. Mirrors migration 0031.
+    Idempotent — `create_all` builds it, this covers a pre-existing test DB."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS webauthn_credentials (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    credential_id BYTEA NOT NULL UNIQUE,
+                    public_key BYTEA NOT NULL,
+                    sign_count BIGINT NOT NULL DEFAULT 0,
+                    transports JSONB,
+                    aaguid VARCHAR(36),
+                    device_name VARCHAR(100),
+                    backed_up BOOLEAN NOT NULL DEFAULT false,
+                    uv_capable BOOLEAN,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    last_used_at TIMESTAMPTZ
+                )
+                """
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_webauthn_credentials_user_id "
+                "ON webauthn_credentials (user_id)"
+            )
+        )
+
+
 async def _ensure_identity_columns(engine) -> None:
     """T3.12 pt.1 schema fix: users.key_lost_at + unique npub +
     trips.nostr_published_by_pubkey. Mirrors migration 0029. Idempotent."""
@@ -1007,6 +1039,7 @@ async def test_engine():
     await _ensure_nostr_keypair_columns(engine)
     await _ensure_email_verification_columns(engine)
     await _ensure_identity_columns(engine)
+    await _ensure_webauthn_table(engine)
     await _ensure_nostr_event_columns(engine)
     await _ensure_threshold_columns(engine)
     await _ensure_operator_access_grants(engine)

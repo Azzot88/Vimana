@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     # on startup if it is set.
     E2E_AUTO_VERIFY_EMAIL_DOMAINS: str = ""
 
+    # T3.14 — WebAuthn. `RP_ID` must equal the site's domain (or a parent of
+    # it), and `ORIGIN` must match the browser's origin exactly, scheme
+    # included. Get either wrong and the browser aborts the ceremony on its own
+    # side — the server sees nothing at all, which makes it a miserable thing to
+    # debug. Defaults are the dev ones, prod sets them in `.env`.
+    WEBAUTHN_RP_ID: str = "localhost"
+    WEBAUTHN_RP_NAME: str = "Vimana"
+    WEBAUTHN_ORIGIN: str = "http://localhost:5173"
+
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_BOT_USERNAME: str = ""
 

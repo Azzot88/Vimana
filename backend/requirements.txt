@@ -50,6 +50,10 @@ weasyprint==63.0
 # 10.x, not 11.x: weasyprint 63.0 requires Pillow<11.
 Pillow==10.4.0
 
+# T3.14 — WebAuthn/passkeys. Does the CBOR/COSE parsing, attestation checks and
+# signature verification; we keep the ceremony state and the credential rows.
+webauthn==2.5.2
+
 # Tests
 pytest==8.3.4
 pytest-asyncio==0.24.0
