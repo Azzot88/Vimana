@@ -31,8 +31,14 @@ export default function PasskeySection() {
     try {
       const { data } = await listPasskeys()
       setItems(data)
+      setError('')
     } catch {
+      // Not silently empty. The first version swallowed this and rendered
+      // "no devices yet" for a *failed* request — which is what a broken
+      // redirect looked like for an hour: a device was registered, the list
+      // call died, and the UI calmly reported nothing was there.
       setItems([])
+      setError(t('passkey.loadFailed') as string)
     }
   }
 

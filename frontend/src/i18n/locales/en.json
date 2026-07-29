@@ -101,6 +101,7 @@
     "lastWayIn": "This is your last way to sign in. Add another device first — remove it now and nobody, including us, can let you back in.",
     "sectionTitle": "Sign-in devices",
     "sectionHint": "Each device signs in on its own. Removing one leaves your identity and every other device untouched.",
+    "loadFailed": "Could not load your devices. Reload the page — this is not the same as having none.",
     "empty": "No devices yet.",
     "unnamedDevice": "Unnamed device",
     "addCta": "Add this device",

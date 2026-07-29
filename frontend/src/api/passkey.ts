@@ -60,8 +60,11 @@ export const passkeySignupVerify = (payload: {
     payload,
   )
 
+/** Trailing slash on purpose: it matches the nginx `location
+ *  /api/auth/passkey/` block, so this request gets the same rate-limit zone as
+ *  the rest of the flow instead of falling through to the generic `/api/` one. */
 export const listPasskeys = () =>
-  api.get<PasskeyCredential[]>('/api/auth/passkey')
+  api.get<PasskeyCredential[]>('/api/auth/passkey/')
 
 export const deletePasskey = (id: string) =>
   api.delete(`/api/auth/passkey/${id}`)

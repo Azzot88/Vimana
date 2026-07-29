@@ -419,7 +419,12 @@ async def signup_verify(
 # ── manage devices ───────────────────────────────────────────────────────────
 
 
-@router.get("", response_model=list[CredentialOut])
+# Both spellings, deliberately. FastAPI would otherwise 307 one to the other,
+# and a redirect is a surprisingly sharp edge here: it survives only if every
+# hop preserves scheme and Authorization. Serving both costs one decorator and
+# removes the question.
+@router.get("", response_model=list[CredentialOut], include_in_schema=False)
+@router.get("/", response_model=list[CredentialOut])
 async def list_credentials(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

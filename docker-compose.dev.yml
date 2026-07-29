@@ -58,7 +58,16 @@ services:
       timeout: 3s
       retries: 6
       start_period: 30s
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # --proxy-headers: honour X-Forwarded-Proto from nginx. Without it the app
+    # believes it is on plain http and builds redirect `Location` headers as
+    # `http://…` — which a browser on an https page blocks as mixed content.
+    # The redirect then fails silently: the server logs a 307 and no follow-up,
+    # the client sees a network error. Cost T3.14 an hour (2026-07-29).
+    # --forwarded-allow-ips=*: only nginx can reach this container, it is not
+    # published on the host, so trusting the forwarded headers is safe here.
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      --proxy-headers --forwarded-allow-ips=*
 
   frontend:
     # T_SEC.2 — production static build served by internal nginx on :80.

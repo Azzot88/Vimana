@@ -85,6 +85,7 @@
     "lastWayIn": "C'est votre dernier moyen de connexion. Ajoutez d'abord un autre appareil — une fois supprimé, personne, nous compris, ne pourra vous rendre l'accès.",
     "sectionTitle": "Appareils de connexion",
     "sectionHint": "Chaque appareil se connecte seul. En supprimer un ne touche ni votre identité ni les autres appareils.",
+    "loadFailed": "Impossible de charger vos appareils. Rechargez la page — ce n'est pas la même chose que ne pas en avoir.",
     "empty": "Aucun appareil pour l'instant.",
     "unnamedDevice": "Appareil sans nom",
     "addCta": "Ajouter cet appareil",

@@ -85,6 +85,7 @@
     "lastWayIn": "To Twój ostatni sposób logowania. Najpierw dodaj inne urządzenie — po usunięciu nikt, łącznie z nami, nie przywróci Ci dostępu.",
     "sectionTitle": "Urządzenia do logowania",
     "sectionHint": "Każde urządzenie loguje się samodzielnie. Usunięcie jednego nie narusza Twojej tożsamości ani pozostałych urządzeń.",
+    "loadFailed": "Nie udało się wczytać urządzeń. Odśwież stronę — to nie to samo, co ich brak.",
     "empty": "Brak urządzeń.",
     "unnamedDevice": "Urządzenie bez nazwy",
     "addCta": "Dodaj to urządzenie",

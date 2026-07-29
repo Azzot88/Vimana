@@ -85,6 +85,7 @@
     "lastWayIn": "Es tu última forma de entrar. Añade otro dispositivo primero: si lo quitas ahora, nadie, ni siquiera nosotros, podrá devolverte el acceso.",
     "sectionTitle": "Dispositivos de acceso",
     "sectionHint": "Cada dispositivo entra por su cuenta. Quitar uno no afecta a tu identidad ni a los demás dispositivos.",
+    "loadFailed": "No se pudieron cargar tus dispositivos. Recarga la página: no es lo mismo que no tener ninguno.",
     "empty": "Todavía no hay dispositivos.",
     "unnamedDevice": "Dispositivo sin nombre",
     "addCta": "Añadir este dispositivo",
