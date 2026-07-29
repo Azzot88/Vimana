@@ -234,6 +234,11 @@ async def test_cannot_delete_the_last_way_in(client, session_maker):
     headers = await _register(client, prefix="pk-lock")
     uid = await _user_id(client, headers)
 
+    # Confirmation first, password removed after: this test is about the guard,
+    # and a real passwordless account would confirm with its passkey — which
+    # pytest cannot produce without an authenticator (see the Playwright spec).
+    token = await _step_up(client, headers)
+
     async with session_maker() as db:
         user = await db.get(User, uid)
         user.password_hash = None
@@ -242,7 +247,7 @@ async def test_cannot_delete_the_last_way_in(client, session_maker):
     cred_id = await _add_credential(session_maker, uid)
     resp = await client.delete(
         f"/api/auth/passkey/{cred_id}",
-        headers=_with_step_up(headers, await _step_up(client, headers)),
+        headers=_with_step_up(headers, token),
     )
     assert resp.status_code == 409
     assert "last way to sign in" in resp.json()["detail"].lower()
@@ -251,6 +256,8 @@ async def test_cannot_delete_the_last_way_in(client, session_maker):
 async def test_second_device_makes_the_first_removable(client, session_maker):
     headers = await _register(client, prefix="pk-two")
     uid = await _user_id(client, headers)
+
+    token = await _step_up(client, headers)  # while the password still exists
 
     async with session_maker() as db:
         user = await db.get(User, uid)
@@ -262,7 +269,7 @@ async def test_second_device_makes_the_first_removable(client, session_maker):
 
     resp = await client.delete(
         f"/api/auth/passkey/{first}",
-        headers=_with_step_up(headers, await _step_up(client, headers)),
+        headers=_with_step_up(headers, token),
     )
     assert resp.status_code == 204
 
