@@ -44,6 +44,20 @@ async def _add_credential(session_maker, email_or_id, *, name="Device") -> uuid.
         return cred.id
 
 
+async def _step_up(client, headers) -> str:
+    """T3.15 — unlinking a device needs a fresh confirmation. Proof handling
+    itself is `test_step_up.py`; here it is just a precondition."""
+    from tests.conftest import step_up_token
+
+    return await step_up_token(client, headers, "unlink_passkey")
+
+
+def _with_step_up(headers: dict[str, str], token: str) -> dict[str, str]:
+    """Header, not query string — a URL lands in access logs, history and
+    `Referer`, and a confirmation grant has no business in any of them."""
+    return {**headers, "X-Step-Up-Token": token}
+
+
 async def _user_id(client, headers) -> uuid.UUID:
     me = await client.get("/api/auth/me", headers=headers)
     return uuid.UUID(me.json()["id"])
@@ -184,7 +198,7 @@ async def test_list_shows_only_my_devices(client, session_maker):
     await _add_credential(session_maker, await _user_id(client, a), name="Mine")
     await _add_credential(session_maker, await _user_id(client, b), name="Theirs")
 
-    resp = await client.get("/api/auth/passkey", headers=a)
+    resp = await client.get("/api/auth/passkey", headers=_with_step_up(a, await _step_up(client, a)))
     assert resp.status_code == 200
     names = [c["device_name"] for c in resp.json()]
     assert names == ["Mine"]
@@ -195,7 +209,10 @@ async def test_cannot_delete_someone_elses_device(client, session_maker):
     b = await _register(client, prefix="pk-y")
     victim = await _add_credential(session_maker, await _user_id(client, b))
 
-    resp = await client.delete(f"/api/auth/passkey/{victim}", headers=a)
+    resp = await client.delete(
+        f"/api/auth/passkey/{victim}",
+        headers=_with_step_up(a, await _step_up(client, a)),
+    )
     assert resp.status_code == 404
 
 
@@ -203,7 +220,10 @@ async def test_delete_works_when_a_password_remains(client, session_maker):
     headers = await _register(client)
     cred_id = await _add_credential(session_maker, await _user_id(client, headers))
 
-    resp = await client.delete(f"/api/auth/passkey/{cred_id}", headers=headers)
+    resp = await client.delete(
+        f"/api/auth/passkey/{cred_id}",
+        headers=_with_step_up(headers, await _step_up(client, headers)),
+    )
     assert resp.status_code == 204
 
 
@@ -220,7 +240,10 @@ async def test_cannot_delete_the_last_way_in(client, session_maker):
         await db.commit()
 
     cred_id = await _add_credential(session_maker, uid)
-    resp = await client.delete(f"/api/auth/passkey/{cred_id}", headers=headers)
+    resp = await client.delete(
+        f"/api/auth/passkey/{cred_id}",
+        headers=_with_step_up(headers, await _step_up(client, headers)),
+    )
     assert resp.status_code == 409
     assert "last way to sign in" in resp.json()["detail"].lower()
 
@@ -237,7 +260,10 @@ async def test_second_device_makes_the_first_removable(client, session_maker):
     first = await _add_credential(session_maker, uid, name="One")
     await _add_credential(session_maker, uid, name="Two")
 
-    resp = await client.delete(f"/api/auth/passkey/{first}", headers=headers)
+    resp = await client.delete(
+        f"/api/auth/passkey/{first}",
+        headers=_with_step_up(headers, await _step_up(client, headers)),
+    )
     assert resp.status_code == 204
 
     async with session_maker() as db:

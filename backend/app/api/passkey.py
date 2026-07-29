@@ -21,7 +21,7 @@ import secrets
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -443,7 +443,9 @@ async def list_credentials(
 @router.delete("/{credential_id}", status_code=204)
 async def delete_credential(
     credential_id: uuid.UUID,
-    step_up_token: str = Query(..., description="From POST /api/auth/step-up/verify"),
+    step_up_token: str = Header(
+        ..., alias="X-Step-Up-Token", description="From POST /api/auth/step-up/verify"
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -452,6 +454,11 @@ async def delete_credential(
     Removing a device is how an attacker with a live session would lock the
     owner out: drop every credential but their own. A session token alone says
     only that someone signed in at some point.
+
+    The grant travels in a **header**, not the query string: a URL ends up in
+    nginx access logs, browser history and `Referer`. Same reasoning that put
+    identity documents on a short presigned TTL — a secret in a URL is a secret
+    in several places nobody is watching.
     """
     cred = await db.get(WebAuthnCredential, credential_id)
     if cred is None or cred.user_id != current_user.id:

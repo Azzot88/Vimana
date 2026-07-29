@@ -317,10 +317,35 @@ async def test_unlinking_a_passkey_needs_confirmation(client, session_maker):
         cred_id = cred.id
 
     without = await client.delete(f"/api/auth/passkey/{cred_id}", headers=headers)
-    assert without.status_code == 422  # step_up_token is a required query param
+    assert without.status_code == 422, "X-Step-Up-Token is required"
 
     token = await _token_by_password(client, headers, StepUpScope.UNLINK_PASSKEY)
     with_token = await client.delete(
-        f"/api/auth/passkey/{cred_id}?step_up_token={token}", headers=headers
+        f"/api/auth/passkey/{cred_id}",
+        headers={**headers, "X-Step-Up-Token": token},
     )
     assert with_token.status_code == 204
+
+
+async def test_the_grant_never_travels_in_the_url(client, session_maker):
+    """A query string ends up in nginx access logs, browser history and
+    `Referer`. Passing the grant there must not work, or the header would be
+    advisory rather than required."""
+    _, headers = await _account(client, "su-url")
+    me = await client.get("/api/auth/me", headers=headers)
+    uid = uuid.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        cred = WebAuthnCredential(
+            user_id=uid, credential_id=uuid.uuid4().bytes, public_key=b"pk"
+        )
+        db.add(cred)
+        await db.commit()
+        await db.refresh(cred)
+        cred_id = cred.id
+
+    token = await _token_by_password(client, headers, StepUpScope.UNLINK_PASSKEY)
+    resp = await client.delete(
+        f"/api/auth/passkey/{cred_id}?step_up_token={token}", headers=headers
+    )
+    assert resp.status_code == 422
