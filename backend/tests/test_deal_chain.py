@@ -42,15 +42,10 @@ from tests.conftest import TEST_DATABASE_URL, unique_email
 # stay sync. The anchoring tests below rely on that: they must NOT run inside a
 # loop, because the Celery path calls `asyncio.run`.
 
-# That same `asyncio.run` is why this suppression is here: it builds a loop
-# inside the test and closes it, out of reach of the autouse Redis teardown in
-# conftest, so any client bound to it is finalised after its loop is gone and
-# raises inside `AbstractConnection.__del__`. Same trade-off as in
-# `test_contract_fuzz.py` — the alternative is opening a Redis connection per
-# operation in production, which is a worse deal than a quiet log.
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::pytest.PytestUnraisableExceptionWarning"
-)
+# That same `asyncio.run` builds a loop inside the test and closes it, out of
+# reach of the autouse Redis teardown in conftest — so a client bound to it is
+# finalised after its loop is gone. Handled centrally by
+# `_silence_dead_loop_finalizers` in conftest; no blanket suppression here.
 
 
 # ─────────────────────────────────────────────────────────────

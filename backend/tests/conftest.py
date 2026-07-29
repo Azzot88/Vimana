@@ -1,5 +1,6 @@
 import base64
 import os
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -1069,6 +1070,47 @@ async def override_db(session_maker):
     app.dependency_overrides[get_db] = _get_test_db
     yield
     app.dependency_overrides.pop(get_db, None)
+
+
+def _silence_dead_loop_finalizers() -> None:
+    """Swallow exactly one known, harmless finalizer failure.
+
+    `redis.asyncio` keeps a `StreamWriter` bound to the loop that created it.
+    When the GC eventually collects the `Connection`, `__del__` calls
+    `transport.close()` → `loop.call_soon()`, and on a closed loop that raises
+    `RuntimeError: Event loop is closed`. CPython cannot propagate an exception
+    out of `__del__`, so it hands it to `sys.unraisablehook`, which prints a
+    traceback to stderr and carries on.
+
+    It surfaces under hypothesis (`test_contract_fuzz`), which runs every
+    example in its own loop: the autouse teardown below closes the client for
+    the loop alive at the *end of the test function*, and cannot reach the ones
+    in between. Collection is GC-timed, so the traceback lands next to whatever
+    test happens to be running — which is why it reads as random.
+
+    Narrow on purpose. `filterwarnings("ignore")` (the previous approach) hid
+    the whole class without looking at it; this matches one exception type,
+    with one message, from redis' connection module, and lets everything else
+    through untouched. Nothing about production behaviour changes: a server has
+    a single long-lived loop and never reaches this path.
+    """
+    previous = sys.unraisablehook
+
+    def hook(unraisable):
+        exc = unraisable.exc_value
+        module = getattr(getattr(unraisable.object, "__self__", None), "__module__", "")
+        if (
+            isinstance(exc, RuntimeError)
+            and "Event loop is closed" in str(exc)
+            and "redis" in f"{module}{unraisable.object!r}"
+        ):
+            return
+        previous(unraisable)
+
+    sys.unraisablehook = hook
+
+
+_silence_dead_loop_finalizers()
 
 
 @pytest_asyncio.fixture(autouse=True, loop_scope="function")
