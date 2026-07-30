@@ -1,6 +1,7 @@
 import smtplib
 import ssl
 from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 
 from app.core.config import settings
 
@@ -35,6 +36,15 @@ def send_email(to: str, subject: str, body: str) -> None:
     msg["Subject"] = subject
     msg["From"] = settings.SMTP_USER
     msg["To"] = to
+    # `Date` and `Message-ID` are required by RFC 5322 and nobody else adds
+    # them: Python does not, and Postfix leaves submitted mail alone by
+    # default. Spam filters score their absence heavily — the first message
+    # this code sent picked up three points from its own server before ever
+    # reaching a recipient's. No DNS record can compensate for a malformed
+    # message.
+    msg["Date"] = formatdate(localtime=True)
+    _, at, domain = settings.SMTP_USER.rpartition("@")
+    msg["Message-ID"] = make_msgid(domain=domain if at else None)
     with _connect() as smtp:
         smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         smtp.sendmail(settings.SMTP_USER, [to], msg.as_string())

@@ -1,4 +1,5 @@
 import uuid as uuidlib
+from email import message_from_string
 
 import pytest
 from sqlalchemy import create_engine
@@ -159,6 +160,24 @@ def test_credentials_and_envelope(smtp_spy):
     frm, recipients, _ = conn.sent[0]
     assert frm == "vimana@example.test"
     assert recipients == ["someone@example.test"]
+
+
+def test_message_carries_date_and_message_id(smtp_spy):
+    from app.core.email import send_email
+
+    opened = smtp_spy(465)
+    send_email("someone@example.test", "subject", "body")
+
+    msg = message_from_string(opened[0].sent[0][2])
+    # Both are mandatory per RFC 5322 and both are worth spam points when
+    # missing; nothing downstream fills them in for us.
+    assert msg["Date"], "a message with no Date is scored as spam"
+    message_id = msg["Message-ID"]
+    assert message_id, "a message with no Message-ID is scored as spam"
+    assert message_id.startswith("<") and message_id.endswith(">")
+    assert message_id.endswith("@example.test>"), (
+        "the id must be anchored to the sender's domain, not the container hostname"
+    )
 
 
 def test_no_connection_without_configuration(smtp_spy, monkeypatch):
