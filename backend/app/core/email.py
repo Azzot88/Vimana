@@ -1,9 +1,14 @@
 import smtplib
 import ssl
 from email.mime.text import MIMEText
-from email.utils import formatdate, make_msgid
+from email.utils import formataddr, formatdate, make_msgid
 
 from app.core.config import settings
+
+# The name shown next to the address in a mail client. A brand constant rather
+# than configuration: it is the same in every environment, and an env var would
+# be one more thing to keep in sync across two servers for no gain.
+FROM_DISPLAY_NAME = "Vimana — Sacred Logistics"
 
 
 def _connect() -> smtplib.SMTP:
@@ -34,7 +39,11 @@ def send_email(to: str, subject: str, body: str) -> None:
         return
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
-    msg["From"] = settings.SMTP_USER
+    # `formataddr` RFC 2047-encodes the name — it contains an em dash, and raw
+    # UTF-8 in a header gets messages dropped by some receivers. The envelope
+    # sender below stays the bare address: the display name is decoration for
+    # the recipient, not part of the address mail is routed by.
+    msg["From"] = formataddr((FROM_DISPLAY_NAME, settings.SMTP_USER))
     msg["To"] = to
     # `Date` and `Message-ID` are required by RFC 5322 and nobody else adds
     # them: Python does not, and Postfix leaves submitted mail alone by

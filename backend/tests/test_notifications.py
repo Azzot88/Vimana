@@ -162,6 +162,23 @@ def test_credentials_and_envelope(smtp_spy):
     assert recipients == ["someone@example.test"]
 
 
+def test_from_shows_the_brand_name(smtp_spy):
+    from app.core.email import FROM_DISPLAY_NAME, send_email
+
+    opened = smtp_spy(465)
+    send_email("someone@example.test", "subject", "body")
+
+    envelope_from, _, raw = opened[0].sent[0]
+    header = message_from_string(raw)["From"]
+    # The name is non-ASCII (em dash), so it must travel as an encoded word —
+    # raw UTF-8 in a header is dropped by some receivers.
+    assert FROM_DISPLAY_NAME not in header, "the name must be RFC 2047-encoded"
+    assert header.startswith("=?utf-8?"), header
+    assert "vimana@example.test" in header
+    # Routing is unaffected: the envelope carries the bare address.
+    assert envelope_from == "vimana@example.test"
+
+
 def test_message_carries_date_and_message_id(smtp_spy):
     from app.core.email import send_email
 
