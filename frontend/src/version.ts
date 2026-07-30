@@ -16,4 +16,5 @@
 // re-encryption, platform-key publishing.
 // T3.13 closed — sign in / sign up with a Nostr key, no password path.
 // T3.14 closed — passkeys: several devices, one identity.
-export const APP_VERSION = '0.03.20'
+// T3.15 closed — step-up re-auth; email delivery working end to end.
+export const APP_VERSION = '0.03.21'
