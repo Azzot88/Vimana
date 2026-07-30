@@ -19,6 +19,17 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_PORT: int = 587
 
+    # The visible sender, kept separate from `SMTP_USER`: the account that
+    # authenticates to the relay and the address the recipient sees need not be
+    # the same mailbox. It matters beyond cosmetics — DMARC alignment is judged
+    # on the domain of this header, so it has to be a domain we sign for.
+    # Empty falls back to `SMTP_USER`, which is what the first version did.
+    SMTP_FROM: str = ""
+    SMTP_FROM_NAME: str = "Vimana"
+    # Replies to a no-reply address are a small betrayal; point them somewhere
+    # a human reads. Empty means no `Reply-To` header at all.
+    SMTP_REPLY_TO: str = ""
+
     # T3.11 — comma-separated email domains whose registrations are marked
     # verified immediately, so the e2e suites stop minting confirmation codes
     # nobody reads. Verification gates nothing, so this changes no behaviour
