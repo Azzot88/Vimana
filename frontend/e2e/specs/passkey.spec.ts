@@ -97,7 +97,7 @@ test.describe('passkeys', () => {
      *  over-trigger, which would be just as broken as not triggering. */
     test.setTimeout(90_000)
     await attachAuthenticator(page)
-    await registerUser(page)
+    const { password } = await registerUser(page)
 
     await page.goto('/profile')
     await Promise.all([
@@ -108,18 +108,26 @@ test.describe('passkeys', () => {
     ])
     await expect(page.getByTestId('passkey-list').locator('li')).toHaveCount(1)
 
+    // T3.15 — unlinking now asks for a fresh confirmation first: dropping every
+    // device but their own is how someone with a stolen session would lock the
+    // owner out. This account has a password, so that is the proof offered.
+    await page
+      .getByTestId('passkey-list')
+      .locator('li')
+      .first()
+      .getByRole('button')
+      .click()
+    const dialog = page.getByTestId('step-up-confirm')
+    await expect(dialog).toBeVisible()
+    await page.locator('input[type="password"]').last().fill(password)
+
     const [delResp] = await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes('/api/auth/passkey/') &&
           r.request().method() === 'DELETE',
       ),
-      page
-        .getByTestId('passkey-list')
-        .locator('li')
-        .first()
-        .getByRole('button')
-        .click(),
+      dialog.click(),
     ])
     expect(delResp.status()).toBe(204)
     await expect(page.getByTestId('passkey-list')).toHaveCount(0)
