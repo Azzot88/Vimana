@@ -162,19 +162,17 @@ services:
   # Not started by default. Enable:
   #   docker compose --profile mcp up -d mcp-server
   # Then wire into Claude Desktop config (see mcp-server/README.md).
-  mcp-server:
-    build:
-      context: ./mcp-server
-      dockerfile: Dockerfile
-    profiles: ["mcp"]
-    restart: unless-stopped
-    logging: *default-logging
-    env_file: .env
-    environment:
-      VIMANA_API_URL: "http://backend:8000"
-    depends_on:
-      backend:
-        condition: service_healthy
+  # `mcp-server` удалён 2026-07-30 — см. T7.1.
+  #
+  # `server.py` работает по stdio: клиент сам запускает сервер дочерним
+  # процессом и общается с ним через пайпы. Как сервис в compose он получал
+  # закрытый stdin, читал EOF, выходил с кодом 0 и поднимался снова — одиннадцать
+  # дней `Restarting (0)` при пустом `logs`, потому что сбоя не было.
+  #
+  # `stdin_open: true` это не чинит: stdin откроется, но писать в него некому —
+  # снаружи до него нет пути. Пока транспорт stdio, контейнер нужен только как
+  # образ (`docker exec -i` с той же машины), но не как запущенный сервис.
+  # Возвращать сюда — только вместе с сетевым транспортом (вариант A в T7.1).
 
 volumes:
   postgres_data:
