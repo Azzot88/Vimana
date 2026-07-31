@@ -42,6 +42,11 @@ class StepUpScope(str, enum.Enum):
     DECLARE_LOST = "declare_lost"
     UNLINK_PASSKEY = "unlink_passkey"
     CHANGE_EMAIL = "change_email"
+    # Covers setting a first password as well as replacing one. From the user's
+    # side it is a single operation, and the confirmation it warrants is the
+    # same either way — a separate scope would only make the dialog ask twice
+    # for the same thing.
+    CHANGE_PASSWORD = "change_password"
     ADD_AUTH_METHOD = "add_auth_method"
 
 

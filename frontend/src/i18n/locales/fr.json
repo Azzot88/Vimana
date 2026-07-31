@@ -98,6 +98,36 @@
       "device_passkey": "Cet appareil uniquement"
     }
   },
+  "security": {
+    "title": "E-mail et mot de passe",
+    "hint": "Des moyens de se connecter. Votre clé — ce qu'est le compte — a sa propre section.",
+    "emailLabel": "Adresse e-mail",
+    "changeEmail": "Changer l'e-mail",
+    "addEmail": "Ajouter un e-mail",
+    "newEmailPlaceholder": "Nouvelle adresse e-mail",
+    "emailNotice": "L'adresse actuelle continue de fonctionner jusqu'à la confirmation de la nouvelle.",
+    "emailConfirmBody": "Confirmez que c'est bien vous et le code partira vers la nouvelle adresse.",
+    "pendingBody": "Un code a été envoyé à",
+    "codePlaceholder": "Code à 6 chiffres",
+    "confirmCode": "Confirmer",
+    "resend": "Renvoyer",
+    "cancelChange": "Annuler le changement",
+    "codeSent": "Code envoyé. Consultez la nouvelle boîte.",
+    "emailChanged": "Adresse modifiée.",
+    "codeFailed": "Ce code n'a pas fonctionné. Vérifiez-le ou demandez-en un nouveau.",
+    "resendFailed": "Impossible d'envoyer un nouveau code. Réessayez dans un instant.",
+    "emailFailed": "Impossible de lancer le changement. Réessayez.",
+    "passwordLabel": "Mot de passe",
+    "passwordSet": "Un mot de passe est défini.",
+    "passwordNone": "Aucun mot de passe : vous vous connectez avec une clé ou une passkey.",
+    "changePassword": "Changer le mot de passe",
+    "setPassword": "Définir un mot de passe",
+    "newPasswordPlaceholder": "Nouveau mot de passe, 8 caractères minimum",
+    "passwordNotice": "L'ancien mot de passe n'est pas nécessaire : la confirmation ci-dessous suffit.",
+    "passwordConfirmBody": "Confirmez que c'est bien vous et le mot de passe changera.",
+    "passwordChanged": "Mot de passe modifié.",
+    "passwordFailed": "Impossible de changer le mot de passe. Réessayez."
+  },
   "stepUp": {
     "confirm": "Confirmer",
     "passwordPlaceholder": "Votre mot de passe",
@@ -138,6 +168,7 @@
     "bannerCta": "Confirmer"
   },
   "common": {
+    "continue": "Continuer",
     "loading": "Chargement...",
     "save": "Enregistrer",
     "cancel": "Annuler",

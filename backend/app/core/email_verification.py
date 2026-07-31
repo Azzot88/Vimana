@@ -96,6 +96,17 @@ def is_auto_verify_domain(email: str | None) -> bool:
     return domain in domains
 
 
+def target_email(user: User) -> str | None:
+    """The address a pending code refers to.
+
+    A change in flight takes precedence: the code was sent there, so that is
+    what proving it proves. Without this the same code would appear to confirm
+    the *old* address — a code delivered to one mailbox settling a claim about
+    another.
+    """
+    return user.pending_email or user.email
+
+
 def issue_code(user: User, *, now: datetime | None = None) -> str:
     """Mint a fresh code and stamp it on the user. Returns the plaintext for
     delivery — the caller hands it to the Celery task and drops it.
@@ -148,6 +159,17 @@ def verify_code(user: User, code: str, *, now: datetime | None = None) -> None:
             _clear_code(user)
             raise TooManyAttempts()
         raise CodeInvalid()
+
+    # A pending change lands here and nowhere else: the proof and the swap are
+    # the same event. Splitting them across caller and helper is how one of the
+    # two eventually gets forgotten on a new code path.
+    #
+    # The caller must flush and be ready for an IntegrityError — `email` is
+    # unique, and the address may have been taken while this change was in
+    # flight. Nothing is reserved for a pending claim by design.
+    if user.pending_email:
+        user.email = user.pending_email
+        user.pending_email = None
 
     user.email_verified_at = now
     _clear_code(user)

@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -18,16 +19,20 @@ from app.core.email_verification import (
     is_auto_verify_domain,
     issue_code,
     normalize_email,
+    target_email,
     verify_code,
 )
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.core.step_up import StepUpScope, consume as consume_step_up
 from app.core.token_blacklist import blacklist_jti
 from app.models.user import User
 from app.schemas.user import (
+    EmailChangeBody,
     EmailVerifyBody,
     MeOut,
+    PasswordChangeBody,
     Token,
     UserCreate,
     UserLogin,
@@ -107,9 +112,13 @@ async def request_email_code(
     db: AsyncSession = Depends(get_db),
 ):
     """Idempotent-ish: already-verified is a 200-shaped no-op, not an error."""
-    if not current_user.email:
+    if not target_email(current_user):
         raise HTTPException(status_code=422, detail="Account has no email")
-    if current_user.email_verified_at is not None:
+    # A change in flight always needs a code, even when the current address is
+    # already verified — what is unproven is the pending one. Checking
+    # `email_verified_at` alone would leave a started change with no way to
+    # finish it.
+    if current_user.pending_email is None and current_user.email_verified_at is not None:
         return {"status": "already_verified"}
 
     try:
@@ -131,8 +140,10 @@ async def verify_email(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.email_verified_at is not None:
+    if current_user.pending_email is None and current_user.email_verified_at is not None:
         return {"status": "already_verified"}
+
+    was_pending = current_user.pending_email
 
     try:
         verify_code(current_user, body.code)
@@ -149,8 +160,116 @@ async def verify_email(
         await db.commit()  # persist the incremented attempt counter
         raise HTTPException(status_code=400, detail="Invalid code")
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # The pending address was claimed by someone else while this change was
+        # in flight — a pending claim reserves nothing on purpose. The rollback
+        # leaves the old address in place and still verified, so the account is
+        # never left without a working one.
+        await db.rollback()
+        raise HTTPException(
+            status_code=409, detail="That address is now registered to another account"
+        )
+
+    if was_pending:
+        return {"status": "changed", "email": current_user.email}
     return {"status": "verified"}
+
+
+@router.post("/email/change", status_code=202)
+@limiter.limit("5/hour")
+async def change_email(
+    request: Request,
+    body: EmailChangeBody,
+    step_up_token: str = Header(
+        ..., alias="X-Step-Up-Token", description="From POST /api/auth/step-up/verify"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.15 — start a move to a new address. Nothing changes until it is proven.
+
+    The account keeps its current address, verified and working, for the whole
+    exchange. Two things follow from that. A typo costs a retry instead of the
+    recovery channel — which matters because for many accounts email is the
+    only way back in. And a stolen session cannot quietly redirect recovery
+    mail: whoever holds it must also be able to read the new mailbox.
+    """
+    await consume_step_up(
+        str(current_user.id), StepUpScope.CHANGE_EMAIL, step_up_token
+    )
+
+    if body.email == current_user.email:
+        raise HTTPException(
+            status_code=409, detail="That is already this account's address"
+        )
+
+    taken = await db.execute(select(User.id).where(User.email == body.email))
+    if taken.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="email already registered")
+
+    current_user.pending_email = body.email
+    # A new address is a new code budget: the cooldown from an earlier request
+    # must not block the first code of a change the user just confirmed.
+    current_user.email_verification_sent_at = None
+    try:
+        _dispatch_code(current_user)
+    except CooldownActive:  # pragma: no cover — cleared above, kept as a guard
+        raise HTTPException(status_code=429, detail="Try again shortly")
+    await db.commit()
+    return {"status": "sent", "pending_email": body.email}
+
+
+@router.delete("/email/pending", status_code=200)
+async def cancel_email_change(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Abandon a pending change. No step-up: dropping a claim that was never
+    proven only ever restores the state the account was already in."""
+    if current_user.pending_email is None:
+        return {"status": "nothing_pending"}
+
+    current_user.pending_email = None
+    # The outstanding code was minted for the address being abandoned. Leaving
+    # it alive would let it later settle a claim about the current address.
+    current_user.email_verification_code_hash = None
+    current_user.email_verification_expires_at = None
+    current_user.email_verification_attempts = 0
+    await db.commit()
+    return {"status": "cancelled"}
+
+
+@router.put("/me/password", status_code=200)
+@limiter.limit("10/hour")
+async def change_password(
+    request: Request,
+    body: PasswordChangeBody,
+    step_up_token: str = Header(
+        ..., alias="X-Step-Up-Token", description="From POST /api/auth/step-up/verify"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.15 — set or replace the password.
+
+    One endpoint for both because it is one operation to the user, and because
+    an account with no password is not a lesser account: setting a first one is
+    how a Nostr- or passkey-created account gains an email login.
+
+    **Known gap:** this does not sign other sessions out. Someone who already
+    holds a stolen token keeps it until it expires. Closing that needs token
+    issue-time tracking, which touches every request — deliberately left to its
+    own task rather than smuggled in here (`T3.15` follow-up).
+    """
+    await consume_step_up(
+        str(current_user.id), StepUpScope.CHANGE_PASSWORD, step_up_token
+    )
+
+    current_user.password_hash = hash_password(body.new_password)
+    await db.commit()
+    return {"status": "changed"}
 
 
 @router.post("/login", response_model=Token)

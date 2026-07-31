@@ -52,6 +52,42 @@ class EmailVerifyBody(BaseModel):
     code: str
 
 
+class EmailChangeBody(BaseModel):
+    """T3.15 — request a move to a new address. The grant travels in the
+    `X-Step-Up-Token` header, not here: it stays out of the request schema, so
+    it cannot surface in an OpenAPI example or a logged body."""
+
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def email_shape(cls, v: str) -> str:
+        from app.core.email_verification import is_valid_email, normalize_email
+
+        if not is_valid_email(v):
+            raise ValueError("Invalid email address")
+        return normalize_email(v)
+
+
+class PasswordChangeBody(BaseModel):
+    """T3.15 — set or replace the account password.
+
+    No `current_password` field. Presence is already proven by step-up, and by
+    whichever method the account actually has — asking for the old password on
+    top would lock out passwordless accounts all over again, which is the exact
+    defect this task exists to fix.
+    """
+
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
 class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
@@ -127,6 +163,12 @@ class MeOut(UserOut):
     # account with no email reads False, and the banner skips it (nothing was
     # claimed, so nothing is pending).
     email_verified: bool = False
+    # T3.15 — the address awaiting proof, so the UI can show what is pending
+    # and offer to cancel. `None` when no change is in flight.
+    pending_email: str | None = None
+    # T3.15 — lets the profile say "set a password" instead of "change" it, and
+    # nothing more: the hash itself never leaves the server.
+    has_password: bool = False
     receiving_country_iso: str | None = None
     receiving_city: str | None = None
     receiving_city_geoname_id: int | None = None

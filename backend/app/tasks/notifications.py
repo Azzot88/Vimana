@@ -106,14 +106,20 @@ def send_verification_code(user_id: str, code: str) -> None:
     consulted: this is not a notification the user opted into, it is the proof
     of address they asked for.
     """
+    from app.core.email_verification import target_email
     from app.models.user import User
 
     with SyncSessionLocal() as db:
         user = db.get(User, user_id)
-        if not user or not user.email:
+        if not user:
+            return
+        # A change in flight is delivered to the *new* address — sending the
+        # code to the old one would ask the wrong mailbox to vouch for the new.
+        recipient = target_email(user)
+        if not recipient:
             return
         send_email(
-            user.email,
+            recipient,
             "Vimana · Код подтверждения",
             f"Ваш код подтверждения: {code}\n\n"
             "Код действителен 15 минут. Если вы его не запрашивали — "

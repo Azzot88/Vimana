@@ -108,6 +108,16 @@ class User(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # T3.15 — an address the user has asked to move to but has not proven yet.
+    # The change lands only when a code sent *there* comes back, so `email`
+    # keeps working as the recovery channel until the new one is real. A typo
+    # therefore costs a retry, not the account; and a stolen session cannot
+    # quietly redirect recovery mail without also reading the new mailbox.
+    # Deliberately NOT unique: two people may have a pending claim on the same
+    # address, and only the one who confirms first gets it — enforced by the
+    # unique index on `email` at swap time, not by holding a reservation.
+    pending_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     @property
     def key_lost(self) -> bool:
         """Public signal — a dead identity must not look like a live one."""
@@ -118,6 +128,13 @@ class User(Base):
         """True once the user holds their own key. Until then `nostr_pubkey` is
         a service key the platform issued and still holds (T3.12)."""
         return self.key_self_custody
+
+    @property
+    def has_password(self) -> bool:
+        """Whether a password exists at all — never the hash, never a hint.
+        Drives the wording in the profile ('set' vs 'change') and nothing
+        else."""
+        return bool(self.password_hash)
 
     @property
     def email_verified(self) -> bool:

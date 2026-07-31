@@ -98,6 +98,36 @@
       "device_passkey": "Tylko to urządzenie"
     }
   },
+  "security": {
+    "title": "E-mail i hasło",
+    "hint": "Sposoby logowania. Klucz — to, czym jest konto — ma własną sekcję.",
+    "emailLabel": "Adres e-mail",
+    "changeEmail": "Zmień e-mail",
+    "addEmail": "Dodaj e-mail",
+    "newEmailPlaceholder": "Nowy adres e-mail",
+    "emailNotice": "Obecny adres działa do czasu potwierdzenia nowego.",
+    "emailConfirmBody": "Potwierdź, że to Ty, a kod trafi na nowy adres.",
+    "pendingBody": "Kod wysłano na",
+    "codePlaceholder": "Kod 6-cyfrowy",
+    "confirmCode": "Potwierdź",
+    "resend": "Wyślij ponownie",
+    "cancelChange": "Anuluj zmianę",
+    "codeSent": "Kod wysłany. Sprawdź nową skrzynkę.",
+    "emailChanged": "Adres zmieniony.",
+    "codeFailed": "Ten kod nie zadziałał. Sprawdź go lub poproś o nowy.",
+    "resendFailed": "Nie udało się wysłać nowego kodu. Spróbuj za chwilę.",
+    "emailFailed": "Nie udało się rozpocząć zmiany. Spróbuj ponownie.",
+    "passwordLabel": "Hasło",
+    "passwordSet": "Hasło jest ustawione.",
+    "passwordNone": "Brak hasła — logujesz się kluczem lub passkey.",
+    "changePassword": "Zmień hasło",
+    "setPassword": "Ustaw hasło",
+    "newPasswordPlaceholder": "Nowe hasło, co najmniej 8 znaków",
+    "passwordNotice": "Stare hasło nie jest potrzebne — wystarczy potwierdzenie poniżej.",
+    "passwordConfirmBody": "Potwierdź, że to Ty, a hasło się zmieni.",
+    "passwordChanged": "Hasło zmienione.",
+    "passwordFailed": "Nie udało się zmienić hasła. Spróbuj ponownie."
+  },
   "stepUp": {
     "confirm": "Potwierdź",
     "passwordPlaceholder": "Twoje hasło",
@@ -138,6 +168,7 @@
     "bannerCta": "Potwierdź"
   },
   "common": {
+    "continue": "Dalej",
     "loading": "Ładowanie...",
     "save": "Zapisz",
     "cancel": "Anuluj",

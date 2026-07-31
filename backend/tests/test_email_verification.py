@@ -379,3 +379,269 @@ async def test_auto_verify_domain_skips_the_flow(client, captured_codes):
     me = await client.get("/api/auth/me", headers=headers)
     assert me.json()["email_verified"] is True
     assert captured_codes == []
+
+
+# ── changing the address (T3.15) ─────────────────────────────────────────────
+#
+# The property under test: the current address keeps working, verified, until
+# the new one is proven. Everything below is a consequence of that — a typo is
+# recoverable, a stolen session cannot silently redirect recovery mail, and a
+# race for the same address is decided by whoever confirms first.
+
+
+async def _step_up(client, headers, scope: str = "change_email") -> str:
+    resp = await client.post(
+        "/api/auth/step-up/verify",
+        headers=headers,
+        json={"scope": scope, "password": PASSWORD},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()["step_up_token"]
+
+
+async def _verified_account(client, fixed_code, captured_codes) -> tuple[str, dict]:
+    """Register and confirm, so tests start from a proven address."""
+    email = gated_email("change")
+    await _register(client, email)
+    headers = await _headers(client, email)
+    resp = await client.post(
+        "/api/auth/email/verify", headers=headers, json={"code": FIXED_CODE}
+    )
+    assert resp.status_code == 200, resp.text
+    captured_codes.clear()
+    return email, headers
+
+
+async def test_change_requires_step_up(client, fixed_code, captured_codes):
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    resp = await client.post(
+        "/api/auth/email/change", headers=headers, json={"email": gated_email("new")}
+    )
+    # Missing required header — FastAPI rejects before the handler runs.
+    assert resp.status_code == 422, resp.text
+
+
+async def test_change_rejects_a_grant_for_another_operation(
+    client, fixed_code, captured_codes
+):
+    """The whole point of scoping: confirming one thing must not authorise
+    another."""
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    token = await _step_up(client, headers, scope="declare_lost")
+    resp = await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": gated_email("new")},
+    )
+    assert resp.status_code == 401, resp.text
+
+
+async def test_change_leaves_the_current_address_live_until_proven(
+    client, fixed_code, captured_codes, session_maker
+):
+    old, headers = await _verified_account(client, fixed_code, captured_codes)
+    new = gated_email("new")
+    token = await _step_up(client, headers)
+
+    resp = await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": new},
+    )
+    assert resp.status_code == 202, resp.text
+
+    user = await _fetch(session_maker, old)
+    assert user.email == old, "the address must not move before it is proven"
+    assert user.pending_email == new
+    assert user.email_verified_at is not None, "the old address stays verified"
+
+    # And it still signs in — the recovery channel is unbroken meanwhile.
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": old, "password": PASSWORD}
+        )
+    ).status_code == 200
+
+
+async def test_code_goes_to_the_new_address(
+    client, fixed_code, captured_codes, session_maker
+):
+    """Delivery target, not just storage: asking the old mailbox to vouch for
+    the new one would prove nothing about the new one."""
+    from app.core.email_verification import target_email
+
+    old, headers = await _verified_account(client, fixed_code, captured_codes)
+    new = gated_email("new")
+    token = await _step_up(client, headers)
+    await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": new},
+    )
+
+    assert len(captured_codes) == 1, "a change must mint a code"
+    user = await _fetch(session_maker, old)
+    assert target_email(user) == new
+
+
+async def test_confirming_moves_the_address(
+    client, fixed_code, captured_codes, session_maker
+):
+    old, headers = await _verified_account(client, fixed_code, captured_codes)
+    new = gated_email("new")
+    token = await _step_up(client, headers)
+    await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": new},
+    )
+
+    resp = await client.post(
+        "/api/auth/email/verify", headers=headers, json={"code": FIXED_CODE}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "changed"
+    assert resp.json()["email"] == new
+
+    user = await _fetch(session_maker, new)
+    assert user.pending_email is None
+    assert user.email_verified_at is not None
+
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": new, "password": PASSWORD}
+        )
+    ).status_code == 200
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": old, "password": PASSWORD}
+        )
+    ).status_code == 401
+
+
+async def test_a_change_can_be_confirmed_even_though_the_old_address_was_verified(
+    client, fixed_code, captured_codes
+):
+    """Regression guard: the verify and request-code endpoints short-circuit on
+    `email_verified_at`, which would leave a started change with no way to
+    finish."""
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    token = await _step_up(client, headers)
+    await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": gated_email("new")},
+    )
+
+    resend = await client.post("/api/auth/email/request-code", headers=headers)
+    assert resend.status_code in (202, 429), resend.text
+    assert resend.json().get("status") != "already_verified"
+
+
+async def test_cancelling_restores_the_previous_state(
+    client, fixed_code, captured_codes, session_maker
+):
+    old, headers = await _verified_account(client, fixed_code, captured_codes)
+    token = await _step_up(client, headers)
+    await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": gated_email("new")},
+    )
+
+    resp = await client.delete("/api/auth/email/pending", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cancelled"
+
+    user = await _fetch(session_maker, old)
+    assert user.pending_email is None
+    # The outstanding code died with the claim: alive, it could later settle a
+    # question about the current address instead.
+    assert user.email_verification_code_hash is None
+
+
+async def test_cancelling_nothing_is_not_an_error(client, fixed_code, captured_codes):
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    resp = await client.delete("/api/auth/email/pending", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "nothing_pending"
+
+
+async def test_cannot_move_to_a_registered_address(
+    client, fixed_code, captured_codes
+):
+    taken = gated_email("taken")
+    await _register(client, taken)
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    token = await _step_up(client, headers)
+
+    resp = await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": taken},
+    )
+    assert resp.status_code == 409, resp.text
+
+
+async def test_cannot_move_to_the_current_address(client, fixed_code, captured_codes):
+    old, headers = await _verified_account(client, fixed_code, captured_codes)
+    token = await _step_up(client, headers)
+    resp = await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": old},
+    )
+    assert resp.status_code == 409, resp.text
+
+
+async def test_malformed_address_is_refused(client, fixed_code, captured_codes):
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    token = await _step_up(client, headers)
+    resp = await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": "not-an-address"},
+    )
+    assert resp.status_code == 422, resp.text
+
+
+async def test_losing_the_race_leaves_the_account_with_a_working_address(
+    client, fixed_code, captured_codes, session_maker
+):
+    """A pending claim reserves nothing. If someone registers the address while
+    the change is in flight, confirming fails — and must fail *without*
+    stranding the account."""
+    old, headers = await _verified_account(client, fixed_code, captured_codes)
+    contested = gated_email("contested")
+    token = await _step_up(client, headers)
+    await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": contested},
+    )
+
+    await _register(client, contested)  # someone else got there first
+
+    resp = await client.post(
+        "/api/auth/email/verify", headers=headers, json={"code": FIXED_CODE}
+    )
+    assert resp.status_code == 409, resp.text
+
+    user = await _fetch(session_maker, old)
+    assert user.email == old
+    assert user.email_verified_at is not None
+
+
+async def test_me_exposes_the_pending_address(client, fixed_code, captured_codes):
+    _, headers = await _verified_account(client, fixed_code, captured_codes)
+    new = gated_email("new")
+    token = await _step_up(client, headers)
+    await client.post(
+        "/api/auth/email/change",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"email": new},
+    )
+
+    me = await client.get("/api/auth/me", headers=headers)
+    assert me.json()["pending_email"] == new
+    assert me.json()["has_password"] is True

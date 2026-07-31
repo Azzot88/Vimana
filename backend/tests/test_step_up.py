@@ -349,3 +349,133 @@ async def test_the_grant_never_travels_in_the_url(client, session_maker):
         f"/api/auth/passkey/{cred_id}?step_up_token={token}", headers=headers
     )
     assert resp.status_code == 422
+
+
+# ── changing the password (T3.15) ────────────────────────────────────────────
+
+
+async def test_password_change_needs_confirmation(client):
+    _, headers = await _account(client, "su-pw")
+    resp = await client.put(
+        "/api/auth/me/password", headers=headers, json={"new_password": "brand-new-1"}
+    )
+    assert resp.status_code == 422, resp.text  # header is required
+
+
+async def test_password_change_rejects_a_grant_for_another_operation(client):
+    _, headers = await _account(client, "su-pw-scope")
+    token = await _token_by_password(client, headers, StepUpScope.DECLARE_LOST)
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"new_password": "brand-new-1"},
+    )
+    assert resp.status_code == 401, resp.text
+
+
+async def test_password_change_swaps_which_password_works(client):
+    email, headers = await _account(client, "su-pw-swap")
+    token = await _token_by_password(client, headers, StepUpScope.CHANGE_PASSWORD)
+
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"new_password": "brand-new-1"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+        )
+    ).status_code == 401, "the old password must stop working"
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": email, "password": "brand-new-1"}
+        )
+    ).status_code == 200
+
+
+async def test_password_change_grant_is_single_use(client):
+    _, headers = await _account(client, "su-pw-once")
+    token = await _token_by_password(client, headers, StepUpScope.CHANGE_PASSWORD)
+    first = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"new_password": "brand-new-1"},
+    )
+    assert first.status_code == 200
+    second = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"new_password": "brand-new-2"},
+    )
+    assert second.status_code == 401, "a captured grant must not be replayable"
+
+
+async def test_short_password_is_refused(client):
+    _, headers = await _account(client, "su-pw-short")
+    token = await _token_by_password(client, headers, StepUpScope.CHANGE_PASSWORD)
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"new_password": "short"},
+    )
+    assert resp.status_code == 422, resp.text
+
+
+async def test_an_account_without_a_password_can_set_one(client, session_maker):
+    """Setting a first password is the same operation, and must be reachable
+    without one — otherwise a Nostr- or passkey-created account can never gain
+    an email login, which is the T3.15 defect in a new place."""
+    email, headers = await _account(client, "su-pw-none")
+    keys = await establish_identity(client, headers)
+
+    async with session_maker() as db:
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        user.password_hash = None
+        await db.commit()
+
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+        )
+    ).status_code == 401
+
+    opts = await client.post(
+        "/api/auth/step-up/options", headers=headers, json={"scope": "change_password"}
+    )
+    assert "password" not in opts.json()["methods"]
+    challenge = opts.json()["challenge"]
+    created_at = int(time.time())
+    event_id = proof_event_id(
+        keys["npub_hex"], step_up_purpose("change_password"), challenge, created_at
+    )
+    verify = await client.post(
+        "/api/auth/step-up/verify",
+        headers=headers,
+        json={
+            "scope": "change_password",
+            "nostr": {
+                "npub_hex": keys["npub_hex"],
+                "challenge": challenge,
+                "created_at": created_at,
+                "sig": sign_event_id(event_id, keys["nsec_hex"]),
+            },
+        },
+    )
+    assert verify.status_code == 200, verify.text
+
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": verify.json()["step_up_token"]},
+        json={"new_password": "first-password-1"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": email, "password": "first-password-1"}
+        )
+    ).status_code == 200

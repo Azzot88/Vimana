@@ -12,6 +12,9 @@ export type StepUpScope =
   | 'declare_lost'
   | 'unlink_passkey'
   | 'change_email'
+  /** Covers setting a first password as well as replacing one — one operation
+   *  from the user's side, one confirmation. */
+  | 'change_password'
   | 'add_auth_method'
 
 export type StepUpMethod = 'password' | 'passkey' | 'nostr'

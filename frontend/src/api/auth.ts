@@ -53,7 +53,38 @@ export interface User {
   // T3.11 — only present on /me. False for an account with no email at all,
   // which is NOT gated: nothing was claimed, so nothing is in limbo.
   email_verified?: boolean
+  // T3.15 — an address asked for but not yet proven. `email` still holds the
+  // working one until the code comes back, so both are shown side by side.
+  pending_email?: string | null
+  // T3.15 — whether a password exists. Never the hash, never a hint: it only
+  // decides whether the profile says "set" or "change".
+  has_password?: boolean
 }
+
+/** T3.15 — moving to a new address. Two steps on purpose: the change is only
+ *  requested here, and lands when a code sent to the new mailbox comes back
+ *  through `verifyEmail`. Until then the old address keeps working. */
+export const changeEmail = (email: string, stepUpToken: string) =>
+  api.post<{ status: string; pending_email: string }>(
+    '/api/auth/email/change',
+    { email },
+    { headers: { 'X-Step-Up-Token': stepUpToken } },
+  )
+
+/** No step-up: abandoning an unproven claim only restores the state the
+ *  account was already in. */
+export const cancelEmailChange = () =>
+  api.delete<{ status: string }>('/api/auth/email/pending')
+
+/** T3.15 — set or replace the password. There is no `current_password` field:
+ *  step-up already proved presence, and demanding the old one would shut out
+ *  accounts that never had one. */
+export const changePassword = (newPassword: string, stepUpToken: string) =>
+  api.put<{ status: string }>(
+    '/api/auth/me/password',
+    { new_password: newPassword },
+    { headers: { 'X-Step-Up-Token': stepUpToken } },
+  )
 
 // T3.13 — sign in / sign up with a Nostr key. No password involved: the server
 // issues a one-time challenge and checks the signature against the claimed key.

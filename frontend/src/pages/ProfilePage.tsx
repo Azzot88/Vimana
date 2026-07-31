@@ -9,6 +9,7 @@ import AddressesSection from '../components/AddressesSection'
 import EditProfileModal from '../components/EditProfileModal'
 import KeypairSection from '../components/KeypairSection'
 import PasskeySection from '../components/PasskeySection'
+import SecuritySection from '../components/SecuritySection'
 import MonoText from '../components/MonoText'
 import TrustCirclesSection from '../components/TrustCirclesSection'
 import UBASection from '../components/UBASection'
@@ -35,6 +36,18 @@ export default function ProfilePage() {
   const [creatingInvite, setCreatingInvite] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+
+  /** T3.15 — re-read the profile after a security change. `SecuritySection`
+   *  renders from the store, and email / pending_email / has_password all move
+   *  server-side; without this the section would keep showing the old address
+   *  until a reload. */
+  const refreshUser = async () => {
+    if (!token) return
+    try {
+      const { data } = await me()
+      setAuth(data, token)
+    } catch { /* the section reports its own failure */ }
+  }
 
   const loadInvites = async () => {
     setInvitesLoading(true)
@@ -216,6 +229,9 @@ export default function ProfilePage() {
             )}
           </div>
 
+          {user && (
+            <SecuritySection user={user} onChanged={refreshUser} />
+          )}
           <KeypairSection />
           <PasskeySection />
 

@@ -114,6 +114,36 @@
       "device_passkey": "This device only"
     }
   },
+  "security": {
+    "title": "Email and password",
+    "hint": "Ways of signing in. Your key — what the account is — has its own section.",
+    "emailLabel": "Email address",
+    "changeEmail": "Change email",
+    "addEmail": "Add an email",
+    "newEmailPlaceholder": "New email address",
+    "emailNotice": "The current address keeps working until the new one is confirmed.",
+    "emailConfirmBody": "Confirm it is you, and a code goes to the new address.",
+    "pendingBody": "A code was sent to",
+    "codePlaceholder": "6-digit code",
+    "confirmCode": "Confirm",
+    "resend": "Send again",
+    "cancelChange": "Cancel the change",
+    "codeSent": "Code sent. Check the new mailbox.",
+    "emailChanged": "Address changed.",
+    "codeFailed": "That code did not work. Check it or ask for a new one.",
+    "resendFailed": "Could not send a new code. Try again shortly.",
+    "emailFailed": "Could not start the change. Try again.",
+    "passwordLabel": "Password",
+    "passwordSet": "A password is set.",
+    "passwordNone": "No password — you sign in with a key or a passkey.",
+    "changePassword": "Change password",
+    "setPassword": "Set a password",
+    "newPasswordPlaceholder": "New password, at least 8 characters",
+    "passwordNotice": "The old password is not needed — confirming below is enough.",
+    "passwordConfirmBody": "Confirm it is you, and the password changes.",
+    "passwordChanged": "Password changed.",
+    "passwordFailed": "Could not change the password. Try again."
+  },
   "stepUp": {
     "confirm": "Confirm",
     "passwordPlaceholder": "Your password",
@@ -154,6 +184,7 @@
     "bannerCta": "Confirm now"
   },
   "common": {
+    "continue": "Continue",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",

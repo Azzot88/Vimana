@@ -402,7 +402,7 @@ async def _ensure_nostr_keypair_columns(engine) -> None:
 
 async def _ensure_email_verification_columns(engine) -> None:
     """T3.11 schema fix: email verification state + password_hash nullable.
-    Mirrors migration 0028. Idempotent."""
+    Mirrors migration 0028, plus `pending_email` from 0032. Idempotent."""
     async with engine.begin() as conn:
         for col, ddl in (
             ("email_verified_at", "TIMESTAMPTZ"),
@@ -410,6 +410,8 @@ async def _ensure_email_verification_columns(engine) -> None:
             ("email_verification_expires_at", "TIMESTAMPTZ"),
             ("email_verification_attempts", "SMALLINT NOT NULL DEFAULT 0"),
             ("email_verification_sent_at", "TIMESTAMPTZ"),
+            # T3.15 (migration 0032) — address awaiting proof during a change.
+            ("pending_email", "VARCHAR(255)"),
         ):
             row = (
                 await conn.execute(

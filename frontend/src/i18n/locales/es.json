@@ -98,6 +98,36 @@
       "device_passkey": "Solo este dispositivo"
     }
   },
+  "security": {
+    "title": "Correo y contraseña",
+    "hint": "Formas de iniciar sesión. Tu clave — lo que la cuenta es — tiene su propia sección.",
+    "emailLabel": "Dirección de correo",
+    "changeEmail": "Cambiar el correo",
+    "addEmail": "Añadir un correo",
+    "newEmailPlaceholder": "Nueva dirección de correo",
+    "emailNotice": "La dirección actual sigue funcionando hasta que se confirme la nueva.",
+    "emailConfirmBody": "Confirma que eres tú y el código irá a la nueva dirección.",
+    "pendingBody": "Se envió un código a",
+    "codePlaceholder": "Código de 6 dígitos",
+    "confirmCode": "Confirmar",
+    "resend": "Enviar de nuevo",
+    "cancelChange": "Cancelar el cambio",
+    "codeSent": "Código enviado. Revisa el nuevo buzón.",
+    "emailChanged": "Dirección cambiada.",
+    "codeFailed": "Ese código no funcionó. Compruébalo o pide uno nuevo.",
+    "resendFailed": "No se pudo enviar un código nuevo. Inténtalo en un momento.",
+    "emailFailed": "No se pudo iniciar el cambio. Inténtalo de nuevo.",
+    "passwordLabel": "Contraseña",
+    "passwordSet": "Hay una contraseña establecida.",
+    "passwordNone": "Sin contraseña: inicias sesión con una clave o una passkey.",
+    "changePassword": "Cambiar la contraseña",
+    "setPassword": "Establecer una contraseña",
+    "newPasswordPlaceholder": "Nueva contraseña, mínimo 8 caracteres",
+    "passwordNotice": "No hace falta la contraseña anterior: basta con confirmar abajo.",
+    "passwordConfirmBody": "Confirma que eres tú y la contraseña cambiará.",
+    "passwordChanged": "Contraseña cambiada.",
+    "passwordFailed": "No se pudo cambiar la contraseña. Inténtalo de nuevo."
+  },
   "stepUp": {
     "confirm": "Confirmar",
     "passwordPlaceholder": "Tu contraseña",
@@ -138,6 +168,7 @@
     "bannerCta": "Confirmar"
   },
   "common": {
+    "continue": "Continuar",
     "loading": "Cargando...",
     "save": "Guardar",
     "cancel": "Cancelar",
