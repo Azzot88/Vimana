@@ -38,10 +38,10 @@ from app.main import app
 from app.models.user import User
 
 # Excluded from everyday runs via `-m "not fuzz"` (registered in pytest.ini).
-# Hypothesis runs every example on its own event loop, so Redis connections
-# outlive the loop that made them and their finalizers fail. Handled centrally
-# by `_silence_dead_loop_finalizers` in conftest, which matches that one
-# exception instead of muting the whole warning class here.
+# schemathesis drives the ASGI app from sync code, spinning up a fresh event
+# loop per request, so Redis connections outlive the loop that made them and
+# their finalizers fail. Filtered in `pytest.ini` by the exact finalizer name —
+# see the comment on the `AbstractConnection.__del__` entry there.
 pytestmark = pytest.mark.fuzz
 
 # schemathesis 3.39 still uses jsonschema.RefResolver internally, which
