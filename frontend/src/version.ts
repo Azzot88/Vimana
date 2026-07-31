@@ -1,21 +1,13 @@
-// Scheme: 0.{phase_two_digits}.{last_completed_task}
-// Examples: 0.01.6 → 0.01.12 → 0.02.1
-// Update this after each completed task in TASKS.md
-// Phase 2 fully closed (T2.1 – T2.4). Now on Phase 3.
-// T_UX.4 fully closed (addresses + avatars + edit modal + landing on logo).
-// T2.1 pt.3 closed — a Phase 2 leftover, but the version is a monotonic progress
-// counter, so it keeps counting inside the current phase instead of going back.
-// T3.6 closed — deal_events hash chain + Nostr anchoring.
-// T3.7 closed — vault content chain (messages/files/seal) + verify_content.
-// T3.8 closed — upload content validation (signatures + image decode).
-// T3.9 closed — identity ↔ deal intersection (identity_doc copy + identity_ref).
-// T3.11 closed — email-only registration + confirmation code (Phase 3.7 opens).
-// Phase 3.7 keeps counting in the 03 series: the version is a monotonic
-// progress counter, not a phase label.
-// T3.12 closed — service key vs identity: establish/declare-lost, vault
-// re-encryption, platform-key publishing.
-// T3.13 closed — sign in / sign up with a Nostr key, no password path.
-// T3.14 closed — passkeys: several devices, one identity.
-// T3.15 closed — step-up re-auth; email delivery working end to end.
-// T3.15 finished — email change, password change, other sessions ended.
-export const APP_VERSION = '0.03.22'
+// Scheme: 0.{phase}.{part of that phase}
+//
+//   0    — beta. Stays 0 until every phase is closed; then Alpha 1 ships.
+//   03   — the phase, two digits with a leading zero.
+//   7    — which part of it, i.e. phase 3.7. A whole phase reads .0 (4 → 0.04.0).
+//
+// So the version answers "where in the roadmap is this build", not "how many
+// tasks got done". It moves when a phase does — rarely, and meaningfully.
+//
+// Earlier this counted closed tasks (0.03.22 after T3.15) and drifted from the
+// documented rule, so a reader could not tell what the number meant. Owner's
+// decision 2026-07-30: the number tracks the phase.
+export const APP_VERSION = '0.03.7'
