@@ -41,11 +41,17 @@ export default function ProfilePage() {
    *  renders from the store, and email / pending_email / has_password all move
    *  server-side; without this the section would keep showing the old address
    *  until a reload. */
-  const refreshUser = async () => {
-    if (!token) return
+  const refreshUser = async (newToken?: string) => {
+    const active = newToken ?? token
+    if (!active) return
     try {
+      // Store the replacement first. A password change retires every token
+      // issued before it, this one included, and the API client reads straight
+      // from localStorage — re-reading with the old token would 401 and look
+      // like the security action logged the user out.
+      if (newToken && user) setAuth(user, newToken)
       const { data } = await me()
-      setAuth(data, token)
+      setAuth(data, active)
     } catch { /* the section reports its own failure */ }
   }
 

@@ -118,6 +118,16 @@ class User(Base):
     # unique index on `email` at swap time, not by holding a reservation.
     pending_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # T3.15 — tokens issued before this moment are refused. Changing a password
+    # sets it, which evicts every other session: the whole reason someone
+    # changes a password in a hurry is that somebody else may be holding one,
+    # and we never learn those tokens' `jti` to revoke them individually.
+    # NULL means "nothing was ever retired" — the state every account starts in,
+    # so deploying this does not sign anybody out.
+    sessions_valid_from: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     @property
     def key_lost(self) -> bool:
         """Public signal — a dead identity must not look like a live one."""

@@ -27,7 +27,10 @@ type Pending = 'email' | 'password' | null
 
 interface Props {
   user: User
-  onChanged: () => void | Promise<void>
+  /** `newToken` arrives after a password change, which retires every earlier
+   *  session — including this one. The caller must store it before any further
+   *  request. */
+  onChanged: (newToken?: string) => void | Promise<void>
 }
 
 export default function SecuritySection({ user, onChanged }: Props) {
@@ -83,10 +86,12 @@ export default function SecuritySection({ user, onChanged }: Props) {
     setBusy(true)
     setError('')
     try {
-      await changePassword(newPassword, token)
+      const { data } = await changePassword(newPassword, token)
       reset()
-      setNotice(t('security.passwordChanged') as string)
-      await onChanged()
+      setNotice(t('security.passwordChangedSessions') as string)
+      // The token in hand was just retired along with every other session —
+      // hand the replacement up before anything else calls the API.
+      await onChanged(data.access_token)
     } catch {
       setError(t('security.passwordFailed') as string)
     } finally {
@@ -262,6 +267,13 @@ export default function SecuritySection({ user, onChanged }: Props) {
             <p className="text-xs font-body text-navy/50">
               {t('security.passwordNotice')}
             </p>
+            {/* Consequence stated before the action, not discovered after it:
+                other devices are about to be signed out. */}
+            <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+              <p className="text-xs font-body text-navy" data-testid="security-sessions-warning">
+                {t('security.sessionsWarning')}
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => setConfirming('password')}
@@ -310,7 +322,9 @@ export default function SecuritySection({ user, onChanged }: Props) {
               ? t('security.changePassword')
               : t('security.setPassword')) as string
           }
-          body={t('security.passwordConfirmBody') as string}
+          body={
+            `${t('security.passwordConfirmBody')} ${t('security.sessionsWarning')}`
+          }
           onConfirm={submitPassword}
           onCancel={() => setConfirming(null)}
         />

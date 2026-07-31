@@ -29,11 +29,28 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(subject: str, expires_delta: timedelta | None = None) -> str:
     """Signs a JWT with a random `jti` so it can be individually revoked
-    (T_UX.3 pt.4a — Redis blacklist)."""
-    expire = datetime.now(timezone.utc) + (
+    (T_UX.3 pt.4a — Redis blacklist), and an `iat` so a whole generation of
+    tokens can be retired at once (T3.15 — `users.sessions_valid_from`).
+
+    The two mechanisms answer different questions. `jti` revokes *this* token,
+    which is what logout needs. `iat` retires every token older than a moment,
+    which is what changing a password needs: the point is to evict a session
+    whose identifier we never had.
+    """
+    now = datetime.now(timezone.utc)
+    expire = now + (
         expires_delta if expires_delta is not None else timedelta(days=_DEFAULT_EXPIRE_DAYS)
     )
-    payload = {"sub": subject, "exp": expire, "jti": uuid.uuid4().hex}
+    payload = {
+        "sub": subject,
+        "exp": expire,
+        # Sub-second on purpose, and passed as a number rather than a datetime:
+        # PyJWT truncates datetimes to whole seconds, and whole seconds leave a
+        # window where a token minted in the same second as a retirement
+        # survives it. RFC 7519 allows a non-integer NumericDate.
+        "iat": now.timestamp(),
+        "jti": uuid.uuid4().hex,
+    }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=_ALGORITHM)
 
 

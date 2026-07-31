@@ -412,6 +412,8 @@ async def _ensure_email_verification_columns(engine) -> None:
             ("email_verification_sent_at", "TIMESTAMPTZ"),
             # T3.15 (migration 0032) — address awaiting proof during a change.
             ("pending_email", "VARCHAR(255)"),
+            # T3.15 (migration 0033) — cutoff that retires older sessions.
+            ("sessions_valid_from", "TIMESTAMPTZ"),
         ):
             row = (
                 await conn.execute(

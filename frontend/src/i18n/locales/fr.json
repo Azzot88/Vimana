@@ -125,7 +125,8 @@
     "newPasswordPlaceholder": "Nouveau mot de passe, 8 caractères minimum",
     "passwordNotice": "L'ancien mot de passe n'est pas nécessaire : la confirmation ci-dessous suffit.",
     "passwordConfirmBody": "Confirmez que c'est bien vous et le mot de passe changera.",
-    "passwordChanged": "Mot de passe modifié.",
+    "sessionsWarning": "Tous les autres appareils seront déconnectés. Celui-ci reste connecté.",
+    "passwordChangedSessions": "Mot de passe modifié. Les autres appareils ont été déconnectés.",
     "passwordFailed": "Impossible de changer le mot de passe. Réessayez."
   },
   "stepUp": {

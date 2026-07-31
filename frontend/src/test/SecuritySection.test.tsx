@@ -18,7 +18,9 @@ vi.mock('../api/auth', async () => {
     ...actual,
     changeEmail: vi.fn().mockResolvedValue({ data: { status: 'sent' } }),
     cancelEmailChange: vi.fn().mockResolvedValue({ data: { status: 'cancelled' } }),
-    changePassword: vi.fn().mockResolvedValue({ data: { status: 'changed' } }),
+    changePassword: vi
+      .fn()
+      .mockResolvedValue({ data: { status: 'changed', access_token: 'fresh-token' } }),
     requestEmailCode: vi.fn().mockResolvedValue({ data: { status: 'sent' } }),
     verifyEmail: vi.fn().mockResolvedValue({ data: { status: 'changed' } }),
   }
@@ -108,6 +110,16 @@ describe('SecuritySection', () => {
     expect(screen.getByTestId('security-password-continue')).toBeDisabled()
     fireEvent.change(field, { target: { value: 'long-enough-1' } })
     expect(screen.getByTestId('security-password-continue')).not.toBeDisabled()
+  })
+
+  it('warns that other devices will be signed out, before the action', () => {
+    renderWithProviders(<SecuritySection user={base} onChanged={noop} />)
+    // Not discovered afterwards: the consequence is on screen while the user
+    // is still deciding.
+    expect(screen.queryByTestId('security-sessions-warning')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('security-change-password'))
+    expect(screen.getByTestId('security-sessions-warning')).toBeInTheDocument()
+    expect(screen.getByText(/signed out/i)).toBeInTheDocument()
   })
 
   it('cancelling a pending change calls the API', async () => {

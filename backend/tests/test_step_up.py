@@ -479,3 +479,91 @@ async def test_an_account_without_a_password_can_set_one(client, session_maker):
             "/api/auth/login", json={"login": email, "password": "first-password-1"}
         )
     ).status_code == 200
+
+
+# ── changing the password ends other sessions ────────────────────────────────
+
+
+async def test_password_change_ends_other_sessions(client):
+    """The reason people change a password in a hurry is that somebody else may
+    be holding a session. Those tokens have no `jti` we ever saw, so they are
+    retired by age instead."""
+    email, first = await _account(client, "su-pw-sessions")
+    second_login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    other = {"Authorization": f"Bearer {second_login.json()['access_token']}"}
+    assert (await client.get("/api/auth/me", headers=other)).status_code == 200
+
+    token = await _token_by_password(client, first, StepUpScope.CHANGE_PASSWORD)
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**first, "X-Step-Up-Token": token},
+        json={"new_password": "brand-new-1"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    assert (
+        await client.get("/api/auth/me", headers=other)
+    ).status_code == 401, "the other session must be gone"
+
+
+async def test_password_change_returns_a_working_replacement_token(client):
+    """The device doing the change must not be thrown out by its own action —
+    that reads as a failure and invites a retry."""
+    _, headers = await _account(client, "su-pw-replace")
+    token = await _token_by_password(client, headers, StepUpScope.CHANGE_PASSWORD)
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**headers, "X-Step-Up-Token": token},
+        json={"new_password": "brand-new-1"},
+    )
+    fresh = resp.json()["access_token"]
+    assert fresh, "a replacement token must come back with the response"
+
+    assert (
+        await client.get(
+            "/api/auth/me", headers={"Authorization": f"Bearer {fresh}"}
+        )
+    ).status_code == 200
+
+
+async def test_sessions_survive_when_nothing_was_retired(client):
+    """Default state. Adding the cutoff must not sign the platform out."""
+    _, headers = await _account(client, "su-pw-default")
+    assert (await client.get("/api/auth/me", headers=headers)).status_code == 200
+
+
+async def test_a_token_with_no_issue_time_is_refused_after_a_retirement(
+    client, session_maker
+):
+    """Tokens minted before `iat` existed carry no issue time. Once an account
+    retires its sessions they must read as older than the cutoff, not as
+    exempt from the check."""
+    import jwt
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.config import settings
+
+    email, headers = await _account(client, "su-pw-legacy")
+    async with session_maker() as db:
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        user_id = str(user.id)
+        user.sessions_valid_from = datetime.now(timezone.utc)
+        await db.commit()
+
+    legacy = jwt.encode(
+        {
+            "sub": user_id,
+            "exp": datetime.now(timezone.utc) + timedelta(days=1),
+            "jti": uuid.uuid4().hex,
+        },
+        settings.SECRET_KEY,
+        algorithm="HS256",
+    )
+    resp = await client.get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {legacy}"}
+    )
+    assert resp.status_code == 401, resp.text

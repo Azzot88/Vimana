@@ -141,7 +141,8 @@
     "newPasswordPlaceholder": "New password, at least 8 characters",
     "passwordNotice": "The old password is not needed — confirming below is enough.",
     "passwordConfirmBody": "Confirm it is you, and the password changes.",
-    "passwordChanged": "Password changed.",
+    "sessionsWarning": "Every other device will be signed out. This one stays.",
+    "passwordChangedSessions": "Password changed. Other devices have been signed out.",
     "passwordFailed": "Could not change the password. Try again."
   },
   "stepUp": {

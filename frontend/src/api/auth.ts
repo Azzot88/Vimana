@@ -78,9 +78,14 @@ export const cancelEmailChange = () =>
 
 /** T3.15 — set or replace the password. There is no `current_password` field:
  *  step-up already proved presence, and demanding the old one would shut out
- *  accounts that never had one. */
+ *  accounts that never had one.
+ *
+ *  Every other session ends. The replacement token comes back here and MUST be
+ *  stored before the next request — the one in hand was retired by the change,
+ *  so carrying it further reads as a logout on the very device that just did
+ *  the securing. */
 export const changePassword = (newPassword: string, stepUpToken: string) =>
-  api.put<{ status: string }>(
+  api.put<{ status: string; access_token: string; token_type: string }>(
     '/api/auth/me/password',
     { new_password: newPassword },
     { headers: { 'X-Step-Up-Token': stepUpToken } },

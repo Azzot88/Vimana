@@ -125,7 +125,8 @@
     "newPasswordPlaceholder": "Nueva contraseña, mínimo 8 caracteres",
     "passwordNotice": "No hace falta la contraseña anterior: basta con confirmar abajo.",
     "passwordConfirmBody": "Confirma que eres tú y la contraseña cambiará.",
-    "passwordChanged": "Contraseña cambiada.",
+    "sessionsWarning": "Se cerrará la sesión en todos los demás dispositivos. Este se mantiene.",
+    "passwordChangedSessions": "Contraseña cambiada. Se cerró la sesión en los demás dispositivos.",
     "passwordFailed": "No se pudo cambiar la contraseña. Inténtalo de nuevo."
   },
   "stepUp": {

@@ -125,7 +125,8 @@
     "newPasswordPlaceholder": "Nowe hasło, co najmniej 8 znaków",
     "passwordNotice": "Stare hasło nie jest potrzebne — wystarczy potwierdzenie poniżej.",
     "passwordConfirmBody": "Potwierdź, że to Ty, a hasło się zmieni.",
-    "passwordChanged": "Hasło zmienione.",
+    "sessionsWarning": "Wszystkie inne urządzenia zostaną wylogowane. To pozostanie zalogowane.",
+    "passwordChangedSessions": "Hasło zmienione. Inne urządzenia zostały wylogowane.",
     "passwordFailed": "Nie udało się zmienić hasła. Spróbuj ponownie."
   },
   "stepUp": {

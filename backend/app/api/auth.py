@@ -258,18 +258,32 @@ async def change_password(
     an account with no password is not a lesser account: setting a first one is
     how a Nostr- or passkey-created account gains an email login.
 
-    **Known gap:** this does not sign other sessions out. Someone who already
-    holds a stolen token keeps it until it expires. Closing that needs token
-    issue-time tracking, which touches every request — deliberately left to its
-    own task rather than smuggled in here (`T3.15` follow-up).
+    **Other sessions end here.** A password is usually changed because someone
+    else may be holding a session, and those tokens cannot be revoked by `jti`
+    — we never saw them. Setting `sessions_valid_from` retires every token
+    issued before this moment instead.
+
+    The caller gets a replacement token in the same response, so the device
+    doing the change stays signed in. Without it the user would be thrown out
+    by their own security action, which reads as a failure and invites a retry.
     """
     await consume_step_up(
         str(current_user.id), StepUpScope.CHANGE_PASSWORD, step_up_token
     )
 
     current_user.password_hash = hash_password(body.new_password)
+    current_user.sessions_valid_from = datetime.now(timezone.utc)
     await db.commit()
-    return {"status": "changed"}
+
+    # Minted *after* the cutoff is stored, so its `iat` is strictly later and it
+    # survives the retirement it is part of. Reordering these two lines would
+    # log the user out of the device that just secured the account.
+    replacement = create_access_token(str(current_user.id))
+    return {
+        "status": "changed",
+        "access_token": replacement,
+        "token_type": "bearer",
+    }
 
 
 @router.post("/login", response_model=Token)
