@@ -80,7 +80,13 @@ services:
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health >/dev/null 2>&1 || exit 1"]
+      # `127.0.0.1`, not `localhost`: inside the container the name resolves to
+      # `::1` first, and `listen 80;` binds IPv4 only — so the probe was testing
+      # an address nothing else uses and had reported unhealthy since T_SEC.2.
+      # stderr is deliberately NOT swallowed. The previous `2>&1` sent wget's
+      # "can't connect to remote host" to /dev/null, so `docker inspect` showed
+      # 263 failures with an empty Output field and no way to tell why.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 6
