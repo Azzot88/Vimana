@@ -128,9 +128,12 @@ export default function SecuritySection({ user, onChanged }: Props) {
    *  mailed to yourself or pasted into a password manager. */
   const downloadCodes = () => {
     if (!freshCodes) return
+    // BOM + explicit charset. Without both, Windows Notepad reads UTF-8 as
+    // cp1251 and the Russian header arrives as mojibake — which is exactly how
+    // a file meant to be trusted stops looking trustworthy.
     const blob = new Blob(
-      [`${t('security.recoveryFileHeader')}\n\n${freshCodes.join('\n')}\n`],
-      { type: 'text/plain' },
+      ['﻿', `${t('security.recoveryFileHeader')}\n\n${freshCodes.join('\n')}\n`],
+      { type: 'text/plain;charset=utf-8' },
     )
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

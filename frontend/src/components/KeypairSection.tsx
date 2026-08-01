@@ -168,7 +168,11 @@ export default function KeypairSection() {
 
   const downloadBackup = () => {
     if (!generated) return
-    const blob = new Blob([keyBackupText(generated)], { type: 'text/plain' })
+    // BOM + charset, same reason as the recovery codes file: without them
+    // Notepad decodes UTF-8 as cp1251.
+    const blob = new Blob(['﻿', keyBackupText(generated)], {
+      type: 'text/plain;charset=utf-8',
+    })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
