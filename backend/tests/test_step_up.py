@@ -706,3 +706,29 @@ async def test_a_code_cannot_be_found_by_another_account(client):
         json={"identifier": email_b, "code": codes_a[0]},
     )
     assert resp.status_code == 401
+
+
+async def test_spending_a_code_tells_the_owner(client, monkeypatch):
+    """The one signal that says "someone used a code". Sent whether or not the
+    account opted into notifications — if it was not the owner, this letter is
+    how they find out at all."""
+    sent: list[tuple[str, int]] = []
+
+    from app.tasks import notifications
+
+    class _Task:
+        @staticmethod
+        def delay(user_id, remaining):
+            sent.append((user_id, remaining))
+
+    monkeypatch.setattr(notifications, "send_recovery_code_used", _Task)
+
+    email, headers = await _account(client, "rec-mail")
+    codes = await _issue_codes(client, headers)
+    resp = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": codes[0]},
+    )
+    assert resp.status_code == 200
+    assert len(sent) == 1
+    assert sent[0][1] == 9, "the letter carries how many are left"

@@ -125,3 +125,32 @@ def send_verification_code(user_id: str, code: str) -> None:
             "Код действителен 15 минут. Если вы его не запрашивали — "
             "просто проигнорируйте это письмо.",
         )
+
+
+@celery_app.task(name="app.tasks.notifications.send_recovery_code_used")
+def send_recovery_code_used(user_id: str, remaining: int) -> None:
+    """T3.16 — tell the owner that a recovery code was spent.
+
+    Sent regardless of `notify_email`, like the confirmation code and for the
+    same reason: this is not a notification anyone opted into, it is the one
+    signal that says someone used a code — and if it was not the owner, this
+    letter is how they find out at all.
+
+    Nothing here can be undone by replying, so the letter says what to do
+    instead: sign in and replace the set. The remaining count is included
+    because "how many are left" is the first question after "was that me?".
+    """
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        send_email(
+            user.email,
+            "Vimana · Использован код восстановления",
+            "В аккаунт вошли по коду восстановления.\n\n"
+            f"Осталось неиспользованных кодов: {remaining}.\n\n"
+            "Если это были вы — ничего делать не нужно. Если нет — войдите "
+            "и создайте новый набор кодов: прежние перестанут работать.",
+        )

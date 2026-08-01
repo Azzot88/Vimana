@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { login, me } from '../api/auth'
+import { changePassword, consumeRecoveryCode, login, me } from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
 import PasskeyAuthButton from '../components/PasskeyAuthButton'
 import { useAuthStore } from '../stores/auth'
@@ -18,6 +18,40 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  /** T3.16 — recovery lives on the login screen because that is where a
+   *  locked-out person already is. Sending them hunting for a separate page is
+   *  the worst moment to ask for navigation. */
+  const [recovering, setRecovering] = useState(false)
+  const [recoveryCode, setRecoveryCode] = useState('')
+  const [recoveryPassword, setRecoveryPassword] = useState('')
+
+  const handleRecovery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const { data: session } = await consumeRecoveryCode(loginVal, recoveryCode)
+      // The recovery token is not a session — `/me` refuses it. It is stored
+      // only so the password call below carries it, and is replaced a moment
+      // later by the real one that call returns.
+      localStorage.setItem('token', session.access_token)
+      const { data } = await changePassword(
+        recoveryPassword,
+        session.step_up_tokens.change_password,
+      )
+      localStorage.setItem('token', data.access_token)
+      const { data: user } = await me()
+      setAuth(user, data.access_token)
+      navigate('/')
+    } catch {
+      // Deliberately one message: the server answers the same 401 for a wrong
+      // code and an unknown account, and the UI must not undo that.
+      setError(t('auth.recoveryFailed'))
+      localStorage.removeItem('token')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,13 +84,18 @@ export default function LoginPage() {
             </p>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+        <form
+          onSubmit={recovering ? handleRecovery : handleSubmit}
+          className="bg-white rounded-xl border border-navy/10 p-6 space-y-4"
+        >
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              {t('auth.email')}
+              {recovering ? t('auth.recoveryIdentifier') : t('auth.email')}
             </label>
             <input
-              type="email"
+              /* Not `type="email"` in recovery: the identifier may be an npub,
+                 and the browser would refuse to submit it. */
+              type={recovering ? 'text' : 'email'}
               value={loginVal}
               onChange={(e) => setLoginVal(e.target.value)}
               required
@@ -67,19 +106,58 @@ export default function LoginPage() {
               placeholder="user@example.com"
             />
           </div>
-          <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              {t('auth.password')}
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
+          {recovering ? (
+            <>
+              <div>
+                <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+                  {t('auth.recoveryCode')}
+                </label>
+                <input
+                  type="text"
+                  value={recoveryCode}
+                  onChange={(e) => setRecoveryCode(e.target.value)}
+                  required
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  data-testid="recovery-code-input"
+                  className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+                  placeholder="XXXX-XXXX-XXXX"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+                  {t('auth.recoveryNewPassword')}
+                </label>
+                <input
+                  type="password"
+                  value={recoveryPassword}
+                  onChange={(e) => setRecoveryPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+                  placeholder="••••••••"
+                />
+              </div>
+              <p className="text-xs font-body text-navy/50">
+                {t('auth.recoveryNotice')}
+              </p>
+            </>
+          ) : (
+            <div>
+              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+                {t('auth.password')}
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+                placeholder="••••••••"
+              />
+            </div>
+          )}
           {error && (
             <p className="text-xs font-mono text-orange-600">{error}</p>
           )}
@@ -88,7 +166,22 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
-            {loading ? t('auth.logging') : t('auth.login')}
+            {loading
+              ? t('auth.logging')
+              : recovering
+                ? t('auth.recoverySubmit')
+                : t('auth.login')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setRecovering(!recovering)
+              setError('')
+            }}
+            data-testid="recovery-toggle"
+            className="w-full text-xs font-body text-navy/50"
+          >
+            {recovering ? t('auth.recoveryBack') : t('auth.recoveryStart')}
           </button>
         </form>
         <div className="mt-4">

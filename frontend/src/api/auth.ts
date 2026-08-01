@@ -59,7 +59,37 @@ export interface User {
   // T3.15 — whether a password exists. Never the hash, never a hint: it only
   // decides whether the profile says "set" or "change".
   has_password?: boolean
+  // T3.16 — how many recovery codes are still unused. A count, never the codes:
+  // the server cannot show them a second time and does not pretend otherwise.
+  recovery_codes_remaining?: number
 }
+
+// ── T3.16 — recovery codes ───────────────────────────────────────────────────
+
+/** Generating replaces any previous set, so the answer below is the only place
+ *  these strings ever exist outside the user's hands. */
+export const issueRecoveryCodes = (stepUpToken: string) =>
+  api.post<{ codes: string[]; generated_at: string }>(
+    '/api/auth/recovery/codes',
+    {},
+    { headers: { 'X-Step-Up-Token': stepUpToken } },
+  )
+
+export interface RecoverySession {
+  access_token: string
+  token_type: string
+  scope: string
+  codes_remaining: number
+  /** Grants for exactly the operations a locked-out account needs; keyed by
+   *  step-up scope. Consuming a code *is* the proof step-up asks for. */
+  step_up_tokens: Record<string, string>
+}
+
+/** `identifier` is an email or an npub — whichever the account has. The server
+ *  answers the same 401 for a wrong code and an unknown account on purpose, so
+ *  the UI must not try to tell the user which one it was. */
+export const consumeRecoveryCode = (identifier: string, code: string) =>
+  api.post<RecoverySession>('/api/auth/recovery/consume', { identifier, code })
 
 /** T3.15 — moving to a new address. Two steps on purpose: the change is only
  *  requested here, and lands when a code sent to the new mailbox comes back

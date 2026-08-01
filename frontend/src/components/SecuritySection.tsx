@@ -4,6 +4,7 @@ import {
   cancelEmailChange,
   changeEmail,
   changePassword,
+  issueRecoveryCodes,
   requestEmailCode,
   verifyEmail,
   type User,
@@ -23,7 +24,7 @@ import StepUpDialog from './StepUpDialog'
  *  rather than the recovery channel — and a stolen session cannot redirect
  *  recovery mail without also reading the new mailbox.
  */
-type Pending = 'email' | 'password' | null
+type Pending = 'email' | 'password' | 'recovery' | null
 
 interface Props {
   user: User
@@ -47,6 +48,11 @@ export default function SecuritySection({ user, onChanged }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  /** T3.16 — the codes exist in the browser for exactly as long as this state
+   *  does. They are never re-fetchable: the server holds digests. */
+  const [freshCodes, setFreshCodes] = useState<string[] | null>(null)
+
+  const codesLeft = user.recovery_codes_remaining ?? 0
 
   const pendingEmail = user.pending_email || null
 
@@ -97,6 +103,41 @@ export default function SecuritySection({ user, onChanged }: Props) {
     } finally {
       setBusy(false)
     }
+  }
+
+  const issueCodes = async (token: string) => {
+    setBusy(true)
+    setError('')
+    try {
+      const { data } = await issueRecoveryCodes(token)
+      setConfirming(null)
+      setFreshCodes(data.codes)
+      await onChanged()
+    } catch {
+      setError(t('security.recoveryFailed') as string)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const copyCodes = () => {
+    if (freshCodes) void navigator.clipboard?.writeText(freshCodes.join('\n'))
+  }
+
+  /** Plain text, one code per line — the format that survives being printed,
+   *  mailed to yourself or pasted into a password manager. */
+  const downloadCodes = () => {
+    if (!freshCodes) return
+    const blob = new Blob(
+      [`${t('security.recoveryFileHeader')}\n\n${freshCodes.join('\n')}\n`],
+      { type: 'text/plain' },
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'vimana-recovery-codes.txt'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const confirmCode = async () => {
@@ -301,6 +342,97 @@ export default function SecuritySection({ user, onChanged }: Props) {
         )}
       </div>
 
+      {/* ── recovery codes ── */}
+      <div className="space-y-3 border-t border-navy/10 pt-4">
+        <div className="text-xs font-body text-navy/50">
+          {t('security.recoveryLabel')}
+        </div>
+
+        {freshCodes ? (
+          /* Shown once. Not a warning about danger — a reminder that the server
+             keeps digests and physically cannot repeat this screen. */
+          <div className="border border-cyan/40 bg-cyan/5 rounded-lg p-3 space-y-3">
+            <p className="text-sm font-body text-navy" data-testid="recovery-once">
+              {t('security.recoveryOnce')}
+            </p>
+            <MonoText className="block">
+              <ul
+                data-testid="recovery-codes"
+                className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-navy"
+              >
+                {freshCodes.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            </MonoText>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={downloadCodes}
+                data-testid="recovery-download"
+                className="flex-1 bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium"
+              >
+                {t('security.recoveryDownload')}
+              </button>
+              <button
+                type="button"
+                onClick={copyCodes}
+                className="px-3 border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+              >
+                {t('security.recoveryCopy')}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFreshCodes(null)}
+              data-testid="recovery-saved"
+              className="w-full text-sm font-body text-navy/50"
+            >
+              {t('security.recoverySaved')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm font-body text-navy/60" data-testid="recovery-left">
+              {codesLeft > 0
+                ? /* `n`, not `count`: i18next treats `count` as the plural
+                     selector, and the phrasing is deliberately number-first so
+                     no locale needs plural forms at all. */
+                  t('security.recoveryLeft', { n: codesLeft })
+                : t('security.recoveryNone')}
+            </p>
+            {/* Low-or-empty is stated where it can be fixed, not as a banner
+                following the user around the product. */}
+            {codesLeft <= 2 && (
+              <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+                <p className="text-xs font-body text-navy" data-testid="recovery-warning">
+                  {t('security.recoveryWarning')}
+                </p>
+              </div>
+            )}
+            <p className="text-xs font-body text-navy/50">
+              {/* The honest boundary, and it moves with the rung the account is
+                  on (D-KEY-TIERS): a code brings back the way in, and — while
+                  the platform still holds a copy of the key — the vaults too. */}
+              {user.nostr_pubkey
+                ? t('security.recoveryScopeWithKey')
+                : t('security.recoveryScope')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setConfirming('recovery')}
+              disabled={busy}
+              data-testid="recovery-generate"
+              className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
+            >
+              {codesLeft > 0
+                ? t('security.recoveryRegenerate')
+                : t('security.recoveryGenerate')}
+            </button>
+          </>
+        )}
+      </div>
+
       {/* Opened by the user, not by the form becoming valid: a grant is
           single-use and lives five minutes, so minting one before they have
           decided to go ahead would spend it for nothing. Cancelling returns to
@@ -326,6 +458,19 @@ export default function SecuritySection({ user, onChanged }: Props) {
             `${t('security.passwordConfirmBody')} ${t('security.sessionsWarning')}`
           }
           onConfirm={submitPassword}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+      {confirming === 'recovery' && (
+        <StepUpDialog
+          scope="add_auth_method"
+          title={
+            (codesLeft > 0
+              ? t('security.recoveryRegenerate')
+              : t('security.recoveryGenerate')) as string
+          }
+          body={t('security.recoveryConfirmBody') as string}
+          onConfirm={issueCodes}
           onCancel={() => setConfirming(null)}
         />
       )}

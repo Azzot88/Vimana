@@ -502,6 +502,16 @@ async def consume_recovery_code(
     ).scalar() or 0
     await db.commit()
 
+    # The owner hears about it even if it was not them — especially if it was
+    # not them. Fire-and-forget: a broker hiccup must not fail a recovery.
+    if user.email:
+        from app.tasks.notifications import send_recovery_code_used
+
+        try:
+            send_recovery_code_used.delay(str(user.id), int(remaining))
+        except Exception:
+            pass
+
     token = create_access_token(
         str(user.id), expires_delta=timedelta(minutes=15), scope=RECOVERY_SCOPE
     )

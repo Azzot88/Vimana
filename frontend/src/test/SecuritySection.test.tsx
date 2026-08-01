@@ -23,6 +23,9 @@ vi.mock('../api/auth', async () => {
       .mockResolvedValue({ data: { status: 'changed', access_token: 'fresh-token' } }),
     requestEmailCode: vi.fn().mockResolvedValue({ data: { status: 'sent' } }),
     verifyEmail: vi.fn().mockResolvedValue({ data: { status: 'changed' } }),
+    issueRecoveryCodes: vi.fn().mockResolvedValue({
+      data: { codes: ['AAAA-BBBB-CCCC', 'DDDD-EEEE-FFFF'], generated_at: 'now' },
+    }),
   }
 })
 
@@ -132,5 +135,36 @@ describe('SecuritySection', () => {
     )
     fireEvent.click(screen.getByTestId('security-cancel-change'))
     expect(cancelEmailChange).toHaveBeenCalled()
+  })
+
+  // ── T3.16 — recovery codes ────────────────────────────────────────────────
+
+  it('says how many codes are left and warns while it can still be fixed', () => {
+    renderWithProviders(
+      <SecuritySection user={{ ...base, recovery_codes_remaining: 2 }} onChanged={noop} />,
+    )
+    expect(screen.getByTestId('recovery-left')).toHaveTextContent('2')
+    // Two is already low: the warning has to arrive while signing in still
+    // works, not once the last code is gone.
+    expect(screen.getByTestId('recovery-warning')).toBeInTheDocument()
+  })
+
+  it('does not nag while the account has codes to spare', () => {
+    renderWithProviders(
+      <SecuritySection user={{ ...base, recovery_codes_remaining: 10 }} onChanged={noop} />,
+    )
+    expect(screen.queryByTestId('recovery-warning')).not.toBeInTheDocument()
+  })
+
+  it('asks for confirmation before replacing a set', () => {
+    renderWithProviders(
+      <SecuritySection user={{ ...base, recovery_codes_remaining: 10 }} onChanged={noop} />,
+    )
+    // Generating replaces the previous set, so it goes through step-up like
+    // every other change here — the codes are a way in, and minting new ones
+    // from a stolen session would outlive the password change meant to end it.
+    expect(screen.queryByTestId('step-up-confirm')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('recovery-generate'))
+    expect(screen.getByTestId('step-up-confirm')).toBeInTheDocument()
   })
 })
