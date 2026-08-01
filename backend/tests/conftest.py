@@ -819,6 +819,31 @@ async def _ensure_receiving_address_columns(engine) -> None:
                 )
 
 
+async def _ensure_recovery_codes(engine) -> None:
+    """T3.16 schema mirror: `recovery_codes`. Mirrors migration 0035.
+    Idempotent — `create_all` builds it, this covers a pre-existing test DB."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS recovery_codes (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    code_hash VARCHAR(255) NOT NULL,
+                    used_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_recovery_codes_user_hash "
+                "ON recovery_codes (user_id, code_hash)"
+            )
+        )
+
+
 async def _ensure_hot_path_indexes(engine) -> None:
     """T_PERF.1 schema mirror: indexes from migration 0034.
 
@@ -1089,6 +1114,7 @@ async def test_engine():
     await _ensure_receiving_addresses(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
+    await _ensure_recovery_codes(engine)
     await _ensure_hot_path_indexes(engine)
     await _seed_default_categories(engine)
     yield engine

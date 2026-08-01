@@ -13,11 +13,39 @@ from app.models.user import User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
+RECOVERY_SCOPE = "recovery"
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """An ordinary session. Scoped tokens are refused here **by default**.
+
+    T3.16 mints a token whose only purpose is to bind a new way in after a
+    recovery code was used. Whitelisting it per endpoint would mean every route
+    written from now on inherits it by forgetting to think about it; refusing
+    any token that carries a `scope` claim inverts that — a route must ask for
+    the scoped dependency on purpose.
+    """
+    return await _resolve_user(token, db, allow_scope=None)
+
+
+async def get_recovery_or_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """For the two doors a locked-out user needs: set a password, register a
+    passkey. Accepts an ordinary session as well, because someone who still has
+    one is doing the same, entirely normal thing."""
+    return await _resolve_user(token, db, allow_scope=RECOVERY_SCOPE)
+
+
+async def _resolve_user(token: str, db: AsyncSession, *, allow_scope: str | None) -> User:
     payload = decode_access_token(token)
+    scope = payload.get("scope")
+    if scope is not None and scope != allow_scope:
+        raise HTTPException(status_code=403, detail="Token is not valid for this action")
     jti = payload.get("jti")
     if jti and await is_blacklisted(jti):
         raise HTTPException(status_code=401, detail="Token revoked")

@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_recovery_or_current_user
 from app.core.challenge import (
     CHALLENGE_TTL_SECONDS,
     ChallengeUnavailable,
@@ -152,7 +152,11 @@ async def _take(scope: str, ceremony_id: str) -> str:
 @limiter.limit("20/hour")
 async def register_options(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    # T3.16 — the second door left to a locked-out account: a recovery-scoped
+    # token may register a new device. Deleting one still requires a full
+    # session plus step-up (see `unlink` below) — losing a phone should let you
+    # add a key, never quietly remove somebody else's.
+    current_user: User = Depends(get_recovery_or_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     existing = (
@@ -184,7 +188,7 @@ async def register_options(
 async def register_verify(
     request: Request,
     body: VerifyIn,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_recovery_or_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     stored = await _take(SCOPE_REGISTER, body.ceremony_id)

@@ -1,5 +1,5 @@
 from app.models.address import ReceivingAddress
-from app.models.user import User
+from app.models.user import RecoveryCode, User
 from app.models.social import InviteLink, Connection
 from app.models.marketplace import Trip, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant, DealParticipant, DealParticipantRole
@@ -17,7 +17,7 @@ from app.models.waitlist import WaitlistEntry
 from app.models.webauthn import WebAuthnCredential
 
 __all__ = [
-    "User", "ReceivingAddress",
+    "User", "RecoveryCode", "ReceivingAddress",
     "InviteLink", "Connection",
     "Trip", "Order", "TripStatus", "OrderStatus", "Category", "DEFAULT_CATEGORIES",
     "TripInquiry", "InquiryMessage",

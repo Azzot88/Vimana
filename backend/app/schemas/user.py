@@ -169,6 +169,9 @@ class MeOut(UserOut):
     # T3.15 — lets the profile say "set a password" instead of "change" it, and
     # nothing more: the hash itself never leaves the server.
     has_password: bool = False
+    # T3.16 — drives the "you have N codes left" banner. A count, never the
+    # codes: the platform cannot show them again and should not pretend it can.
+    recovery_codes_remaining: int = 0
     receiving_country_iso: str | None = None
     receiving_city: str | None = None
     receiving_city_geoname_id: int | None = None
@@ -182,3 +185,37 @@ class MeOut(UserOut):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# T3.16 — recovery codes.
+
+
+class RecoveryCodesOut(BaseModel):
+    """The one and only moment these strings leave the server."""
+
+    codes: list[str]
+    generated_at: datetime
+
+
+class RecoveryConsumeBody(BaseModel):
+    """`identifier` is an email or an npub (hex) — whichever the account has.
+    Someone who lost their only device still knows one of them, and demanding
+    the right *kind* at the worst possible moment is a poor trade."""
+
+    identifier: str
+    code: str
+
+
+class RecoverySessionOut(BaseModel):
+    """A way to bind a new authenticator, not a session.
+
+    `scope` is echoed so the client can see what it holds; `step_up_tokens` are
+    included because the accounts that need this route usually have no other
+    proof left to offer.
+    """
+
+    access_token: str
+    token_type: str = "bearer"
+    scope: str
+    codes_remaining: int
+    step_up_tokens: dict[str, str]

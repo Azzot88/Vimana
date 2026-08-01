@@ -567,3 +567,142 @@ async def test_a_token_with_no_issue_time_is_refused_after_a_retirement(
         "/api/auth/me", headers={"Authorization": f"Bearer {legacy}"}
     )
     assert resp.status_code == 401, resp.text
+
+
+# ── T3.16 — recovery codes ───────────────────────────────────────────────────
+#
+# A code is the last door into an account that may have no other. The properties
+# worth pinning are therefore about what it does *not* open: it is not a session,
+# it cannot be spent twice, and it says nothing about which accounts exist.
+
+
+async def _issue_codes(client, headers) -> list[str]:
+    token = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/auth/recovery/codes", headers={**headers, "X-Step-Up-Token": token}
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()["codes"]
+
+
+async def test_ten_distinct_codes_are_issued_once(client):
+    _, headers = await _account(client, "rec-issue")
+    codes = await _issue_codes(client, headers)
+
+    assert len(codes) == 10
+    assert len(set(codes)) == 10, "codes must not repeat within a set"
+
+    me = await client.get("/api/auth/me", headers=headers)
+    assert me.json()["recovery_codes_remaining"] == 10
+    # The plaintext exists in that one response and nowhere else — /me returns a
+    # count, never the strings.
+    assert "codes" not in me.json()
+
+
+async def test_issuing_requires_step_up(client):
+    _, headers = await _account(client, "rec-nostep")
+    resp = await client.post("/api/auth/recovery/codes", headers=headers)
+    assert resp.status_code == 422, "X-Step-Up-Token is required"
+
+
+async def test_regenerating_kills_the_previous_set(client):
+    email, headers = await _account(client, "rec-regen")
+    first = await _issue_codes(client, headers)
+    await _issue_codes(client, headers)
+
+    spent = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": first[0]},
+    )
+    assert spent.status_code == 401, "a replaced code must not open anything"
+
+
+async def test_a_code_buys_a_scoped_token_not_a_session(client):
+    email, headers = await _account(client, "rec-scope")
+    codes = await _issue_codes(client, headers)
+
+    resp = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": codes[0]},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["scope"] == "recovery"
+    assert body["codes_remaining"] == 9
+
+    scoped = {"Authorization": f"Bearer {body['access_token']}"}
+    ordinary = await client.get("/api/auth/me", headers=scoped)
+    assert ordinary.status_code == 403, "a recovery token is not a session"
+
+
+async def test_a_code_can_set_a_password_and_then_is_spent(client):
+    email, headers = await _account(client, "rec-pass")
+    codes = await _issue_codes(client, headers)
+
+    consumed = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": codes[0]},
+    )
+    body = consumed.json()
+    scoped = {"Authorization": f"Bearer {body['access_token']}"}
+    new_password = "Recovered-9182!"
+
+    changed = await client.put(
+        "/api/auth/me/password",
+        headers={**scoped, "X-Step-Up-Token": body["step_up_tokens"]["change_password"]},
+        json={"new_password": new_password},
+    )
+    assert changed.status_code == 200, changed.text
+
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": new_password}
+    )
+    assert login.status_code == 200, "the whole point: the account is reachable again"
+
+    again = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": codes[0]},
+    )
+    assert again.status_code == 401, "a spent code is spent"
+
+
+async def test_unknown_account_and_wrong_code_are_indistinguishable(client):
+    email, headers = await _account(client, "rec-oracle")
+    await _issue_codes(client, headers)
+
+    wrong = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": "AAAA-BBBB-CCCC"},
+    )
+    missing = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": "nobody-here@vimana.test", "code": "AAAA-BBBB-CCCC"},
+    )
+    assert wrong.status_code == missing.status_code == 401
+    assert wrong.json()["detail"] == missing.json()["detail"], (
+        "different answers would turn this into a lookup for which accounts exist"
+    )
+
+
+async def test_codes_are_typed_the_way_people_write_them(client):
+    email, headers = await _account(client, "rec-typing")
+    codes = await _issue_codes(client, headers)
+
+    sloppy = codes[0].lower().replace("-", " ")
+    resp = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email, "code": sloppy},
+    )
+    assert resp.status_code == 200, "case and dashes are presentation, not secret"
+
+
+async def test_a_code_cannot_be_found_by_another_account(client):
+    email_a, headers_a = await _account(client, "rec-a")
+    codes_a = await _issue_codes(client, headers_a)
+    email_b, _ = await _account(client, "rec-b")
+
+    resp = await client.post(
+        "/api/auth/recovery/consume",
+        json={"identifier": email_b, "code": codes_a[0]},
+    )
+    assert resp.status_code == 401

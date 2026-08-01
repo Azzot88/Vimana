@@ -1,12 +1,16 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import (
+    RECOVERY_SCOPE,
+    get_current_user,
+    get_recovery_or_current_user,
+)
 from app.core.avatar_url import me_out_with_avatar
 from app.core.database import get_db
 from app.core.email_verification import (
@@ -24,15 +28,26 @@ from app.core.email_verification import (
 )
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
-from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
-from app.core.step_up import StepUpScope, consume as consume_step_up
+from app.core.security import (
+    RECOVERY_CODE_COUNT,
+    create_access_token,
+    decode_access_token,
+    generate_recovery_code,
+    hash_password,
+    hash_recovery_code,
+    verify_password,
+)
+from app.core.step_up import StepUpScope, consume as consume_step_up, grant as grant_step_up
 from app.core.token_blacklist import blacklist_jti
-from app.models.user import User
+from app.models.user import RecoveryCode, User
 from app.schemas.user import (
     EmailChangeBody,
     EmailVerifyBody,
     MeOut,
     PasswordChangeBody,
+    RecoveryCodesOut,
+    RecoveryConsumeBody,
+    RecoverySessionOut,
     Token,
     UserCreate,
     UserLogin,
@@ -249,7 +264,10 @@ async def change_password(
     step_up_token: str = Header(
         ..., alias="X-Step-Up-Token", description="From POST /api/auth/step-up/verify"
     ),
-    current_user: User = Depends(get_current_user),
+    # T3.16 — also reachable with a recovery-scoped token: setting a password is
+    # one of the two doors a locked-out account has left, and the step-up grant
+    # that comes with a consumed code is what authorises it.
+    current_user: User = Depends(get_recovery_or_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """T3.15 — set or replace the password.
@@ -329,9 +347,27 @@ async def logout(token: str = Depends(_oauth2_scheme)):
 
 
 @router.get("/me", response_model=MeOut)
-async def me(current_user: User = Depends(get_current_user)):
+async def me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Owner view — includes private `receiving_*` fields + presigned avatar URL."""
-    return me_out_with_avatar(current_user)
+    out = me_out_with_avatar(current_user)
+    # T3.16 — counted here rather than kept as a column: a denormalised counter
+    # would be a second truth about the same rows, and the query is a COUNT over
+    # at most ten indexed rows.
+    out.recovery_codes_remaining = int(
+        (
+            await db.execute(
+                select(func.count(RecoveryCode.id)).where(
+                    RecoveryCode.user_id == current_user.id,
+                    RecoveryCode.used_at.is_(None),
+                )
+            )
+        ).scalar()
+        or 0
+    )
+    return out
 
 
 _NOT_NULL_UPDATE_FIELDS = {
@@ -360,3 +396,126 @@ async def update_me(
     await db.commit()
     await db.refresh(current_user)
     return me_out_with_avatar(current_user)
+
+
+# ─────────────────────────────────────────────────────────────
+# T3.16 — recovery codes: a spare way in, never a spare identity
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post("/recovery/codes", response_model=RecoveryCodesOut)
+@limiter.limit("10/hour")
+async def issue_recovery_codes(
+    request: Request,
+    step_up_token: str = Header(
+        ..., alias="X-Step-Up-Token", description="From POST /api/auth/step-up/verify"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate ten codes, shown exactly once, replacing any previous set.
+
+    One endpoint for the first set and every later one: to the user it is the
+    same action, and a separate "regenerate" would only add a state to explain.
+    Under step-up in both cases — codes minted from a stolen session would
+    outlive the password change that was supposed to end it.
+    """
+    await consume_step_up(
+        str(current_user.id), StepUpScope.ADD_AUTH_METHOD, step_up_token
+    )
+
+    # Previous codes die with the new set, in the same transaction: two live
+    # sets would mean a code the user believes replaced still opens the door.
+    await db.execute(
+        RecoveryCode.__table__.delete().where(RecoveryCode.user_id == current_user.id)
+    )
+
+    plaintext = [generate_recovery_code() for _ in range(RECOVERY_CODE_COUNT)]
+    for code in plaintext:
+        db.add(RecoveryCode(user_id=current_user.id, code_hash=hash_recovery_code(code)))
+    await db.commit()
+
+    # The only moment these strings exist outside the user's hands.
+    return RecoveryCodesOut(codes=plaintext, generated_at=datetime.now(timezone.utc))
+
+
+@router.post("/recovery/consume", response_model=RecoverySessionOut)
+@limiter.limit("5/hour")
+async def consume_recovery_code(
+    request: Request,
+    body: RecoveryConsumeBody,
+    db: AsyncSession = Depends(get_db),
+):
+    """Spend one code; get back the ability to bind a new way in — nothing more.
+
+    The token returned here carries a scope, and `get_current_user` refuses
+    scoped tokens outright: it opens exactly the two doors a locked-out person
+    needs (set a password, register a passkey) and no others. A stolen code
+    therefore does not become a full session.
+
+    It also hands out step-up grants, because consuming a one-time code the user
+    wrote down *is* the proof step-up asks for — and the accounts most likely to
+    need this have no other proof left to give.
+
+    Every failure answers the same 401. Distinguishing "no such account" from
+    "wrong code" would turn this into a lookup service for which identifiers
+    exist.
+    """
+    invalid = HTTPException(status_code=401, detail="Invalid identifier or code")
+
+    identifier = (body.identifier or "").strip()
+    if not identifier:
+        raise invalid
+    lookup = normalize_email(identifier) if "@" in identifier else identifier.lower()
+    column = User.email if "@" in identifier else User.nostr_pubkey
+    user = (
+        await db.execute(select(User).where(column == lookup))
+    ).scalars().first()
+    if user is None:
+        raise invalid
+
+    digest = hash_recovery_code(body.code)
+    row = (
+        await db.execute(
+            select(RecoveryCode).where(
+                RecoveryCode.user_id == user.id,
+                RecoveryCode.code_hash == digest,
+                RecoveryCode.used_at.is_(None),
+            )
+        )
+    ).scalars().first()
+    if row is None:
+        raise invalid
+
+    row.used_at = datetime.now(timezone.utc)
+    # Flushed explicitly rather than leaning on autoflush: the count below must
+    # already exclude the code being spent, and "it works because of a session
+    # default" is the kind of thing that changes under you.
+    await db.flush()
+    remaining = (
+        await db.execute(
+            select(func.count(RecoveryCode.id)).where(
+                RecoveryCode.user_id == user.id,
+                RecoveryCode.used_at.is_(None),
+            )
+        )
+    ).scalar() or 0
+    await db.commit()
+
+    token = create_access_token(
+        str(user.id), expires_delta=timedelta(minutes=15), scope=RECOVERY_SCOPE
+    )
+    step_up_tokens = {
+        StepUpScope.CHANGE_PASSWORD.value: await grant_step_up(
+            str(user.id), StepUpScope.CHANGE_PASSWORD
+        ),
+        StepUpScope.ADD_AUTH_METHOD.value: await grant_step_up(
+            str(user.id), StepUpScope.ADD_AUTH_METHOD
+        ),
+    }
+    return RecoverySessionOut(
+        access_token=token,
+        scope=RECOVERY_SCOPE,
+        codes_remaining=int(remaining),
+        step_up_tokens=step_up_tokens,
+    )

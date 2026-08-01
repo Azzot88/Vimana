@@ -5,6 +5,8 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Float,
+    ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     SmallInteger,
@@ -151,3 +153,40 @@ class User(Base):
         """Derived flag for `MeOut`. An account without an email is not
         'unverified' — it simply has nothing to prove (T3.13/T3.14 paths)."""
         return self.email_verified_at is not None
+
+
+class RecoveryCode(Base):
+    """T3.16 — a spare way *in*, never a spare identity.
+
+    One row per code, hashed the same way a password is: the platform can
+    neither show a code again nor use one itself. Consuming a code proves
+    possession of something the account holder wrote down, which is exactly the
+    question step-up asks — so a code is accepted as a step-up proof rather than
+    opening a parallel door beside it.
+
+    What it restores depends on where the key lives (`D-KEY-TIERS`): on the
+    lower rungs the platform still holds a copy, so a code brings back the
+    account *and* the ability to read the vaults; once that copy is deleted a
+    code brings back the account only, and the key comes back from the user's
+    own Identity Vault file. Both sentences are true at once, which is why the
+    UI text next to the codes has to follow the rung.
+    """
+
+    __tablename__ = "recovery_codes"
+    __table_args__ = (
+        Index("ix_recovery_codes_user_id", "user_id"),
+        # The lookup the consume path walks: this account, this digest.
+        Index("ix_recovery_codes_user_hash", "user_id", "code_hash"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    code_hash: Mapped[str] = mapped_column(String(255))
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
