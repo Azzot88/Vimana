@@ -218,6 +218,40 @@ async def test_deleted_message_is_detected(
     assert content["mismatches"][0]["reason"] == "message missing"
 
 
+async def test_unreadable_reference_reads_as_missing_not_as_a_crash(
+    client, session_maker, carrier_headers, sender_headers
+):
+    """A chain payload whose `message_id` is not a UUID at all.
+
+    We write those ids ourselves, so this only happens to a corrupted row — and
+    a corrupted row is precisely what this function exists to report. Before
+    T_PERF.1 the id went straight into `uuid.UUID(...)` per event, so the
+    endpoint answered 500 and said nothing about which entry was wrong.
+    """
+    deal_id = await _fresh_deal(client, carrier_headers, sender_headers)
+    await _post_message(client, sender_headers, deal_id)
+
+    async with session_maker() as db:
+        await db.execute(
+            text(
+                "UPDATE deal_events SET payload = jsonb_set(payload::jsonb,"
+                " '{message_id}', '\"not-a-uuid\"')::json"
+                " WHERE deal_id = :deal AND event_type = 'message_added'"
+            ),
+            {"deal": uuidlib.UUID(str(deal_id))},
+        )
+        await db.commit()
+
+    async with session_maker() as db:
+        content = await verify_content(db, uuidlib.UUID(str(deal_id)))
+    assert content["content_ok"] is False
+    assert content["mismatches"][0]["reason"] == "message missing"
+    assert content["mismatches"][0]["ref_id"] == "not-a-uuid"
+
+    resp = await client.get(f"/api/deals/{deal_id}/chain", headers=sender_headers)
+    assert resp.status_code == 200
+
+
 # ─────────────────────────────────────────────────────────────
 # 3. Sealing
 # ─────────────────────────────────────────────────────────────

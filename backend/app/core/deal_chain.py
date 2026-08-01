@@ -366,6 +366,34 @@ def _broken(events: list[DealEvent], seq: int, reason: str) -> dict:
     }
 
 
+def _uuid_or_none(raw) -> uuid.UUID | None:
+    """Payload ids are written by us, but a corrupted row is exactly what this
+    module exists to detect — so a malformed id reads as "row not found" and
+    becomes a mismatch, not a 500."""
+    if raw is None:
+        return None
+    try:
+        return uuid.UUID(str(raw))
+    except (ValueError, AttributeError):
+        return None
+
+
+def _collect(bucket: set[uuid.UUID], raw) -> None:
+    parsed = _uuid_or_none(raw)
+    if parsed is not None:
+        bucket.add(parsed)
+
+
+async def _load_by_ids(db: AsyncSession, model, ids: set[uuid.UUID]) -> dict:
+    """`{id: row}` for the ids that exist. Missing ones are simply absent."""
+    if not ids:
+        return {}
+    rows = (
+        (await db.execute(select(model).where(model.id.in_(ids)))).scalars().all()
+    )
+    return {row.id: row for row in rows}
+
+
 async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
     """T3.7 — check chained content pointers against the stored content.
 
@@ -402,6 +430,34 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
         .all()
     )
 
+    # T3.9 — the identity branch below compares against the canonical container.
+    from app.models.verification import IdentityContainer
+
+    # Every referenced row is collected first and loaded in one query per kind.
+    # A `db.get` per event meant a 300-message vault cost 300 round trips on an
+    # endpoint any participant of the deal can call (T_PERF.1).
+    referenced: dict[type, set[uuid.UUID]] = {
+        DealVaultMessage: set(),
+        Attachment: set(),
+        IdentityContainer: set(),
+    }
+    for evt in events:
+        payload = evt.payload or {}
+        if evt.event_type == DealEventType.message_added:
+            _collect(referenced[DealVaultMessage], payload.get("message_id"))
+        elif evt.event_type == DealEventType.identity_ref:
+            _collect(referenced[Attachment], payload.get("attachment_id"))
+            _collect(referenced[IdentityContainer], payload.get("container_id"))
+        else:
+            _collect(referenced[Attachment], payload.get("attachment_id"))
+
+    loaded = {
+        model: await _load_by_ids(db, model, ids) for model, ids in referenced.items()
+    }
+    messages = loaded[DealVaultMessage]
+    attachments = loaded[Attachment]
+    containers = loaded[IdentityContainer]
+
     mismatches: list[dict] = []
     checked_messages = 0
     checked_files = 0
@@ -413,12 +469,10 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
             # T3.9 — triple match: chain payload == deal attachment copy ==
             # canonical IdentityContainer. Any divergence between the two
             # vaults (or a deleted row) surfaces here.
-            from app.models.verification import IdentityContainer
-
             checked_identity += 1
             ref_hash = payload.get("doc_hash")
             att_ref = payload.get("attachment_id")
-            att = await db.get(Attachment, uuid.UUID(att_ref)) if att_ref else None
+            att = attachments.get(_uuid_or_none(att_ref))
             if att is None:
                 mismatches.append(
                     {"seq": evt.seq, "kind": "identity", "ref_id": att_ref, "reason": "identity attachment missing"}
@@ -428,9 +482,7 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
                     {"seq": evt.seq, "kind": "identity", "ref_id": att_ref, "reason": "identity copy hash mismatch"}
                 )
             cont_ref = payload.get("container_id")
-            cont = (
-                await db.get(IdentityContainer, uuid.UUID(cont_ref)) if cont_ref else None
-            )
+            cont = containers.get(_uuid_or_none(cont_ref))
             if cont is None:
                 mismatches.append(
                     {"seq": evt.seq, "kind": "identity", "ref_id": cont_ref, "reason": "identity container missing"}
@@ -443,7 +495,7 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
         if evt.event_type == DealEventType.message_added:
             checked_messages += 1
             ref = payload.get("message_id")
-            msg = await db.get(DealVaultMessage, uuid.UUID(ref)) if ref else None
+            msg = messages.get(_uuid_or_none(ref))
             if msg is None or msg.deal_id != deal_id:
                 mismatches.append(
                     {"seq": evt.seq, "kind": "message", "ref_id": ref, "reason": "message missing"}
@@ -457,7 +509,7 @@ async def verify_content(db: AsyncSession, deal_id: uuid.UUID) -> dict:
         else:
             checked_files += 1
             ref = payload.get("attachment_id")
-            att = await db.get(Attachment, uuid.UUID(ref)) if ref else None
+            att = attachments.get(_uuid_or_none(ref))
             if att is None:
                 mismatches.append(
                     {"seq": evt.seq, "kind": "file", "ref_id": ref, "reason": "attachment missing"}

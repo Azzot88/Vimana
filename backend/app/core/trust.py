@@ -10,7 +10,6 @@ the pair. Anything else raises `SybilGuardError`.
 from __future__ import annotations
 
 import uuid
-from collections import deque
 from datetime import datetime, timezone
 
 from sqlalchemy import and_, func, or_, select
@@ -191,30 +190,37 @@ async def bfs_circles(
     depth = max(1, min(depth, 6))
     visited: set[uuid.UUID] = {root_id}
     levels: dict[int, list[uuid.UUID]] = {0: [root_id]}
-    frontier: deque[tuple[uuid.UUID, int]] = deque([(root_id, 0)])
+    frontier: list[uuid.UUID] = [root_id]
 
-    while frontier:
-        node, d = frontier.popleft()
-        if d >= depth:
-            continue
+    # One query per level, not per node. The traversal is the same breadth-first
+    # walk; what changed is that a level's neighbours are asked for in a single
+    # `IN (...)` instead of a round trip per member. At depth 6 on a graph of any
+    # size that is the difference between six queries and one per person reached
+    # — which is why the follow-up recorded for this was a Redis cache. Caching
+    # the answer would have hidden the shape of the question (T_PERF.1).
+    for level in range(1, depth + 1):
+        if not frontier:
+            break
         conditions = [
-            TrustEdge.from_user_id == node,
+            TrustEdge.from_user_id.in_(frontier),
             TrustEdge.revoked_at.is_(None),
         ]
         if kind is not None:
             conditions.append(TrustEdge.kind == kind)
         rows = (
-            await db.execute(select(TrustEdge.to_user_id).where(*conditions))
+            await db.execute(
+                select(TrustEdge.to_user_id).where(*conditions).distinct()
+            )
         ).scalars().all()
-        next_level_bucket: list[uuid.UUID] = []
+        next_frontier: list[uuid.UUID] = []
         for target in rows:
             if target in visited:
                 continue
             visited.add(target)
-            next_level_bucket.append(target)
-            frontier.append((target, d + 1))
-        if next_level_bucket:
-            levels.setdefault(d + 1, []).extend(next_level_bucket)
+            next_frontier.append(target)
+        if next_frontier:
+            levels[level] = next_frontier
+        frontier = next_frontier
 
     return levels
 

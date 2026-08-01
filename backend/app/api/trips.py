@@ -1,8 +1,8 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, cast, Date
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -66,12 +66,24 @@ async def list_trips(
 ):
     stmt = select(Trip).where(Trip.status == TripStatus.open)
 
+    # Exact match, not `ilike '%code%'` (T_PERF.1). `origin`/`destination` hold
+    # IATA codes — `AirportSelect` can only emit one — so a substring match was
+    # both slower (a leading wildcard cannot use an index) and wrong: `?origin=A`
+    # matched every airport with an A in it. The query is upper-cased because a
+    # hand-typed `dxb` should still find `DXB`; stored values come from the
+    # picker and are already upper-case.
     if origin:
-        stmt = stmt.where(Trip.origin.ilike(f"%{origin}%"))
+        stmt = stmt.where(Trip.origin == origin.strip().upper())
     if destination:
-        stmt = stmt.where(Trip.destination.ilike(f"%{destination}%"))
+        stmt = stmt.where(Trip.destination == destination.strip().upper())
     if date:
-        stmt = stmt.where(cast(Trip.depart_at, Date) == date)
+        # Half-open UTC day instead of `cast(depart_at, Date) = :date`: a
+        # function on the column rules the index out for every row.
+        day_start = datetime.combine(date, time.min, tzinfo=timezone.utc)
+        stmt = stmt.where(
+            Trip.depart_at >= day_start,
+            Trip.depart_at < day_start + timedelta(days=1),
+        )
 
     items, next_cursor = await paginate_desc(db, stmt, Trip, after, clamp_limit(limit))
 

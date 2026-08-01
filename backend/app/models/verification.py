@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Enum as SAEnum,
     ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     String,
@@ -71,6 +72,8 @@ class VerificationSource(str, enum.Enum):
 
 class VerificationRequest(Base):
     __tablename__ = "verification_requests"
+    # Requests are always listed per deal (T_PERF.1, 0034).
+    __table_args__ = (Index("ix_verification_requests_deal_id", "deal_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
@@ -131,6 +134,9 @@ class VerificationBadge(Base):
     """Append-only trust event. Aggregation lives in `User.highest_verification_level`."""
 
     __tablename__ = "verification_badges"
+    # Read per user on profiles, trip cards and the hourly UBA recompute
+    # (T_PERF.1, 0034).
+    __table_args__ = (Index("ix_verification_badges_subject_id", "subject_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))

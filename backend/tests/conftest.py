@@ -819,6 +819,41 @@ async def _ensure_receiving_address_columns(engine) -> None:
                 )
 
 
+async def _ensure_hot_path_indexes(engine) -> None:
+    """T_PERF.1 schema mirror: indexes from migration 0034.
+
+    `create_all` builds indexes only for tables it creates, and these tables all
+    predate the migration — so without this the test database would keep drifting
+    from production exactly where the plans differ. Idempotent, and cheap on
+    tables this size."""
+    async with engine.begin() as conn:
+        for name, target in (
+            ("ix_deals_sender_id", "deals (sender_id)"),
+            ("ix_deals_carrier_id", "deals (carrier_id)"),
+            ("ix_trips_status_created", "trips (status, created_at, id)"),
+            ("ix_trips_carrier_id", "trips (carrier_id)"),
+            (
+                "ix_deal_vault_messages_deal_created",
+                "deal_vault_messages (deal_id, created_at, id)",
+            ),
+            ("ix_attachments_message_id", "attachments (message_id)"),
+            (
+                "ix_inquiry_messages_inquiry_created",
+                "inquiry_messages (inquiry_id, created_at, id)",
+            ),
+            ("ix_trust_edges_to_user_id", "trust_edges (to_user_id)"),
+            (
+                "ix_verification_requests_deal_id",
+                "verification_requests (deal_id)",
+            ),
+            (
+                "ix_verification_badges_subject_id",
+                "verification_badges (subject_id)",
+            ),
+        ):
+            await conn.execute(text(f"CREATE INDEX IF NOT EXISTS {name} ON {target}"))
+
+
 async def _ensure_inquiry_tables(engine) -> None:
     """T1.22 schema fix: trip_inquiries + inquiry_messages. Idempotent."""
     async with engine.begin() as conn:
@@ -1054,6 +1089,7 @@ async def test_engine():
     await _ensure_receiving_addresses(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
+    await _ensure_hot_path_indexes(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

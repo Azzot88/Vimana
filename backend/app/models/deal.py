@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, JSON, LargeBinary, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, Index, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -58,6 +58,11 @@ class AttachmentKind(str, enum.Enum):
 
 class Deal(Base):
     __tablename__ = "deals"
+    # `GET /api/deals` filters on either side of the deal (T_PERF.1, 0034).
+    __table_args__ = (
+        Index("ix_deals_sender_id", "sender_id"),
+        Index("ix_deals_carrier_id", "carrier_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id"))
@@ -152,6 +157,11 @@ class DealChainAnchor(Base):
 
 class DealVaultMessage(Base):
     __tablename__ = "deal_vault_messages"
+    # Chat read: filter by deal, order by (created_at, id) — one range scan
+    # instead of scan + sort (T_PERF.1, 0034).
+    __table_args__ = (
+        Index("ix_deal_vault_messages_deal_created", "deal_id", "created_at", "id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
@@ -292,6 +302,9 @@ class OperatorAccessGrant(Base):
 
 class Attachment(Base):
     __tablename__ = "attachments"
+    # `selectinload(...attachments)` fetches a whole chat page by message id
+    # (T_PERF.1, 0034).
+    __table_args__ = (Index("ix_attachments_message_id", "message_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deal_vault_messages.id"))

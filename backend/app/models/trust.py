@@ -13,7 +13,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum as SAEnum, Float, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum as SAEnum, Float, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -35,6 +35,11 @@ class TrustEdge(Base):
             "source_ref",
             name="uq_trust_edge_pair_kind_source",
         ),
+        # Edges *pointing at* a user — "verifications received" in
+        # `refresh_trust_counts`. The outgoing direction needs nothing: it leads
+        # the unique constraint above, and a leftmost prefix is an index
+        # (T_PERF.1, 0034).
+        Index("ix_trust_edges_to_user_id", "to_user_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Enum as SAEnum, Float, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -41,6 +41,12 @@ class OrderStatus(str, enum.Enum):
 
 class Trip(Base):
     __tablename__ = "trips"
+    # Marketplace listing filters on status and pages by (created_at, id);
+    # the second index serves a carrier's own trips (T_PERF.1, 0034).
+    __table_args__ = (
+        Index("ix_trips_status_created", "status", "created_at", "id"),
+        Index("ix_trips_carrier_id", "carrier_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     carrier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
@@ -112,6 +118,11 @@ class InquiryMessage(Base):
     scheme as DealVaultMessage (T1.21) — `text` is a property that wraps the
     ciphertext/nonce columns."""
     __tablename__ = "inquiry_messages"
+    # Same read shape as the vault chat: filter by thread, order by time
+    # (T_PERF.1, 0034).
+    __table_args__ = (
+        Index("ix_inquiry_messages_inquiry_created", "inquiry_id", "created_at", "id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     inquiry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trip_inquiries.id"))
