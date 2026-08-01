@@ -97,7 +97,8 @@
 - OCR/санкции — без API-ключей, всё локально (PaddleOCR + публичные CSV).
 
 **Фаза 3.5:**
-- `NOSTR_RELAY_URL` (наш публичный wss endpoint)
+- `NOSTR_PUBLISH_ENABLED` (мастер-переключатель всего, что уходит наружу: листинги рейсов и якоря цепи; по умолчанию `false`)
+- `NOSTR_RELAY_URL` — наш публичный endpoint, **`wss://<домен>/relay`** (TLS терминирует nginx, T_SEC.4); `NOSTR_OWN_RELAY_URL` — тот же relay изнутри compose-сети, `ws://nostr-relay:7777`
 - `NOSTR_RELAY_PRIVKEY` (служебный ключ для NIP-42 challenges + deletion events)
 - `NOSTR_FRIENDLY_RELAYS` (comma-separated whitelist wss:// адресов)
 
@@ -135,7 +136,7 @@
 - **Probe-пути блокируются** на уровне nginx: `.env`, `.git`, `wp-admin`, `.php`, `.aspx` → 403/404.
 - **Rate-limit** на `/api/auth/login` и `/api/auth/register` — slowapi + nginx `limit_req` дублированно.
 - **Публичные endpoint'ы** только `/health` (для docker healthcheck); всё остальное — JWT auth или RBAC.
-- **Наружу публикуется только nginx** (80/443) и, при включённом профиле `nostr`, relay (7777). `db`, `redis` и `backend` слушают `127.0.0.1` — T_SEC.3. До этого `backend` был опубликован на `0.0.0.0:8000` и открыт в security group: прямое обращение обходило TLS, security-заголовки, probe-deny и обе зоны `limit_req`, а ключ slowapi берётся из `X-Forwarded-For` (`core/rate_limit.py`), который прямой клиент подставляет сам. Доступ для отладки — SSH-туннель (`ssh -L 8000:127.0.0.1:8000`), не публикация порта.
+- **Наружу публикуется только nginx** (80/443). Relay с T_SEC.4 порт не публикует вовсе — он доступен как `wss://<домен>/relay` через тот же nginx; 7777 в security group можно закрыть. `db`, `redis` и `backend` слушают `127.0.0.1` — T_SEC.3. До этого `backend` был опубликован на `0.0.0.0:8000` и открыт в security group: прямое обращение обходило TLS, security-заголовки, probe-deny и обе зоны `limit_req`, а ключ slowapi берётся из `X-Forwarded-For` (`core/rate_limit.py`), который прямой клиент подставляет сам. Доступ для отладки — SSH-туннель (`ssh -L 8000:127.0.0.1:8000`), не публикация порта.
 
 ### 5.2 Developer setup — remote access
 

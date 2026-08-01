@@ -181,8 +181,12 @@ services:
     profiles: ["nostr"]
     restart: unless-stopped
     logging: *default-logging
-    ports:
-      - "7777:7777"
+    # No published port (T_SEC.4). The relay is reached over TLS through nginx
+    # at `wss://<host>/relay`; plain `ws://` on 7777 was unusable from any web
+    # client anyway (mixed content), and leaving it open would be a second door
+    # into the relay that skips the rate-limit zone and the real-IP header.
+    expose:
+      - "7777"
     volumes:
       - ./nostr/strfry.conf:/etc/strfry.conf:ro
       - ./nostr/write_policy.py:/etc/write_policy.py:ro
