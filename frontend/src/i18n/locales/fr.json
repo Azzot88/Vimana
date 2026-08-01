@@ -445,7 +445,7 @@
       "vaultPassNotice": "Ce n'est pas le mot de passe du compte, et nous ne la voyons jamais. Oubliez-la tant que nous détenons une copie de votre clé : vous retéléchargerez simplement le fichier avec une nouvelle.",
       "vaultConfirmBody": "Confirmez que c'est bien vous. La clé est scellée dans votre navigateur et le fichier enregistré sur cet appareil.",
       "vaultDone": "Enregistré. Conservez le fichier ailleurs que sur l'appareil depuis lequel vous vous connectez.",
-      &
+      "vaultOnlyYours": "Nous ne détenons plus de copie de cette clé — elle n'existe que dans votre Identity Vault.",
       "sealCta": "Sceller une clé que vous avez déjà",
       "sealKeyPlaceholder": "nsec1… ou les 64 caractères hex de votre sauvegarde",
       "sealLocalNotice": "Rien ne quitte cette page : la clé est scellée ici et le fichier enregistré sur cet appareil. De quoi remplacer une sauvegarde en clair par une version chiffrée.",
