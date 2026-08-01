@@ -790,3 +790,60 @@ async def test_nothing_to_release_once_our_copy_is_gone(client, session_maker):
         "/api/me/identity/release-key", headers=headers, json={"step_up_token": token}
     )
     assert resp.status_code == 409
+
+
+# ── T3.22 — deleting the platform's copy (rung 3) ────────────────────────────
+
+
+async def _release(client, headers) -> None:
+    token = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/me/identity/release-key", headers=headers, json={"step_up_token": token}
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_cannot_delete_our_copy_before_the_owner_has_one(client):
+    """The guard that keeps rung 3 a choice rather than a shredder: without a
+    downloaded Identity Vault, deleting our copy destroys the only one."""
+    _, headers = await _account(client, "rung3-early")
+    token = await _token_by_password(client, headers, StepUpScope.DECLARE_LOST)
+    resp = await client.request(
+        "DELETE",
+        "/api/me/identity/platform-copy",
+        headers={**headers, "X-Step-Up-Token": token},
+    )
+    assert resp.status_code == 409, resp.text
+
+
+async def test_deleting_our_copy_ends_what_the_server_can_do(client, session_maker):
+    """Rung 2 → 3. The key, the npub and the deals are untouched; what ends is
+    our ability to act — and it ends in the schema, not in a promise."""
+    _, headers = await _account(client, "rung3-ok")
+    before = await client.get("/api/me/keypair/status", headers=headers)
+    npub_before = before.json()["npub"]
+
+    await _release(client, headers)
+    token = await _token_by_password(client, headers, StepUpScope.DECLARE_LOST)
+    resp = await client.request(
+        "DELETE",
+        "/api/me/identity/platform-copy",
+        headers={**headers, "X-Step-Up-Token": token},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["key_copies"] == "user_only"
+    assert resp.json()["npub"] == npub_before, "the identity does not change — only who holds it"
+
+    me = await client.get("/api/auth/me", headers=headers)
+    async with session_maker() as db:
+        user = await db.get(User, uuid.UUID(me.json()["id"]))
+        assert user.nsec_encrypted is None, "no copy may survive on the server"
+
+    # Second call is a no-op rather than an error: the state asked for is the
+    # state we are in.
+    again = await client.request(
+        "DELETE",
+        "/api/me/identity/platform-copy",
+        headers={**headers, "X-Step-Up-Token": "unused"},
+    )
+    assert again.status_code == 200

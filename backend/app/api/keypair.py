@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -402,3 +402,48 @@ async def release_key(
     current_user.identity_file_released_at = datetime.now(timezone.utc)
     await db.commit()
     return KeyReleaseOut(nsec_hex=nsec_hex, npub_hex=current_user.nostr_pubkey or "")
+
+
+@router.delete("/me/identity/platform-copy", response_model=KeypairStatus)
+async def delete_platform_copy(
+    step_up_token: str = Header(
+        ..., alias="X-Step-Up-Token", description="From POST /api/auth/step-up/verify"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.22 — rung 3 of `D-KEY-TIERS`: we stop holding a copy of the key.
+
+    This is the only irreversible step on the ladder, and it is deliberately
+    small: the key does not change, the npub does not change, the deals stay
+    exactly where they were. What ends is our *ability* — after this the server
+    cannot sign or decrypt for this account, and that is a property of the
+    schema, not a promise.
+
+    **Refused unless the owner has taken a copy first.** Without that check the
+    button would be an identity shredder one click deep, for the very users who
+    have not yet understood what the key is. Sovereignty is the user's to
+    choose; walking into it blindfolded is not a choice.
+    """
+    if current_user.nsec_encrypted is None:
+        return _status(current_user)  # idempotent: already rung 3
+    if current_user.key_lost_at is not None:
+        raise HTTPException(status_code=409, detail="This identity was declared lost")
+    if current_user.identity_file_released_at is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Download your Identity Vault first — this is the only copy left otherwise",
+        )
+    await consume_step_up(
+        str(current_user.id), StepUpScope.DECLARE_LOST, step_up_token
+    )
+
+    current_user.nsec_encrypted = None
+    current_user.nsec_nonce = None
+    # The account now holds its own key. `key_self_custody` has meant exactly
+    # that since T3.12 — what changed under `D-KEY-TIERS` is how one gets here:
+    # by removing our copy, not by minting a different key.
+    current_user.key_self_custody = True
+    await db.commit()
+    await db.refresh(current_user)
+    return _status(current_user)
