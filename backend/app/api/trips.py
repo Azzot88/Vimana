@@ -30,10 +30,15 @@ async def create_trip(
         raise HTTPException(status_code=403, detail="Carrier capability required")
     require_live_identity(current_user)  # T3.12 — a lost key cannot sign a trip
 
+    # Normalised on write (T_PERF.1). The filter compares codes exactly, so the
+    # column has to hold one canonical form — otherwise a trip stored as `dxb`
+    # is invisible to every search for `DXB`, which is what the API accepts.
+    # `AirportSelect` already sends upper-case; this covers a direct POST, and
+    # it is the write side that should decide the shape, not each reader.
     trip = Trip(
         carrier_id=current_user.id,
-        origin=body.origin,
-        destination=body.destination,
+        origin=body.origin.strip().upper(),
+        destination=body.destination.strip().upper(),
         depart_at=body.depart_at,
         capacity=body.capacity,
         allowed_categories=body.allowed_categories,

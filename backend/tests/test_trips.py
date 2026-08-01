@@ -48,6 +48,33 @@ async def test_list_trips_filter_by_origin(client, seed_trip):
     assert any(t["id"] == str(seed_trip.id) for t in resp.json()["items"])
 
 
+async def test_trip_route_is_normalised_on_write(client, carrier_headers):
+    """T_PERF.1 — the column holds one canonical form.
+
+    The filter compares codes exactly, so a trip stored as `dxb` would be
+    invisible to every search for `DXB`. `AirportSelect` sends upper-case
+    already; a direct POST does not have to, and deciding the shape on write is
+    what keeps every reader from having to.
+    """
+    resp = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "origin": " nrm ",
+            "destination": "nrd",
+            "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+            "capacity": 1.0,
+            "allowed_categories": ["document"],
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["origin"] == "NRM"
+    assert resp.json()["destination"] == "NRD"
+
+    found = await client.get("/api/trips", params={"origin": "NRM"})
+    assert any(t["id"] == resp.json()["id"] for t in found.json()["items"])
+
+
 async def test_list_trips_filter_origin_is_exact_not_substring(client, seed_trip):
     """T_PERF.1 — the filter matches a code, not a fragment of one.
 
