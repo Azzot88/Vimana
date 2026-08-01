@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -12,6 +13,14 @@ export default defineConfig({
     // Split heavy vendors so the main bundle stays under 500 kB and the browser
     // can cache the (rarely-changing) libraries separately from our code.
     rollupOptions: {
+      // T3.24 — two entries. `reader.html` is a standalone page for opening a
+      // `.dvlt`; it is not a route, because a route would need the server to
+      // serve it and this page exists for the case where the server is exactly
+      // what you do not have.
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        reader: resolve(__dirname, 'reader.html'),
+      },
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],

@@ -1,0 +1,109 @@
+/**
+ * T3.24 — the `.dvlt` reader.
+ *
+ * The point of this file is a claim the product makes and must be able to
+ * keep: **your Identity Vault opens without us.** A reader that needed our API
+ * would make the claim circular, so this page has no API client, no auth and
+ * no imports from the app — only the sealing primitives it shares with the
+ * profile, which are the same NIP-49 the rest of the Nostr world implements.
+ *
+ * What it verifies is stated plainly on the page and nothing more: the file
+ * decrypts under the given passphrase, and the key inside derives the public
+ * key written next to it. That second check matters — a container carrying
+ * someone else's npub beside your key would otherwise look perfectly fine.
+ *
+ * `type: "deal"` is recognised and refused for now: deal export (`.dvlt` of a
+ * vault) is deliberately deferred (`D-DVLT-PROTOCOL` п.6), and a reader that
+ * pretended to handle a file nobody can produce yet would be the same kind of
+ * overclaim §9.1 forbids.
+ */
+import {
+  npubBech32,
+  npubFromNsec,
+  openNsec,
+  type IdentityVaultFile,
+} from './lib/identity'
+
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
+
+const fileInput = $<HTMLInputElement>('file')
+const passInput = $<HTMLInputElement>('pass')
+const openBtn = $<HTMLButtonElement>('open')
+const revealBtn = $<HTMLButtonElement>('reveal')
+const errorBox = $<HTMLParagraphElement>('error')
+const result = $<HTMLElement>('result')
+const nsecRow = $<HTMLElement>('nsecRow')
+
+let nsecHex = ''
+
+function fail(message: string): void {
+  errorBox.textContent = message
+  errorBox.classList.remove('hidden')
+  result.classList.add('hidden')
+}
+
+function parseVault(text: string): IdentityVaultFile {
+  const data = JSON.parse(text) as Partial<IdentityVaultFile>
+  if (data.type === 'deal') {
+    throw new Error(
+      'This is a deal vault. Exporting deals is not built yet, so no reader can open one.',
+    )
+  }
+  if (data.type !== 'identity' || !data.ncryptsec || !data.npub) {
+    throw new Error('Not a Vimana Identity Vault file.')
+  }
+  if (data.v !== 1) {
+    throw new Error(`This file is version ${data.v}; this reader knows version 1.`)
+  }
+  return data as IdentityVaultFile
+}
+
+async function handleOpen(): Promise<void> {
+  errorBox.classList.add('hidden')
+  result.classList.add('hidden')
+  nsecRow.classList.add('hidden')
+  nsecHex = ''
+
+  const file = fileInput.files?.[0]
+  if (!file) return fail('Choose a .dvlt file first.')
+  if (!passInput.value) return fail('Enter the passphrase you sealed the file with.')
+
+  openBtn.disabled = true
+  openBtn.textContent = 'Opening…'
+  try {
+    const vault = parseVault(await file.text())
+    // Wrong passphrase fails here, on the authentication tag — it cannot
+    // decrypt to a plausible but different key.
+    const opened = openNsec(vault.ncryptsec, passInput.value)
+    const derived = npubBech32(npubFromNsec(opened))
+    if (derived !== vault.npub) {
+      throw new Error(
+        'The key inside does not match the public key written in the file.',
+      )
+    }
+    nsecHex = opened
+    $('npub').textContent = vault.npub
+    $('created').textContent = vault.created_at || '—'
+    result.classList.remove('hidden')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    // A decryption failure and a wrong file look the same to a user in the
+    // moment, so the wording covers both without guessing which it was.
+    fail(
+      message.includes('Identity Vault') || message.includes('deal vault') || message.includes('version')
+        ? message
+        : 'Could not open it — check the passphrase, or the file is not an Identity Vault.',
+    )
+  } finally {
+    openBtn.disabled = false
+    openBtn.textContent = 'Open'
+  }
+}
+
+openBtn.addEventListener('click', () => void handleOpen())
+revealBtn.addEventListener('click', () => {
+  if (!nsecHex) return
+  $('nsec').textContent = nsecHex
+  nsecRow.classList.remove('hidden')
+  revealBtn.classList.add('hidden')
+})
