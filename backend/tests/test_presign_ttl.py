@@ -36,6 +36,26 @@ def test_sensitive_window_is_actually_shorter():
     assert PRESIGN_TTL_SENSITIVE < PRESIGN_TTL_DEFAULT
 
 
+def test_s3_client_is_built_once_per_process(monkeypatch):
+    """T_PERF.1 — one client, not one per call.
+
+    Building it parses botocore's S3 service model, and `get_presigned_url`
+    runs once per attachment: a vault page with a dozen photos used to build a
+    dozen clients to sign a dozen URLs. The cache is cleared afterwards so a
+    test that swaps R2 settings still gets a client built from them.
+    """
+    from app.core import storage
+
+    monkeypatch.setattr(storage.settings, "R2_ENDPOINT", "https://r2.test")
+    monkeypatch.setattr(storage.settings, "R2_ACCESS_KEY_ID", "k")
+    monkeypatch.setattr(storage.settings, "R2_SECRET_ACCESS_KEY", "s")
+    storage.reset_client_cache()
+    try:
+        assert storage.get_s3_client() is storage.get_s3_client()
+    finally:
+        storage.reset_client_cache()
+
+
 def test_identity_doc_kind_still_exists():
     """The mapping keys off a string. If `AttachmentKind.identity_doc` is ever
     renamed, this test fails instead of the TTL quietly reverting to an hour."""

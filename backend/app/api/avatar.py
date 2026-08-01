@@ -8,6 +8,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -64,8 +65,11 @@ async def upload_avatar(
         buf.write(chunk)
 
     # T3.8 — same content validation as DealVault uploads: signature + decode.
+    # In the threadpool (T_PERF.1): a full Pillow decode is CPU work measured in
+    # tens of milliseconds, and on the event loop it is time nobody else's
+    # request can use.
     try:
-        validate_upload(buf.getvalue(), ct)
+        await run_in_threadpool(validate_upload, buf.getvalue(), ct)
     except FileValidationError as exc:
         logging.getLogger(__name__).warning(
             "avatar rejected: user=%s declared=%s size=%d reason=%s",
@@ -78,7 +82,10 @@ async def upload_avatar(
 
     ext = _ALLOWED_MIME[ct]
     key = f"avatars/{current_user.id}/{uuid.uuid4().hex}.{ext}"
-    upload_file(buf.getvalue(), key, ct)
+    # Blocking network call — the PUT to R2 holds the event loop for its whole
+    # duration otherwise, so one slow upload stalls every other request on this
+    # worker (T_PERF.1).
+    await run_in_threadpool(upload_file, buf.getvalue(), key, ct)
 
     current_user.avatar_key = key
     await db.commit()

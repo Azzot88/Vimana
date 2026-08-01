@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_current_user
 from app.core.address import (
@@ -362,8 +363,9 @@ async def upload_attachment(
 
     # T3.8 — validate the bytes against the declared type BEFORE the R2 write:
     # signature whitelist + full image decode. Metadata only in the log.
+    # Decode runs in the threadpool (T_PERF.1) — see `api/avatar.py` for why.
     try:
-        validate_upload(buffer.getvalue(), content_type)
+        await run_in_threadpool(validate_upload, buffer.getvalue(), content_type)
     except FileValidationError as exc:
         logger.warning(
             "upload rejected: deal=%s user=%s kind=%s declared=%s size=%d reason=%s",
@@ -378,7 +380,9 @@ async def upload_attachment(
     ext = MIME_TO_EXT.get(content_type, "")
     r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
 
-    upload_file(buffer.getvalue(), r2_key, content_type)
+    # Blocking PUT — off the event loop (T_PERF.1). Attachments here are the
+    # largest files the product accepts, so this is the worst place to hold it.
+    await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
 
     attachment = Attachment(
         message_id=message_id,

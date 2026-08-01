@@ -29,6 +29,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from pydantic import BaseModel
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
@@ -498,8 +499,9 @@ async def _read_upload(file: UploadFile) -> tuple[bytes, str]:
     # dirt never reaches an IdentityContainer.
     from app.core.file_validation import FileValidationError, validate_document
 
+    # Sniffing plus a full decode is CPU work; off the event loop (T_PERF.1).
     try:
-        detected_mime = validate_document(data)
+        detected_mime = await run_in_threadpool(validate_document, data)
     except FileValidationError as exc:
         raise HTTPException(
             status_code=422,
@@ -575,7 +577,8 @@ async def _copy_document_into_vault(
 
     ext = MIME_TO_EXT.get(mime, "")
     r2_key = f"deals/{deal_id}/identity/{uuid.uuid4().hex}{ext}"
-    upload_file(doc_bytes, r2_key, mime)
+    # Blocking PUT — off the event loop (T_PERF.1).
+    await run_in_threadpool(upload_file, doc_bytes, r2_key, mime)
     attachment = Attachment(
         message_id=msg.id,
         r2_key=r2_key,

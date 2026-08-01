@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 
 import boto3
 
@@ -7,7 +8,20 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+@lru_cache(maxsize=1)
 def get_s3_client():
+    """One client for the process (T_PERF.1).
+
+    Building a boto3 client is not a cheap constructor: botocore loads and parses
+    the S3 service model — a few hundred kilobytes of JSON — and assembles the
+    signing machinery. This function used to run on **every** call, and
+    `get_presigned_url` is called once per attachment, so opening a vault page
+    with a dozen photos built a dozen clients to sign a dozen URLs.
+
+    Sharing one is the documented pattern: boto3 clients are safe to use from
+    several threads, which matters because the upload paths now run inside the
+    threadpool.
+    """
     return boto3.client(
         "s3",
         endpoint_url=settings.R2_ENDPOINT,
@@ -15,6 +29,11 @@ def get_s3_client():
         aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
         region_name="auto",
     )
+
+
+def reset_client_cache() -> None:
+    """For tests that swap R2 settings mid-run (cf. `keypair.reset_key_cache`)."""
+    get_s3_client.cache_clear()
 
 
 def upload_file(file_bytes: bytes, key: str, content_type: str) -> str:

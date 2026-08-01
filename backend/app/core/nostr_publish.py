@@ -220,12 +220,20 @@ async def _publish_one(url: str, event: dict, timeout_s: float = 5.0) -> bool:
 
 
 async def publish_event(event: dict) -> dict[str, bool]:
-    """Publish to all configured relays; return per-URL result map."""
+    """Publish to all configured relays; return per-URL result map.
+
+    Relays are independent of each other, so they are published to at once
+    (T_PERF.1). Sequentially, a set of four with the 5-second timeout each took
+    up to twenty seconds for one trip — and a single unreachable relay delayed
+    every relay behind it in the list. Now the whole fan-out costs one timeout
+    at worst. `_publish_one` never raises, so `gather` needs no exception
+    handling of its own; the result stays a per-URL map for the audit trail.
+    """
     urls = list(get_friendly_relays())
     own = get_own_relay_url()
     if own:
         urls.insert(0, own)
-    results: dict[str, bool] = {}
-    for url in urls:
-        results[url] = await _publish_one(url, event)
-    return results
+    if not urls:
+        return {}
+    outcomes = await asyncio.gather(*(_publish_one(url, event) for url in urls))
+    return dict(zip(urls, outcomes))

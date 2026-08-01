@@ -37,6 +37,43 @@ async def _register_carrier(client):
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
+async def test_relays_are_published_to_at_once(monkeypatch):
+    """T_PERF.1 — the fan-out is concurrent, and the proof is not a stopwatch.
+
+    Each fake publish waits until every relay has entered the function. If they
+    were still visited one after another the first would wait for a barrier the
+    second can never reach, and `wait_for` would time out — so a sequential
+    implementation fails this deterministically rather than "usually".
+    """
+    import asyncio
+
+    from app.core import nostr_publish
+
+    urls = ["wss://a.test", "wss://b.test", "wss://c.test"]
+    monkeypatch.setattr(nostr_publish, "get_friendly_relays", lambda: urls)
+    monkeypatch.setattr(nostr_publish, "get_own_relay_url", lambda: None)
+
+    entered = asyncio.Event()
+    arrived: list[str] = []
+
+    async def _fake_publish_one(url, event, timeout_s=5.0):
+        arrived.append(url)
+        if len(arrived) == len(urls):
+            entered.set()
+        await entered.wait()
+        return url != "wss://c.test"  # one failure, to keep the map honest
+
+    monkeypatch.setattr(nostr_publish, "_publish_one", _fake_publish_one)
+
+    results = await asyncio.wait_for(nostr_publish.publish_event({"id": "x"}), timeout=5)
+
+    assert results == {
+        "wss://a.test": True,
+        "wss://b.test": True,
+        "wss://c.test": False,
+    }
+
+
 def test_publish_disabled_by_default():
     os.environ.pop("NOSTR_PUBLISH_ENABLED", None)
     assert is_publish_enabled() is False
