@@ -732,3 +732,61 @@ async def test_spending_a_code_tells_the_owner(client, monkeypatch):
     assert resp.status_code == 200
     assert len(sent) == 1
     assert sent[0][1] == 9, "the letter carries how many are left"
+
+
+# ── T3.21 — releasing the key for an Identity Vault ──────────────────────────
+
+
+async def test_the_owner_can_take_a_copy_of_their_key(client):
+    """`D-KEY-TIERS` rung 2: the account gains a second copy, the platform keeps
+    its own, and nothing else changes. T3.12 deleted an endpoint shaped like
+    this one — correctly, because back then the key was the platform's service
+    key. Now it is the account's identity from registration, and refusing its
+    owner would be the lie instead."""
+    _, headers = await _account(client, "rel-ok")
+
+    before = await client.get("/api/me/keypair/status", headers=headers)
+    assert before.json()["key_copies"] == "platform_only"
+
+    token = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/me/identity/release-key", headers=headers, json={"step_up_token": token}
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body["nsec_hex"]) == 64
+    assert body["npub_hex"] == before.json()["npub"]
+
+    after = await client.get("/api/me/keypair/status", headers=headers)
+    assert after.json()["key_copies"] == "both", "our copy stays — this is not a handover"
+
+
+async def test_releasing_the_key_needs_a_fresh_confirmation(client):
+    _, headers = await _account(client, "rel-nostep")
+    resp = await client.post(
+        "/api/me/identity/release-key", headers=headers, json={"step_up_token": "nope"}
+    )
+    assert resp.status_code in (401, 403), resp.text
+
+
+async def test_nothing_to_release_once_our_copy_is_gone(client, session_maker):
+    """Rung 3 answers plainly instead of returning an empty 200 — "we do not
+    have it" is the honest sentence, and it is also the one the UI needs."""
+    _, headers = await _account(client, "rel-gone")
+    me = await client.get("/api/auth/me", headers=headers)
+
+    async with session_maker() as db:
+        user = await db.get(User, uuid.UUID(me.json()["id"]))
+        user.nsec_encrypted = None
+        user.nsec_nonce = None
+        user.key_self_custody = True
+        await db.commit()
+
+    status = await client.get("/api/me/keypair/status", headers=headers)
+    assert status.json()["key_copies"] == "user_only"
+
+    token = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/me/identity/release-key", headers=headers, json={"step_up_token": token}
+    )
+    assert resp.status_code == 409

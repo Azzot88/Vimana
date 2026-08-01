@@ -61,6 +61,14 @@ class KeypairStatus(BaseModel):
     # above is a service key the platform holds, not the user's identity.
     identity_established: bool
     key_lost: bool
+    # T3.21 — which rung of `D-KEY-TIERS` this account is on, as one word:
+    #   platform_only — only we hold a copy of the key
+    #   both          — the user has downloaded an Identity Vault as well
+    #   user_only     — our copy is gone; we can no longer sign for them
+    # Derived, never stored: the answer is exactly "does a copy exist here" plus
+    # "was one ever released", and a third column would be a second truth about
+    # the same two facts.
+    key_copies: str
     # DEPRECATED (T3.12) — kept so the existing crypto suite and frontend keep
     # reading. `key_self_custody` is the same bit as `identity_established`;
     # `has_encrypted_nsec` is its inverse for accounts that have any key at all.
@@ -105,11 +113,18 @@ class DeclareLostBody(BaseModel):
     step_up_token: str
 
 
+def _key_copies(user: User) -> str:
+    if user.nsec_encrypted is None:
+        return "user_only"
+    return "both" if user.identity_file_released_at is not None else "platform_only"
+
+
 def _status(user: User) -> KeypairStatus:
     return KeypairStatus(
         npub=user.nostr_pubkey,
         identity_established=user.identity_established,
         key_lost=user.key_lost,
+        key_copies=_key_copies(user),
         key_self_custody=user.key_self_custody,
         has_encrypted_nsec=user.nsec_encrypted is not None,
     )
@@ -331,3 +346,59 @@ async def identity_declare_lost(
     await db.commit()
     await db.refresh(current_user)
     return _status(current_user)
+
+
+class KeyReleaseOut(BaseModel):
+    """The key, once, so the browser can seal it into an Identity Vault.
+
+    Both halves travel: `npub_hex` goes into the file in the clear (it is the
+    public identifier), `nsec_hex` is what the browser encrypts under the user's
+    passphrase and immediately forgets.
+    """
+
+    nsec_hex: str
+    npub_hex: str
+
+
+@router.post("/me/identity/release-key", response_model=KeyReleaseOut)
+async def release_key(
+    body: DeclareLostBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.21 — hand the key to the owner's browser so it can be sealed offline.
+
+    T3.12 removed an endpoint that looked like this one and was right to: back
+    then the key was the platform's *service* key, and calling it "yours" would
+    have been a lie. `D-KEY-TIERS` changed what the key is, not how it is
+    stored — from registration it is the account's identity, and refusing to
+    give it to its owner would be the new lie.
+
+    The passphrase never appears here. Sealing happens in the browser (NIP-49),
+    because a passphrase this server has seen cannot protect a file this server
+    stores. That is the whole difference between rung 2 and a second copy of
+    our own custody.
+
+    Releasing does not weaken anything by itself — our copy stays, the user
+    simply stops being locked in. What it does change is the honest answer to
+    "does a second copy exist", so the moment is recorded.
+    """
+    if current_user.key_lost_at is not None:
+        raise HTTPException(status_code=409, detail="This identity was declared lost")
+    if current_user.nsec_encrypted is None or current_user.nsec_nonce is None:
+        # Rung 3 already: we cannot hand over what we do not have, and saying
+        # so plainly is better than an empty 200.
+        raise HTTPException(
+            status_code=409,
+            detail="The platform holds no copy of this key — it is only in your Identity Vault",
+        )
+    await consume_step_up(
+        str(current_user.id), StepUpScope.ADD_AUTH_METHOD, body.step_up_token
+    )
+
+    nsec_hex = decrypt_nsec(
+        bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted)
+    )
+    current_user.identity_file_released_at = datetime.now(timezone.utc)
+    await db.commit()
+    return KeyReleaseOut(nsec_hex=nsec_hex, npub_hex=current_user.nostr_pubkey or "")

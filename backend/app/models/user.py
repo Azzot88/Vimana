@@ -49,6 +49,14 @@ class User(Base):
     # gone (self-custody). Losing the key is not losing access: a live passkey
     # still signs the user in, but they can no longer sign or read their own
     # encrypted history, and counterparties must see that.
+    # T3.21 — when the key was last handed to the browser for sealing into an
+    # Identity Vault file. It is the only evidence the platform can honestly
+    # have that a second copy exists: whether the user actually kept the file
+    # is beyond our knowing, and pretending otherwise would put a claim in the
+    # UI that nothing backs.
+    identity_file_released_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     key_lost_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

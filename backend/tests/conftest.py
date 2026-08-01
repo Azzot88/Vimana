@@ -467,6 +467,8 @@ async def _ensure_identity_columns(engine) -> None:
     async with engine.begin() as conn:
         for table, col, ddl in (
             ("users", "key_lost_at", "TIMESTAMPTZ"),
+            # T3.21 — mirrors migration 0036.
+            ("users", "identity_file_released_at", "TIMESTAMPTZ"),
             ("trips", "nostr_published_by_pubkey", "VARCHAR(64)"),
             # T3.12 pt.2b — mirrors migration 0030.
             ("identity_containers", "key_envelope", "TEXT"),
