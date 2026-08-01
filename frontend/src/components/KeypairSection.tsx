@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   declareKeyLost,
+  deletePlatformCopy,
   establishIdentity,
   getKeypairStatus,
   releaseKeyForVault,
@@ -54,6 +55,10 @@ export default function KeypairSection() {
   const [vaultOpen, setVaultOpen] = useState(false)
   const [confirmingVault, setConfirmingVault] = useState(false)
   const [vaultDone, setVaultDone] = useState(false)
+  /** T3.22 — dropping our copy of the key: the one irreversible step. */
+  const [dropOpen, setDropOpen] = useState(false)
+  const [dropUnderstood, setDropUnderstood] = useState(false)
+  const [confirmingDrop, setConfirmingDrop] = useState(false)
 
   const nip07 = hasNip07Extension()
 
@@ -191,6 +196,25 @@ export default function KeypairSection() {
       await load()
     } catch {
       setError(t('profile.identity.vaultFailed') as string)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** T3.22 — rung 3. Nothing about the identity changes; what ends is our
+   *  ability to act for it, and it ends in the database rather than in a
+   *  promise. */
+  const dropPlatformCopy = async (stepUpToken: string) => {
+    setBusy(true)
+    setError('')
+    try {
+      const { data } = await deletePlatformCopy(stepUpToken)
+      setStatus(data)
+      setConfirmingDrop(false)
+      setDropOpen(false)
+      setDropUnderstood(false)
+    } catch {
+      setError(t('profile.identity.errorGeneric') as string)
     } finally {
       setBusy(false)
     }
@@ -347,13 +371,86 @@ export default function KeypairSection() {
         />
       )}
 
-      {/* ── not established yet ── */}
+      {/* ── T3.22 — rung 2 → 3: we stop holding a copy ──
+          Only offered once a copy exists on the user's side. Before that this
+          button would be an identity shredder one click deep, and the backend
+          refuses it for the same reason (409). */}
+      {!lost && copies === 'both' && (
+        <div className="border-t border-navy/10 pt-4 space-y-3">
+          {dropOpen ? (
+            <div className="border border-amber/40 bg-amber/5 rounded-lg p-3 space-y-3">
+              <p className="text-sm font-body text-navy font-medium">
+                {t('profile.identity.dropTitle')}
+              </p>
+              <p className="text-sm font-body text-navy/70">
+                {t('profile.identity.dropBody')}
+              </p>
+              <label className="flex items-start gap-2 text-sm font-body text-navy">
+                <input
+                  type="checkbox"
+                  checked={dropUnderstood}
+                  onChange={(e) => setDropUnderstood(e.target.checked)}
+                  data-testid="drop-understood"
+                  className="mt-1"
+                />
+                <span>{t('profile.identity.dropCheckbox')}</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setConfirmingDrop(true)}
+                disabled={!dropUnderstood || busy}
+                data-testid="drop-continue"
+                className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+              >
+                {busy ? '…' : t('profile.identity.dropCta')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDropOpen(false)
+                  setDropUnderstood(false)
+                }}
+                className="w-full text-sm font-body text-navy/50"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDropOpen(true)}
+              data-testid="drop-platform-copy"
+              className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+            >
+              {t('profile.identity.dropCta')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {confirmingDrop && (
+        <StepUpDialog
+          scope="declare_lost"
+          title={t('profile.identity.dropCta') as string}
+          body={t('profile.identity.dropConfirmBody') as string}
+          onConfirm={dropPlatformCopy}
+          onCancel={() => setConfirmingDrop(false)}
+        />
+      )}
+
+      {/* ── replacing the identity with a different key ──
+          Deliberately quiet and deliberately last. Under `D-KEY-TIERS` owning
+          your key is reached by removing our copy (above), not by minting a new
+          one — this path exists for someone bringing a key from elsewhere, and
+          it *replaces* the identity rather than upgrading it. It used to be the
+          headline button here, which is how an owner walked into it on
+          2026-08-01 and ended up with a plaintext .txt. */}
       {!established && !lost && step === 'idle' && (
         <button
           type="button"
           data-testid="identity-start"
           onClick={() => setStep('choose')}
-          className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium"
+          className="w-full text-sm font-body text-navy/50 underline"
         >
           {t('profile.identity.startCta')}
         </button>

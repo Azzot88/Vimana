@@ -42,6 +42,15 @@ export const releaseKeyForVault = (stepUpToken: string) =>
     { step_up_token: stepUpToken },
   )
 
+/** T3.22 — rung 3: we stop holding a copy. The key and the npub do not change
+ *  and neither do the deals; what ends is the server's ability to sign or
+ *  decrypt for this account. Refused with 409 until an Identity Vault has been
+ *  downloaded — otherwise this would destroy the only copy in existence. */
+export const deletePlatformCopy = (stepUpToken: string) =>
+  api.delete<KeypairStatus>('/api/me/identity/platform-copy', {
+    headers: { 'X-Step-Up-Token': stepUpToken },
+  })
+
 /** T3.15 — confirmation comes from step-up, not a password field: an account
  *  with no password must be able to do this too. */
 export const declareKeyLost = (stepUpToken: string) =>
