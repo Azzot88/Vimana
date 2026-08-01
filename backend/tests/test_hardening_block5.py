@@ -22,8 +22,14 @@ async def _publish_trip(client, carrier_headers, tag: str) -> str:
 async def test_trips_pagination_next_cursor_walks_all_items(client, carrier_headers):
     tag = uuidlib.uuid4().hex[:6]
     created_ids = []
-    for i in range(5):
-        tid = await _publish_trip(client, carrier_headers, f"{tag}-{i}")
+    for _ in range(5):
+        # All five share one origin — five trips out of the same airport, which
+        # is what paging through a corridor actually looks like. They used to
+        # get distinct suffixes and be gathered back by a substring filter;
+        # that leaned on `ilike '%code%'`, which T_PERF.1 replaced with an exact
+        # match (origins are IATA codes, and `?origin=A` matching everything
+        # with an A in it was never intended).
+        tid = await _publish_trip(client, carrier_headers, tag)
         created_ids.append(tid)
 
     # First page: limit=2
