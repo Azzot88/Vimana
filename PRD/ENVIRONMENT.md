@@ -17,8 +17,8 @@
 - **Python / FastAPI** — строгая типизация, async API.
 - **SQLAlchemy (async)** — ORM.
 - **Alembic** — миграции.
-- **Celery + Redis** — фоновые задачи (уведомления, проверки дедлайнов).
-- **ReportLab / WeasyPrint** — генерация «посадочного талона сделки» (PDF).
+- **Celery + Redis** — фоновые задачи (уведомления, проверки дедлайнов). Redis поднимается с `--requirepass` (T_SEC.3).
+- **PDF «посадочного талона сделки»** — движок не выбран. `weasyprint` числился в зависимостях, но не импортировался ни разу и держал `Pillow<11`; удалён в T_SEC.3. Выбор движка — часть задачи, которая будет делать сам талон.
 
 ### Frontend
 - **React / TypeScript / Vite** — отзывчивый SPA.
@@ -81,7 +81,7 @@
 - `MESSAGE_ENCRYPTION_KEY` (T1.21 at-rest AES-256-GCM для DealVault; **если пусто в prod — падение при первом encrypt/decrypt**)
 - `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_ENDPOINT` (вложения DealVault)
 - `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_HOST` / `SMTP_PORT` (email-уведомления)
-- `REDIS_URL` (Celery)
+- `REDIS_PASSWORD` (T_SEC.3; compose стартует Redis с `--requirepass`, без переменной `up` падает с явной ошибкой) + `REDIS_URL` (Celery и приложение; пароль вписывается в URL руками — `env_file` не раскрывает подстановки)
 - `CORS_ORIGINS` (T1.19 whitelist доменов)
 - `RATE_LIMIT_ENABLED` (T1.19 slowapi; в тестах = `false`)
 
@@ -135,6 +135,7 @@
 - **Probe-пути блокируются** на уровне nginx: `.env`, `.git`, `wp-admin`, `.php`, `.aspx` → 403/404.
 - **Rate-limit** на `/api/auth/login` и `/api/auth/register` — slowapi + nginx `limit_req` дублированно.
 - **Публичные endpoint'ы** только `/health` (для docker healthcheck); всё остальное — JWT auth или RBAC.
+- **Наружу публикуется только nginx** (80/443) и, при включённом профиле `nostr`, relay (7777). `db`, `redis` и `backend` слушают `127.0.0.1` — T_SEC.3. До этого `backend` был опубликован на `0.0.0.0:8000` и открыт в security group: прямое обращение обходило TLS, security-заголовки, probe-deny и обе зоны `limit_req`, а ключ slowapi берётся из `X-Forwarded-For` (`core/rate_limit.py`), который прямой клиент подставляет сам. Доступ для отладки — SSH-туннель (`ssh -L 8000:127.0.0.1:8000`), не публикация порта.
 
 ### 5.2 Developer setup — remote access
 
@@ -200,6 +201,7 @@ docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v
 - **При изменении `frontend/package.json`** — только `--build frontend`. `Dockerfile` уже содержит `RUN npm install`, Docker инвалидирует слой автоматически. **Никогда не запускать `docker compose exec frontend npm install`** — это лишний шаг, зависимости уже установлены в новом образе.
 - **При изменении `backend/requirements.txt`** — только `--build backend`. Аналогично: `pip install -r requirements.txt` в Dockerfile ставит пакеты при билде.
 - **При изменении только исходников (без deps)** — `--build` всё равно быстро отрабатывает через кэш слоёв, ставить только `restart backend/frontend` **не безопасно** (nginx-контейнер держит соединения к старым, .env не подхватится).
+- **Правка исходников требует пересоздания контейнера** (T_SEC.3). `uvicorn` больше не запускается с `--reload`: watcher держал вторую копию приложения в памяти и перезапускал воркеров при любом изменении файла в примонтированном `./backend` — `git pull` во время запроса ронял этот запрос. Штатный `up -d --build backend` из шаблона выше это и делает.
 - **При изменении `.env`** — обязательно `up --force-recreate --remove-orphans` (просто `restart` **не подхватит** переменные окружения, см. [feedback_docker_compose_env]).
 - **Миграции `alembic upgrade head` — НЕ в стандартный шаблон.** Запускать только если в коммите есть новый файл в `backend/alembic/versions/`. Alembic идемпотентна, но лишняя `docker exec` — трата времени и шума в логах. Проверка: `git diff --name-only HEAD~1 HEAD -- backend/alembic/versions/`. Если пусто — миграцию не запускать.
 - **Тесты и билды выполняются только на сервере**, никогда локально (см. `feedback_no_local_tests_builds`).

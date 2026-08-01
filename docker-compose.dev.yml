@@ -14,8 +14,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Loopback only. Nothing outside the host talks to Postgres directly —
+    # backend and workers reach it over the compose network as `db:5432`.
+    # A published `5432:5432` binds 0.0.0.0, and Docker writes its own DNAT
+    # rules ahead of ufw, so the host firewall does not cover it either.
+    # For psql/DBeaver from a laptop: `ssh -L 5432:127.0.0.1:5432 <host>`.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,8 +33,18 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     logging: *default-logging
+    # Redis holds step-up grants, identity challenges, the token blacklist and
+    # the Celery broker. Whoever can write to the broker queues a task, and a
+    # task is code on the worker — so this one is not "just a cache".
+    # `:?` fails the compose run with a named error rather than silently
+    # starting an open Redis when the variable is missing.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}"]
+    environment:
+      # redis-cli reads the password from here, so the healthcheck stays a
+      # plain `ping` and the secret never lands in a process argument list.
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -43,8 +58,17 @@ services:
     restart: unless-stopped
     logging: *default-logging
     env_file: .env
+    # Loopback only. nginx reaches the app over the compose network
+    # (`backend:8000`, see nginx/default.conf), so a published port served
+    # nothing but a way around nginx — and around everything nginx enforces:
+    # TLS, HSTS and the rest of the T_SEC.1 headers, the probe-deny rules and
+    # both `limit_req` zones. The slowapi key is `X-Forwarded-For`
+    # (core/rate_limit.py), which a direct caller sets freely, so the per-IP
+    # limits were bypassable by anyone who could reach :8000.
+    # For Swagger while debugging: `ssh -L 8000:127.0.0.1:8000 <host>` plus
+    # EXPOSE_DOCS=true, and turn both off afterwards.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
     depends_on:
@@ -63,10 +87,14 @@ services:
     # `http://…` — which a browser on an https page blocks as mixed content.
     # The redirect then fails silently: the server logs a 307 and no follow-up,
     # the client sees a network error. Cost T3.14 an hour (2026-07-29).
-    # --forwarded-allow-ips=*: only nginx can reach this container, it is not
-    # published on the host, so trusting the forwarded headers is safe here.
+    # --forwarded-allow-ips=*: the port is bound to loopback and the only route
+    # in from outside the host is nginx, so the forwarded headers come from it.
+    # No --reload: it runs a file watcher and a second copy of the app, and it
+    # restarts the workers whenever a file under the mounted ./backend changes —
+    # a `git pull` mid-request drops that request. Code changes now need the
+    # container recreated (ENVIRONMENT §9 already prescribes `up -d --build`).
     command: >
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      uvicorn app.main:app --host 0.0.0.0 --port 8000
       --proxy-headers --forwarded-allow-ips=*
 
   frontend:
@@ -146,7 +174,10 @@ services:
   #   docker compose --profile nostr up -d nostr-relay
   # Then set NOSTR_OWN_RELAY_URL=ws://nostr-relay:7777 in backend .env.
   nostr-relay:
-    image: dockurr/strfry:latest
+    # Pinned, not `latest`: a floating tag lets a rebuild swap the relay binary
+    # under a component the roadmap calls our point of external decentralisation.
+    # 1.1.1 is what `latest` resolved to at the time of pinning (2026-07-21).
+    image: dockurr/strfry:1.1.1
     profiles: ["nostr"]
     restart: unless-stopped
     logging: *default-logging

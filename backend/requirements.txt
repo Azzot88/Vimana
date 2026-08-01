@@ -47,13 +47,13 @@ python-dotenv==1.0.1
 httpx==0.28.0
 pycountry==24.6.1
 
-# PDF generation (boarding pass)
-weasyprint==63.0
-
-# T3.8 — image decode validation for uploads (already a transitive dep of
-# weasyprint; pinned explicitly because file_validation.py imports it directly).
-# 10.x, not 11.x: weasyprint 63.0 requires Pillow<11.
-Pillow==10.4.0
+# T3.8 — image decode validation for uploads. `file_validation.py` opens every
+# uploaded image with it, so this is the library on the path of all user files.
+# It used to be held at 10.4.0 by `weasyprint==63.0` (which requires Pillow<11).
+# weasyprint was never imported anywhere — the boarding-pass PDF is not built —
+# so it was removed and the ceiling with it. Picking a PDF engine is part of
+# writing that feature, not something to carry unused until then.
+Pillow==12.3.0
 
 # T3.14 — WebAuthn/passkeys. Does the CBOR/COSE parsing, attestation checks and
 # signature verification; we keep the ceremony state and the credential rows.
