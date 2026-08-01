@@ -128,6 +128,32 @@ async def test_lookup_by_kyiv_ukrainian_finds_city(client):
     assert any(c["iso"] == "UA" for c in cities)
 
 
+def test_alternate_city_names_still_match_after_precomputing_case():
+    """T_PERF.1 — search compares against lower-cased copies built at load.
+
+    The alternate-name index is what lets OpenFlights' "Kiev" find the GeoNames
+    record spelled "Kyiv", and it is the one place where the pre-computation
+    could have silently dropped a field instead of lower-casing it.
+    """
+    from app.core.airports import search
+
+    # "Київ" is only reachable through the alternate-name list (the airport's
+    # own city field says "Kiev"); "KIEV" additionally proves the query is
+    # folded against a pre-lowered field rather than a freshly lowered one.
+    for spelling in ("Київ", "KIEV"):
+        hits = search(spelling, limit=10)
+        assert any(a.country_iso == "UA" for a in hits), spelling
+
+
+def test_static_aggregates_are_computed_once():
+    """The airport table cannot change at runtime, so these are cached rather
+    than recomputed per request; identity is the cheapest proof."""
+    from app.core.airports import list_cities, list_countries
+
+    assert list_countries() is list_countries()
+    assert list_cities("AE") is list_cities("AE")
+
+
 async def test_airports_in_dubai_sorted_dxb_first(client):
     resp = await client.get(
         "/api/airports/by-city", params={"country": "AE", "city": "Dubai"}

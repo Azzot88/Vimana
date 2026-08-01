@@ -1,4 +1,5 @@
 import csv
+import heapq
 import math
 from dataclasses import dataclass
 from functools import lru_cache
@@ -99,9 +100,6 @@ def _load_cities_index() -> dict[tuple[str, str], dict]:
     return idx
 
 
-_CITY_INDEX = _load_cities_index()
-
-
 @dataclass(frozen=True, slots=True)
 class Airport:
     iata: str
@@ -113,9 +111,22 @@ class Airport:
     alt_names: tuple[str, ...]
     population: int
     order: int
+    # Lower-cased once at load instead of on every keystroke (T_PERF.1). Search
+    # ran `.lower()` over ~7 000 airports plus their alternate names per call,
+    # which is tens of thousands of throwaway strings per autocomplete request.
+    iata_lower: str
+    city_lower: str
+    country_lower: str
+    alt_names_lower: tuple[str, ...]
 
 
 def _load() -> list[Airport]:
+    # Built here, not at module level (T_PERF.1). The GeoNames index comes from
+    # an 8.4 MB file and is only ever read by this loop; as a module global it
+    # stayed resident for the life of the process for nothing. On a 2 GB box
+    # that has already met the OOM killer, that is free memory back.
+    city_index = _load_cities_index()
+
     airports: list[Airport] = []
     with DATA_PATH.open("r", encoding="utf-8", newline="") as f:
         reader = csv.reader(f)
@@ -135,7 +146,7 @@ def _load() -> list[Airport]:
             country = row[3]
             iso = _NAME_TO_ISO.get(country.lower(), "")
             city = row[2]
-            city_meta = _CITY_INDEX.get((city.lower(), iso)) if iso else None
+            city_meta = city_index.get((city.lower(), iso)) if iso else None
             alt_names = city_meta["alt_names"] if city_meta else (city,)
             population = city_meta["population"] if city_meta else 0
             airports.append(
@@ -149,6 +160,10 @@ def _load() -> list[Airport]:
                     alt_names=alt_names,
                     population=population,
                     order=order,
+                    iata_lower=iata.lower(),
+                    city_lower=city.lower(),
+                    country_lower=country.lower(),
+                    alt_names_lower=tuple(n.lower() for n in alt_names),
                 )
             )
     return airports
@@ -173,24 +188,20 @@ def search(query: str, limit: int = 10) -> list[Airport]:
     alt_match: list[Airport] = []
 
     for a in _AIRPORTS:
-        iata_l = a.iata.lower()
-        city_l = a.city.lower()
-        country_l = a.country.lower()
-
-        if iata_l == q:
+        if a.iata_lower == q:
             exact_iata.append(a)
             continue
-        if iata_l.startswith(q):
+        if a.iata_lower.startswith(q):
             starts_iata.append(a)
             continue
-        if city_l.startswith(q):
+        if a.city_lower.startswith(q):
             starts_city.append(a)
             continue
-        if q in city_l or q in country_l:
+        if q in a.city_lower or q in a.country_lower:
             contains.append(a)
             continue
-        for name in a.alt_names:
-            if q in name.lower():
+        for name in a.alt_names_lower:
+            if q in name:
                 alt_match.append(a)
                 break
 
@@ -243,12 +254,18 @@ def route_distance_km(origin: str, destination: str) -> float | None:
 
 
 def nearest(lat: float, lon: float, limit: int = 5) -> list[Airport]:
-    with_dist = [(a, _haversine_km(lat, lon, a.lat, a.lon)) for a in _AIRPORTS]
-    with_dist.sort(key=lambda x: x[1])
-    return [a for a, _ in with_dist[:limit]]
+    # `nsmallest` keeps a heap of `limit` instead of sorting all ~7 000 entries
+    # to hand back five (T_PERF.1).
+    return heapq.nsmallest(
+        limit, _AIRPORTS, key=lambda a: _haversine_km(lat, lon, a.lat, a.lon)
+    )
 
 
+@lru_cache(maxsize=1)
 def list_countries() -> list[dict]:
+    # The airport table never changes at runtime, so this aggregate is computed
+    # once rather than on every request (T_PERF.1). Callers serialise the result
+    # and must not mutate it.
     counts: dict[str, int] = {}
     for a in _AIRPORTS:
         if not a.country_iso:
@@ -260,7 +277,9 @@ def list_countries() -> list[dict]:
     )
 
 
+@lru_cache(maxsize=256)
 def list_cities(country_iso: str) -> list[dict]:
+    # Same reasoning as `list_countries`; ~200 countries bound the cache.
     iso = country_iso.upper()
     counts: dict[str, int] = {}
     for a in _AIRPORTS:
@@ -278,7 +297,7 @@ def airports_in_city(country_iso: str, city: str) -> list[Airport]:
     city_lower = city.strip().lower()
     result = [
         a for a in _AIRPORTS
-        if a.country_iso == iso and a.city.lower() == city_lower
+        if a.country_iso == iso and a.city_lower == city_lower
     ]
     result.sort(key=lambda a: (a.order, a.iata))
     return result
@@ -293,11 +312,11 @@ def search_cities(query: str, limit: int = 8) -> list[dict]:
         if not a.country_iso:
             continue
         hit = False
-        for name in a.alt_names:
-            if q in name.lower():
+        for name in a.alt_names_lower:
+            if q in name:
                 hit = True
                 break
-        if not hit and q in a.city.lower():
+        if not hit and q in a.city_lower:
             hit = True
         if not hit:
             continue

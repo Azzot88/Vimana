@@ -231,6 +231,30 @@ async def test_metrics_endpoint_returns_expected_shape(client):
     assert body["last_attempt_at"] is None or isinstance(body["last_attempt_at"], str)
 
 
+async def test_counter_increments_are_not_lost_and_are_read_back(session_maker):
+    """T_PERF.1 — the addition happens in the database, and the reader sees it.
+
+    Two things used to be wrong here at once. The bump was a read-modify-write
+    through the ORM, so simultaneous publishes overwrote each other's `n + 1`.
+    And the read went through `select(PublishMetric)`, which with
+    `expire_on_commit=False` can be answered from the identity map — the very
+    map that never saw the new value, because the database computed it.
+    """
+    from app.core.metrics import bump_publish_metric, get_publish_metrics
+
+    async with session_maker() as db:
+        before = await get_publish_metrics(db)
+        await bump_publish_metric(db, success=True)
+        await bump_publish_metric(db, success=True)
+        await bump_publish_metric(db, success=False)
+        await db.commit()
+        after = await get_publish_metrics(db)
+
+    assert after["success_count"] == before["success_count"] + 2
+    assert after["error_count"] == before["error_count"] + 1
+    assert after["last_attempt_at"] is not None
+
+
 async def test_metrics_bump_after_publish(client, session_maker):
     """Publish (even with no relays configured → all failures) still bumps the
     error counter — that's the observability we want."""
