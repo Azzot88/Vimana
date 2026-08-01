@@ -8,7 +8,9 @@ import {
   canonicalProofEvent,
   generateKeypair,
   npubBech32,
+  npubFromNsec,
   openNsec,
+  parseNsecInput,
   proofEventId,
   sealNsec,
   signProofWithKey,
@@ -140,5 +142,24 @@ describe('identity vault', () => {
     expect(file.npub.startsWith('npub1')).toBe(true)
     expect(file.ncryptsec.startsWith('ncryptsec1')).toBe(true)
     expect(JSON.stringify(file)).not.toContain(nsecHex)
+  }, 30_000)
+})
+
+describe('sealing a key the user already holds (T3.24)', () => {
+  it('accepts both shapes a person can actually have in hand', () => {
+    const { nsecHex, npubHex } = generateKeypair()
+    // Raw hex is what the old plain-text backup printed; `nsec1…` is what any
+    // other Nostr client hands out. Both must lead to the same file.
+    expect(parseNsecInput(nsecHex.toUpperCase())).toBe(nsecHex)
+    expect(npubFromNsec(nsecHex)).toBe(npubHex)
+    expect(() => parseNsecInput('definitely not a key')).toThrow()
+  })
+
+  it('derives the public half from the key, not from what was typed beside it', () => {
+    const { nsecHex, npubHex } = generateKeypair()
+    const file = buildIdentityVault(npubFromNsec(nsecHex), sealNsec(nsecHex, 'pass phrase'))
+    // The file describes what it actually contains — a mistyped npub cannot
+    // travel with someone else's key.
+    expect(file.npub).toBe(npubBech32(npubHex))
   }, 30_000)
 })

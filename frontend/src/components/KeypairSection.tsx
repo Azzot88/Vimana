@@ -13,6 +13,8 @@ import {
   buildIdentityVault,
   generateKeypair,
   keyBackupText,
+  npubFromNsec,
+  parseNsecInput,
   sealNsec,
   signProofWithKey,
   signProofWithNip07,
@@ -56,6 +58,10 @@ export default function KeypairSection() {
   const [confirmingVault, setConfirmingVault] = useState(false)
   const [vaultDone, setVaultDone] = useState(false)
   /** T3.22 — dropping our copy of the key: the one irreversible step. */
+  /** T3.24 pt.1 — sealing a key the user already holds. Nothing here touches
+   *  the network: the key is pasted, sealed and downloaded in this tab. */
+  const [sealOpen, setSealOpen] = useState(false)
+  const [sealKey, setSealKey] = useState('')
   const [dropOpen, setDropOpen] = useState(false)
   const [dropUnderstood, setDropUnderstood] = useState(false)
   const [confirmingDrop, setConfirmingDrop] = useState(false)
@@ -201,6 +207,38 @@ export default function KeypairSection() {
     }
   }
 
+  /** T3.24 pt.1 — turn a key the user already has into an Identity Vault,
+   *  entirely offline. The npub is derived from the key itself rather than
+   *  taken from the account: the file must describe what it actually contains. */
+  const sealExistingKey = () => {
+    setBusy(true)
+    setError('')
+    try {
+      const nsecHex = parseNsecInput(sealKey)
+      const file = buildIdentityVault(
+        npubFromNsec(nsecHex),
+        sealNsec(nsecHex, vaultPass),
+      )
+      const blob = new Blob([JSON.stringify(file, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `vimana-identity-${file.npub.slice(0, 12)}.dvlt`
+      a.click()
+      URL.revokeObjectURL(url)
+      setSealOpen(false)
+      setSealKey('')
+      setVaultPass('')
+      setVaultDone(true)
+    } catch {
+      setError(t('profile.identity.sealFailed') as string)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   /** T3.22 — rung 3. Nothing about the identity changes; what ends is our
    *  ability to act for it, and it ends in the database rather than in a
    *  promise. */
@@ -301,9 +339,67 @@ export default function KeypairSection() {
           )}
 
           {copies === 'user_only' ? (
-            <p className="text-sm font-body text-navy/60">
-              {t('profile.identity.vaultOnlyYours')}
-            </p>
+            /* T3.24 pt.1 — the platform has nothing to hand over, but sealing
+               needs nothing from it either: paste the key you already hold and
+               the browser turns it into an Identity Vault. This exists because
+               accounts that took the old T3.12 path were left holding a .txt
+               with the key in clear text. */
+            <div className="space-y-2">
+              <p className="text-sm font-body text-navy/60">
+                {t('profile.identity.vaultOnlyYours')}
+              </p>
+              {sealOpen ? (
+                <>
+                  <textarea
+                    value={sealKey}
+                    onChange={(e) => setSealKey(e.target.value)}
+                    rows={2}
+                    placeholder={t('profile.identity.sealKeyPlaceholder') as string}
+                    data-testid="seal-key"
+                    className="w-full border border-navy/20 rounded-lg px-3 py-2 text-xs font-mono text-navy focus:outline-none focus:border-cyan"
+                  />
+                  <input
+                    type="password"
+                    value={vaultPass}
+                    onChange={(e) => setVaultPass(e.target.value)}
+                    placeholder={t('profile.identity.vaultPassPlaceholder') as string}
+                    className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                  />
+                  <p className="text-xs font-body text-navy/50">
+                    {t('profile.identity.sealLocalNotice')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={sealExistingKey}
+                    disabled={busy || vaultPass.length < 8 || !sealKey.trim()}
+                    data-testid="seal-continue"
+                    className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+                  >
+                    {busy ? '…' : t('profile.identity.sealCta')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSealOpen(false)
+                      setSealKey('')
+                      setVaultPass('')
+                    }}
+                    className="text-sm font-body text-navy/50"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSealOpen(true)}
+                  data-testid="seal-open"
+                  className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+                >
+                  {t('profile.identity.sealCta')}
+                </button>
+              )}
+            </div>
           ) : vaultOpen ? (
             <div className="space-y-2">
               <input

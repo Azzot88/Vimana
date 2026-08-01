@@ -265,3 +265,24 @@ export function buildIdentityVault(
     ...(label ? { label } : {}),
   }
 }
+
+/** Accepts what a person actually has in hand: a `nsec1…` string from any
+ *  Nostr client, or the raw hex our own backup file printed. Returns hex —
+ *  the internal representation everywhere else in this module. */
+export function parseNsecInput(raw: string): string {
+  const value = (raw || '').trim()
+  if (/^[0-9a-fA-F]{64}$/.test(value)) return value.toLowerCase()
+  if (value.startsWith('nsec1')) {
+    const { prefix, words } = bech32.decode(value as `${string}1${string}`, 200)
+    if (prefix !== 'nsec') throw new Error('Not an nsec string')
+    return bytesToHex(Uint8Array.from(bech32.fromWords(words)))
+  }
+  throw new Error('Unrecognised key format')
+}
+
+/** The npub that belongs to a private key — so a file sealed from a pasted key
+ *  carries the right public half, rather than trusting whatever was typed
+ *  alongside it. */
+export function npubFromNsec(nsecHex: string): string {
+  return bytesToHex(schnorr.getPublicKey(hexToBytes(nsecHex)))
+}
