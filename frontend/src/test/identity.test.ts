@@ -4,9 +4,13 @@ import { bytesToHex } from '@noble/hashes/utils'
 import {
   PROOF_KIND,
   PURPOSE_ESTABLISH,
+  buildIdentityVault,
   canonicalProofEvent,
   generateKeypair,
+  npubBech32,
+  openNsec,
   proofEventId,
+  sealNsec,
   signProofWithKey,
 } from '../lib/identity'
 
@@ -96,4 +100,45 @@ describe('identity keys', () => {
       false,
     )
   })
+})
+
+// ── T3.21 — Identity Vault sealing (NIP-49) ──────────────────────────────────
+
+describe('identity vault', () => {
+  // scrypt N=2^16 is deliberately slow; a handful of runs is all we need.
+  const PASS = 'correct horse battery staple'
+
+  it('seals a key and opens it again with the same passphrase', () => {
+    const { nsecHex, npubHex } = generateKeypair()
+    const sealed = sealNsec(nsecHex, PASS)
+
+    expect(sealed.startsWith('ncryptsec1')).toBe(true)
+    // The plain key must not survive anywhere in the container.
+    expect(sealed).not.toContain(nsecHex)
+    expect(openNsec(sealed, PASS)).toBe(nsecHex)
+    expect(npubBech32(npubHex).startsWith('npub1')).toBe(true)
+  }, 30_000)
+
+  it('refuses the wrong passphrase instead of returning garbage', () => {
+    const { nsecHex } = generateKeypair()
+    const sealed = sealNsec(nsecHex, PASS)
+    // XChaCha20-Poly1305 authenticates: a wrong key fails the tag rather than
+    // decrypting to a plausible-looking but wrong secret. That distinction is
+    // what makes "we cannot help you recover it" safe to say out loud.
+    expect(() => openNsec(sealed, 'not the passphrase')).toThrow()
+  }, 30_000)
+
+  it('produces a portable file, not a Vimana-only blob', () => {
+    const { nsecHex, npubHex } = generateKeypair()
+    const file = buildIdentityVault(npubHex, sealNsec(nsecHex, PASS), 'laptop')
+
+    expect(file.type).toBe('identity')
+    expect(file.v).toBe(1)
+    // bech32 in the file, hex only inside the app: the string in `ncryptsec`
+    // is what another Nostr client accepts by copy-paste, and `npub` is the
+    // public identifier as the rest of the ecosystem writes it.
+    expect(file.npub.startsWith('npub1')).toBe(true)
+    expect(file.ncryptsec.startsWith('ncryptsec1')).toBe(true)
+    expect(JSON.stringify(file)).not.toContain(nsecHex)
+  }, 30_000)
 })

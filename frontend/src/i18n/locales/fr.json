@@ -432,6 +432,21 @@
     "identity": {
       "title": "Votre clé",
       "stateService": "Détenue par Vimana",
+      "vaultLabel": "Identity Vault",
+      "copies": {
+        "platform_only": "copie chez nous uniquement",
+        "both": "copie chez vous et chez nous",
+        "user_only": "copie chez vous uniquement"
+      },
+      "vaultHint": "Emportez une copie de votre clé dans un fichier que vous seul pouvez ouvrir. La nôtre reste en place — rien ne change pour votre compte.",
+      "vaultDownload": "Télécharger l'Identity Vault",
+      "vaultDownloadAgain": "Télécharger une nouvelle copie",
+      "vaultPassPlaceholder": "Phrase secrète du fichier, 8 caractères minimum",
+      "vaultPassNotice": "Ce n'est pas le mot de passe du compte, et nous ne la voyons jamais. Oubliez-la tant que nous détenons une copie de votre clé : vous retéléchargerez simplement le fichier avec une nouvelle.",
+      "vaultConfirmBody": "Confirmez que c'est bien vous. La clé est scellée dans votre navigateur et le fichier enregistré sur cet appareil.",
+      "vaultDone": "Enregistré. Conservez le fichier ailleurs que sur l'appareil depuis lequel vous vous connectez.",
+      "vaultOnlyYours": "Nous ne détenons plus de copie de cette clé — elle n'existe que dans votre Identity Vault.",
+      "vaultFailed": "Impossible de préparer le fichier. Réessayez.",
       "stateOwn": "La vôtre",
       "stateLost": "Perdue",
       "hintService": "Votre coffre est chiffré avec une clé que Vimana a créée et conserve. C'est une clé de service, pas une identité — nous n'allons pas vous demander de faire confiance à une clé que nous avons détenue tout du long.",

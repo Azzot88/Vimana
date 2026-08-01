@@ -432,6 +432,21 @@
     "identity": {
       "title": "Tu clave",
       "stateService": "En poder de Vimana",
+      "vaultLabel": "Identity Vault",
+      "copies": {
+        "platform_only": "copia solo con nosotros",
+        "both": "copia contigo y con nosotros",
+        "user_only": "copia solo contigo"
+      },
+      "vaultHint": "Llévate una copia de tu clave en un archivo que solo tú puedes abrir. La nuestra se queda donde está: en tu cuenta no cambia nada.",
+      "vaultDownload": "Descargar Identity Vault",
+      "vaultDownloadAgain": "Descargar una copia nueva",
+      "vaultPassPlaceholder": "Frase de contraseña del archivo, mínimo 8 caracteres",
+      "vaultPassNotice": "No es la contraseña de la cuenta y nunca la vemos. Si la olvidas mientras conservamos una copia de tu clave, simplemente descargas el archivo otra vez con una nueva.",
+      "vaultConfirmBody": "Confirma que eres tú. La clave se sella en tu navegador y el archivo se guarda en este dispositivo.",
+      "vaultDone": "Guardado. Mantén el archivo fuera del dispositivo desde el que inicias sesión.",
+      "vaultOnlyYours": "Ya no conservamos una copia de esta clave: existe solo en tu Identity Vault.",
+      "vaultFailed": "No se pudo preparar el archivo. Inténtalo de nuevo.",
       "stateOwn": "Tuya",
       "stateLost": "Perdida",
       "hintService": "Tu caja fuerte se cifra con una clave que Vimana creó y conserva. Es una clave de servicio, no una identidad: no vamos a pedirte que confíes en una clave que ha estado en nuestras manos todo este tiempo.",

@@ -485,6 +485,21 @@
     "identity": {
       "title": "Your key",
       "stateService": "Held by Vimana",
+      "vaultLabel": "Identity Vault",
+      "copies": {
+        "platform_only": "copy with us only",
+        "both": "copy with you and with us",
+        "user_only": "copy with you only"
+      },
+      "vaultHint": "Take a copy of your key in a file only you can open. Ours stays where it is — nothing about your account changes.",
+      "vaultDownload": "Download Identity Vault",
+      "vaultDownloadAgain": "Download a new copy",
+      "vaultPassPlaceholder": "Passphrase for the file, at least 8 characters",
+      "vaultPassNotice": "This is not your account password, and we never see it. Forget it while we still hold a copy of your key and you simply download again with a new one.",
+      "vaultConfirmBody": "Confirm it is you. The key is sealed in your browser and the file is saved to this device.",
+      "vaultDone": "Saved. Keep the file somewhere other than the device you sign in from.",
+      "vaultOnlyYours": "We no longer hold a copy of this key — it exists only in your Identity Vault.",
+      "vaultFailed": "Could not prepare the file. Try again.",
       "stateOwn": "Yours",
       "stateLost": "Lost",
       "hintService": "Your vault is encrypted with a key Vimana generated and keeps. It is a working key, not an identity — we would not ask you to trust a key we have held all along.",

@@ -7,6 +7,10 @@ export interface KeypairStatus {
    *  user's identity. */
   identity_established: boolean
   key_lost: boolean
+  /** T3.21 — which rung of `D-KEY-TIERS` the account sits on:
+   *  `platform_only` only we hold the key · `both` the user has an Identity
+   *  Vault too · `user_only` our copy is gone and we can no longer sign. */
+  key_copies: 'platform_only' | 'both' | 'user_only'
   /** @deprecated mirrors `identity_established`; kept while callers migrate. */
   key_self_custody: boolean
   /** @deprecated */
@@ -27,6 +31,16 @@ export const requestIdentityChallenge = () =>
 
 export const establishIdentity = (proof: IdentityProof) =>
   api.post<KeypairStatus>('/api/me/identity/establish', proof)
+
+/** T3.21 — the key, once, so this browser can seal it into an Identity Vault.
+ *  Our copy stays: this is a second copy appearing, not a handover. The
+ *  passphrase is never sent — sealing happens locally, and a passphrase the
+ *  server has seen could not protect a file the server keeps. */
+export const releaseKeyForVault = (stepUpToken: string) =>
+  api.post<{ nsec_hex: string; npub_hex: string }>(
+    '/api/me/identity/release-key',
+    { step_up_token: stepUpToken },
+  )
 
 /** T3.15 — confirmation comes from step-up, not a password field: an account
  *  with no password must be able to do this too. */

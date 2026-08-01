@@ -433,6 +433,21 @@
     "identity": {
       "title": "Twój klucz",
       "stateService": "U platformy",
+      "vaultLabel": "Identity Vault",
+      "copies": {
+        "platform_only": "kopia tylko u nas",
+        "both": "kopia u Ciebie i u nas",
+        "user_only": "kopia tylko u Ciebie"
+      },
+      "vaultHint": "Weź kopię klucza w pliku, który otworzysz tylko Ty. Nasza kopia zostaje — w koncie nic się nie zmienia.",
+      "vaultDownload": "Pobierz Identity Vault",
+      "vaultDownloadAgain": "Pobierz nową kopię",
+      "vaultPassPlaceholder": "Hasło do pliku, co najmniej 8 znaków",
+      "vaultPassNotice": "To nie jest hasło do konta i nigdy go nie widzimy. Zapomnisz je, póki mamy kopię klucza — po prostu pobierzesz plik ponownie z nowym.",
+      "vaultConfirmBody": "Potwierdź, że to Ty. Klucz jest pieczętowany w Twojej przeglądarce, plik zapisuje się na tym urządzeniu.",
+      "vaultDone": "Zapisano. Trzymaj plik poza urządzeniem, z którego się logujesz.",
+      "vaultOnlyYours": "Nie mamy już kopii tego klucza — istnieje wyłącznie w Twoim Identity Vault.",
+      "vaultFailed": "Nie udało się przygotować pliku. Spróbuj ponownie.",
       "stateOwn": "Twój",
       "stateLost": "Utracony",
       "hintService": "Twój sejf jest szyfrowany kluczem, który Vimana utworzyła i przechowuje. To klucz roboczy, nie tożsamość — nie będziemy prosić, byś ufał kluczowi, który cały czas leżał u nas.",

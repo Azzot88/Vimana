@@ -4,12 +4,15 @@ import {
   declareKeyLost,
   establishIdentity,
   getKeypairStatus,
+  releaseKeyForVault,
   requestIdentityChallenge,
   type KeypairStatus,
 } from '../api/keypair'
 import {
+  buildIdentityVault,
   generateKeypair,
   keyBackupText,
+  sealNsec,
   signProofWithKey,
   signProofWithNip07,
   type Keypair,
@@ -45,6 +48,12 @@ export default function KeypairSection() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  /** T3.21 — Identity Vault download. The passphrase lives in this state and
+   *  nowhere else: it is never sent, and sealing happens in this tab. */
+  const [vaultPass, setVaultPass] = useState('')
+  const [vaultOpen, setVaultOpen] = useState(false)
+  const [confirmingVault, setConfirmingVault] = useState(false)
+  const [vaultDone, setVaultDone] = useState(false)
 
   const nip07 = hasNip07Extension()
 
@@ -157,10 +166,41 @@ export default function KeypairSection() {
     URL.revokeObjectURL(url)
   }
 
+  /** T3.21 — the whole of rung 2, in one function: ask the server for the key,
+   *  seal it here under a passphrase it never sees, hand the user a file. */
+  const downloadVault = async (stepUpToken: string) => {
+    setBusy(true)
+    setError('')
+    try {
+      const { data } = await releaseKeyForVault(stepUpToken)
+      const ncryptsec = sealNsec(data.nsec_hex, vaultPass)
+      const file = buildIdentityVault(data.npub_hex, ncryptsec)
+      const blob = new Blob([JSON.stringify(file, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `vimana-identity-${file.npub.slice(0, 12)}.dvlt`
+      a.click()
+      URL.revokeObjectURL(url)
+      setConfirmingVault(false)
+      setVaultOpen(false)
+      setVaultPass('')
+      setVaultDone(true)
+      await load()
+    } catch {
+      setError(t('profile.identity.vaultFailed') as string)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (loading || !status) return null
 
   const established = status.identity_established
   const lost = status.key_lost
+  const copies = status.key_copies
 
   return (
     <div className="bg-white rounded-2xl border border-navy/10 p-5 space-y-4">
@@ -210,6 +250,101 @@ export default function KeypairSection() {
         <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
           <p className="text-sm font-body text-navy">{error}</p>
         </div>
+      )}
+
+      {/* ── T3.21 — Identity Vault: the rung, and the way up to the next ── */}
+      {!lost && (
+        <div className="border-t border-navy/10 pt-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-body text-navy/50">
+              {t('profile.identity.vaultLabel')}
+            </div>
+            <span
+              data-testid="identity-copies"
+              data-copies={copies}
+              className="text-xs font-body text-navy/50"
+            >
+              {t(`profile.identity.copies.${copies}`)}
+            </span>
+          </div>
+
+          {vaultDone && (
+            <div className="bg-cyan/10 border border-cyan/40 rounded-lg px-3 py-2">
+              <p className="text-xs font-body text-navy" data-testid="vault-done">
+                {t('profile.identity.vaultDone')}
+              </p>
+            </div>
+          )}
+
+          {copies === 'user_only' ? (
+            <p className="text-sm font-body text-navy/60">
+              {t('profile.identity.vaultOnlyYours')}
+            </p>
+          ) : vaultOpen ? (
+            <div className="space-y-2">
+              <input
+                type="password"
+                value={vaultPass}
+                onChange={(e) => setVaultPass(e.target.value)}
+                placeholder={t('profile.identity.vaultPassPlaceholder') as string}
+                autoFocus
+                data-testid="vault-passphrase"
+                className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+              />
+              {/* Reassuring, not frightening: at this rung nothing is at stake
+                  yet — the platform still holds a copy, so a forgotten
+                  passphrase costs one more download, not the identity. */}
+              <p className="text-xs font-body text-navy/50">
+                {t('profile.identity.vaultPassNotice')}
+              </p>
+              <button
+                type="button"
+                onClick={() => setConfirmingVault(true)}
+                disabled={busy || vaultPass.length < 8}
+                data-testid="vault-continue"
+                className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+              >
+                {busy ? '…' : t('common.continue')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVaultOpen(false)
+                  setVaultPass('')
+                }}
+                className="text-sm font-body text-navy/50"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-body text-navy/60">
+                {t('profile.identity.vaultHint')}
+              </p>
+              <button
+                type="button"
+                onClick={() => setVaultOpen(true)}
+                data-testid="vault-download"
+                className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+              >
+                {copies === 'both'
+                  ? t('profile.identity.vaultDownloadAgain')
+                  : t('profile.identity.vaultDownload')}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {confirmingVault && (
+        <StepUpDialog
+          scope="add_auth_method"
+          title={t('profile.identity.vaultDownload') as string}
+          body={t('profile.identity.vaultConfirmBody') as string}
+          onConfirm={downloadVault}
+          onCancel={() => setConfirmingVault(false)}
+        />
       )}
 
       {/* ── not established yet ── */}
