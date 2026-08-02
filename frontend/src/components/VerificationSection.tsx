@@ -108,7 +108,7 @@ export default function VerificationSection() {
           <button
             type="button"
             onClick={() => handleRevoke(b.id)}
-            className="text-xs font-body text-navy/40 hover:text-red-600"
+            className="text-xs font-body text-navy/40 hover:text-danger"
           >
             {t('verification.revoke')}
           </button>
@@ -196,7 +196,7 @@ export default function VerificationSection() {
             <p className="text-[10px] font-mono text-navy/30">
               🔒 {t('verification.privacyHint')}
             </p>
-            {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+            {error && <p className="text-xs font-mono text-danger">{error}</p>}
           </div>
         </>
       )}

@@ -42,7 +42,7 @@ export default function JoinDealPage() {
         <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
       )}
       {state !== 'pending' && state !== 'ok' && (
-        <p className="text-sm font-body text-red-600">{state}</p>
+        <p className="text-sm font-body text-danger">{state}</p>
       )}
     </div>
   )

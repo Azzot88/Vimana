@@ -133,6 +133,14 @@
     "keyChangedOn": "La clé de cette identité a été changée le {{date}}. Tout ce qui a été signé avant appartient à une clé qu'elle n'a plus.",
     "footer": "Tout sur cette page est une information publique de Vimana."
   },
+  "notFound": {
+    "title": "Cette page n'existe pas",
+    "body": "Le lien ne mène nulle part : une faute de frappe, une page déplacée ou un enregistrement retiré. Si quelqu'un vous a envoyé ce lien, l'adresse ci-dessous l'aidera à trouver son erreur.",
+    "pathLabel": "L'adresse qui a échoué",
+    "toDashboard": "Retour à mon tableau de bord",
+    "toHome": "Retour à l'accueil",
+    "toTrips": "Voir les trajets"
+  },
   "archive": {
     "title": "Archive de l'identité",
     "period": "Active du {{from}} au {{to}}",
@@ -267,6 +275,7 @@
     "sending": "Envoi...",
     "error": "Erreur",
     "close": "Fermer",
+    "skipToContent": "Aller au contenu",
     "search": "Rechercher…",
     "copied": "Copié"
   },

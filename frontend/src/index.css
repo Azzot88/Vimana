@@ -11,3 +11,56 @@ body {
   background-color: #F5F3EE;
   color: #0A1626;
 }
+
+/* T_UX.7 pt.1 — one focus ring for the whole product.
+ *
+ * Focus styles sat on 48 elements against 73 transitions: most of what moved
+ * under the pointer was invisible to the keyboard. Fixing that per component
+ * would have meant touching sixty files and missing the sixty-first, so the
+ * ring lives here and applies to everything focusable.
+ *
+ * `:focus-visible`, not `:focus`: a mouse click should not leave a ring behind,
+ * which is exactly why codebases end up sprinkling `focus:outline-none` and
+ * putting nothing in its place. Components that do that for their own border
+ * treatment still get this one — the utility only clears the browser default.
+ *
+ * `:where()` keeps specificity at zero, so any component that genuinely needs a
+ * different ring can still override it with a plain class. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #58B0D9;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Skip-link: invisible until focused, first stop for the keyboard. */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 400;
+  padding: 0.5rem 0.875rem;
+  background: #0A1626;
+  color: #F5F3EE;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+/* Keys, hashes and npubs must wrap instead of widening a layout. */
+.break-anywhere {
+  overflow-wrap: anywhere;
+}
+
+/* Respect the system setting rather than deciding for people that our motion is
+ * the pleasant kind. Applies to the Motion work in pt.2 as well. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

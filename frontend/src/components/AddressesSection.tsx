@@ -142,7 +142,7 @@ export default function AddressesSection() {
           </button>
         )}
       </div>
-      {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+      {error && <p className="text-xs font-mono text-danger">{error}</p>}
       {loading ? (
         <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
       ) : addresses.length === 0 && !creating ? (
@@ -222,7 +222,7 @@ export default function AddressesSection() {
                   <button
                     type="button"
                     onClick={() => handleDelete(a)}
-                    className="text-[11px] font-body text-red-600 hover:underline"
+                    className="text-[11px] font-body text-danger hover:underline"
                   >
                     {t('common.delete')}
                   </button>

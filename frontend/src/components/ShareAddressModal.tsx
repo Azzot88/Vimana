@@ -114,7 +114,7 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
           </div>
         )}
 
-        {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+        {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <button

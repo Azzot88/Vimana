@@ -427,7 +427,7 @@ export default function NewTripPage() {
                   key={n.id}
                   className={`border rounded-lg p-3 text-xs font-body ${
                     n.status === 'restricted'
-                      ? 'bg-red-50 border-red-300 text-red-800'
+                      ? 'bg-danger/5 border-danger/30 text-danger'
                       : 'bg-amber/10 border-amber/40 text-navy'
                   }`}
                 >

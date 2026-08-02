@@ -248,7 +248,7 @@ export default function DealPage() {
             deal.status !== 'disputed' && (
               <button
                 onClick={() => setDisputeOpen(true)}
-                className="border border-red-300 text-red-600 font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-red-50 transition-colors"
+                className="border border-danger/30 text-danger font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-danger/5 transition-colors"
               >
                 {t('dispute.openButton')}
               </button>
@@ -333,7 +333,7 @@ export default function DealPage() {
               className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
             {disputeError && (
-              <p className="text-xs font-mono text-red-600">{disputeError}</p>
+              <p className="text-xs font-mono text-danger">{disputeError}</p>
             )}
             <div className="flex gap-2 justify-end">
               <button
@@ -345,7 +345,7 @@ export default function DealPage() {
               <button
                 onClick={handleDispute}
                 disabled={disputeSubmitting || !disputeReason.trim()}
-                className="bg-red-600 text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-40"
+                className="bg-danger text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
               >
                 {disputeSubmitting ? '…' : t('dispute.submit')}
               </button>

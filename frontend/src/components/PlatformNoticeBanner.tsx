@@ -4,7 +4,7 @@ import { listPlatformNotices, type PlatformNotice } from '../api/notices'
 const SEVERITY_CLASS: Record<PlatformNotice['severity'], string> = {
   info: 'bg-cyan/10 border-cyan/30 text-navy',
   warning: 'bg-amber/10 border-amber/40 text-navy',
-  alert: 'bg-red-50 border-red-300 text-red-800',
+  alert: 'bg-danger/5 border-danger/30 text-danger',
 }
 
 interface Props {

@@ -70,7 +70,7 @@ export default function AdminDisputesPage() {
       </h1>
 
       {error && (
-        <p className="text-xs font-mono text-red-600">{error}</p>
+        <p className="text-xs font-mono text-danger">{error}</p>
       )}
 
       {loading ? (
@@ -99,7 +99,7 @@ export default function AdminDisputesPage() {
                   <span
                     className={`text-xs font-mono px-2 py-0.5 rounded ${
                       d.status === 'open'
-                        ? 'bg-red-100 text-red-700'
+                        ? 'bg-danger/10 text-danger'
                         : d.status === 'claimed'
                         ? 'bg-amber/20 text-amber'
                         : 'bg-navy/10 text-navy/60'

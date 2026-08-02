@@ -5,7 +5,7 @@ const STATUS_CLASS: Record<RouteNote['status'], string> = {
   standard: '',
   attention: 'bg-cyan/15 text-cyan border-cyan/30',
   complex: 'bg-amber/20 text-amber border-amber/40',
-  restricted: 'bg-red-100 text-red-700 border-red-300',
+  restricted: 'bg-danger/10 text-danger border-danger/30',
 }
 
 const STATUS_ICON: Record<RouteNote['status'], string> = {

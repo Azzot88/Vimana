@@ -267,8 +267,8 @@ export default function DealVaultPage() {
       </div>
 
       {messages.some((m) => m.is_system && (m.text ?? '').includes('Arbiter')) && (
-        <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 mb-3 shrink-0">
-          <p className="text-xs font-body text-red-700">
+        <div className="bg-danger/5 border border-danger/30 rounded-lg px-3 py-2 mb-3 shrink-0">
+          <p className="text-xs font-body text-danger">
             ⚖️ Арбитр открыл переписку по спору. Обе стороны видят это уведомление.
           </p>
         </div>

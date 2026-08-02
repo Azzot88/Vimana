@@ -110,7 +110,7 @@ export default function VerificationRespondModal({
               className={`w-full text-left border rounded-lg px-4 py-3 text-sm font-body transition-colors ${
                 isCarrier
                   ? 'border-navy/20 text-navy/70 hover:bg-ivory'
-                  : 'border-red-300 text-red-600 hover:bg-red-50'
+                  : 'border-danger/30 text-danger hover:bg-danger/5'
               }`}
             >
               {isCarrier
@@ -160,7 +160,7 @@ export default function VerificationRespondModal({
           </div>
         )}
 
-        {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+        {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
         <div className="flex justify-end">
           <button

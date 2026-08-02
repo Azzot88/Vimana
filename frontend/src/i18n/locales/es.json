@@ -133,6 +133,14 @@
     "keyChangedOn": "La clave de esta identidad se cambió el {{date}}. Todo lo firmado antes pertenece a una clave que ya no tiene.",
     "footer": "Todo en esta página es información pública de Vimana."
   },
+  "notFound": {
+    "title": "Esta página no existe",
+    "body": "El enlace no lleva a ninguna parte: un error al escribir, una página que cambió de sitio o un registro que se retiró. Si alguien te envió este enlace, la dirección de abajo le ayudará a encontrar el fallo.",
+    "pathLabel": "La dirección que falló",
+    "toDashboard": "Volver a mi panel",
+    "toHome": "Volver al inicio",
+    "toTrips": "Ver viajes"
+  },
   "archive": {
     "title": "Archivo de la identidad",
     "period": "Activa del {{from}} al {{to}}",
@@ -267,6 +275,7 @@
     "sending": "Enviando...",
     "error": "Error",
     "close": "Cerrar",
+    "skipToContent": "Ir al contenido",
     "search": "Buscar…",
     "copied": "Copiado"
   },

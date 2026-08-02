@@ -133,6 +133,14 @@
     "keyChangedOn": "Klucz tej tożsamości zmieniono {{date}}. Wszystko podpisane wcześniej należy do klucza, którego już nie ma.",
     "footer": "Wszystko na tej stronie to publiczne informacje Vimana."
   },
+  "notFound": {
+    "title": "Taka strona nie istnieje",
+    "body": "Odnośnik prowadzi donikąd: literówka, przeniesiona strona albo usunięty wpis. Jeśli ktoś przysłał Ci ten link, adres poniżej pomoże mu znaleźć błąd.",
+    "pathLabel": "Adres, który nie zadziałał",
+    "toDashboard": "Wróć do panelu",
+    "toHome": "Wróć na stronę główną",
+    "toTrips": "Zobacz podróże"
+  },
   "archive": {
     "title": "Archiwum tożsamości",
     "period": "Działała od {{from}} do {{to}}",
@@ -267,6 +275,7 @@
     "sending": "Wysyłanie...",
     "error": "Błąd",
     "close": "Zamknij",
+    "skipToContent": "Przejdź do treści",
     "search": "Szukaj…",
     "copied": "Skopiowano"
   },

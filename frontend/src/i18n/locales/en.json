@@ -149,6 +149,14 @@
     "keyChangedOn": "The key of this identity was changed on {{date}}. Anything signed before that belongs to a key it no longer holds.",
     "footer": "Everything on this page is public information from Vimana."
   },
+  "notFound": {
+    "title": "This page does not exist",
+    "body": "The link leads nowhere: a typo, a page that moved, or a record that was removed. If somebody sent you this link, the address below will help them find their mistake.",
+    "pathLabel": "The address that failed",
+    "toDashboard": "Back to my dashboard",
+    "toHome": "Back to the front page",
+    "toTrips": "Browse trips"
+  },
   "archive": {
     "title": "Identity archive",
     "period": "Active from {{from}} to {{to}}",
@@ -284,6 +292,7 @@
     "error": "Error",
     "errorGeneric": "Something went wrong. Please try again.",
     "close": "Close",
+    "skipToContent": "Skip to content",
     "search": "Search…",
     "copied": "Copied",
     "edit": "Edit",

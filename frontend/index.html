@@ -4,10 +4,32 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vimana.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vimana — Sacred Logistics</title>
+    <meta name="theme-color" content="#0A1626" />
+    <title>Vimana — доставка в чужом чемодане, с записью каждого шага</title>
+    <!-- T_UX.7 pt.1 — the page had a title and nothing else, so every share of
+         every link rendered as a bare URL. Description and OG are written for a
+         human reading a preview, not stuffed with keywords. -->
+    <meta
+      name="description"
+      content="Посылку везёт человек, который и так летит этим рейсом. Каждый шаг сделки записан в цепь, которую нельзя изменить незаметно, и проверить её можно без нас."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vimana" />
+    <meta property="og:title" content="Vimana — доставка в чужом чемодане, с записью каждого шага" />
+    <meta
+      property="og:description"
+      content="Посылку везёт человек, который и так летит этим рейсом. Каждый шаг сделки записан в цепь, которую нельзя изменить незаметно."
+    />
+    <!-- og:image deliberately absent until a real 1200×630 raster exists.
+         Pointing at an SVG would look correct in the markup and render nowhere:
+         Facebook, Telegram and Slack all refuse SVG previews. A missing image
+         degrades to a text card; a broken one degrades to a blank box. -->
+    <meta name="twitter:card" content="summary" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- 600 added for the display face: the scale used 400/500/700 only, which
+         is why headings had to jump straight to bold to gain any weight. -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

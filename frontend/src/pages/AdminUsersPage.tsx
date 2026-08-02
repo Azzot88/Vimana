@@ -114,7 +114,7 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+      {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
       {loading ? (
         <p className="text-sm font-body text-navy/40 text-center py-8">
@@ -196,7 +196,7 @@ export default function AdminUsersPage() {
                         {u.id !== me.id && u.role !== 'superuser' && (
                           <button
                             onClick={() => handleDelete(u)}
-                            className="text-xs font-display font-medium px-3 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
+                            className="text-xs font-display font-medium px-3 py-1 rounded-lg bg-danger/10 text-danger hover:bg-danger/15"
                           >
                             Delete
                           </button>

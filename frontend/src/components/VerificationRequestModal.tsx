@@ -55,7 +55,7 @@ export default function VerificationRequestModal({
               : 'verification.askCarrierHint',
           )}
         </p>
-        {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+        {error && <p className="text-xs font-mono text-danger">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button
             onClick={onClose}

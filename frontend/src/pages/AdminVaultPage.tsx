@@ -48,7 +48,7 @@ export default function AdminVaultPage() {
         </p>
       </div>
 
-      {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+      {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
       {loading ? (
         <p className="text-sm font-body text-navy/40 text-center py-8">
@@ -60,7 +60,7 @@ export default function AdminVaultPage() {
             <div
               key={m.id}
               className={`border-l-2 pl-3 ${
-                m.is_system ? 'border-red-400 bg-red-50/50 -mx-4 px-4 py-2' : 'border-navy/10'
+                m.is_system ? 'border-danger/40 bg-danger/5 -mx-4 px-4 py-2' : 'border-navy/10'
               }`}
             >
               <div className="flex items-baseline justify-between gap-2">

@@ -22,6 +22,7 @@ import AdminNoticesPage from './pages/AdminNoticesPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminVaultPage from './pages/AdminVaultPage'
 import JoinDealPage from './pages/JoinDealPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 function ProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -63,6 +64,11 @@ export default function App() {
               <Route path="/admin/deals/:dealId/vault" element={<AdminVaultPage />} />
             </Route>
           </Route>
+          {/* T_UX.7 pt.1 — the catch-all that was missing. Outside the
+              protected block on purpose: a stranger following a dead link
+              should be told the page does not exist, not bounced to a login
+              that implies it does. */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthBootstrap>
     </BrowserRouter>

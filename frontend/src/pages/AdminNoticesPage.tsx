@@ -101,7 +101,7 @@ export default function AdminNoticesPage() {
   return (
     <div className="space-y-8">
       <h1 className="font-display font-bold text-2xl text-navy">Notices</h1>
-      {error && <p className="text-xs font-mono text-red-600">{error}</p>}
+      {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
       <section className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
         <h2 className="font-display font-semibold text-lg text-navy">Route notes</h2>
@@ -181,7 +181,7 @@ export default function AdminNoticesPage() {
                     await reload()
                   }
                 }}
-                className="text-red-600 hover:underline"
+                className="text-danger hover:underline"
               >
                 Delete
               </button>
@@ -261,7 +261,7 @@ export default function AdminNoticesPage() {
                     await reload()
                   }
                 }}
-                className="text-red-600 hover:underline"
+                className="text-danger hover:underline"
               >
                 Delete
               </button>
