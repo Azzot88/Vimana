@@ -18,8 +18,23 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
  * The reader build must not empty `dist/`: it runs second, and the app's output
  * is already there.
  */
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
   const isReader = mode === 'reader'
+
+  if (isSsrBuild) {
+    // T_UX.7 pt.2 — a Node-runnable bundle exporting `render()`, consumed by
+    // `scripts/prerender.mjs`. `emptyOutDir: false` for the same reason the
+    // reader build needs it: this pass runs last and the browser output is
+    // already sitting in `dist/`.
+    return {
+      plugins: [react()],
+      build: {
+        ssr: resolve(__dirname, 'src/entry-ssr.tsx'),
+        outDir: 'dist/ssr',
+        emptyOutDir: false,
+      },
+    }
+  }
 
   return {
     plugins: isReader ? [viteSingleFile()] : [react()],
@@ -35,15 +50,21 @@ export default defineConfig(({ mode }) => {
           },
         }
       : {
-          // Split heavy vendors so the main bundle stays under 500 kB and the
-          // browser can cache the (rarely-changing) libraries separately from
-          // our code.
+          // Split heavy vendors so the browser caches rarely-changing libraries
+          // separately from our code.
+          //
+          // The comment here used to promise the main bundle stayed under
+          // 500 kB. It stopped being true well before `framer-motion` was
+          // added — the warning had simply been read as background noise. The
+          // real fix is below: routes load on demand, so opening the landing no
+          // longer downloads the admin vault screen.
           rollupOptions: {
             output: {
               manualChunks: {
                 'vendor-react': ['react', 'react-dom', 'react-router-dom'],
                 'vendor-i18n': ['i18next', 'react-i18next'],
                 'vendor-phone': ['libphonenumber-js'],
+                'vendor-motion': ['framer-motion'],
               },
             },
           },

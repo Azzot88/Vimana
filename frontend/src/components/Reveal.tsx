@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { ReactNode } from 'react'
 
@@ -7,12 +8,24 @@ import type { ReactNode } from 'react'
  * `MOTION_INTENSITY: 3`. The landing is written to read as a document, and a
  * document that moves while you read it stops being one. So: a short rise on
  * first appearance, once, and no scroll-linked parallax, no loops, no
- * hover-scale on anything that carries information.
+ * hover-scale on anything carrying information.
  *
- * `useReducedMotion` is checked here as well as in the global CSS rule, because
- * the CSS `!important` override kills *durations* but not the initial offset —
- * without this branch a reduced-motion user would see content jump from 12px
- * down to place with no transition, which is worse than either option.
+ * Three guards, each for a different failure:
+ *
+ * - **`useReducedMotion`** — the system setting, honoured here as well as in the
+ *   global CSS rule. The CSS `!important` kills durations but not the initial
+ *   offset, so without this branch a reduced-motion user would get content
+ *   jumping 12px into place with no transition: worse than either option.
+ * - **`typeof window === 'undefined'`** — the prerender runs in Node. The
+ *   prerendered HTML has to contain the finished page, not its first frame;
+ *   `whileInView` needs an IntersectionObserver, so the server would otherwise
+ *   serialise every section at `opacity: 0` and anyone with JavaScript off
+ *   would get a blank page.
+ * - **`hydrated`** — the first *client* render must match the server byte for
+ *   byte, or React logs a hydration mismatch for every section. Motion starts
+ *   one effect later. That is invisible in practice because everything wrapped
+ *   here is below the fold; the hero deliberately does not use this component,
+ *   since content that is already on screen must not fade in after arriving.
  */
 export default function Reveal({
   children,
@@ -24,7 +37,13 @@ export default function Reveal({
   className?: string
 }) {
   const reduced = useReducedMotion()
-  if (reduced) return <div className={className}>{children}</div>
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => setHydrated(true), [])
+
+  if (reduced || !hydrated || typeof window === 'undefined') {
+    return <div className={className}>{children}</div>
+  }
 
   return (
     <motion.div

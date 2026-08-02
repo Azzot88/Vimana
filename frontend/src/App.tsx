@@ -1,28 +1,41 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from './stores/auth'
 import AuthBootstrap from './components/AuthBootstrap'
 import Layout from './components/Layout'
+import MonoText from './components/MonoText'
+
+/**
+ * T_UX.7 pt.2 — the three pages a stranger can reach are bundled eagerly; every
+ * screen behind a session loads when it is first opened.
+ *
+ * The build warned that the main chunk had passed 500 kB and the warning had
+ * been living there long enough to read as decoration. It mattered more once
+ * the landing became a real front door: a visitor who only ever reads it was
+ * downloading the arbiter's vault screen to do so.
+ */
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import VerifyEmailPage from './pages/VerifyEmailPage'
-import DashboardPage from './pages/DashboardPage'
-import TripsPage from './pages/TripsPage'
-import NewTripPage from './pages/NewTripPage'
-import DealsPage from './pages/DealsPage'
-import DealPage from './pages/DealPage'
-import DealVaultPage from './pages/DealVaultPage'
-import IdentityPage from './pages/IdentityPage'
-import ProfileKeysPage from './pages/ProfileKeysPage'
-import ProfilePage from './pages/ProfilePage'
-import InvitePage from './pages/InvitePage'
-import AcceptInvitePage from './pages/AcceptInvitePage'
-import AdminDisputesPage from './pages/AdminDisputesPage'
-import AdminNoticesPage from './pages/AdminNoticesPage'
-import AdminUsersPage from './pages/AdminUsersPage'
-import AdminVaultPage from './pages/AdminVaultPage'
-import JoinDealPage from './pages/JoinDealPage'
-import NotFoundPage from './pages/NotFoundPage'
+
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const TripsPage = lazy(() => import('./pages/TripsPage'))
+const NewTripPage = lazy(() => import('./pages/NewTripPage'))
+const DealsPage = lazy(() => import('./pages/DealsPage'))
+const DealPage = lazy(() => import('./pages/DealPage'))
+const DealVaultPage = lazy(() => import('./pages/DealVaultPage'))
+const IdentityPage = lazy(() => import('./pages/IdentityPage'))
+const ProfileKeysPage = lazy(() => import('./pages/ProfileKeysPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const InvitePage = lazy(() => import('./pages/InvitePage'))
+const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage'))
+const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'))
+const AdminNoticesPage = lazy(() => import('./pages/AdminNoticesPage'))
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
+const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
+const JoinDealPage = lazy(() => import('./pages/JoinDealPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function ProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -30,10 +43,21 @@ function ProtectedRoute() {
   return <Outlet />
 }
 
+/** Deliberately quiet: a chunk fetch on a warm connection is over before a
+ *  spinner would finish appearing, and a flashing spinner reads as a fault. */
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <MonoText className="text-sm text-navy/30">·</MonoText>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthBootstrap>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -69,7 +93,8 @@ export default function App() {
               should be told the page does not exist, not bounced to a login
               that implies it does. */}
           <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </AuthBootstrap>
     </BrowserRouter>
   )

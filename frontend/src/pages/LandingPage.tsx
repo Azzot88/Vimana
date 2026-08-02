@@ -138,8 +138,11 @@ export default function LandingPage() {
 
       <main id="main" className="mx-auto max-w-5xl px-5">
         {/* ── Hero ─────────────────────────────────────────────────────── */}
+        {/* The hero is deliberately not wrapped in `Reveal`: it is on screen
+            before anything can reveal it, and fading in content the visitor is
+            already looking at is the motion equivalent of a splash screen. */}
         <section className="grid gap-10 border-b border-navy/10 py-14 md:grid-cols-[1.15fr_1fr] md:items-center md:py-20">
-          <Reveal>
+          <div>
             <Label>{t('landing.heroEyebrow')}</Label>
             <h1 className="mt-4 font-display text-[clamp(2.25rem,5.5vw,3.75rem)] font-bold leading-[1.03] tracking-[-0.03em] text-balance">
               {t('landing.heroTitle')}
@@ -164,12 +167,12 @@ export default function LandingPage() {
                 {t('landing.ctaBrowse')}
               </Link>
             </div>
-          </Reveal>
+          </div>
 
           {/* Boarding pass. Kept from the previous landing because it is the
-              one image the product already owns — a parcel riding an existing
+              one image the product already owns: a parcel riding an existing
               flight is exactly what a boarding pass depicts. */}
-          <Reveal delay={0.1}>
+          <div>
             <div className="rounded-card border border-navy/12 bg-white shadow-card">
               <div className="flex items-center justify-between border-b border-dashed border-navy/15 px-5 py-3">
                 <MonoText className="text-[10px] uppercase tracking-[0.2em] text-navy/45">
@@ -210,7 +213,7 @@ export default function LandingPage() {
                 </MonoText>
               </div>
             </div>
-          </Reveal>
+          </div>
         </section>
 
         {/* ── What is true today ───────────────────────────────────────── */}

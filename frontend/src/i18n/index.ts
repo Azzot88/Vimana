@@ -9,9 +9,14 @@ import es from './locales/es.json'
 
 const LEGACY_LANG_MAP: Record<string, string> = { uk: 'ua' }
 
-const rawSaved = localStorage.getItem('lang') ?? 'en'
+// T_UX.7 pt.2 — this module is imported by the prerender build, which runs in
+// Node where `localStorage` does not exist. Reading it unguarded threw at import
+// time and took the whole build down before rendering a single element.
+const hasStorage = typeof localStorage !== 'undefined'
+
+const rawSaved = (hasStorage && localStorage.getItem('lang')) || 'en'
 const savedLang = LEGACY_LANG_MAP[rawSaved] ?? rawSaved
-if (savedLang !== rawSaved) {
+if (hasStorage && savedLang !== rawSaved) {
   localStorage.setItem('lang', savedLang)
 }
 

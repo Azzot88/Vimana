@@ -19,9 +19,14 @@ interface AuthStore {
   bumpActivity: () => void
 }
 
+// T_UX.7 pt.2 — the store is constructed at import, and the prerender build
+// imports it from Node. Only the initial read needs guarding: every write below
+// happens in response to a user action, which by definition is a browser.
+const initialToken = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
-  token: localStorage.getItem('token'),
+  token: initialToken,
   authState: 'loading',
   lastActivityAt: Date.now(),
   setAuth: (user, token) => {

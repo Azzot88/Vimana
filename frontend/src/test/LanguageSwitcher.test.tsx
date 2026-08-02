@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { renderWithProviders } from './render'
 import i18n from '../i18n'
@@ -28,9 +28,18 @@ describe('LanguageSwitcher', () => {
     const list = screen.getByRole('list')
     await user.click(within(list).getByText('Русский'))
 
-    expect(i18n.language).toBe('ru')
+    // `changeLanguage` resolves after the click handler returns, and the
+    // re-render it causes lands outside `act` — which is what the warning in
+    // the output was about. Waiting for the settled value puts that update
+    // inside `act` and, incidentally, tests the thing that actually matters:
+    // the switch completes, not that it started.
+    await waitFor(() => expect(i18n.language).toBe('ru'))
     expect(localStorage.getItem('lang')).toBe('ru')
 
-    await i18n.changeLanguage('en')
+    // The reset is a state update too, so it needs the same treatment or the
+    // warning simply moves to the end of the test.
+    await act(async () => {
+      await i18n.changeLanguage('en')
+    })
   })
 })

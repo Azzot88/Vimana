@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && vite build --mode reader",
+    "build": "tsc && vite build && vite build --mode reader && vite build --ssr src/entry-ssr.tsx --outDir dist/ssr --emptyOutDir false && node scripts/prerender.mjs",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run"
