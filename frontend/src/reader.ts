@@ -35,6 +35,28 @@ const result = $<HTMLElement>('result')
 const nsecRow = $<HTMLElement>('nsecRow')
 
 let nsecHex = ''
+let ncryptsec = ''
+
+/**
+ * Copy, with a fallback that matters here more than usual: saved to disk the
+ * page runs from `file://`, where the clipboard API is often unavailable. In
+ * that case the text is selected instead, so Ctrl+C still works — an offline
+ * copy of this page must not be the broken one.
+ */
+async function copy(text: string, source: HTMLElement): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text)
+    const note = $('copied')
+    note.classList.remove('hidden')
+    setTimeout(() => note.classList.add('hidden'), 1500)
+  } catch {
+    const range = document.createRange()
+    range.selectNodeContents(source)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+}
 
 function fail(message: string): void {
   errorBox.textContent = message
@@ -88,6 +110,7 @@ async function handleOpen(): Promise<void> {
       )
     }
     nsecHex = contents.nsec
+    ncryptsec = contents.ncryptsec
     $('npub').textContent = contents.npub
     $('created').textContent = contents.created_at || '—'
     result.classList.remove('hidden')
@@ -113,3 +136,9 @@ revealBtn.addEventListener('click', () => {
   nsecRow.classList.remove('hidden')
   revealBtn.classList.add('hidden')
 })
+
+$('copyNpub').addEventListener('click', () => void copy($('npub').textContent || '', $('npub')))
+$('copyNsec').addEventListener('click', () => void copy(nsecHex, $('nsec')))
+// The encrypted string, not the bare key: this is the one meant to be pasted
+// somewhere else, and it stays useless to whoever has not got the passphrase.
+$('copyNcryptsec').addEventListener('click', () => void copy(ncryptsec, $('npub')))

@@ -70,10 +70,21 @@
       <div class="row">
         <div class="k">Public key (npub)</div>
         <div id="npub" class="mono"></div>
+        <button id="copyNpub" class="secondary" type="button">Copy npub</button>
       </div>
       <div class="row">
         <div class="k">Sealed at</div>
         <div id="created" class="mono"></div>
+      </div>
+      <div class="row">
+        <div class="k">For another Nostr client</div>
+        <button id="copyNcryptsec" class="secondary" type="button">
+          Copy the encrypted key (ncryptsec)
+        </button>
+        <p class="k" style="margin:.35rem 0 0">
+          Paste it into damus, amethyst or any client that accepts NIP-49. It
+          asks for this same passphrase — the key never travels in the open.
+        </p>
       </div>
       <p class="warn">
         The private key below is the identity itself. Anyone who reads it can
@@ -83,7 +94,9 @@
       <div class="row hidden" id="nsecRow">
         <div class="k">Private key (nsec)</div>
         <div id="nsec" class="mono"></div>
+        <button id="copyNsec" class="secondary" type="button">Copy the private key</button>
       </div>
+      <p id="copied" class="k hidden">Copied.</p>
     </section>
 
     <footer>
