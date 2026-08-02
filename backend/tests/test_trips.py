@@ -95,7 +95,17 @@ async def test_list_trips_filter_origin_is_case_insensitive(client, seed_trip):
 
 
 async def test_list_trips_filter_by_departure_date(client, carrier_headers):
-    """The date filter is a half-open UTC day, not a cast on the column."""
+    """The date filter is a half-open UTC day, not a cast on the column.
+
+    The origin is unique per run on purpose. With a fixed one this test failed
+    a day after it was written: trips are never deleted, so yesterday's
+    "now + 11 days" is today's "day before" — and they matched the negative
+    assertion entirely legitimately. A test that depends on the calendar date
+    it runs on has to scope itself to its own run.
+    """
+    import uuid as uuidlib
+
+    origin = f"DT{uuidlib.uuid4().hex[:6].upper()}"
     depart = (datetime.now(timezone.utc) + timedelta(days=11)).replace(
         hour=12, minute=0, second=0, microsecond=0
     )
@@ -103,8 +113,8 @@ async def test_list_trips_filter_by_departure_date(client, carrier_headers):
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "DTFLT",
-            "destination": "DTFLT-DEST",
+            "origin": origin,
+            "destination": f"{origin}-DEST",
             "depart_at": depart.isoformat(),
             "capacity": 1.0,
             "allowed_categories": ["document"],
@@ -115,7 +125,7 @@ async def test_list_trips_filter_by_departure_date(client, carrier_headers):
 
     same_day = await client.get(
         "/api/trips",
-        params={"origin": "DTFLT", "date": depart.date().isoformat()},
+        params={"origin": origin, "date": depart.date().isoformat()},
     )
     assert same_day.status_code == 200
     assert any(t["id"] == trip_id for t in same_day.json()["items"])
@@ -123,7 +133,7 @@ async def test_list_trips_filter_by_departure_date(client, carrier_headers):
     day_before = await client.get(
         "/api/trips",
         params={
-            "origin": "DTFLT",
+            "origin": origin,
             "date": (depart.date() - timedelta(days=1)).isoformat(),
         },
     )
@@ -146,12 +156,15 @@ async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_header
 
     from app.models.user import User
 
+    # Unique per run for the same reason as the date test above: nothing is
+    # deleted, and a fixed origin turns leftovers into false positives.
+    origin = f"LST{uuidlib.uuid4().hex[:6].upper()}"
     created = await client.post(
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "LSTK",
-            "destination": "LSTK-D",
+            "origin": origin,
+            "destination": f"{origin}-D",
             "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
             "capacity": 1.0,
             "allowed_categories": ["document"],
@@ -160,7 +173,7 @@ async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_header
     assert created.status_code == 201
     carrier_id = created.json()["carrier_id"]
 
-    listed = await client.get("/api/trips", params={"origin": "LSTK"})
+    listed = await client.get("/api/trips", params={"origin": origin})
     assert listed.json()["items"][0]["carrier_key_lost"] is False
 
     async with session_maker() as db:
@@ -169,7 +182,7 @@ async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_header
         await db.commit()
 
     try:
-        after = await client.get("/api/trips", params={"origin": "LSTK"})
+        after = await client.get("/api/trips", params={"origin": origin})
         assert after.json()["items"][0]["carrier_key_lost"] is True
     finally:
         # The seed carrier is shared across the suite — a retired flag left
