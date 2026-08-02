@@ -361,6 +361,26 @@
     }
   },
   "chat": {
+    "backToDeal": "Transaction",
+    "immutable": "Immuable · SHA-256",
+    "empty": "Aucun message pour l'instant",
+    "placeholder": "Message…",
+    "send": "Envoyer",
+    "uploadPhoto": "Envoyer une photo",
+    "openFullscreen": "Ouvrir en plein écran",
+    "decrypting": "déchiffrement…",
+    "needsNip07": "Message chiffré. Une extension NIP-07 est nécessaire pour le lire.",
+    "loadFailed": "Impossible de charger les messages",
+    "sendFailed": "Impossible d'envoyer le message",
+    "uploadFailed": "Impossible d'envoyer le fichier",
+    "arbiterOpened": "Un arbitre a ouvert cette conversation pour le litige. Les deux parties voient cet avis.",
+    "kind": {
+      "handoff_photo": "Photo de la remise",
+      "receipt_photo": "Photo de la réception",
+      "doc": "Document",
+      "payment_receipt": "Reçu de paiement",
+      "identity_doc": "Pièce d'identité"
+    },
     "shareAddress": {
       "button": "Partager mon adresse",
       "confirm": "Partager votre adresse enregistrée ? L'autre partie la verra.",
@@ -434,6 +454,7 @@
     "search": "Rechercher",
     "carrier": "Transporteur",
     "capacity": "Capacité",
+    "kg": "kg",
     "keyLost": "clé perdue",
     "keyLostHint": "Ce transporteur a déclaré sa clé perdue. Le compte reste accessible, mais il ne peut plus signer ni ouvrir les coffres des transactions.",
     "alsoOnNostr": "sur Nostr",
@@ -483,6 +504,17 @@
   "deals": {
     "title": "Transactions",
     "noDeals": "Aucune transaction",
+    "notFound": "Transaction introuvable",
+    "actionFailed": "L'action n'a pas abouti. Réessayez.",
+    "boardingPass": "Carte d'embarquement",
+    "sender": "Expéditeur",
+    "carrier": "Transporteur",
+    "cargo": "Colis",
+    "category": "Catégorie",
+    "dealId": "ID de la transaction",
+    "accept": "Accepter la transaction",
+    "recordHandoff": "Enregistrer la remise",
+    "confirmReceipt": "Confirmer la réception",
     "status": {
       "draft": "Brouillon",
       "matched": "Associé",

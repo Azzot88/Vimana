@@ -409,6 +409,26 @@
     }
   },
   "chat": {
+    "backToDeal": "Deal",
+    "immutable": "Immutable · SHA-256",
+    "empty": "No messages yet",
+    "placeholder": "Message…",
+    "send": "Send",
+    "uploadPhoto": "Upload a photo",
+    "openFullscreen": "Open full screen",
+    "decrypting": "decrypting…",
+    "needsNip07": "Encrypted message. A NIP-07 extension is needed to read it.",
+    "loadFailed": "Could not load the messages",
+    "sendFailed": "Could not send the message",
+    "uploadFailed": "Could not upload the file",
+    "arbiterOpened": "An arbiter opened this thread for the dispute. Both sides see this notice.",
+    "kind": {
+      "handoff_photo": "Hand-off photo",
+      "receipt_photo": "Receipt photo",
+      "doc": "Document",
+      "payment_receipt": "Payment receipt",
+      "identity_doc": "Identity document"
+    },
     "shareAddress": {
       "button": "Share my address",
       "confirm": "Share your saved address? The other party will see it.",
@@ -482,6 +502,7 @@
     "search": "Search",
     "carrier": "Carrier",
     "capacity": "Capacity",
+    "kg": "kg",
     "keyLost": "key lost",
     "keyLostHint": "This carrier declared their key lost. The account can still be signed into, but it can no longer sign or open deal vaults.",
     "alsoOnNostr": "on Nostr",
@@ -531,6 +552,17 @@
   "deals": {
     "title": "Deals",
     "noDeals": "No deals yet",
+    "notFound": "Deal not found",
+    "actionFailed": "That did not go through. Please try again.",
+    "boardingPass": "Boarding pass",
+    "sender": "Sender",
+    "carrier": "Carrier",
+    "cargo": "Cargo",
+    "category": "Category",
+    "dealId": "Deal ID",
+    "accept": "Accept the deal",
+    "recordHandoff": "Record the hand-off",
+    "confirmReceipt": "Confirm receipt",
     "status": {
       "draft": "Draft",
       "matched": "Matched",

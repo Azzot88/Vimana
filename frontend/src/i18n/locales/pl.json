@@ -362,6 +362,26 @@
     }
   },
   "chat": {
+    "backToDeal": "Transakcja",
+    "immutable": "Niezmienne · SHA-256",
+    "empty": "Brak wiadomości",
+    "placeholder": "Wiadomość…",
+    "send": "Wyślij",
+    "uploadPhoto": "Wyślij zdjęcie",
+    "openFullscreen": "Otwórz na pełnym ekranie",
+    "decrypting": "odszyfrowuję…",
+    "needsNip07": "Wiadomość zaszyfrowana. Do odczytu potrzebne jest rozszerzenie NIP-07.",
+    "loadFailed": "Nie udało się wczytać wiadomości",
+    "sendFailed": "Nie udało się wysłać wiadomości",
+    "uploadFailed": "Nie udało się wysłać pliku",
+    "arbiterOpened": "Arbiter otworzył tę rozmowę w związku ze sporem. Obie strony widzą to powiadomienie.",
+    "kind": {
+      "handoff_photo": "Zdjęcie przekazania",
+      "receipt_photo": "Zdjęcie odbioru",
+      "doc": "Dokument",
+      "payment_receipt": "Potwierdzenie zapłaty",
+      "identity_doc": "Dokument tożsamości"
+    },
     "shareAddress": {
       "button": "Udostępnij adres",
       "confirm": "Udostępnić zapisany adres? Druga strona go zobaczy.",
@@ -435,6 +455,7 @@
     "search": "Szukaj",
     "carrier": "Przewoźnik",
     "capacity": "Pojemność",
+    "kg": "kg",
     "keyLost": "klucz utracony",
     "keyLostHint": "Przewoźnik zgłosił utratę klucza. Do konta można się zalogować, ale nie podpisze już zapisów ani nie otworzy sejfów transakcji.",
     "alsoOnNostr": "w Nostr",
@@ -484,6 +505,17 @@
   "deals": {
     "title": "Transakcje",
     "noDeals": "Brak transakcji",
+    "notFound": "Nie znaleziono transakcji",
+    "actionFailed": "Nie udało się wykonać. Spróbuj ponownie.",
+    "boardingPass": "Karta pokładowa",
+    "sender": "Nadawca",
+    "carrier": "Przewoźnik",
+    "cargo": "Ładunek",
+    "category": "Kategoria",
+    "dealId": "ID transakcji",
+    "accept": "Przyjmij transakcję",
+    "recordHandoff": "Zarejestruj przekazanie",
+    "confirmReceipt": "Potwierdź odbiór",
     "status": {
       "draft": "Szkic",
       "matched": "Dopasowano",

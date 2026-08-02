@@ -162,7 +162,7 @@ export default function TripsPage() {
                       ))}
                     </span>
                     <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
-                    <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} кг</MonoText></span>
+                    <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} {t('trips.kg')}</MonoText></span>
                   </div>
                   {trip.allowed_categories.length > 0 && (
                     <div className="flex flex-wrap gap-1">

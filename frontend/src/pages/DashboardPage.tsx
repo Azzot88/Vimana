@@ -153,7 +153,7 @@ export default function DashboardPage() {
                     </MonoText>
                   </div>
                   <p className="text-xs font-body text-navy/50 mt-1">
-                    {t('trips.capacity')}: {trip.capacity} кг
+                    {t('trips.capacity')}: {trip.capacity} {t('trips.kg')}
                   </p>
                 </div>
               ))}

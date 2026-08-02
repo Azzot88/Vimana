@@ -361,6 +361,26 @@
     }
   },
   "chat": {
+    "backToDeal": "Acuerdo",
+    "immutable": "Inmutable · SHA-256",
+    "empty": "Todavía no hay mensajes",
+    "placeholder": "Mensaje…",
+    "send": "Enviar",
+    "uploadPhoto": "Subir una foto",
+    "openFullscreen": "Abrir a pantalla completa",
+    "decrypting": "descifrando…",
+    "needsNip07": "Mensaje cifrado. Hace falta una extensión NIP-07 para leerlo.",
+    "loadFailed": "No se pudieron cargar los mensajes",
+    "sendFailed": "No se pudo enviar el mensaje",
+    "uploadFailed": "No se pudo subir el archivo",
+    "arbiterOpened": "Un árbitro abrió esta conversación por la disputa. Ambas partes ven este aviso.",
+    "kind": {
+      "handoff_photo": "Foto de la entrega",
+      "receipt_photo": "Foto de la recepción",
+      "doc": "Documento",
+      "payment_receipt": "Comprobante de pago",
+      "identity_doc": "Documento de identidad"
+    },
     "shareAddress": {
       "button": "Compartir mi dirección",
       "confirm": "¿Compartir tu dirección guardada? La otra parte podrá verla.",
@@ -434,6 +454,7 @@
     "search": "Buscar",
     "carrier": "Transportista",
     "capacity": "Capacidad",
+    "kg": "kg",
     "keyLost": "clave perdida",
     "keyLostHint": "Este transportista declaró perdida su clave. Aún se puede entrar en la cuenta, pero ya no puede firmar ni abrir las cajas de las operaciones.",
     "alsoOnNostr": "en Nostr",
@@ -483,6 +504,17 @@
   "deals": {
     "title": "Acuerdos",
     "noDeals": "Sin acuerdos",
+    "notFound": "Acuerdo no encontrado",
+    "actionFailed": "No se pudo completar. Inténtalo de nuevo.",
+    "boardingPass": "Tarjeta de embarque",
+    "sender": "Remitente",
+    "carrier": "Transportista",
+    "cargo": "Carga",
+    "category": "Categoría",
+    "dealId": "ID del acuerdo",
+    "accept": "Aceptar el acuerdo",
+    "recordHandoff": "Registrar la entrega",
+    "confirmReceipt": "Confirmar recepción",
     "status": {
       "draft": "Borrador",
       "matched": "Emparejado",

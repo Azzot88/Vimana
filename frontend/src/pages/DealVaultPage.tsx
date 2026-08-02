@@ -19,16 +19,19 @@ import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
 
-const KIND_LABEL: Record<AttachmentKind, string> = {
-  handoff_photo: 'Фото передачи',
-  receipt_photo: 'Фото получения',
-  doc: 'Документ',
-  payment_receipt: 'Чек оплаты',
-  identity_doc: 'Документ личности',
+/** T_UX.7 pt.3 — keys, not labels. The labels themselves were Russian literals
+ *  and doubled as the `alt` text on every attachment, so five locales got a
+ *  Russian image description read aloud by their screen reader. */
+const KIND_KEY: Record<AttachmentKind, string> = {
+  handoff_photo: 'chat.kind.handoff_photo',
+  receipt_photo: 'chat.kind.receipt_photo',
+  doc: 'chat.kind.doc',
+  payment_receipt: 'chat.kind.payment_receipt',
+  identity_doc: 'chat.kind.identity_doc',
 }
 
 export default function DealVaultPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const { dealId } = useParams<{ dealId: string }>()
   const [messages, setMessages] = useState<VaultMessage[]>([])
@@ -54,7 +57,7 @@ export default function DealVaultPage() {
       const { data } = await listMessages(dealId, { limit: 100 })
       setMessages(data.items)
     } catch {
-      setError('Не удалось загрузить сообщения')
+      setError(t('chat.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -135,7 +138,7 @@ export default function DealVaultPage() {
       setMessages((prev) => [...prev, data])
       setText('')
     } catch {
-      setError('Не удалось отправить сообщение')
+      setError(t('chat.sendFailed'))
     } finally {
       setSending(false)
     }
@@ -152,7 +155,7 @@ export default function DealVaultPage() {
     } catch (err: unknown) {
       const detail =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'Не удалось загрузить файл')
+      setError(typeof detail === 'string' ? detail : t('chat.uploadFailed'))
     } finally {
       setSending(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -166,29 +169,29 @@ export default function DealVaultPage() {
         <div className="flex items-center gap-2">
           {att && (
             <span className="text-xs font-mono text-navy/30 bg-navy/5 px-1.5 py-0.5 rounded">
-              {KIND_LABEL[att.kind] ?? att.kind}
+              {t(KIND_KEY[att.kind]) ?? att.kind}
             </span>
           )}
           {msg.is_system && (
             <span className="text-xs font-mono text-cyan bg-cyan/5 px-1.5 py-0.5 rounded">
-              Система
+              {t('admin.systemMessage')}
             </span>
           )}
           <MonoText className="text-xs text-navy/30 ml-auto">
-            {new Date(msg.created_at).toLocaleTimeString('ru-RU')}
+            {new Date(msg.created_at).toLocaleTimeString(i18n.language)}
           </MonoText>
         </div>
 
         {att && att.url && (
           <button
             type="button"
-            onClick={() => setPreview({ url: att.url!, alt: KIND_LABEL[att.kind] ?? att.kind })}
+            onClick={() => setPreview({ url: att.url!, alt: t(KIND_KEY[att.kind]) ?? att.kind })}
             className="rounded-field overflow-hidden border border-navy/10 max-w-xs cursor-zoom-in hover:border-cyan/40 transition-colors block"
-            aria-label="Открыть в полный экран"
+            aria-label={t("chat.openFullscreen") as string}
           >
             <img
               src={att.url}
-              alt={KIND_LABEL[att.kind] ?? att.kind}
+              alt={t(KIND_KEY[att.kind]) ?? att.kind}
               className="w-full object-cover max-h-48"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none'
@@ -202,14 +205,14 @@ export default function DealVaultPage() {
           if (msg.is_e2e && shown === undefined) {
             return (
               <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
-                🔒 расшифровываю…
+                🔒 {t('chat.decrypting')}
               </p>
             )
           }
           if (msg.is_e2e && shown === '') {
             return (
               <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
-                🔒 e2e-сообщение — требуется NIP-07 расширение для чтения
+                🔒 {t('chat.needsNip07')}
               </p>
             )
           }
@@ -239,7 +242,7 @@ export default function DealVaultPage() {
     <div className="max-w-2xl flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
       <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
         <Link to={`/deals/${dealId}`} className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
-          ← Сделка
+          ← {t('chat.backToDeal')}
         </Link>
         <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
         {user && parties.senderId === user.id && dealId && (
@@ -263,13 +266,13 @@ export default function DealVaultPage() {
 
       <div className="bg-navy/5 rounded-field px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan"></span>
-        <MonoText className="text-xs text-navy/60">Иммутабельно · SHA-256</MonoText>
+        <MonoText className="text-xs text-navy/60">{t('chat.immutable')}</MonoText>
       </div>
 
       {messages.some((m) => m.is_system && (m.text ?? '').includes('Arbiter')) && (
         <div className="bg-danger/5 border border-danger/30 rounded-field px-3 py-2 mb-3 shrink-0">
           <p className="text-xs font-body text-danger">
-            ⚖️ Арбитр открыл переписку по спору. Обе стороны видят это уведомление.
+            ⚖️ {t('chat.arbiterOpened')}
           </p>
         </div>
       )}
@@ -278,11 +281,11 @@ export default function DealVaultPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
             <div className="text-center py-8">
-              <MonoText className="text-navy/40 text-sm">Загрузка...</MonoText>
+              <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm font-body text-navy/30">Нет сообщений</p>
+              <p className="text-sm font-body text-navy/30">{t('chat.empty')}</p>
             </div>
           ) : (
             messages.map(renderMessage)
@@ -303,13 +306,13 @@ export default function DealVaultPage() {
               onChange={(e) => setUploadKind(e.target.value as AttachmentKind)}
               className="text-xs font-mono border border-navy/20 rounded-field px-2 py-2 min-h-[2.5rem] text-navy focus:outline-none focus:border-cyan"
             >
-              <option value="handoff_photo">Фото передачи</option>
-              <option value="receipt_photo">Фото получения</option>
-              <option value="doc">Документ</option>
-              <option value="payment_receipt">Чек оплаты</option>
+              <option value="handoff_photo">{t("chat.kind.handoff_photo")}</option>
+              <option value="receipt_photo">{t("chat.kind.receipt_photo")}</option>
+              <option value="doc">{t("chat.kind.doc")}</option>
+              <option value="payment_receipt">{t("chat.kind.payment_receipt")}</option>
             </select>
             <label className="cursor-pointer border border-navy/20 rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body text-navy/60 hover:border-cyan transition-colors flex items-center">
-              {sending ? 'Отправка…' : 'Загрузить фото'}
+              {sending ? t('common.sending') : t('chat.uploadPhoto')}
               <input
                 ref={fileRef}
                 type="file"
@@ -336,7 +339,7 @@ export default function DealVaultPage() {
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Сообщение..."
+              placeholder={t("chat.placeholder") as string}
               className="flex-1 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               disabled={sending}
             />
@@ -345,7 +348,7 @@ export default function DealVaultPage() {
               disabled={sending || !text.trim()}
               className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
             >
-              {sending ? '...' : 'Отправить'}
+              {sending ? '…' : t('chat.send')}
             </button>
           </form>
         </div>

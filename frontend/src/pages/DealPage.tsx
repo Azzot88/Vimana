@@ -80,7 +80,7 @@ export default function DealPage() {
         setCarrierPoliteDecline(null)
       }
     } catch {
-      setError('Сделка не найдена')
+      setError(t('deals.notFound'))
     } finally {
       setLoading(false)
     }
@@ -97,14 +97,18 @@ export default function DealPage() {
         await acceptDeal(dealId)
         await load()
       } else if (action === 'handoff') {
-        await addEvent(dealId, 'handoff', 'Груз передан перевозчику')
+        // T_UX.7 pt.3 — no free-text note. It was persisted into the event payload
+        // and hashed into the chain, so one party's UI language ended up inside
+        // shared evidence the other party reads. `event_type` already says
+        // exactly this, and both sides render it in their own language.
+        await addEvent(dealId, 'handoff')
         await load()
       } else if (action === 'confirm') {
         await confirmDeal(dealId)
         await load()
       }
     } catch {
-      setError('Действие не выполнено')
+      setError(t('deals.actionFailed'))
     } finally {
       setActionLoading(false)
     }
@@ -113,7 +117,7 @@ export default function DealPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <MonoText className="text-navy/40 text-sm">Загрузка...</MonoText>
+        <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
       </div>
     )
   }
@@ -121,7 +125,7 @@ export default function DealPage() {
   if (!deal) {
     return (
       <div className="text-center py-24">
-        <p className="text-sm font-body text-navy/40">{error || 'Сделка не найдена'}</p>
+        <p className="text-sm font-body text-navy/40">{error || t('deals.notFound')}</p>
       </div>
     )
   }
@@ -133,7 +137,7 @@ export default function DealPage() {
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
         <Link to="/deals" className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
-          ← Сделки
+          ← {t('nav.deals')}
         </Link>
       </div>
 
@@ -150,7 +154,7 @@ export default function DealPage() {
         <div className="bg-navy px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-xs font-mono text-white/40 uppercase tracking-widest">Посадочный талон</p>
+              <p className="text-xs font-mono text-white/40 uppercase tracking-widest">{t('deals.boardingPass')}</p>
               <MonoText className="text-xl text-white font-medium">
                 {deal.origin} → {deal.destination}
               </MonoText>
@@ -164,23 +168,23 @@ export default function DealPage() {
 
         <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <p className="text-xs font-body font-medium text-navy/40 mb-1">Отправитель</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.sender')}</p>
             <p className="text-sm font-body text-navy font-medium">{deal.sender_name}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-navy/40 mb-1">Перевозчик</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.carrier')}</p>
             <p className="text-sm font-body text-navy font-medium">{deal.carrier_name}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-navy/40 mb-1">Груз</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.cargo')}</p>
             <p className="text-sm font-body text-navy">{deal.cargo_description}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-navy/40 mb-1">Категория</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.category')}</p>
             <MonoText className="text-sm text-navy">{deal.cargo_category}</MonoText>
           </div>
           <div className="sm:col-span-2">
-            <p className="text-xs font-body font-medium text-navy/40 mb-1">ID сделки</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.dealId')}</p>
             <MonoText className="text-xs text-navy/50 break-all">{deal.id}</MonoText>
           </div>
         </div>
@@ -198,7 +202,7 @@ export default function DealPage() {
               disabled={actionLoading}
               className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {actionLoading ? '...' : 'Принять сделку'}
+              {actionLoading ? '...' : t('deals.accept')}
             </button>
           )}
           {isCarrier && deal.status === 'accepted' && (
@@ -207,7 +211,7 @@ export default function DealPage() {
               disabled={actionLoading}
               className="bg-amber text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {actionLoading ? '...' : 'Зафиксировать передачу'}
+              {actionLoading ? '...' : t('deals.recordHandoff')}
             </button>
           )}
           {isSender && deal.status === 'delivered' && (
@@ -216,7 +220,7 @@ export default function DealPage() {
               disabled={actionLoading}
               className="bg-success text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {actionLoading ? '...' : 'Подтвердить получение'}
+              {actionLoading ? '...' : t('deals.confirmReceipt')}
             </button>
           )}
           <Link
