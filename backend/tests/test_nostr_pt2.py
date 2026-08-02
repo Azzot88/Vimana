@@ -359,3 +359,37 @@ def test_whitelist_task_writes_file(session_maker, tmp_path):
         assert "count" in result
     finally:
         os.environ.pop("NOSTR_ALLOWED_PUBKEYS_FILE", None)
+
+
+def test_whitelist_includes_the_chain_anchor_key(session_maker, tmp_path, monkeypatch):
+    """T3.20 — our own relay refuses anything not on this list.
+
+    The publishing key was added in T3.5 pt.2; the anchor key is deliberately a
+    different key (T3.6), so adding one did not cover the other — and every
+    anchor was rejected by our own strfry before third parties even entered the
+    picture. Found on the first live tick, 2026-08-01.
+    """
+    from app.core.keypair import generate_keypair
+    from app.tasks.nostr_whitelist import refresh_allowed_pubkeys
+
+    anchor_nsec, anchor_npub = generate_keypair()
+    monkeypatch.setenv("CHAIN_ANCHOR_NSEC", anchor_nsec)
+    file_path = tmp_path / "allowed.txt"
+    monkeypatch.setenv("NOSTR_ALLOWED_PUBKEYS_FILE", str(file_path))
+
+    refresh_allowed_pubkeys()
+    assert anchor_npub in file_path.read_text().split()
+
+
+def test_whitelist_survives_an_unconfigured_anchor(session_maker, tmp_path, monkeypatch):
+    """No anchor key configured is a normal state, not an error: anchoring is
+    off until someone turns it on, and the whitelist must still be written."""
+    from app.tasks.nostr_whitelist import refresh_allowed_pubkeys
+
+    monkeypatch.delenv("CHAIN_ANCHOR_NSEC", raising=False)
+    file_path = tmp_path / "allowed.txt"
+    monkeypatch.setenv("NOSTR_ALLOWED_PUBKEYS_FILE", str(file_path))
+
+    result = refresh_allowed_pubkeys()
+    assert file_path.exists()
+    assert "count" in result

@@ -212,10 +212,29 @@ async def _publish_one(url: str, event: dict, timeout_s: float = 5.0) -> bool:
                 data = json.loads(reply)
                 # OK message per NIP-20: ["OK", event_id, true|false, message]
                 if isinstance(data, list) and len(data) >= 3 and data[0] == "OK":
-                    return bool(data[2])
+                    if data[2]:
+                        return True
+                    # A refusal used to return False with no log line at all, so
+                    # "the relay said no, here is why" and "we never reached it"
+                    # were indistinguishable in the audit trail — and the reason
+                    # relays give ("blocked: not on whitelist", "payment
+                    # required") is the entire diagnosis.
+                    reason = data[3] if len(data) > 3 else ""
+                    logger.warning(
+                        "nostr relay %s refused event %s: %s",
+                        url,
+                        event.get("id", "?"),
+                        reason,
+                    )
+                    return False
+                logger.warning(
+                    "nostr relay %s answered something other than OK: %.200s", url, reply
+                )
                 return False
     except Exception as exc:  # network, timeout, JSON — one of many
-        logger.info("nostr publish to %s failed: %s", url, exc)
+        logger.warning(
+            "nostr publish to %s unreachable: %s: %s", url, type(exc).__name__, exc
+        )
         return False
 
 

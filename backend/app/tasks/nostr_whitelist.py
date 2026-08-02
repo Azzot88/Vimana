@@ -57,6 +57,17 @@ def refresh_allowed_pubkeys() -> dict:
     if platform_pubkey:
         pubkeys.add(platform_pubkey)
 
+    # T3.20 — the chain-anchor key. Same reasoning one step further: our relay
+    # refuses anything not on this list, so without the anchor key our own
+    # strfry rejected every anchor we ever tried to publish. Distinct from the
+    # publishing key by design (T3.6), which is exactly why adding one did not
+    # cover the other.
+    from app.core.chain_anchor import get_anchor_pubkey
+
+    anchor_pubkey = get_anchor_pubkey()
+    if anchor_pubkey:
+        pubkeys.add(anchor_pubkey)
+
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
     except OSError:

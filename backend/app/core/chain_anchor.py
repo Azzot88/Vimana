@@ -68,6 +68,19 @@ def get_anchor_nsec() -> str | None:
     return raw or None
 
 
+def get_anchor_pubkey() -> str | None:
+    """Public half of the anchor key, or None when anchoring is not configured.
+
+    Needed outside this module by the relay whitelist: our own strfry runs a
+    write policy, and a key that is not on the list is refused like any stranger.
+    The platform's *publishing* key was added there in T3.5 pt.2; the anchor key
+    was not, so every anchor was rejected by our own relay before it ever got to
+    the question of third parties (found 2026-08-01 on the first live tick).
+    """
+    nsec = get_anchor_nsec()
+    return npub_from_nsec(nsec) if nsec else None
+
+
 def is_anchoring_enabled() -> bool:
     return is_publish_enabled() and get_anchor_nsec() is not None
 
