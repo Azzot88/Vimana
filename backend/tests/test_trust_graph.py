@@ -566,6 +566,10 @@ async def test_a_malformed_key_is_refused_before_the_database(client):
     the answer for all of it is the same "no such identity" this endpoint gives
     to everything it will not talk about.
     """
-    for bad in ("\x00", "not-a-key", "AB" * 32 + "cd", "%2e%2e", " ", "z" * 64):
+    # `%00`, not a raw NUL: httpx refuses to build a URL containing one, so a
+    # literal "\x00" here fails in the client and never reaches the server —
+    # testing our own HTTP library instead of our endpoint. The wire form is
+    # what the fuzzer actually sent and what Postgres actually choked on.
+    for bad in ("%00", "not-a-key", "AB" * 32 + "cd", "%2e%2e", " ", "z" * 64):
         resp = await client.get(f"/api/identities/{bad}")
         assert resp.status_code in (404, 422), f"{bad!r} → {resp.status_code}"
