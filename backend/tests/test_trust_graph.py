@@ -555,3 +555,17 @@ async def test_trust_metrics_date_their_counters(client, seed_carrier):
     from last month, and the counter alone cannot tell them apart."""
     body = (await client.get(f"/api/users/{seed_carrier.id}/trust-metrics")).json()
     assert "last_vouched_at" in body
+
+
+async def test_a_malformed_key_is_refused_before_the_database(client):
+    """T_KEYS.1 — the npub is checked for shape, not handed to Postgres raw.
+
+    Found by the contract fuzzer: a NUL byte in the path reached asyncpg, which
+    rejects it at the protocol level, so a malformed **public** URL answered
+    500. Anything that is not 64 hex characters cannot match a row anyway, and
+    the answer for all of it is the same "no such identity" this endpoint gives
+    to everything it will not talk about.
+    """
+    for bad in ("\x00", "not-a-key", "AB" * 32 + "cd", "%2e%2e", " ", "z" * 64):
+        resp = await client.get(f"/api/identities/{bad}")
+        assert resp.status_code in (404, 422), f"{bad!r} → {resp.status_code}"

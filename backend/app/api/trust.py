@@ -349,6 +349,18 @@ async def public_identity(
     place and has an address.
     """
     key = (npub or "").strip().lower()
+    # T_KEYS.1 — check the shape before the database sees it. A key is 64
+    # lowercase hex characters; anything else cannot match a row, so asking is
+    # pointless — and one particular "anything else" was worse than pointless:
+    # a NUL byte in the path reached asyncpg, which refuses it at the protocol
+    # level (`invalid byte sequence for encoding "UTF8"`), turning a malformed
+    # public URL into a 500. Found by the contract fuzzer, not by hand.
+    #
+    # 404 rather than 422, deliberately: this endpoint answers "no such
+    # identity" to everything it will not talk about, and a distinct code for
+    # "malformed" would be a second shape of answer on a public URL for no gain.
+    if len(key) != 64 or not all(c in "0123456789abcdef" for c in key):
+        raise HTTPException(status_code=404, detail="No such identity")
     subject = (
         await db.execute(select(User).where(User.nostr_pubkey == key))
     ).scalars().first()
