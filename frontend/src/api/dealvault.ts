@@ -82,7 +82,7 @@ export const createMessage = async (
   if (hasNip07Extension() && parties) {
     try {
       const { data: status } = await getKeypairStatus()
-      if (status.key_self_custody) {
+      if (status.identity_established) {
         const { data: arbiter } = await getArbiterInfo()
         body.e2e_payload = await encryptE2E(
           text,
@@ -107,7 +107,7 @@ export const createMessage = async (
     if (hasNip07Extension()) {
       try {
         const { data: status } = await getKeypairStatus()
-        if (status.key_self_custody) {
+        if (status.identity_established) {
           const signed = await signVaultMessageViaNip07(dealId, text, isSystem)
           body.nostr_sig = signed.nostr_sig
           body.nostr_created_at = signed.nostr_created_at

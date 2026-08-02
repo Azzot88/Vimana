@@ -22,10 +22,6 @@ export interface KeypairStatus {
   archive_choice: 'show' | 'hide' | null
   archive_notice_seen_at: string | null
   archive_window_ends_at: string | null
-  /** @deprecated mirrors `identity_established`; kept while callers migrate. */
-  key_self_custody: boolean
-  /** @deprecated */
-  has_encrypted_nsec: boolean
 }
 
 export interface IdentityChallenge {

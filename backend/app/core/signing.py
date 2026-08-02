@@ -27,6 +27,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -39,6 +40,8 @@ from app.core.keypair import (
 )
 from app.models.deal import DealEvent, DealVaultMessage
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 NOSTR_KIND_VAULT_MESSAGE = 4801
 NOSTR_KIND_DEAL_EVENT = 4802
@@ -204,7 +207,32 @@ def sign_vault_message(
         or author.nsec_nonce is None
         or not author.nostr_pubkey
     ):
-        return  # no keypair — leave unsigned (backward-compat during migration)
+        # T_KEYS.1 — this used to `return`, leaving the message unsigned, with
+        # the comment "backward-compat during migration". The migration ended
+        # with T3.12: `core/service_keys.py` issued a key to every account,
+        # arbiter included, so a custodial author with no key is not a legacy
+        # state — it is a broken one.
+        #
+        # The self-custody cases are already handled above: an account that
+        # holds its own key is told to sign client-side (422), and after T3.22
+        # its `nsec_encrypted` is NULL precisely because we deleted our copy.
+        # Reaching here therefore means an account that is *not* self-custody
+        # and has no service key either, which nothing should be able to
+        # produce.
+        #
+        # Silence was the dangerous part, not the deadness: an unsigned record
+        # in the vault looks exactly like a signed one until somebody tries to
+        # verify it, and by then the deal is closed. Same reasoning as
+        # `append_deal_event` refusing an unchained event — a loud error beats
+        # a quiet hole in the evidence.
+        logger.error(
+            "vault message author %s has no signing key and is not self-custody",
+            author.id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Cannot sign this record: the account has no signing key",
+        )
     _server_sign(msg, NOSTR_KIND_VAULT_MESSAGE, tags, content, author)
 
 

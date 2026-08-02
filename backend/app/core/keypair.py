@@ -5,20 +5,26 @@ Two-layer design:
 - `encrypt_nsec / decrypt_nsec` wrap the private key with AES-256-GCM using
   `NSEC_ENCRYPTION_KEY` from env (**separate from `MESSAGE_ENCRYPTION_KEY`** so
   compromising one doesn't compromise the other).
-- `sign_event(payload_json, nsec_hex) → sig_hex` and `verify_event(...)` implement
-  NIP-01-style Schnorr sig: `sig = schnorr_sign(sha256(payload), nsec)`.
+- `sign_event_id / verify_event_id` sign a precomputed NIP-01 event id (T2.2 pt.2).
 
-When user claims self-custody, `nsec_encrypted` is DELETE-ed from DB and
-server can no longer sign — client must pre-sign events via NIP-07.
+The signing pair from T2.2 pt.1 — `sign_event` / `verify_event`, raw
+`schnorr(sha256(payload))` — is gone (T_KEYS.1). It was kept "for backward compat
+with records signed before the pt.2 refactor"; a full grep found no caller, not
+even a test, and no such record exists. What it did keep alive was a second,
+non-NIP-01 way to sign, sitting one autocomplete away from the real one.
+
+Ownership of the key is a ladder, not a flag — see `D-KEY-TIERS`. While the
+platform holds a copy it can sign for the user; once the copy is deleted
+(T3.22) `nsec_encrypted` is NULL and it cannot, so the client signs via NIP-07
+or an imported key.
 """
 from __future__ import annotations
 
 import base64
-import hashlib
 import os
 from functools import lru_cache
 
-from coincurve import PrivateKey, PublicKey, PublicKeyXOnly
+from coincurve import PrivateKey, PublicKeyXOnly
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _KEY_ENV = "NSEC_ENCRYPTION_KEY"
@@ -83,28 +89,6 @@ def decrypt_nsec(nonce: bytes, ciphertext: bytes) -> str:
     key = _load_key()
     pt = AESGCM(key).decrypt(nonce, ciphertext, None)
     return pt.decode("ascii")
-
-
-def sign_event(payload_json: str, nsec_hex: str) -> str:
-    """Legacy T2.2 pt.1 helper — raw sha256(payload) Schnorr sig.
-
-    Kept for backward compat with records signed before the T2.2 pt.2 NIP-01
-    event refactor. New records use `sign_event_id` (see below).
-    """
-    priv = PrivateKey(bytes.fromhex(nsec_hex))
-    digest = hashlib.sha256(payload_json.encode("utf-8")).digest()
-    sig = priv.sign_schnorr(digest)
-    return sig.hex()
-
-
-def verify_event(payload_json: str, sig_hex: str, npub_hex: str) -> bool:
-    """Legacy T2.2 pt.1 verify — see `sign_event` doc."""
-    try:
-        digest = hashlib.sha256(payload_json.encode("utf-8")).digest()
-        pub = PublicKeyXOnly(bytes.fromhex(npub_hex))
-        return pub.verify(bytes.fromhex(sig_hex), digest)
-    except Exception:
-        return False
 
 
 def sign_event_id(event_id_hex: str, nsec_hex: str) -> str:

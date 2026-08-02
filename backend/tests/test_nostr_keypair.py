@@ -29,8 +29,11 @@ async def test_registration_generates_custodial_keypair(client):
     body = status.json()
     assert body["npub"] is not None
     assert len(body["npub"]) == 64  # 32 bytes hex
-    assert body["key_self_custody"] is False
-    assert body["has_encrypted_nsec"] is True
+    # T_KEYS.1 — the two booleans are gone from this response. Ownership is a
+    # ladder (`D-KEY-TIERS`) and a flag cannot name a rung: a fresh account
+    # holds no identity of its own, and the only copy of its key is ours.
+    assert body["identity_established"] is False
+    assert body["key_copies"] == "platform_only"
 
 
 async def test_nsec_never_plaintext_in_db(client, session_maker):
@@ -107,7 +110,6 @@ async def test_establish_puts_the_account_in_self_custody(client):
     status = await client.get("/api/me/keypair/status", headers=headers)
     body = status.json()
     assert body["identity_established"] is True
-    assert body["has_encrypted_nsec"] is False
     assert body["npub"] == keys["npub_hex"]
 
 

@@ -60,8 +60,6 @@ const status = (over: Partial<KeypairStatus> = {}): KeypairStatus => ({
   archive_choice: null,
   archive_notice_seen_at: null,
   archive_window_ends_at: new Date(Date.now() + 10 * 86_400_000).toISOString(),
-  key_self_custody: true,
-  has_encrypted_nsec: false,
   ...over,
 })
 

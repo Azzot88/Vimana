@@ -84,11 +84,13 @@ class KeypairStatus(BaseModel):
     archive_choice: str | None = None
     archive_notice_seen_at: datetime | None = None
     archive_window_ends_at: datetime | None = None
-    # DEPRECATED (T3.12) — kept so the existing crypto suite and frontend keep
-    # reading. `key_self_custody` is the same bit as `identity_established`;
-    # `has_encrypted_nsec` is its inverse for accounts that have any key at all.
-    key_self_custody: bool
-    has_encrypted_nsec: bool
+    # T_KEYS.1 — `key_self_custody` and `has_encrypted_nsec` are gone from this
+    # response. They were kept "so existing readers do not break", and the only
+    # reader is our own frontend. Worse, they answered the wrong question: with
+    # `D-KEY-TIERS` ownership is a ladder of three rungs, and two booleans
+    # cannot say which one an account is on — `key_copies` does, and callers
+    # that used to read the flags should read `identity_established` (does this
+    # account hold its own key) or `key_copies` (who else holds a copy).
     model_config = ConfigDict(from_attributes=False)
 
 
@@ -145,8 +147,6 @@ def _status(user: User) -> KeypairStatus:
         archive_choice=user.archive_choice,
         archive_notice_seen_at=user.archive_notice_seen_at,
         archive_window_ends_at=archive_window_ends_at(user),
-        key_self_custody=user.key_self_custody,
-        has_encrypted_nsec=user.nsec_encrypted is not None,
     )
 
 
