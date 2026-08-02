@@ -62,6 +62,8 @@ export interface User {
   // T3.16 — how many recovery codes are still unused. A count, never the codes:
   // the server cannot show them a second time and does not pretend otherwise.
   recovery_codes_remaining?: number
+  /** T3.18 — how much of this identity a stranger may see. */
+  public_profile?: 'full' | 'minimal' | 'hidden'
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────
@@ -173,6 +175,7 @@ export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 export interface UserUpdate {
   display_name?: string
   phone?: string
+  public_profile?: 'full' | 'minimal' | 'hidden'
   notify_email?: boolean
   notify_telegram?: boolean
   notify_whatsapp?: boolean

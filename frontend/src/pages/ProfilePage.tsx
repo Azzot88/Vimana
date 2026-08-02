@@ -93,6 +93,18 @@ export default function ProfilePage() {
     } catch { /* silent */ }
   }
 
+  /** T3.18 — visibility applies to every public slice at once, so a click here
+   *  changes what the metric endpoints answer too. Saved immediately: this is a
+   *  one-field choice, and a Save button would only add a state in which the
+   *  radio says one thing and the server another. */
+  const handleVisibility = async (value: 'full' | 'minimal' | 'hidden') => {
+    if (!user || !token) return
+    try {
+      const { data } = await updateMe({ public_profile: value })
+      setAuth(data, token)
+    } catch { /* silent — the radio snaps back on the next read */ }
+  }
+
   const handleConnectTelegram = async () => {
     try {
       const { data } = await getTelegramLink()
@@ -217,6 +229,49 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* T3.18 — the public face of this identity: what a counterparty sees
+              before deciding to deal, and how much of it they see. Kept on the
+              profile rather than with the keys — this is about being looked at,
+              not about getting in. */}
+          {user?.nostr_pubkey && (
+            <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
+              <h2 className="font-display font-semibold text-base text-navy">
+                {t('identity.publicTitle')}
+              </h2>
+              <p className="text-sm font-body text-navy/60">
+                {t('identity.publicHint')}
+              </p>
+              <div className="space-y-1">
+                {(['full', 'minimal', 'hidden'] as const).map((value) => (
+                  <label key={value} className="flex items-start gap-2 text-sm font-body">
+                    <input
+                      type="radio"
+                      name="public_profile"
+                      checked={(user.public_profile ?? 'full') === value}
+                      onChange={() => void handleVisibility(value)}
+                      data-testid={`visibility-${value}`}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="text-navy">{t(`identity.visibility.${value}`)}</span>
+                      <span className="block text-xs text-navy/50">
+                        {t(`identity.visibilityHint.${value}`)}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <Link
+                to={`/i/${user.nostr_pubkey}`}
+                target="_blank"
+                data-testid="identity-public-link"
+                className="block w-full text-center border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+              >
+                {t('identity.openPublic')}
+              </Link>
+            </div>
+          )}
 
           {/* T_UX.6 — access and keys moved to their own page. This card is the
               door, not the machinery: the profile answers "who am I to the

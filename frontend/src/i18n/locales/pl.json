@@ -106,6 +106,32 @@
       "device_passkey": "Tylko to urządzenie"
     }
   },
+  "identity": {
+    "publicTitle": "Twoja publiczna tożsamość",
+    "publicHint": "To, co widzi druga strona, zanim zdecyduje się na transakcję. Jedna strona, której adresem jest Twój klucz.",
+    "openPublic": "Otwórz moją publiczną stronę",
+    "visibility": {
+      "full": "Otwarcie",
+      "minimal": "Minimum",
+      "hidden": "Ukryta"
+    },
+    "visibilityHint": {
+      "full": "Nazwa, poziom aktywności, liczniki zaufania, weryfikacja.",
+      "minimal": "Tylko to, że ten klucz jest prawdziwym uczestnikiem i jak jest zweryfikowany.",
+      "hidden": "Nikt poza Tobą. Strona i liczby za nią odpowiadają „nie ma takiej tożsamości”."
+    },
+    "notFoundTitle": "Nie ma takiej tożsamości",
+    "notFoundBody": "Ten klucz jest tu nieznany — albo jego właściciel nie chce być widoczny.",
+    "toHome": "Na stronę główną",
+    "unnamed": "Tożsamość bez nazwy",
+    "minimalBody": "Ta tożsamość pokazuje tylko to, że istnieje i jak jest zweryfikowana.",
+    "memberSince": "Tutaj od",
+    "dealtWith": "Transakcji z ludźmi",
+    "vouchedFor": "Poręczył za innych",
+    "vouchedBy": "Poręczyli za niego",
+    "keyChangedOn": "Klucz tej tożsamości zmieniono {{date}}. Wszystko podpisane wcześniej należy do klucza, którego już nie ma.",
+    "footer": "Wszystko na tej stronie to publiczne informacje Vimana."
+  },
   "security": {
     "title": "E-mail i hasło",
     "hint": "Sposoby logowania. Klucz — to, czym jest konto — ma własną sekcję.",

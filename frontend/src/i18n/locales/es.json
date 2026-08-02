@@ -106,6 +106,32 @@
       "device_passkey": "Solo este dispositivo"
     }
   },
+  "identity": {
+    "publicTitle": "Tu identidad pública",
+    "publicHint": "Lo que ve la otra parte antes de decidir si opera contigo. Una página cuya dirección es tu clave.",
+    "openPublic": "Abrir mi página pública",
+    "visibility": {
+      "full": "Abierta",
+      "minimal": "Mínima",
+      "hidden": "Oculta"
+    },
+    "visibilityHint": {
+      "full": "Nombre, nivel de actividad, contadores de confianza, verificación.",
+      "minimal": "Solo que esta clave es un participante real y cuán verificada está.",
+      "hidden": "Nadie salvo tú. La página y los números detrás responden «no existe esa identidad»."
+    },
+    "notFoundTitle": "No existe esa identidad",
+    "notFoundBody": "Esta clave es desconocida aquí, o su dueño eligió no aparecer.",
+    "toHome": "Ir a Vimana",
+    "unnamed": "Identidad sin nombre",
+    "minimalBody": "Esta identidad solo muestra que existe y cuán verificada está.",
+    "memberSince": "Aquí desde",
+    "dealtWith": "Operaciones con personas",
+    "vouchedFor": "Respondió por otros",
+    "vouchedBy": "Respondieron por él",
+    "keyChangedOn": "La clave de esta identidad se cambió el {{date}}. Todo lo firmado antes pertenece a una clave que ya no tiene.",
+    "footer": "Todo en esta página es información pública de Vimana."
+  },
   "security": {
     "title": "Correo y contraseña",
     "hint": "Formas de iniciar sesión. Tu clave — lo que la cuenta es — tiene su propia sección.",

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -91,6 +92,11 @@ class PasswordChangeBody(BaseModel):
 class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
+    # T3.18 — how much of this identity a stranger may see. Validated here
+    # rather than trusted from the client: an unknown value would fall back to
+    # `full` in `visible_to`, i.e. a typo in the UI would silently un-hide an
+    # account that asked to be hidden.
+    public_profile: Literal["full", "minimal", "hidden"] | None = None
     notify_email: bool | None = None
     notify_telegram: bool | None = None
     notify_whatsapp: bool | None = None
@@ -172,6 +178,8 @@ class MeOut(UserOut):
     # T3.16 — drives the "you have N codes left" banner. A count, never the
     # codes: the platform cannot show them again and should not pretend it can.
     recovery_codes_remaining: int = 0
+    # T3.18 — the owner's own view of their visibility setting.
+    public_profile: str = "full"
     receiving_country_iso: str | None = None
     receiving_city: str | None = None
     receiving_city_geoname_id: int | None = None

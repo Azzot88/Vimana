@@ -106,6 +106,32 @@
       "device_passkey": "Cet appareil uniquement"
     }
   },
+  "identity": {
+    "publicTitle": "Votre identité publique",
+    "publicHint": "Ce que voit un correspondant avant de décider de traiter avec vous. Une page, dont l'adresse est votre clé.",
+    "openPublic": "Ouvrir ma page publique",
+    "visibility": {
+      "full": "Ouverte",
+      "minimal": "Minimale",
+      "hidden": "Masquée"
+    },
+    "visibilityHint": {
+      "full": "Nom, niveau d'activité, compteurs de confiance, vérification.",
+      "minimal": "Seulement que cette clé est un vrai participant, et à quel point elle est vérifiée.",
+      "hidden": "Personne sauf vous. La page et les chiffres derrière répondent « identité inconnue »."
+    },
+    "notFoundTitle": "Identité inconnue",
+    "notFoundBody": "Cette clé est inconnue ici — ou son propriétaire a choisi de ne pas apparaître.",
+    "toHome": "Aller à Vimana",
+    "unnamed": "Identité sans nom",
+    "minimalBody": "Cette identité ne montre que son existence et son niveau de vérification.",
+    "memberSince": "Ici depuis",
+    "dealtWith": "Transactions avec des personnes",
+    "vouchedFor": "A répondu d'autres",
+    "vouchedBy": "On a répondu de lui",
+    "keyChangedOn": "La clé de cette identité a été changée le {{date}}. Tout ce qui a été signé avant appartient à une clé qu'elle n'a plus.",
+    "footer": "Tout sur cette page est une information publique de Vimana."
+  },
   "security": {
     "title": "E-mail et mot de passe",
     "hint": "Des moyens de se connecter. Votre clé — ce qu'est le compte — a sa propre section.",

@@ -12,6 +12,7 @@ import NewTripPage from './pages/NewTripPage'
 import DealsPage from './pages/DealsPage'
 import DealPage from './pages/DealPage'
 import DealVaultPage from './pages/DealVaultPage'
+import IdentityPage from './pages/IdentityPage'
 import ProfileKeysPage from './pages/ProfileKeysPage'
 import ProfilePage from './pages/ProfilePage'
 import InvitePage from './pages/InvitePage'
@@ -38,6 +39,10 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/invite/:token" element={<AcceptInvitePage />} />
           <Route path="/join/deal/:token" element={<JoinDealPage />} />
+          {/* T3.18 — public by design: this is what a counterparty opens
+              *before* deciding to deal, and behind a login it would answer
+              nobody's question. */}
+          <Route path="/i/:npub" element={<IdentityPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />

@@ -122,6 +122,32 @@
       "device_passkey": "This device only"
     }
   },
+  "identity": {
+    "publicTitle": "Your public identity",
+    "publicHint": "What a counterparty sees before deciding to deal with you. It is one page, addressed by your key.",
+    "openPublic": "Open my public page",
+    "visibility": {
+      "full": "Open",
+      "minimal": "Minimal",
+      "hidden": "Hidden"
+    },
+    "visibilityHint": {
+      "full": "Name, activity level, trust counters, verification.",
+      "minimal": "Only that this key is a real participant, and how well verified.",
+      "hidden": "Nobody but you. The page and the numbers behind it both answer 'no such identity'."
+    },
+    "notFoundTitle": "No such identity",
+    "notFoundBody": "This key is unknown here, or its owner chose not to be listed.",
+    "toHome": "Go to Vimana",
+    "unnamed": "Unnamed identity",
+    "minimalBody": "This identity chose to show only that it exists and how well it is verified.",
+    "memberSince": "Here since",
+    "dealtWith": "Dealt with",
+    "vouchedFor": "Vouched for others",
+    "vouchedBy": "Vouched for by others",
+    "keyChangedOn": "The key of this identity was changed on {{date}}. Anything signed before that belongs to a key it no longer holds.",
+    "footer": "Everything on this page is public information from Vimana."
+  },
   "security": {
     "title": "Email and password",
     "hint": "Ways of signing in. Your key — what the account is — has its own section.",
