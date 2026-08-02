@@ -67,7 +67,13 @@ async def my_trust_circle(
 @router.get("/users/{user_id}/trust-metrics", response_model=TrustMetricsOut)
 async def user_trust_metrics(
     user_id: uuid.UUID,
-    current_user: User | None = Depends(get_current_user),
+    # T3.18 — optional, which is what the annotation always claimed:
+    # `get_current_user` never returns None, so an anonymous caller got a 401
+    # from a signature that said the viewer might be absent. These are the same
+    # counters the public identity page shows, so requiring a session here and
+    # not there was a difference without a reason. Anonymous simply gets no
+    # `distance_from_viewer` — there is no viewer to measure from.
+    current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     user = await db.get(User, user_id)

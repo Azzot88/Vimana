@@ -310,10 +310,11 @@ async def test_hidden_answers_404_rather_than_403(client, carrier_headers, sessi
         anon = await client.get(f"/api/identities/{npub}")
         assert anon.status_code == 404
 
-        # …and the numbers behind the page are hidden too. A setting that hides
-        # the page while the metrics answer one URL over is a setting that lies.
-        metrics = await client.get(f"/api/users/{user_id}/trust-metrics")
-        assert metrics.status_code == 404
+        # …and the numbers behind the page are hidden too, to a stranger and to
+        # nobody-at-all alike. A setting that hides the page while the metrics
+        # answer one URL over is a setting that lies.
+        anon_metrics = await client.get(f"/api/users/{user_id}/trust-metrics")
+        assert anon_metrics.status_code == 404
         uba = await client.get(f"/api/users/{user_id}/uba", headers=carrier_headers)
         assert uba.status_code == 200, "the owner still sees themselves"
     finally:
@@ -351,3 +352,13 @@ async def test_minimal_shows_that_the_key_is_real_and_nothing_else(
             user = await db.get(User, user_id)
             user.public_profile = "full"
             await db.commit()
+
+
+async def test_trust_metrics_are_readable_without_a_session(client, seed_carrier):
+    """Same counters the public identity page shows. Requiring a session here
+    and not there would have been a difference without a reason — the only
+    thing an anonymous caller loses is the distance, because there is no viewer
+    to measure it from."""
+    resp = await client.get(f"/api/users/{seed_carrier.id}/trust-metrics")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["distance_from_viewer"] is None
