@@ -42,7 +42,7 @@ test.describe('passkeys', () => {
 
     const user = await registerUser(page)
 
-    await page.goto('/profile')
+    await page.goto('/profile/keys')
     await page.waitForLoadState('domcontentloaded')
 
     const [addResp] = await Promise.all([
@@ -85,7 +85,7 @@ test.describe('passkeys', () => {
 
     // Same account, not a new one — the credential resolved to the user who
     // registered it.
-    await page.goto('/profile')
+    await page.goto('/profile/keys')
     await expect(page.getByTestId('passkey-list').locator('li')).toHaveCount(1)
     expect(user.email).toBeTruthy()
   })
@@ -99,7 +99,7 @@ test.describe('passkeys', () => {
     await attachAuthenticator(page)
     const { password } = await registerUser(page)
 
-    await page.goto('/profile')
+    await page.goto('/profile/keys')
     await Promise.all([
       page.waitForResponse((r) =>
         r.url().includes('/api/auth/passkey/register/verify'),

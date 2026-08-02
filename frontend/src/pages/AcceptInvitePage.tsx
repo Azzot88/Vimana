@@ -44,7 +44,10 @@ export default function AcceptInvitePage() {
           <MonoText className="text-sm text-navy/40">{t('common.loading')}</MonoText>
         )}
         {status === 'success' && (
-          <div className="bg-white rounded-card border border-success/30 p-6 space-y-3">
+          <div
+            data-testid="invite-accepted"
+            className="bg-white rounded-card border border-success/30 p-6 space-y-3"
+          >
             <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mx-auto">
               <span className="text-success text-xl" aria-hidden="true">✓</span>
             </div>

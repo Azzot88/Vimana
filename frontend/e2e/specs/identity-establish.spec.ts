@@ -27,7 +27,7 @@ test.describe('identity: establish', () => {
   }) => {
     await registerUser(page)
 
-    await page.goto('/profile')
+    await page.goto('/profile/keys')
     await page.waitForLoadState('domcontentloaded')
 
     const state = page.getByTestId('identity-state')
@@ -71,7 +71,7 @@ test.describe('identity: establish', () => {
      *  session would be worse than one that fails outright. */
     await registerUser(page)
 
-    await page.goto('/profile')
+    await page.goto('/profile/keys')
     await page.getByTestId('identity-start').click()
     await page.getByTestId('identity-generate').click()
     await page.getByTestId('identity-saved').check()
@@ -89,7 +89,7 @@ test.describe('identity: establish', () => {
     await expect(page).toHaveURL(/\/dashboard/)
 
     await page.reload()
-    await page.goto('/profile')
+    await page.goto('/profile/keys')
     await expect(page.getByTestId('identity-state')).toHaveAttribute(
       'data-state',
       'own',
