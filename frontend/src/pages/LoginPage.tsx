@@ -8,11 +8,36 @@ import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
 
+/**
+ * T_UX.7 pt.2 — where to go after signing in.
+ *
+ * `AcceptInvitePage` has always sent people here as `/login?returnUrl=/invite/…`
+ * and nothing ever read the parameter, so anyone opening an invite link while
+ * signed out landed on the dashboard and the invite was silently dropped. The
+ * person who sent it never got connected and had no way to know.
+ *
+ * Reading it back is also the exact sink the react-router open-redirect
+ * advisory (GHSA-wrjc-x8rr-h8h6) is about, so the check is deliberately narrow
+ * rather than clever: one leading slash, no scheme, no protocol-relative `//`,
+ * no backslash — which browsers normalise to `/` and which is what that
+ * advisory turns into an off-site redirect. Anything else falls back to `/`,
+ * because a login that lands somewhere harmless is a nuisance and one that
+ * lands on an attacker's page is a phishing step.
+ */
+export function safeReturnUrl(raw: string | null): string {
+  if (!raw) return '/'
+  if (!raw.startsWith('/')) return '/'
+  if (raw.startsWith('//') || raw.startsWith('/\\')) return '/'
+  if (raw.includes('\\')) return '/'
+  return raw
+}
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const inactivityLogout = searchParams.get('reason') === 'inactivity'
+  const returnUrl = safeReturnUrl(searchParams.get('returnUrl'))
   const setAuth = useAuthStore((s) => s.setAuth)
   const [loginVal, setLoginVal] = usePersistedState<string>('login:login', '')
   const [password, setPassword] = useState('')
@@ -42,7 +67,7 @@ export default function LoginPage() {
       localStorage.setItem('token', data.access_token)
       const { data: user } = await me()
       setAuth(user, data.access_token)
-      navigate('/')
+      navigate(returnUrl)
     } catch {
       // Deliberately one message: the server answers the same 401 for a wrong
       // code and an unknown account, and the UI must not undo that.
@@ -62,7 +87,7 @@ export default function LoginPage() {
       localStorage.setItem('token', tokenData.access_token)
       const { data: user } = await me()
       setAuth(user, tokenData.access_token)
-      navigate('/')
+      navigate(returnUrl)
     } catch {
       setError(t('auth.errorCredentials'))
     } finally {
