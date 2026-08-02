@@ -148,6 +148,7 @@
     "capacityKg": "Zadeklarowana pojemność, kg",
     "tripsCompleted": "na {{count}} zrealizowanych podróży",
     "footnote": "„W linii prostej” to łuk między lotniskami: rzeczywista trasa jest dłuższa, a mierzymy drogę przesyłki, nie nalot samolotu. Pojemność jest tą zadeklarowaną przez przewoźnika — nic nie było ważone. Podpisy powstały, gdy klucz działał, i nadal się weryfikują.",
+    "anchoredAsOf": "Sprawdzalne niezależnie na dzień {{date}}: głowy łańcuchów {{part}} z {{total}} transakcji są opublikowane na przekaźnikach osób trzecich. To, co zapisano po tej dacie, opiera się na razie wyłącznie na naszej własnej kontroli spójności.",
     "bannerTitle": "Tożsamość zakończona.",
     "bannerUndecided": "Strona publiczna pozostanie otwarta po {{date}}, jeśli nic nie zrobisz.",
     "bannerOpen": "Strona publiczna jest otwarta.",

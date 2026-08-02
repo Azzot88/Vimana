@@ -137,6 +137,24 @@ export default function ArchiveRecordCard({
         )}
       </dl>
 
+      {/* T3.20 — the strongest sentence this card is allowed to say, and only
+          when an anchor exists. Anchoring puts a chain head on relays we do not
+          control; everything beneath it is fixed by someone else's clock, and
+          everything after it is not. So the claim carries a date and a count,
+          and disappears entirely when there is nothing behind it. */}
+      {record.last_anchor_at && (
+        <p
+          data-testid="archive-anchor"
+          className="text-xs font-body text-navy/60 border-t border-navy/10 pt-3"
+        >
+          {t('archive.anchoredAsOf', {
+            date: date(record.last_anchor_at),
+            part: number(record.anchored_deals),
+            total: number(record.deals_total),
+          })}
+        </p>
+      )}
+
       <p className="text-xs font-body text-navy/50 border-t border-navy/10 pt-3">
         {t('archive.footnote')}
       </p>

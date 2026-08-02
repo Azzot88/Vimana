@@ -78,6 +78,12 @@ export interface ArchiveRecord {
   longest_hop_route: string | null
   trips_completed: number
   capacity_kg: number | null
+  /** T3.20 — how far the record is checkable without taking our word. An anchor
+   *  publishes a chain head to relays we do not control, so everything beneath
+   *  it carries someone else's timestamp. Null means no anchor exists yet, and
+   *  the card must then claim nothing of the kind. */
+  last_anchor_at: string | null
+  anchored_deals: number
 }
 
 /** No auth required — and none is sent when the visitor has no session. */

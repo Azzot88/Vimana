@@ -25,6 +25,8 @@ const record = (over: Partial<ArchiveRecord> = {}): ArchiveRecord => ({
   longest_hop_route: 'TBS→ULN',
   trips_completed: 7,
   capacity_kg: 48.5,
+  last_anchor_at: null,
+  anchored_deals: 0,
   ...over,
 })
 
@@ -64,6 +66,28 @@ describe('ArchiveRecordCard', () => {
     expect(text).not.toContain('Longest hop, km straight line')
     // Deals and signatures are still counted, so the card is not empty.
     expect(text).toContain('12 closed of 15')
+  })
+
+  it('claims nothing about independent checking until an anchor exists', () => {
+    const { queryByTestId } = renderWithProviders(<ArchiveRecordCard record={record()} />)
+    // T3.20 — with no anchor there is no third party holding anything, and
+    // "independently checkable" with no date behind it is the exact claim this
+    // project refuses to make.
+    expect(queryByTestId('archive-anchor')).toBeNull()
+  })
+
+  it('dates the claim and stops it at the anchor', () => {
+    const { getByTestId } = renderWithProviders(
+      <ArchiveRecordCard
+        record={record({ last_anchor_at: '2026-06-30T00:00:00Z', anchored_deals: 11 })}
+      />,
+    )
+    const text = getByTestId('archive-anchor').textContent ?? ''
+    expect(text).toContain('11 of 15')
+    // The boundary is stated, not implied: what came after the anchor rests on
+    // our own integrity check alone.
+    expect(text).toContain('after that date')
+    expect(text).not.toContain('forever')
   })
 
   it('never promises that anything is verified forever', () => {

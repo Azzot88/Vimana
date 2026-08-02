@@ -164,6 +164,7 @@
     "capacityKg": "Declared capacity, kg",
     "tripsCompleted": "across {{count}} completed trips",
     "footnote": "\"Straight line\" is the arc between airports: real tracks run longer, and this measures where a parcel went, not what an aircraft flew. Capacity is what carriers declared — nothing was weighed. The signatures were made while the key was live, and they still verify.",
+    "anchoredAsOf": "Independently checkable as of {{date}}: chain heads for {{part}} of {{total}} deals are published on third-party relays. Anything written after that date rests on our own integrity check alone.",
     "bannerTitle": "Identity retired.",
     "bannerUndecided": "The public page stays open after {{date}} unless you say otherwise.",
     "bannerOpen": "The public page is open.",

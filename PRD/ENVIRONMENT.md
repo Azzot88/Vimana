@@ -101,6 +101,7 @@
 - `NOSTR_RELAY_URL` — наш публичный endpoint, **`wss://<домен>/relay`** (TLS терминирует nginx, T_SEC.4); `NOSTR_OWN_RELAY_URL` — тот же relay изнутри compose-сети, `ws://nostr-relay:7777`
 - `NOSTR_RELAY_PRIVKEY` (служебный ключ для NIP-42 challenges + deletion events)
 - `NOSTR_FRIENDLY_RELAYS` (comma-separated whitelist wss:// адресов)
+- `CHAIN_ANCHOR_NSEC` (T3.6/T3.20) — 64-hex ключ, которым платформа подписывает якоря голов цепи. Не задан → якорение молча ничего не делает; именно так оно и жило до T3.20. **Обязан отличаться от `PLATFORM_PUBLISH_NSEC`** и не быть ничьим пользовательским: якорь — утверждение платформы о своих же записях, и подписант, который вдобавок подписывает события сделок, делает неразличимым, кто из двоих говорит. Генерация на сервере: `docker compose -f docker-compose.dev.yml exec -w /app backend python -c "from app.core.keypair import generate_keypair; print(generate_keypair()[0])"`. Якорение включается **тремя** значениями сразу: `NOSTR_PUBLISH_ENABLED=true`, `CHAIN_ANCHOR_NSEC=<hex>` и хотя бы один **сторонний** relay в `NOSTR_FRIENDLY_RELAYS` — голова, дошедшая только до нашего strfry, не доказывает о нас ничего, а в этом весь смысл якоря. После правки `.env` нужен `up -d --force-recreate` (не `restart`) для `backend`, `celery-worker` и `celery-beat` — тик якорения исполняет воркер, и старое значение переменной пережило бы `restart`.
 
 **Фаза 4:**
 - `KYC_PROVIDER_API_KEY` (Sumsub / Onfido / Jumio — D-KYC)

@@ -14,7 +14,7 @@ from app.core.permissions import require_visible
 from app.core.storage import get_presigned_url
 from app.core.trust import bfs_circles, distance_between
 from app.core.uba import level_of
-from app.models.deal import Deal, DealEvent, DealStatus
+from app.models.deal import Deal, DealChainAnchor, DealEvent, DealStatus
 from app.models.marketplace import Trip
 from app.models.trust import TrustEdgeKind
 from app.models.user import User
@@ -150,6 +150,15 @@ class ArchiveRecord(BaseModel):
     longest_hop_route: str | None = None
     trips_completed: int
     capacity_kg: float | None = None
+    # T3.20 — the date the claim is allowed to reach, and no further. Anchors
+    # publish a chain head to relays we do not control; everything beneath a
+    # published head is fixed by someone else's timestamp, everything after it
+    # is covered only by our own consistency check. So the sentence this feeds
+    # is "independently checkable as of <date>" — never "verified forever", and
+    # never a bare badge with no date at all. Null means no anchor exists yet,
+    # in which case the card must claim nothing of the sort.
+    last_anchor_at: datetime | None = None
+    anchored_deals: int = 0
 
 
 async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
@@ -204,6 +213,18 @@ async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
         )
     ).one()
 
+    # T3.20 — how far a third party can check this without taking our word.
+    anchored_deals, last_anchor_at = (
+        await db.execute(
+            select(
+                func.count(func.distinct(DealChainAnchor.deal_id)),
+                func.max(DealChainAnchor.created_at),
+            )
+            .join(Deal, Deal.id == DealChainAnchor.deal_id)
+            .where(or_(Deal.sender_id == subject.id, Deal.carrier_id == subject.id))
+        )
+    ).one()
+
     return ArchiveRecord(
         retired_at=subject.key_lost_at,
         chain_entries=entries or 0,
@@ -219,6 +240,8 @@ async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
         longest_hop_route=longest_route,
         trips_completed=len(carried_trips),
         capacity_kg=round(sum(carried_trips.values()), 1) if carried_trips else None,
+        last_anchor_at=last_anchor_at,
+        anchored_deals=anchored_deals or 0,
     )
 
 

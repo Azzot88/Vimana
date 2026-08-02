@@ -148,6 +148,7 @@
     "capacityKg": "Capacité déclarée, kg",
     "tripsCompleted": "sur {{count}} voyages effectués",
     "footnote": "« À vol d'oiseau » est l'arc entre aéroports : la trace réelle est plus longue, et il s'agit du trajet du colis, pas des heures de vol de l'avion. La capacité est celle déclarée par le transporteur ; rien n'a été pesé. Les signatures ont été faites tant que la clé vivait, et elles se vérifient toujours.",
+    "anchoredAsOf": "Vérifiable indépendamment à la date du {{date}} : les têtes de chaîne de {{part}} accords sur {{total}} sont publiées sur des relais tiers. Ce qui a été écrit après cette date ne repose que sur notre propre contrôle d'intégrité.",
     "bannerTitle": "Identité retirée.",
     "bannerUndecided": "La page publique restera ouverte après le {{date}} si vous ne faites rien.",
     "bannerOpen": "La page publique est ouverte.",

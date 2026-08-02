@@ -417,6 +417,15 @@ async def test_a_retired_identity_shows_counted_numbers_only(
         if archive["routes_measured"] == 0:
             assert archive["straight_line_km"] is None
             assert archive["longest_hop_km"] is None
+
+        # T3.20 — how far the record is checkable without our word. Null until
+        # an anchor exists, and the card must then say nothing of the kind:
+        # "independently checkable" with no date behind it is the exact claim
+        # this project refuses to make.
+        assert "last_anchor_at" in archive
+        assert archive["anchored_deals"] <= archive["deals_total"]
+        if archive["last_anchor_at"] is None:
+            assert archive["anchored_deals"] == 0
     finally:
         async with session_maker() as db:
             user = await db.get(User, user_id)

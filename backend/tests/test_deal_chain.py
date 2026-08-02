@@ -908,3 +908,108 @@ def test_anchor_skips_when_head_moved(sync_session, monkeypatch):
 
     assert result["skipped"] == "head not found"
     assert called is False
+
+
+# ─────────────────────────────────────────────────────────────
+# 5. T3.20 — what the API is allowed to claim about an anchor
+# ─────────────────────────────────────────────────────────────
+
+
+async def test_chain_endpoint_says_where_to_check_and_how_far(
+    client, session_maker, sender_headers, chain_deal, seed_sender, monkeypatch
+):
+    """An anchor is worth exactly the third parties holding it.
+
+    So the endpoint reports *which* relays took the event — an auditor has to go
+    somewhere — and reports our own relay separately, because a head that only
+    landed on our strfry proves nothing about us. Relays that refused are not
+    listed at all: sending someone to look for an event that is not there is
+    worse than saying nothing.
+    """
+    monkeypatch.setenv("NOSTR_OWN_RELAY_URL", "ws://nostr-relay:7777")
+
+    async with session_maker() as db:
+        for _ in range(3):
+            await append_deal_event(
+                db,
+                deal_id=chain_deal.id,
+                event_type=DealEventType.handoff,
+                actor_id=seed_sender.id,
+                author=seed_sender,
+            )
+        await db.commit()
+
+        head = await head_of(db, chain_deal.id)
+        anchored_seq = head.seq - 1
+        db.add(
+            DealChainAnchor(
+                deal_id=chain_deal.id,
+                seq=anchored_seq,
+                entry_hash=bytes(
+                    (
+                        await db.execute(
+                            select(DealEvent.entry_hash).where(
+                                DealEvent.deal_id == chain_deal.id,
+                                DealEvent.seq == anchored_seq,
+                            )
+                        )
+                    ).scalars().one()
+                ),
+                nostr_event_id="ab" * 32,
+                nostr_pubkey="cd" * 32,
+                relays={
+                    "wss://relay.damus.io": True,
+                    "ws://nostr-relay:7777": True,
+                    "wss://refused.example": False,
+                },
+            )
+        )
+        await db.commit()
+
+    try:
+        body = (
+            await client.get(
+                f"/api/deals/{chain_deal.id}/chain", headers=sender_headers
+            )
+        ).json()
+
+        assert body["anchored_seq"] == anchored_seq
+        assert sorted(body["anchor_relays"]) == [
+            "ws://nostr-relay:7777",
+            "wss://relay.damus.io",
+        ]
+        # The one that refused is absent, and our own is excluded from the list
+        # that carries evidential weight.
+        assert body["anchor_third_party_relays"] == ["wss://relay.damus.io"]
+        # The claim stops at the anchor: this is how far past it we are.
+        assert body["unanchored_entries"] == 1
+    finally:
+        async with session_maker() as db:
+            await db.execute(
+                delete(DealChainAnchor).where(DealChainAnchor.deal_id == chain_deal.id)
+            )
+            await db.commit()
+
+
+async def test_nothing_is_anchored_means_nothing_is_covered(
+    client, session_maker, sender_headers, chain_deal, seed_sender
+):
+    """With no anchor, every entry is outside the third-party claim — reported
+    as the whole length, not as zero. Zero would read as "all covered"."""
+    async with session_maker() as db:
+        await append_deal_event(
+            db,
+            deal_id=chain_deal.id,
+            event_type=DealEventType.handoff,
+            actor_id=seed_sender.id,
+            author=seed_sender,
+        )
+        await db.commit()
+
+    body = (
+        await client.get(f"/api/deals/{chain_deal.id}/chain", headers=sender_headers)
+    ).json()
+    assert body["anchored_seq"] is None
+    assert body["anchor_relays"] == []
+    assert body["anchor_third_party_relays"] == []
+    assert body["unanchored_entries"] == body["head_seq"]

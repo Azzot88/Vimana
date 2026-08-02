@@ -19,6 +19,7 @@ from app.core.deal_chain import (
     verify_chain,
     verify_content,
 )
+from app.core.nostr_publish import get_own_relay_url
 from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import (
@@ -349,6 +350,17 @@ class ChainStatusOut(BaseModel):
     anchored_hash: str | None = None
     anchor_event_id: str | None = None
     anchored_at: datetime | None = None
+    # T3.20 — where to go and check without asking us. Only relays that actually
+    # accepted the event: listing the ones that refused would send an auditor to
+    # look for something that is not there, and an anchor is worth exactly the
+    # third parties holding it. Our own strfry appears here too when it took the
+    # event, and is worth nothing evidentially — hence the split below.
+    anchor_relays: list[str] = []
+    anchor_third_party_relays: list[str] = []
+    # Entries written after the last anchor. They are covered by `ok` (the log is
+    # internally consistent) and by nothing else yet: the claim "fixed by a third
+    # party" stops at `anchored_seq`, and this number is how far past it we are.
+    unanchored_entries: int = 0
     # T3.7 — seal + content coverage. Coverage is honest about pre-T3.7 data:
     # messages/files created before chaining exist but were never chained.
     sealed_at: datetime | None = None
@@ -441,13 +453,26 @@ async def get_deal_chain(
         .first()
     )
     if anchor is not None:
+        # Only the relays that took it. `relays` records the answer of every
+        # relay we tried, and reporting a refusal as a place to look would send
+        # an auditor after an event that is not there.
+        accepted = [url for url, ok in (anchor.relays or {}).items() if ok]
+        own = get_own_relay_url()
+        head_seq = result.get("head_seq")
         result = {
             **result,
             "anchored_seq": anchor.seq,
             "anchored_hash": bytes(anchor.entry_hash).hex(),
             "anchor_event_id": anchor.nostr_event_id,
             "anchored_at": anchor.created_at,
+            "anchor_relays": accepted,
+            # We run our own strfry, so an anchor that landed only there proves
+            # nothing about us — the evidential weight is exactly this list.
+            "anchor_third_party_relays": [u for u in accepted if u != own],
+            "unanchored_entries": max((head_seq or 0) - anchor.seq, 0),
         }
+    else:
+        result = {**result, "unanchored_entries": result.get("head_seq") or 0}
     return ChainStatusOut(**result)
 
 

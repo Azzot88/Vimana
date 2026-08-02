@@ -148,6 +148,7 @@
     "capacityKg": "Capacidad declarada, kg",
     "tripsCompleted": "en {{count}} viajes completados",
     "footnote": "«En línea recta» es el arco entre aeropuertos: la ruta real es más larga, y esto mide por dónde fue el paquete, no lo que voló el avión. La capacidad es la declarada por el transportista; nada se pesó. Las firmas se hicieron mientras la clave estaba viva y siguen verificándose.",
+    "anchoredAsOf": "Verificable de forma independiente a fecha de {{date}}: las cabeceras de cadena de {{part}} de {{total}} acuerdos están publicadas en relays de terceros. Lo escrito después de esa fecha se apoya únicamente en nuestra propia comprobación de integridad.",
     "bannerTitle": "Identidad retirada.",
     "bannerUndecided": "La página pública seguirá abierta después del {{date}} si no haces nada.",
     "bannerOpen": "La página pública está abierta.",
