@@ -64,6 +64,11 @@ export interface User {
   recovery_codes_remaining?: number
   /** T3.18 — how much of this identity a stranger may see. */
   public_profile?: 'full' | 'minimal' | 'hidden'
+  /** T3.19 — the identity key is gone. Access still works (that is what
+   *  `declare-lost` preserves), but this account can no longer sign, and the
+   *  shell reads this one bit to decide whether it is showing a participant or
+   *  a record. */
+  key_lost?: boolean
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────

@@ -15,6 +15,13 @@ export interface KeypairStatus {
    *  stopped being current. Null until the first change. */
   previous_npub: string | null
   identity_changed_at: string | null
+  /** T3.19 — the retired identity's say over its own exhibit. All null while
+   *  the key is alive: there is nothing to decide until it is gone.
+   *  `archive_choice` null means the owner has not answered — and silence
+   *  becomes `show` once `archive_window_ends_at` passes. */
+  archive_choice: 'show' | 'hide' | null
+  archive_notice_seen_at: string | null
+  archive_window_ends_at: string | null
   /** @deprecated mirrors `identity_established`; kept while callers migrate. */
   key_self_custody: boolean
   /** @deprecated */
@@ -61,6 +68,20 @@ export const declareKeyLost = (stepUpToken: string) =>
   api.post<KeypairStatus>('/api/me/identity/declare-lost', {
     step_up_token: stepUpToken,
   })
+
+/** T3.19 — the one-time explanation was shown. Deliberately not a decision:
+ *  closing the dialog leaves `archive_choice` null, which is the default path
+ *  the dialog just described. A close button that quietly registered consent
+ *  would be the opposite of informing anybody. */
+export const markArchiveNoticeSeen = () =>
+  api.post<KeypairStatus>('/api/me/archive/notice-seen')
+
+/** T3.19 — `show` writes down what silence would produce anyway and can be
+ *  revisited; `hide` closes the public page for good. Nothing is deleted in
+ *  either case: the chain, the signatures and the deal history stay, because
+ *  half of that record belongs to the counterparty. */
+export const setArchiveChoice = (choice: 'show' | 'hide') =>
+  api.post<KeypairStatus>('/api/me/archive/choice', { choice })
 
 // T3.12 — `export`, `claim` and `import` are gone from the UI. `import` no
 // longer exists server-side at all: it accepted a bare npub with no proof of

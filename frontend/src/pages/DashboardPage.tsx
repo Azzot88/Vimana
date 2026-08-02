@@ -70,7 +70,11 @@ export default function DashboardPage() {
               : 'Dashboard'}
           </h1>
         </div>
-        {isCarrier && currentUser?.can_carry && (
+        {/* T3.19 — an action a retired identity cannot complete is hidden, not
+            offered and then refused: the server answers 403 to publishing
+            without a key, and a button whose only outcome is that message is a
+            trap, not a feature. */}
+        {isCarrier && currentUser?.can_carry && !currentUser?.key_lost && (
           <Link
             to="/trips/new"
             className="bg-cyan text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity flex items-center"
@@ -124,12 +128,14 @@ export default function DashboardPage() {
           {myTrips.length === 0 ? (
             <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
               <p className="text-sm font-body text-navy/40">{t('dashboard.noTrips')}</p>
-              <Link
-                to="/trips/new"
-                className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
-              >
-                {t('dashboard.publishFirst')}
-              </Link>
+              {!currentUser?.key_lost && (
+                <Link
+                  to="/trips/new"
+                  className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
+                >
+                  {t('dashboard.publishFirst')}
+                </Link>
+              )}
             </div>
           ) : (
             <div className="grid gap-3">

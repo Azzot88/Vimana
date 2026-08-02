@@ -180,6 +180,11 @@ class MeOut(UserOut):
     recovery_codes_remaining: int = 0
     # T3.18 — the owner's own view of their visibility setting.
     public_profile: str = "full"
+    # T3.19 — the one bit that decides whether this account is still a
+    # participant or has become a record. Here rather than only on the keypair
+    # endpoint so the shell can answer "is anything different about this
+    # session" without asking a second question on every page.
+    key_lost: bool = False
     receiving_country_iso: str | None = None
     receiving_city: str | None = None
     receiving_city_geoname_id: int | None = None

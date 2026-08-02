@@ -44,6 +44,40 @@ export interface PublicIdentity {
    *  that date belongs to a key this identity no longer holds. */
   identity_changed_at: string | null
   previous_npub: string | null
+  /** T3.19 — present only for a retired identity seen in full. Null on a live
+   *  one is not a missing field: there is no record to close while the key
+   *  still signs. */
+  archive: ArchiveRecord | null
+}
+
+/**
+ * T3.19 — the record of an identity that can no longer act.
+ *
+ * Every number here was counted, never estimated, and every total comes with
+ * the set it was counted from — `deals_closed` next to `deals_total`,
+ * `routes_measured` next to `routes_closed`. There is no rate, no average and
+ * no score, because none of those were measured.
+ *
+ * `straight_line_km` says so in its own name: it is a great-circle arc, real
+ * tracks run 3–7% longer, and it measures where a parcel went rather than what
+ * an aircraft flew. `capacity_kg` is capacity carriers *declared* on completed
+ * trips — nothing was ever weighed. Labels must not promise more than this.
+ */
+export interface ArchiveRecord {
+  retired_at: string
+  chain_entries: number
+  signatures: number
+  first_signature_at: string | null
+  last_signature_at: string | null
+  deals_total: number
+  deals_closed: number
+  routes_measured: number
+  routes_closed: number
+  straight_line_km: number | null
+  longest_hop_km: number | null
+  longest_hop_route: string | null
+  trips_completed: number
+  capacity_kg: number | null
 }
 
 /** No auth required — and none is sent when the visitor has no session. */

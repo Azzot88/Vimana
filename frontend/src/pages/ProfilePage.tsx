@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { me, updateMe, getTelegramLink } from '../api/auth'
 import { createInvite, listConnections, listMyInvites, type Connection, type MyInvite } from '../api/social'
+import { getIdentity, type ArchiveRecord } from '../api/trust'
 import AdminPanelSection from '../components/AdminPanelSection'
+import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
 import EditProfileModal from '../components/EditProfileModal'
 import MonoText from '../components/MonoText'
@@ -33,6 +35,10 @@ export default function ProfilePage() {
   const [creatingInvite, setCreatingInvite] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  // T3.19 — the owner's own copy of their record. Read from the public endpoint
+  // on purpose: what the profile shows and what a counterparty sees are then
+  // the same numbers by construction, not by two implementations agreeing.
+  const [archive, setArchive] = useState<ArchiveRecord | null>(null)
 
   // T_UX.6 — `refreshUser` moved to `ProfileKeysPage` along with the sections
   // that needed it: only a security change makes the stored user go stale, and
@@ -64,6 +70,15 @@ export default function ProfilePage() {
     }
     load()
   }, [])
+
+  // Only for a retired identity, and only once the key is known: on a live
+  // account there is no record to fetch, so there is no request either.
+  useEffect(() => {
+    if (!user?.key_lost || !user.nostr_pubkey) return
+    getIdentity(user.nostr_pubkey)
+      .then(({ data }) => setArchive(data.archive))
+      .catch(() => {})
+  }, [user?.key_lost, user?.nostr_pubkey])
 
   const handleCreateInvite = async () => {
     setCreatingInvite(true)
@@ -179,6 +194,12 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* T3.19 — above the reputation widgets, because for a retired
+              identity this *is* the reputation: what it did, with dates. */}
+          {archive && (
+            <ArchiveRecordCard record={archive} memberSince={user?.created_at} />
+          )}
+
           <UBASection />
           <VerificationSection />
           <TrustCirclesSection />
@@ -237,31 +258,37 @@ export default function ProfilePage() {
           {user?.nostr_pubkey && (
             <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
               <h2 className="font-display font-semibold text-base text-navy">
-                {t('identity.publicTitle')}
+                {user.key_lost ? t('archive.pageTitle') : t('identity.publicTitle')}
               </h2>
               <p className="text-sm font-body text-navy/60">
-                {t('identity.publicHint')}
+                {user.key_lost ? t('archive.pageHint') : t('identity.publicHint')}
               </p>
-              <div className="space-y-1">
-                {(['full', 'minimal', 'hidden'] as const).map((value) => (
-                  <label key={value} className="flex items-start gap-2 text-sm font-body">
-                    <input
-                      type="radio"
-                      name="public_profile"
-                      checked={(user.public_profile ?? 'full') === value}
-                      onChange={() => void handleVisibility(value)}
-                      data-testid={`visibility-${value}`}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="text-navy">{t(`identity.visibility.${value}`)}</span>
-                      <span className="block text-xs text-navy/50">
-                        {t(`identity.visibilityHint.${value}`)}
+              {/* T3.19 — a retired identity has one question about its page, and
+                  it is asked in the notice: keep it or close it. Leaving the
+                  three-way setting here would put two controls over one outcome,
+                  and the loser of that race is whichever one the user believed. */}
+              {!user.key_lost && (
+                <div className="space-y-1">
+                  {(['full', 'minimal', 'hidden'] as const).map((value) => (
+                    <label key={value} className="flex items-start gap-2 text-sm font-body">
+                      <input
+                        type="radio"
+                        name="public_profile"
+                        checked={(user.public_profile ?? 'full') === value}
+                        onChange={() => void handleVisibility(value)}
+                        data-testid={`visibility-${value}`}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="text-navy">{t(`identity.visibility.${value}`)}</span>
+                        <span className="block text-xs text-navy/50">
+                          {t(`identity.visibilityHint.${value}`)}
+                        </span>
                       </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
+                    </label>
+                  ))}
+                </div>
+              )}
               <Link
                 to={`/i/${user.nostr_pubkey}`}
                 target="_blank"

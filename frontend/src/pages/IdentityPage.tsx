@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getIdentity, type PublicIdentity } from '../api/trust'
 import { shortKey } from '../lib/identity'
+import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import MonoText from '../components/MonoText'
 import UBAChip from '../components/UBAChip'
 
@@ -165,6 +166,16 @@ export default function IdentityPage() {
             </div>
           )}
         </div>
+
+        {/* T3.19 — a retired identity reads as a record, not as a profile with
+            things missing. The placard goes below the header so the first thing
+            a visitor sees is still who this was. */}
+        {identity.archive && (
+          <ArchiveRecordCard
+            record={identity.archive}
+            memberSince={identity.member_since}
+          />
+        )}
 
         <p className="text-xs font-body text-navy/40 text-center">
           {t('identity.footer')}
