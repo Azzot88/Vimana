@@ -1,0 +1,26 @@
+<!--
+  T_UX.7 — the favicon `index.html` has been asking for since the beginning.
+  The file simply did not exist: the link tag pointed at `/vimana.svg` and the
+  browser got a 404 on every page load, quietly falling back to a blank page
+  icon. Found while emptying `public/` of the retired v5 landings.
+
+  The mark is the wordmark compressed to one glyph: the V, and the amber dot
+  that follows "Vimana" in every header. Drawn as geometry rather than text so
+  it does not depend on Space Grotesk being available — a favicon renders
+  before webfonts arrive, and often outside the page entirely.
+
+  Sized for 16px first: two strokes and one dot, nothing that turns to mud.
+  Colours are the tokens, not approximations of them.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0A1626" />
+  <path
+    d="M8.5 8.5 L16 22 L23.5 8.5"
+    fill="none"
+    stroke="#F5F3EE"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="25.6" cy="21.6" r="2.7" fill="#FF7A2F" />
+</svg>
