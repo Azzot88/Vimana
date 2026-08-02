@@ -19,6 +19,10 @@ class TripOut(BaseModel):
     # T3.1/T3.2 — UBA is a first-class trust signal on trip cards.
     carrier_uba: int | None = None
     carrier_uba_level: str | None = None
+    # T3.17 — a retired identity, visible before anyone offers it a deal. The
+    # account can still be signed into but can no longer act, and finding that
+    # out after choosing a carrier is finding it out too late.
+    carrier_key_lost: bool = False
     origin: str
     destination: str
     depart_at: datetime

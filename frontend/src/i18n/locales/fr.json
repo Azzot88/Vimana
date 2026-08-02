@@ -189,7 +189,9 @@
     "errorTooManyAttempts": "Trop de tentatives — ce code n'est plus valable. Demandez-en un nouveau.",
     "errorCooldown": "Un code vient d'être envoyé. Attendez une minute avant d'en redemander un.",
     "bannerBody": "Votre email n'est pas confirmé. C'est l'adresse pour la récupération du compte et les notifications de transactions — confirmez-la pour les recevoir.",
-    "bannerCta": "Confirmer"
+    "bannerCta": "Confirmer",
+    "addBannerBody": "Ce compte n'a pas d'adresse e-mail. C'est par là que l'accès revient et que les nouvelles des transactions arrivent — à ajouter maintenant qu'une transaction est en cours.",
+    "addBannerCta": "Ajouter un e-mail"
   },
   "common": {
     "continue": "Continuer",
@@ -345,6 +347,8 @@
     "search": "Rechercher",
     "carrier": "Transporteur",
     "capacity": "Capacité",
+    "keyLost": "clé perdue",
+    "keyLostHint": "Ce transporteur a déclaré sa clé perdue. Le compte reste accessible, mais il ne peut plus signer ni ouvrir les coffres des transactions.",
     "alsoOnNostr": "sur Nostr",
     "sendPackage": "Envoyer un colis",
     "noTrips": "Aucun vol trouvé",

@@ -154,3 +154,31 @@ def send_recovery_code_used(user_id: str, remaining: int) -> None:
             "Если это были вы — ничего делать не нужно. Если нет — войдите "
             "и создайте новый набор кодов: прежние перестанут работать.",
         )
+
+
+@celery_app.task(name="app.tasks.notifications.send_platform_copy_deleted")
+def send_platform_copy_deleted(user_id: str) -> None:
+    """T3.17 — the account asked us to stop holding its key, and we did.
+
+    Sent regardless of `notify_email`, like the confirmation code: this is not a
+    subscription, it is the record of an irreversible change. If it was not the
+    owner who did it, this letter is how they find out — and while the action
+    cannot be undone, an account with a copy of its Identity Vault can hand one
+    back, which is what the letter says instead of "sorry".
+    """
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        send_email(
+            user.email,
+            "Vimana · Ключ теперь только у вас",
+            "Мы удалили свою копию ключа вашего аккаунта.\n\n"
+            "С этого момента подписывать записи и открывать сейфы ваших сделок "
+            "можете только вы — из файла Identity Vault или через расширение "
+            "Nostr. Мы не сможем сделать это за вас.\n\n"
+            "Если это были не вы — войдите и верните нашу копию из своего "
+            "файла Identity Vault: страница «Доступ и ключи» в профиле.",
+        )

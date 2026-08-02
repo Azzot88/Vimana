@@ -7,6 +7,9 @@ export interface Trip {
   carrier_name: string
   carrier_uba?: number | null
   carrier_uba_level?: 'newbie' | 'verified' | 'reliable' | 'trusted' | 'elite' | null
+  /** T3.17 — the carrier declared their key lost: the account can be signed
+   *  into but can no longer act. Shown before a deal is offered, not after. */
+  carrier_key_lost?: boolean
   origin: string
   destination: string
   depart_at: string

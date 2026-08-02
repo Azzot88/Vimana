@@ -99,9 +99,12 @@ async def list_trips(
     if items:
         carrier_ids = list({t.carrier_id for t in items})
         rows = await db.execute(
-            select(User.id, User.display_name, User.business_activity_level).where(
-                User.id.in_(carrier_ids)
-            )
+            select(
+                User.id,
+                User.display_name,
+                User.business_activity_level,
+                User.key_lost_at,
+            ).where(User.id.in_(carrier_ids))
         )
         by_id = {r.id: r for r in rows}
         out: list[TripOut] = []
@@ -115,6 +118,7 @@ async def list_trips(
                     carrier_name=row.display_name if row else None,
                     carrier_uba=uba,
                     carrier_uba_level=level_of(uba) if uba is not None else None,
+                    carrier_key_lost=bool(row and row.key_lost_at is not None),
                     origin=t.origin,
                     destination=t.destination,
                     depart_at=t.depart_at,

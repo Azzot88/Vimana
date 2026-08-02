@@ -484,6 +484,18 @@ async def delete_platform_copy(
     current_user.key_self_custody = True
     await db.commit()
     await db.refresh(current_user)
+
+    # T3.17 — the owner hears about it either way. If it was not them, this
+    # letter is how they find out, and it says what can still be done: an
+    # Identity Vault file can hand the copy back.
+    if current_user.email:
+        from app.tasks.notifications import send_platform_copy_deleted
+
+        try:
+            send_platform_copy_deleted.delay(str(current_user.id))
+        except Exception:
+            pass
+
     return _status(current_user)
 
 

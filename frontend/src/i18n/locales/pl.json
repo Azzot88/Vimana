@@ -189,7 +189,9 @@
     "errorTooManyAttempts": "Za dużo prób — ten kod już nie działa. Zamów nowy.",
     "errorCooldown": "Kod właśnie został wysłany. Odczekaj minutę przed kolejną prośbą.",
     "bannerBody": "Adres email nie jest potwierdzony. Służy do odzyskiwania konta i powiadomień o transakcjach — potwierdź go, aby wiadomości docierały.",
-    "bannerCta": "Potwierdź"
+    "bannerCta": "Potwierdź",
+    "addBannerBody": "To konto nie ma adresu e-mail. Tędy wraca dostęp i przychodzą informacje o transakcjach — warto dodać, skoro transakcja już trwa.",
+    "addBannerCta": "Dodaj e-mail"
   },
   "common": {
     "continue": "Dalej",
@@ -346,6 +348,8 @@
     "search": "Szukaj",
     "carrier": "Przewoźnik",
     "capacity": "Pojemność",
+    "keyLost": "klucz utracony",
+    "keyLostHint": "Przewoźnik zgłosił utratę klucza. Do konta można się zalogować, ale nie podpisze już zapisów ani nie otworzy sejfów transakcji.",
     "alsoOnNostr": "w Nostr",
     "sendPackage": "Wyślij paczkę",
     "noTrips": "Nie znaleziono lotów",

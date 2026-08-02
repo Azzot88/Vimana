@@ -143,6 +143,19 @@ export default function TripsPage() {
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
                       {t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span>
                       <UBAChip uba={trip.carrier_uba} level={trip.carrier_uba_level} />
+                      {/* T3.17 — a retired identity, said before anyone offers
+                          it a deal. Grey, not red: this is not a warning about
+                          the person, it is a fact about what the account can
+                          still do. */}
+                      {trip.carrier_key_lost && (
+                        <span
+                          data-testid="carrier-key-lost"
+                          title={t('trips.keyLostHint') as string}
+                          className="text-xs font-body px-2 py-0.5 rounded bg-navy/10 text-navy/50"
+                        >
+                          {t('trips.keyLost')}
+                        </span>
+                      )}
                       <NostrBadge eventId={trip.nostr_event_id} publishedAt={trip.nostr_published_at} />
                       {filterNotesForCorridor(allNotes, trip.origin, trip.destination).map((n) => (
                         <RouteNoteBadge key={n.id} note={n} compact />

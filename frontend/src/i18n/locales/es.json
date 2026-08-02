@@ -189,7 +189,9 @@
     "errorTooManyAttempts": "Demasiados intentos — este código ya no sirve. Pide uno nuevo.",
     "errorCooldown": "Acabamos de enviar un código. Espera un minuto antes de pedir otro.",
     "bannerBody": "Tu email no está confirmado. Es la dirección para recuperar la cuenta y recibir avisos de operaciones — confírmala para que lleguen.",
-    "bannerCta": "Confirmar"
+    "bannerCta": "Confirmar",
+    "addBannerBody": "Esta cuenta no tiene correo. Por ahí vuelve el acceso y llegan las novedades de las operaciones: conviene añadirlo ahora que ya hay una en marcha.",
+    "addBannerCta": "Añadir un correo"
   },
   "common": {
     "continue": "Continuar",
@@ -345,6 +347,8 @@
     "search": "Buscar",
     "carrier": "Transportista",
     "capacity": "Capacidad",
+    "keyLost": "clave perdida",
+    "keyLostHint": "Este transportista declaró perdida su clave. Aún se puede entrar en la cuenta, pero ya no puede firmar ni abrir las cajas de las operaciones.",
     "alsoOnNostr": "en Nostr",
     "sendPackage": "Enviar paquete",
     "noTrips": "No se encontraron vuelos",

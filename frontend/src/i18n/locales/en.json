@@ -205,7 +205,9 @@
     "errorTooManyAttempts": "Too many attempts — this code is no longer valid. Request a new one.",
     "errorCooldown": "A code was just sent. Give it a minute before asking for another.",
     "bannerBody": "Your email isn't confirmed. It is the address for account recovery and deal notifications — confirm it so those actually reach you.",
-    "bannerCta": "Confirm now"
+    "bannerCta": "Confirm now",
+    "addBannerBody": "This account has no email address. It is how access comes back and how deal updates reach you — worth adding now that you have a deal running.",
+    "addBannerCta": "Add an email"
   },
   "common": {
     "continue": "Continue",
@@ -393,6 +395,8 @@
     "search": "Search",
     "carrier": "Carrier",
     "capacity": "Capacity",
+    "keyLost": "key lost",
+    "keyLostHint": "This carrier declared their key lost. The account can still be signed into, but it can no longer sign or open deal vaults.",
     "alsoOnNostr": "on Nostr",
     "sendPackage": "Send package",
     "noTrips": "No trips found",

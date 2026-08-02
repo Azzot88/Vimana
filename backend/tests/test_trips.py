@@ -137,3 +137,44 @@ async def test_list_trips_filter_no_match(client):
     body = resp.json()
     assert body["items"] == []
     assert body["next_cursor"] is None
+
+
+async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_headers, session_maker):
+    """T3.17 — a lost key means the account can be signed into but can no longer
+    act. Finding that out after choosing a carrier is finding it out too late."""
+    import uuid as uuidlib
+
+    from app.models.user import User
+
+    created = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "origin": "LSTK",
+            "destination": "LSTK-D",
+            "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+            "capacity": 1.0,
+            "allowed_categories": ["document"],
+        },
+    )
+    assert created.status_code == 201
+    carrier_id = created.json()["carrier_id"]
+
+    listed = await client.get("/api/trips", params={"origin": "LSTK"})
+    assert listed.json()["items"][0]["carrier_key_lost"] is False
+
+    async with session_maker() as db:
+        user = await db.get(User, uuidlib.UUID(carrier_id))
+        user.key_lost_at = datetime.now(timezone.utc)
+        await db.commit()
+
+    try:
+        after = await client.get("/api/trips", params={"origin": "LSTK"})
+        assert after.json()["items"][0]["carrier_key_lost"] is True
+    finally:
+        # The seed carrier is shared across the suite — a retired flag left
+        # behind would quietly change what every other test sees.
+        async with session_maker() as db:
+            user = await db.get(User, uuidlib.UUID(carrier_id))
+            user.key_lost_at = None
+            await db.commit()
