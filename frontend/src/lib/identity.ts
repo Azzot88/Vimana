@@ -178,14 +178,30 @@ const NIP49_LOG_N = 16
  */
 const NIP49_HANDLED_BY_PLATFORM = 0x00
 
+/** What the file looks like on disk. Everything that identifies the owner is
+ *  inside `sealed`; the fields left in the clear are only what a reader needs
+ *  to know *how* to open it. */
 export interface IdentityVaultFile {
-  v: number
+  v: 2
   type: 'identity'
+  kdf: { n: number; r: number; p: number; salt: string }
+  nonce: string
+  sealed: string
+}
+
+/** What comes out of it. `ncryptsec` travels along so the key can be pasted
+ *  into another Nostr client without a second scrypt run. */
+export interface IdentityVaultContents {
   npub: string
+  nsec: string
   ncryptsec: string
   created_at: string
   label?: string
 }
+
+const b64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes))
+const unb64 = (value: string): Uint8Array =>
+  Uint8Array.from(atob(value), (c) => c.charCodeAt(0))
 
 export function sealNsec(
   nsecHex: string,
@@ -249,21 +265,69 @@ export function npubBech32(pubkeyHex: string): string {
   return bech32.encode('npub', bech32.toWords(hexToBytes(pubkeyHex)), 200)
 }
 
-/** The `.dvlt` payload — same extension and shape family as a deal export
- *  (`D-DVLT-PROTOCOL`), distinguished by `type`. One reader opens both. */
+/**
+ * The `.dvlt` payload — same extension and shape family as a deal export
+ * (`D-DVLT-PROTOCOL`), distinguished by `type`. One reader opens both.
+ *
+ * **Format 2 seals the whole container, not just the key.** In v1 the `npub`
+ * and the timestamp sat in the clear: the key was safe, but the file announced
+ * whose it was to anyone who opened it in a text editor. A backup that names
+ * its owner is a different object from one that does not — it turns "a file on
+ * a flash drive" into "this person's identity, on a flash drive".
+ *
+ * What stays readable is only what a reader needs to know how to proceed:
+ * the format version, the type, and the KDF parameters. Reading anything else
+ * costs the passphrase.
+ */
 export function buildIdentityVault(
   npubHex: string,
-  ncryptsec: string,
+  nsecHex: string,
+  passphrase: string,
   label?: string,
 ): IdentityVaultFile {
-  return {
-    v: 1,
-    type: 'identity',
+  const salt = randomBytes(16)
+  const nonce = randomBytes(24)
+  const key = scrypt(passphrase.normalize('NFKC'), salt, {
+    N: 2 ** NIP49_LOG_N,
+    r: 8,
+    p: 1,
+    dkLen: 32,
+  })
+  const contents: IdentityVaultContents = {
     npub: npubBech32(npubHex),
-    ncryptsec,
+    nsec: nsecHex,
+    // Carried inside so another Nostr client can be fed a standard string
+    // without a second scrypt pass at open time.
+    ncryptsec: sealNsec(nsecHex, passphrase),
     created_at: new Date().toISOString(),
     ...(label ? { label } : {}),
   }
+  const sealed = xchacha20poly1305(key, nonce).encrypt(
+    new TextEncoder().encode(JSON.stringify(contents)),
+  )
+  return {
+    v: 2,
+    type: 'identity',
+    kdf: { n: 2 ** NIP49_LOG_N, r: 8, p: 1, salt: b64(salt) },
+    nonce: b64(nonce),
+    sealed: b64(sealed),
+  }
+}
+
+/** Inverse of `buildIdentityVault`. Throws on a wrong passphrase — the tag
+ *  fails, so there is no half-open state to misread. */
+export function openIdentityVault(
+  file: IdentityVaultFile,
+  passphrase: string,
+): IdentityVaultContents {
+  const key = scrypt(passphrase.normalize('NFKC'), unb64(file.kdf.salt), {
+    N: file.kdf.n,
+    r: file.kdf.r,
+    p: file.kdf.p,
+    dkLen: 32,
+  })
+  const plain = xchacha20poly1305(key, unb64(file.nonce)).decrypt(unb64(file.sealed))
+  return JSON.parse(new TextDecoder().decode(plain)) as IdentityVaultContents
 }
 
 /** Accepts what a person actually has in hand: a `nsec1…` string from any

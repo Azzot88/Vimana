@@ -20,7 +20,7 @@
 import {
   npubBech32,
   npubFromNsec,
-  openNsec,
+  openIdentityVault,
   type IdentityVaultFile,
 } from './lib/identity'
 
@@ -43,19 +43,25 @@ function fail(message: string): void {
 }
 
 function parseVault(text: string): IdentityVaultFile {
-  const data = JSON.parse(text) as Partial<IdentityVaultFile>
+  // Typed as an open record on purpose: this is a file from disk, not our own
+  // object, and narrowing it to the interface before checking would let
+  // TypeScript "prove" things about bytes nobody has validated.
+  const data = JSON.parse(text) as Record<string, unknown>
   if (data.type === 'deal') {
     throw new Error(
       'This is a deal vault. Exporting deals is not built yet, so no reader can open one.',
     )
   }
-  if (data.type !== 'identity' || !data.ncryptsec || !data.npub) {
+  if (data.type !== 'identity') {
     throw new Error('Not a Vimana Identity Vault file.')
   }
-  if (data.v !== 1) {
-    throw new Error(`This file is version ${data.v}; this reader knows version 1.`)
+  if (data.v !== 2) {
+    throw new Error(`This file is version ${String(data.v)}; this reader knows version 2.`)
   }
-  return data as IdentityVaultFile
+  if (!data.sealed || !data.nonce || !data.kdf) {
+    throw new Error('The file is missing its sealed contents.')
+  }
+  return data as unknown as IdentityVaultFile
 }
 
 async function handleOpen(): Promise<void> {
@@ -72,18 +78,18 @@ async function handleOpen(): Promise<void> {
   openBtn.textContent = 'Opening…'
   try {
     const vault = parseVault(await file.text())
-    // Wrong passphrase fails here, on the authentication tag — it cannot
-    // decrypt to a plausible but different key.
-    const opened = openNsec(vault.ncryptsec, passInput.value)
-    const derived = npubBech32(npubFromNsec(opened))
-    if (derived !== vault.npub) {
+    // Wrong passphrase fails here, on the authentication tag — nothing decrypts
+    // to a plausible but different value.
+    const contents = openIdentityVault(vault, passInput.value)
+    const derived = npubBech32(npubFromNsec(contents.nsec))
+    if (derived !== contents.npub) {
       throw new Error(
-        'The key inside does not match the public key written in the file.',
+        'The key inside does not match the public key stored beside it.',
       )
     }
-    nsecHex = opened
-    $('npub').textContent = vault.npub
-    $('created').textContent = vault.created_at || '—'
+    nsecHex = contents.nsec
+    $('npub').textContent = contents.npub
+    $('created').textContent = contents.created_at || '—'
     result.classList.remove('hidden')
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

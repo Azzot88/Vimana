@@ -9,6 +9,7 @@ import {
   generateKeypair,
   npubBech32,
   npubFromNsec,
+  openIdentityVault,
   openNsec,
   parseNsecInput,
   proofEventId,
@@ -130,18 +131,35 @@ describe('identity vault', () => {
     expect(() => openNsec(sealed, 'not the passphrase')).toThrow()
   }, 30_000)
 
-  it('produces a portable file, not a Vimana-only blob', () => {
+  it('seals the whole container, not only the key', () => {
     const { nsecHex, npubHex } = generateKeypair()
-    const file = buildIdentityVault(npubHex, sealNsec(nsecHex, PASS), 'laptop')
+    const file = buildIdentityVault(npubHex, nsecHex, PASS, 'laptop')
+    const raw = JSON.stringify(file)
 
     expect(file.type).toBe('identity')
-    expect(file.v).toBe(1)
-    // bech32 in the file, hex only inside the app: the string in `ncryptsec`
-    // is what another Nostr client accepts by copy-paste, and `npub` is the
-    // public identifier as the rest of the ecosystem writes it.
-    expect(file.npub.startsWith('npub1')).toBe(true)
-    expect(file.ncryptsec.startsWith('ncryptsec1')).toBe(true)
-    expect(JSON.stringify(file)).not.toContain(nsecHex)
+    expect(file.v).toBe(2)
+    // The file must not say whose it is. A backup that names its owner turns
+    // "a file on a flash drive" into "this person's identity, on a flash drive".
+    expect(raw).not.toContain(nsecHex)
+    expect(raw).not.toContain(npubBech32(npubHex))
+    expect(raw).not.toContain('ncryptsec1')
+  }, 30_000)
+
+  it('opens with the passphrase and carries a paste-ready key for other clients', () => {
+    const { nsecHex, npubHex } = generateKeypair()
+    const opened = openIdentityVault(buildIdentityVault(npubHex, nsecHex, PASS), PASS)
+
+    expect(opened.nsec).toBe(nsecHex)
+    expect(opened.npub).toBe(npubBech32(npubHex))
+    // `ncryptsec` travels inside so a user can paste a standard string into
+    // damus or amethyst without us re-deriving anything.
+    expect(opened.ncryptsec.startsWith('ncryptsec1')).toBe(true)
+  }, 60_000)
+
+  it('refuses the wrong passphrase for the container too', () => {
+    const { nsecHex, npubHex } = generateKeypair()
+    const file = buildIdentityVault(npubHex, nsecHex, PASS)
+    expect(() => openIdentityVault(file, 'wrong one')).toThrow()
   }, 30_000)
 })
 
@@ -157,9 +175,9 @@ describe('sealing a key the user already holds (T3.24)', () => {
 
   it('derives the public half from the key, not from what was typed beside it', () => {
     const { nsecHex, npubHex } = generateKeypair()
-    const file = buildIdentityVault(npubFromNsec(nsecHex), sealNsec(nsecHex, 'pass phrase'))
+    const file = buildIdentityVault(npubFromNsec(nsecHex), nsecHex, 'pass phrase')
     // The file describes what it actually contains — a mistyped npub cannot
     // travel with someone else's key.
-    expect(file.npub).toBe(npubBech32(npubHex))
-  }, 30_000)
+    expect(openIdentityVault(file, 'pass phrase').npub).toBe(npubBech32(npubHex))
+  }, 60_000)
 })

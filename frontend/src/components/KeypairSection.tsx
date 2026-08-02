@@ -15,7 +15,6 @@ import {
   keyBackupText,
   npubFromNsec,
   parseNsecInput,
-  sealNsec,
   signProofWithKey,
   signProofWithNip07,
   type Keypair,
@@ -188,15 +187,16 @@ export default function KeypairSection() {
     setError('')
     try {
       const { data } = await releaseKeyForVault(stepUpToken)
-      const ncryptsec = sealNsec(data.nsec_hex, vaultPass)
-      const file = buildIdentityVault(data.npub_hex, ncryptsec)
+      const file = buildIdentityVault(data.npub_hex, data.nsec_hex, vaultPass)
       const blob = new Blob([JSON.stringify(file, null, 2)], {
         type: 'application/json',
       })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `vimana-identity-${file.npub.slice(0, 12)}.dvlt`
+      // The name no longer carries the npub: the file stopped announcing whose
+      // it is inside, and a filename that still did would undo that.
+      a.download = `vimana-identity-${new Date().toISOString().slice(0, 10)}.dvlt`
       a.click()
       URL.revokeObjectURL(url)
       setConfirmingVault(false)
@@ -219,17 +219,14 @@ export default function KeypairSection() {
     setError('')
     try {
       const nsecHex = parseNsecInput(sealKey)
-      const file = buildIdentityVault(
-        npubFromNsec(nsecHex),
-        sealNsec(nsecHex, vaultPass),
-      )
+      const file = buildIdentityVault(npubFromNsec(nsecHex), nsecHex, vaultPass)
       const blob = new Blob([JSON.stringify(file, null, 2)], {
         type: 'application/json',
       })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `vimana-identity-${file.npub.slice(0, 12)}.dvlt`
+      a.download = `vimana-identity-${new Date().toISOString().slice(0, 10)}.dvlt`
       a.click()
       URL.revokeObjectURL(url)
       setSealOpen(false)
