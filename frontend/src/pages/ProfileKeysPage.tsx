@@ -22,7 +22,7 @@ import SecuritySection from '../components/SecuritySection'
  */
 export default function ProfileKeysPage() {
   const { t } = useTranslation()
-  const setUser = useAuthStore((s) => s.setUser)
+  const setAuth = useAuthStore((s) => s.setAuth)
   const [user, setLocalUser] = useState<User | null>(null)
 
   /** Re-read after any change here: `SecuritySection` can hand back a fresh
@@ -32,7 +32,9 @@ export default function ProfileKeysPage() {
     if (newToken) localStorage.setItem('token', newToken)
     const { data } = await me()
     setLocalUser(data)
-    setUser(data)
+    // The store keeps user and token together; after a password change the
+    // token in hand is the replacement one, so both are written at once.
+    setAuth(data, newToken ?? localStorage.getItem('token') ?? '')
   }
 
   useEffect(() => {

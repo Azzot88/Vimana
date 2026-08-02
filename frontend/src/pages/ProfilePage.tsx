@@ -7,9 +7,6 @@ import { createInvite, listConnections, listMyInvites, type Connection, type MyI
 import AdminPanelSection from '../components/AdminPanelSection'
 import AddressesSection from '../components/AddressesSection'
 import EditProfileModal from '../components/EditProfileModal'
-import KeypairSection from '../components/KeypairSection'
-import PasskeySection from '../components/PasskeySection'
-import SecuritySection from '../components/SecuritySection'
 import MonoText from '../components/MonoText'
 import TrustCirclesSection from '../components/TrustCirclesSection'
 import UBASection from '../components/UBASection'
@@ -37,23 +34,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
 
-  /** T3.15 — re-read the profile after a security change. `SecuritySection`
-   *  renders from the store, and email / pending_email / has_password all move
-   *  server-side; without this the section would keep showing the old address
-   *  until a reload. */
-  const refreshUser = async (newToken?: string) => {
-    const active = newToken ?? token
-    if (!active) return
-    try {
-      // Store the replacement first. A password change retires every token
-      // issued before it, this one included, and the API client reads straight
-      // from localStorage — re-reading with the old token would 401 and look
-      // like the security action logged the user out.
-      if (newToken && user) setAuth(user, newToken)
-      const { data } = await me()
-      setAuth(data, active)
-    } catch { /* the section reports its own failure */ }
-  }
+  // T_UX.6 — `refreshUser` moved to `ProfileKeysPage` along with the sections
+  // that needed it: only a security change makes the stored user go stale, and
+  // those now happen on the other screen.
 
   const loadInvites = async () => {
     setInvitesLoading(true)
