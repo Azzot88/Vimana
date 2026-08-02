@@ -129,6 +129,7 @@
     "dealtWith": "Transactions avec des personnes",
     "vouchedFor": "A répondu d'autres",
     "vouchedBy": "On a répondu de lui",
+    "lastVouchedOn": "le plus récent — {{date}}",
     "keyChangedOn": "La clé de cette identité a été changée le {{date}}. Tout ce qui a été signé avant appartient à une clé qu'elle n'a plus.",
     "footer": "Tout sur cette page est une information publique de Vimana."
   },
@@ -287,7 +288,10 @@
   },
   "verification": {
     "sectionTitle": "Vérification d'identité",
-    "sectionHint": "Trois niveaux de vérification s'accumulent sur votre profil. Plus le niveau est élevé, plus la confiance dans les recherches est grande.",
+    "sectionHint": "Trois niveaux de vérification s'accumulent sur votre profil. Plus le niveau est élevé, plus la confiance dans les recherches est grande. Chaque marque porte sa date : elle pèse moins avec le temps.",
+    "dateUnknown": "date inconnue",
+    "expiresOn": "valable jusqu'au {{date}}",
+    "expiredOn": "expirée le {{date}}",
     "uploadTitle": "Auto-vérification (niveau : auto)",
     "uploadButton": "Téléverser un document",
     "chooseFile": "Choisir un fichier",

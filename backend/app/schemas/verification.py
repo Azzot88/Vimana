@@ -49,5 +49,9 @@ class UserVerificationSummary(BaseModel):
     """Public verification summary — no document contents."""
     subject_id: uuid.UUID
     highest_level: str | None
+    # T_TRUST.1 — when the badge behind `highest_level` was issued. None when
+    # there is no level, or when the badge carrying it is no longer active. The
+    # UI must not render the level without this date (`D-EVIDENCE-DECAYS`).
+    highest_level_at: datetime | None = None
     active_counts: dict[str, int]  # {'auto': N, 'peer': M, 'kyc': K}
     badges: list[VerificationBadgeOut]

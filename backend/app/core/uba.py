@@ -39,8 +39,10 @@ from app.models.deal import (
     DealStatus,
     DealVaultMessage,
 )
+from app.core.freshness import freshness_factor
 from app.models.marketplace import Order
 from app.models.user import User
+from app.models.verification import VerificationBadge
 
 WINDOW_DAYS = 90
 
@@ -71,6 +73,10 @@ class UBAComponents:
     v_sum: float      # sum of Order.declared_value on closed deals
     d_peak: float     # peak active collateral (0 until T5.x Collateral model)
     verify_level: str | None  # highest_verification_level
+    # T_TRUST.1 — when the badge behind that level was issued. None means either
+    # no verification at all or one with no date, and `freshness_factor` treats
+    # the second case as the floor rather than as fresh.
+    verify_at: datetime | None = None
 
 
 def _window_start() -> datetime:
@@ -142,12 +148,26 @@ def compute_components(db: Session, user_id: uuid.UUID) -> UBAComponents:
         select(User.highest_verification_level).where(User.id == user_id)
     ).scalar()
 
+    # T_TRUST.1 — when that level was earned. The newest live badge of exactly
+    # that level, because that is the one the level is standing on; an older
+    # badge of a lower level says nothing about how fresh *this* claim is.
+    verify_at = None
+    if verify_level is not None:
+        verify_at = db.execute(
+            select(func.max(VerificationBadge.verified_at)).where(
+                VerificationBadge.subject_id == user_id,
+                VerificationBadge.level == verify_level,
+                VerificationBadge.revoked_at.is_(None),
+            )
+        ).scalar()
+
     return UBAComponents(
         f_count=int(f_count),
         q_count=int(q_count),
         v_sum=float(v_sum),
         d_peak=float(d_peak),
         verify_level=verify_level,
+        verify_at=verify_at,
     )
 
 
@@ -162,7 +182,14 @@ def compute_uba(c: UBAComponents) -> int:
 
     d_factor = 1.0 + 0.5 * min(c.d_peak / 5000.0, 1.0)
 
+    # T_TRUST.1 — age decays the *bonus*, not the person. The factor moves back
+    # toward 1.00, the value of having no verification at all, so a five-year-old
+    # proof makes someone ordinary and never worse than someone who was never
+    # verified. Multiplying the factor itself would have done the opposite: a
+    # 0.4× on 1.30 lands at 0.52, i.e. an old badge would be a penalty.
     factor = _VERIFY_FACTOR.get(c.verify_level, 1.0)
+    if c.verify_level is not None:
+        factor = 1.0 + (factor - 1.0) * freshness_factor(c.verify_at)
     v_verify_norm = factor / _VERIFY_FACTOR_MAX
 
     raw = f_norm * q_norm * v_norm * d_factor * v_verify_norm * 1000.0

@@ -145,6 +145,7 @@
     "dealtWith": "Dealt with",
     "vouchedFor": "Vouched for others",
     "vouchedBy": "Vouched for by others",
+    "lastVouchedOn": "most recent — {{date}}",
     "keyChangedOn": "The key of this identity was changed on {{date}}. Anything signed before that belongs to a key it no longer holds.",
     "footer": "Everything on this page is public information from Vimana."
   },
@@ -335,7 +336,10 @@
       "comingSoonBody": "Escrow and collateral mechanics land with Phase 5 (BTC/USDT non-custodial 2-of-3). For now, you can chat with the carrier and negotiate directly."
     },
     "sectionTitle": "Identity verification",
-    "sectionHint": "Three verification tiers accumulate on your profile. Higher tiers give more trust in searches and deals.",
+    "sectionHint": "Three verification tiers accumulate on your profile. Higher tiers give more trust in searches and deals. Every mark carries a date — it weighs less as it ages.",
+    "dateUnknown": "date unknown",
+    "expiresOn": "valid until {{date}}",
+    "expiredOn": "lapsed {{date}}",
     "uploadTitle": "Self-verify (level: auto)",
     "uploadButton": "Upload document",
     "chooseFile": "Choose file",

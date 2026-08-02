@@ -420,13 +420,29 @@ async def get_user_verifications(
             .order_by(VerificationBadge.verified_at.desc())
         )
     ).scalars().all()
-    active = [b for b in rows if b.revoked_at is None]
+    # T_TRUST.1 — "active" means not revoked *and* not lapsed. Counting an
+    # expired badge among the active ones is the same lie as keeping it in
+    # `highest_verification_level`: the expiry date is written by this very
+    # module, and a date the system sets and then ignores is worse than none.
+    now = datetime.now(timezone.utc)
+    active = [
+        b
+        for b in rows
+        if b.revoked_at is None and (b.expires_at is None or b.expires_at > now)
+    ]
     counts = {"auto": 0, "peer": 0, "kyc": 0}
     for b in active:
         counts[b.level.value] = counts.get(b.level.value, 0) + 1
+    # The date the headline claim rests on. Never show "verified" without
+    # "when": a bare level asserts more than the evidence does.
+    highest_at = next(
+        (b.verified_at for b in active if b.level.value == user.highest_verification_level),
+        None,
+    )
     return UserVerificationSummary(
         subject_id=user_id,
         highest_level=user.highest_verification_level,
+        highest_level_at=highest_at,
         active_counts=counts,
         badges=[VerificationBadgeOut.model_validate(b) for b in rows],
     )

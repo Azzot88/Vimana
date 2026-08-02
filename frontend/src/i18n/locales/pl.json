@@ -129,6 +129,7 @@
     "dealtWith": "Transakcji z ludźmi",
     "vouchedFor": "Poręczył za innych",
     "vouchedBy": "Poręczyli za niego",
+    "lastVouchedOn": "ostatnie — {{date}}",
     "keyChangedOn": "Klucz tej tożsamości zmieniono {{date}}. Wszystko podpisane wcześniej należy do klucza, którego już nie ma.",
     "footer": "Wszystko na tej stronie to publiczne informacje Vimana."
   },
@@ -288,7 +289,10 @@
   },
   "verification": {
     "sectionTitle": "Weryfikacja tożsamości",
-    "sectionHint": "Trzy poziomy weryfikacji kumulują się w profilu. Wyższy poziom = większe zaufanie w wyszukiwaniu.",
+    "sectionHint": "Trzy poziomy weryfikacji kumulują się w profilu. Wyższy poziom = większe zaufanie w wyszukiwaniu. Każdy znak ma datę — z czasem waży mniej.",
+    "dateUnknown": "data nieznana",
+    "expiresOn": "ważne do {{date}}",
+    "expiredOn": "wygasła {{date}}",
     "uploadTitle": "Self-verify (poziom: auto)",
     "uploadButton": "Wgraj dokument",
     "chooseFile": "Wybierz plik",

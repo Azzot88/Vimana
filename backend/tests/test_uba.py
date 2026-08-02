@@ -2,14 +2,26 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from app.core.uba import LEVELS, UBAComponents, compute_uba, level_of
 
 
-def _c(f=0, q=0, v=0.0, d=0.0, verify=None) -> UBAComponents:
-    return UBAComponents(f_count=f, q_count=q, v_sum=v, d_peak=d, verify_level=verify)
+def _c(f=0, q=0, v=0.0, d=0.0, verify=None, verify_at=None) -> UBAComponents:
+    # T_TRUST.1 — a fresh date by default. These cases are about the *level*
+    # ladder, not about age; leaving the date empty would silently retest decay
+    # everywhere and destroy what each assertion was written to prove. Decay has
+    # its own tests below.
+    return UBAComponents(
+        f_count=f,
+        q_count=q,
+        v_sum=v,
+        d_peak=d,
+        verify_level=verify,
+        verify_at=verify_at or datetime.now(timezone.utc),
+    )
 
 
 def test_zero_activity_yields_zero_uba():
@@ -207,3 +219,63 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
     assert body["components"]["v_sum"] == 500.0
     assert body["components"]["q_count"] == 0
     assert body["uba"] == 0
+
+
+# ── T_TRUST.1 — evidence decays ──────────────────────────────────────────────
+
+
+def test_an_old_verification_is_worth_less_than_a_fresh_one():
+    fresh = compute_uba(_c(f=24, q=50, v=50000.0, verify="kyc"))
+    stale = compute_uba(
+        _c(
+            f=24,
+            q=50,
+            v=50000.0,
+            verify="kyc",
+            verify_at=datetime.now(timezone.utc) - timedelta(days=1825),
+        )
+    )
+    assert stale < fresh
+
+
+def test_decay_never_drops_below_having_no_verification_at_all():
+    """The bonus decays toward 1.00, not toward zero.
+
+    An ancient proof makes someone ordinary; it must never make them worse than
+    a person who was never verified — that would turn evidence into a liability
+    and give people a reason to avoid being verified at all.
+    """
+    unverified = compute_uba(_c(f=24, q=50, v=50000.0, verify=None))
+    ancient = compute_uba(
+        _c(
+            f=24,
+            q=50,
+            v=50000.0,
+            verify="kyc",
+            verify_at=datetime.now(timezone.utc) - timedelta(days=36500),
+        )
+    )
+    assert ancient >= unverified
+
+
+def test_a_week_old_verification_is_still_full_strength():
+    """Decay must not be felt immediately: "вчера" and "неделю назад" were
+    called equally strong, and a score that visibly slips a day after a KYC
+    would read as a bug to the person who just passed it."""
+    now = datetime.now(timezone.utc)
+    today = compute_uba(_c(f=24, q=50, v=50000.0, verify="kyc", verify_at=now))
+    week = compute_uba(
+        _c(f=24, q=50, v=50000.0, verify="kyc", verify_at=now - timedelta(days=7))
+    )
+    assert today == week
+
+
+def test_unverified_accounts_are_untouched_by_decay():
+    """No level means no bonus to decay — the factor stays exactly 1.00 and the
+    date is irrelevant."""
+    now = datetime.now(timezone.utc)
+    recent = compute_uba(_c(f=24, q=50, v=50000.0, verify=None, verify_at=now))
+    ancient = compute_uba(
+        _c(f=24, q=50, v=50000.0, verify=None, verify_at=now - timedelta(days=9999))
+    )
+    assert recent == ancient

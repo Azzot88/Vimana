@@ -448,3 +448,77 @@ async def test_list_requests_unknown_deal_404(client, sender_headers):
         f"/api/deals/{uuid.uuid4()}/verification-requests", headers=sender_headers
     )
     assert resp.status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────
+# T_TRUST.1 — a lapsed badge stops counting
+# ─────────────────────────────────────────────────────────────
+
+
+async def test_an_expired_badge_stops_holding_up_the_level(
+    client, carrier_headers, sender_headers, seed_sender, session_maker
+):
+    """`expires_at` is written by this module and was never read.
+
+    Peer verification sets +365 days, so a badge that lapsed two years ago kept
+    its level on the account forever — a promise on the profile with nothing
+    behind it. Both the aggregate level and the "active" counts must drop it.
+    """
+    from sqlalchemy import select
+
+    from app.core.verification import refresh_highest_level
+    from app.models.verification import VerificationBadge
+
+    deal_id = await _make_active_deal(client, carrier_headers, sender_headers)
+    req = await client.post(
+        f"/api/deals/{deal_id}/verification",
+        headers=carrier_headers,
+        json={"target_role": "sender"},
+    )
+    req_id = req.json()["id"]
+    await client.post(
+        f"/api/deals/{deal_id}/verification/{req_id}/submit-document",
+        headers=sender_headers,
+        data=_upload_form(),
+        files={"file": ("id.jpg", _fake_doc_bytes(), "image/jpeg")},
+    )
+
+    before = await client.get(f"/api/users/{seed_sender.id}/verifications")
+    assert before.json()["highest_level"] == "auto"
+    # The date the claim rests on travels with it — never a level without a
+    # "when" (`D-EVIDENCE-DECAYS`).
+    assert before.json()["highest_level_at"] is not None
+
+    async with session_maker() as db:
+        badge = (
+            await db.execute(
+                select(VerificationBadge)
+                .where(
+                    VerificationBadge.subject_id == seed_sender.id,
+                    VerificationBadge.revoked_at.is_(None),
+                )
+                .order_by(VerificationBadge.verified_at.desc())
+                .limit(1)
+            )
+        ).scalars().first()
+        assert badge is not None
+        original_expiry = badge.expires_at
+        badge.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        await db.commit()
+        await refresh_highest_level(seed_sender.id, db)
+        await db.commit()
+
+    try:
+        after = await client.get(f"/api/users/{seed_sender.id}/verifications")
+        assert after.json()["active_counts"]["auto"] == 0
+        assert after.json()["highest_level_at"] is None
+        # The badge itself is still in the list: it happened, and the record of
+        # it is not deleted — what changed is that it no longer counts.
+        assert any(b["expires_at"] for b in after.json()["badges"])
+    finally:
+        async with session_maker() as db:
+            badge = await db.get(VerificationBadge, badge.id)
+            badge.expires_at = original_expiry
+            await db.commit()
+            await refresh_highest_level(seed_sender.id, db)
+            await db.commit()

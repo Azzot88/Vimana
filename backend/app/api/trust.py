@@ -1,6 +1,6 @@
 """T2.4 — Trust Graph HTTP endpoints, plus the public identity page (T3.18)."""
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -16,8 +16,9 @@ from app.core.trust import bfs_circles, distance_between
 from app.core.uba import level_of
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealStatus
 from app.models.marketplace import Trip
-from app.models.trust import TrustEdgeKind
+from app.models.trust import TrustEdge, TrustEdgeKind
 from app.models.user import User
+from app.models.verification import VerificationBadge
 
 router = APIRouter()
 
@@ -35,6 +36,10 @@ class TrustMetricsOut(BaseModel):
     verifications_received_count: int
     dealt_with_count: int
     distance_from_viewer: int | None  # None if not authenticated or not connected
+    # T_TRUST.1 — a counter says nothing about time, and three vouches from four
+    # years ago is a different statement from three from last month. The date of
+    # the newest live vouch is the cheapest way to tell them apart.
+    last_vouched_at: datetime | None = None
 
 
 @router.get("/me/trust-circle", response_model=TrustCirclesOut)
@@ -98,12 +103,56 @@ async def user_trust_metrics(
         verifications_received_count=user.verifications_received_count,
         dealt_with_count=user.dealt_with_count,
         distance_from_viewer=distance,
+        last_vouched_at=await _last_vouched_at(db, user),
     )
 
 
 # ─────────────────────────────────────────────────────────────
 # T3.18 — the public identity page
 # ─────────────────────────────────────────────────────────────
+
+
+async def _verified_at(db: AsyncSession, subject: User) -> datetime | None:
+    """When the badge behind `highest_verification_level` was issued.
+
+    Newest live badge of exactly that level: an older badge of a lower level
+    says nothing about how fresh *this* claim is. Expired badges are excluded
+    here for the same reason they no longer set the level at all (T_TRUST.1).
+    """
+    if subject.highest_verification_level is None:
+        return None
+    now = datetime.now(timezone.utc)
+    return (
+        await db.execute(
+            select(func.max(VerificationBadge.verified_at)).where(
+                VerificationBadge.subject_id == subject.id,
+                VerificationBadge.level == subject.highest_verification_level,
+                VerificationBadge.revoked_at.is_(None),
+                or_(
+                    VerificationBadge.expires_at.is_(None),
+                    VerificationBadge.expires_at > now,
+                ),
+            )
+        )
+    ).scalar()
+
+
+async def _last_vouched_at(db: AsyncSession, subject: User) -> datetime | None:
+    """Date of the most recent live vouch pointing at this identity.
+
+    The counter beside it ("3 people vouched") is silent about time, and three
+    vouches from four years ago is a different statement from three from last
+    month. One date is enough to tell those apart without listing the edges.
+    """
+    return (
+        await db.execute(
+            select(func.max(TrustEdge.created_at)).where(
+                TrustEdge.to_user_id == subject.id,
+                TrustEdge.kind == TrustEdgeKind.peer_verified,
+                TrustEdge.revoked_at.is_(None),
+            )
+        )
+    ).scalar()
 
 
 class ArchiveRecord(BaseModel):
@@ -265,6 +314,12 @@ class IdentityOut(BaseModel):
     uba: int | None = None
     uba_level: str | None = None
     highest_verification_level: str | None = None
+    # T_TRUST.1 — the date the level rests on, and the date of the most recent
+    # vouch. A level or a counter with no date asserts more than the evidence:
+    # "peer verified" reads as a present-tense fact, and the fact is that
+    # somebody said so on a particular day (`D-EVIDENCE-DECAYS`).
+    verified_at: datetime | None = None
+    last_vouched_at: datetime | None = None
     verifications_issued_count: int | None = None
     verifications_received_count: int | None = None
     dealt_with_count: int | None = None
@@ -302,13 +357,18 @@ async def public_identity(
 
     level = require_visible(subject, viewer)
 
+    verified_at = await _verified_at(db, subject)
+
     if level == "minimal":
         # Existence and how well proven it is — enough to answer "is this key a
-        # real participant" without drawing a portrait.
+        # real participant" without drawing a portrait. The date comes along:
+        # it is part of the claim, not part of the portrait, and "verified" with
+        # no "when" is exactly the overstatement T_TRUST.1 exists to stop.
         return IdentityOut(
             npub=key,
             visibility=level,
             highest_verification_level=subject.highest_verification_level,
+            verified_at=verified_at,
             key_lost=subject.key_lost,
         )
 
@@ -326,6 +386,8 @@ async def public_identity(
         uba=uba,
         uba_level=level_of(uba) if uba is not None else None,
         highest_verification_level=subject.highest_verification_level,
+        verified_at=verified_at,
+        last_vouched_at=await _last_vouched_at(db, subject),
         verifications_issued_count=subject.verifications_issued_count,
         verifications_received_count=subject.verifications_received_count,
         dealt_with_count=subject.dealt_with_count,

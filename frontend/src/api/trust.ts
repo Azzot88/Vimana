@@ -15,6 +15,9 @@ export interface TrustMetrics {
   verifications_received_count: number
   dealt_with_count: number
   distance_from_viewer: number | null
+  /** T_TRUST.1 — the newest live vouch. Three from four years ago is a
+   *  different statement from three from last month. */
+  last_vouched_at: string | null
 }
 
 export const getMyTrustCircle = (params?: { depth?: number; kind?: TrustEdgeKind }) =>
@@ -36,6 +39,11 @@ export interface PublicIdentity {
   uba: number | null
   uba_level: string | null
   highest_verification_level: string | null
+  /** T_TRUST.1 — the dates the claims above rest on. A level or a counter with
+   *  no date is a present-tense statement about something that happened once
+   *  (`D-EVIDENCE-DECAYS`). */
+  verified_at: string | null
+  last_vouched_at: string | null
   verifications_issued_count: number | null
   verifications_received_count: number | null
   dealt_with_count: number | null

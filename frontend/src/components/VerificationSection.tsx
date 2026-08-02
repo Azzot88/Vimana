@@ -83,14 +83,25 @@ export default function VerificationSection() {
         }`}
       >
         <div className="flex items-center gap-3">
-          <VerificationBadgeChip level={b.level} />
+          <VerificationBadgeChip level={b.level} at={b.verified_at} />
           <div>
             <MonoText className="text-xs text-navy/40">
               {t(`verification.source.${b.source}`)}
             </MonoText>
-            <MonoText className="text-xs text-navy/30">
-              {new Date(b.verified_at).toLocaleDateString(i18n.language)}
-            </MonoText>
+            {/* T_TRUST.1 — expiry belongs next to the badge, not only in the
+                database. It is the difference between "verified" and "was
+                verified", and the account holder is the person who can act on
+                it before it lapses. */}
+            {b.expires_at && (
+              <MonoText className="text-xs text-navy/30">
+                {t(
+                  new Date(b.expires_at) < new Date()
+                    ? 'verification.expiredOn'
+                    : 'verification.expiresOn',
+                  { date: new Date(b.expires_at).toLocaleDateString(i18n.language) },
+                )}
+              </MonoText>
+            )}
           </div>
         </div>
         {active && b.source === 'auto_ocr' && (
@@ -112,7 +123,11 @@ export default function VerificationSection() {
         <h2 className="font-display font-semibold text-base text-navy">
           {t('verification.sectionTitle')}
         </h2>
-        <VerificationBadgeChip level={summary?.highest_level} size="md" />
+        <VerificationBadgeChip
+          level={summary?.highest_level}
+          at={summary?.highest_level_at}
+          size="md"
+        />
       </div>
 
       <p className="text-xs font-body text-navy/50">

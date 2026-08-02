@@ -37,6 +37,11 @@ export interface VerificationBadge {
 export interface UserVerificationSummary {
   subject_id: string
   highest_level: VerificationLevel | null
+  /** T_TRUST.1 — when the badge behind `highest_level` was issued. Null when
+   *  there is no level, or when the badge carrying it has lapsed. The level is
+   *  never rendered without it (`D-EVIDENCE-DECAYS`). */
+  highest_level_at: string | null
+  /** Counts only badges that are neither revoked nor expired. */
   active_counts: Record<VerificationLevel, number>
   badges: VerificationBadge[]
 }

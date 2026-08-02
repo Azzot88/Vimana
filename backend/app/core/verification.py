@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import hashlib
 import os
+from datetime import datetime, timezone
 from typing import Iterable
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.keypair import decrypt_nsec
@@ -163,11 +164,28 @@ async def refresh_highest_level(user_id, db: AsyncSession) -> str | None:
     """Recompute `User.highest_verification_level` from active badges.
 
     Call after INSERT / revoke of `VerificationBadge`. Cheap query (indexed).
+
+    T_TRUST.1 — "active" now includes not being expired. It did not before:
+    peer verification writes `expires_at = +365 days` (and so does the escalated
+    path), and this query never looked at the column, so a badge that lapsed two
+    years ago kept its level on the account forever. An expiry date the system
+    writes and then ignores is worse than no expiry at all — it reads as a
+    promise on the profile that nothing behind it keeps.
+
+    Note this is recomputed on badge INSERT/revoke, not on a timer: a level can
+    therefore stay stale until the next such event. That is a smaller lie than
+    the previous one and is recorded as a follow-up rather than fixed by adding
+    a job nobody asked for.
     """
+    now = datetime.now(tz=timezone.utc)
     result = await db.execute(
         select(VerificationBadge.level).where(
             VerificationBadge.subject_id == user_id,
             VerificationBadge.revoked_at.is_(None),
+            or_(
+                VerificationBadge.expires_at.is_(None),
+                VerificationBadge.expires_at > now,
+            ),
         )
     )
     levels: Iterable = result.scalars().all()

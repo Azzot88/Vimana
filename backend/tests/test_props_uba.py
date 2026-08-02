@@ -6,6 +6,8 @@ not just the hand-picked cases in `test_uba.py`.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from hypothesis import assume, given, settings, strategies as st
 
 from app.core.uba import LEVELS, UBAComponents, compute_uba, level_of
@@ -20,6 +22,10 @@ def _c(**kw) -> UBAComponents:
         v_sum=kw.get("v", 0.0),
         d_peak=kw.get("d", 0.0),
         verify_level=kw.get("verify"),
+        # T_TRUST.1 — fresh unless a case says otherwise: these properties are
+        # about the formula's shape, and an implicit five-year-old badge would
+        # make every one of them quietly test decay instead.
+        verify_at=kw.get("verify_at") or datetime.now(timezone.utc),
     )
 
 

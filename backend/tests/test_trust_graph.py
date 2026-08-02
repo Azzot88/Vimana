@@ -497,3 +497,61 @@ async def test_minimal_visibility_does_not_leak_the_archive(
             user.key_lost_at = None
             user.public_profile = "full"
             await db.commit()
+
+
+# ── T_TRUST.1 — no claim without its date ────────────────────────────────────
+
+
+async def test_the_identity_page_dates_its_claims(client, carrier_headers):
+    """A level and a counter are present-tense statements about the past.
+
+    `D-EVIDENCE-DECAYS`: whenever the page can say "verified" or "vouched for",
+    it must be able to say when — otherwise the claim is stronger than the
+    evidence behind it.
+    """
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    body = (await client.get(f"/api/identities/{me.json()['nostr_pubkey']}")).json()
+
+    assert "verified_at" in body
+    assert "last_vouched_at" in body
+    if body["highest_verification_level"] is not None:
+        assert body["verified_at"] is not None, "a level with no date is an overclaim"
+    if (body["verifications_received_count"] or 0) > 0:
+        assert body["last_vouched_at"] is not None
+
+
+async def test_minimal_visibility_still_carries_the_date(
+    client, carrier_headers, session_maker
+):
+    """The date is part of the claim, not part of the portrait — `minimal`
+    drops the portrait and keeps the claim honest."""
+    import uuid as uuidlib
+
+    from app.models.user import User
+
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuidlib.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.public_profile = "minimal"
+        await db.commit()
+
+    try:
+        body = (await client.get(f"/api/identities/{npub}")).json()
+        assert body["visibility"] == "minimal"
+        assert body["display_name"] is None
+        if body["highest_verification_level"] is not None:
+            assert body["verified_at"] is not None
+    finally:
+        async with session_maker() as db:
+            user = await db.get(User, user_id)
+            user.public_profile = "full"
+            await db.commit()
+
+
+async def test_trust_metrics_date_their_counters(client, seed_carrier):
+    """Three vouches from four years ago is a different statement from three
+    from last month, and the counter alone cannot tell them apart."""
+    body = (await client.get(f"/api/users/{seed_carrier.id}/trust-metrics")).json()
+    assert "last_vouched_at" in body

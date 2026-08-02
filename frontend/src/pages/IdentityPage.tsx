@@ -6,6 +6,7 @@ import { shortKey } from '../lib/identity'
 import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import MonoText from '../components/MonoText'
 import UBAChip from '../components/UBAChip'
+import VerificationBadgeChip from '../components/VerificationBadgeChip'
 
 /**
  * T3.18 — an identity, by its key, readable by anyone.
@@ -104,17 +105,27 @@ export default function IdentityPage() {
 
           {minimal ? (
             /* The owner chose to be a fact rather than a portrait. Saying so is
-               better than rendering a page full of blanks. */
-            <p className="text-sm font-body text-navy/60">{t('identity.minimalBody')}</p>
+               better than rendering a page full of blanks — and the one fact on
+               offer, how well proven this key is, comes with its date like
+               everywhere else (T_TRUST.1). */
+            <div className="space-y-2">
+              <p className="text-sm font-body text-navy/60">{t('identity.minimalBody')}</p>
+              <VerificationBadgeChip
+                level={identity.highest_verification_level as never}
+                at={identity.verified_at}
+              />
+            </div>
           ) : (
             <>
+              {/* T_TRUST.1 — the level carries its date. Rendered through the
+                  shared chip so this page cannot drift back into a bare badge:
+                  the date is a required prop there (`D-EVIDENCE-DECAYS`). */}
               <div className="flex flex-wrap items-center gap-2">
                 <UBAChip uba={identity.uba} level={identity.uba_level as never} />
-                {identity.highest_verification_level && (
-                  <span className="text-xs font-body px-2 py-0.5 rounded bg-cyan/10 text-cyan">
-                    {t(`verification.level.${identity.highest_verification_level}`)}
-                  </span>
-                )}
+                <VerificationBadgeChip
+                  level={identity.highest_verification_level as never}
+                  at={identity.verified_at}
+                />
               </div>
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-body">
@@ -138,6 +149,18 @@ export default function IdentityPage() {
                   <dt className="text-xs text-navy/50">{t('identity.vouchedBy')}</dt>
                   <dd className="text-navy">
                     {identity.verifications_received_count ?? 0}
+                    {/* A counter is silent about time, and that silence reads as
+                        "recently". The date of the newest vouch is the cheapest
+                        way to stop it saying that. */}
+                    {identity.last_vouched_at && (
+                      <span className="block text-xs text-navy/40">
+                        {t('identity.lastVouchedOn', {
+                          date: new Date(identity.last_vouched_at).toLocaleDateString(
+                            i18n.language,
+                          ),
+                        })}
+                      </span>
+                    )}
                   </dd>
                 </div>
               </dl>
