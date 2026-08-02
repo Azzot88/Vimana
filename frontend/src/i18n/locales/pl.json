@@ -406,6 +406,11 @@
   },
   "profile": {
     "title": "Profil",
+    "keys": {
+      "title": "Dostęp i klucze",
+      "hint": "Czym się logujesz i co posiada konto: e-mail i hasło, urządzenia, kody odzyskiwania, Twój klucz.",
+      "open": "Otwórz dostęp i klucze"
+    },
     "level": "Poziom Aktywności Biznesowej",
     "levelPhase": "Faza 3",
     "levelNote": "Dostępne w następnej fazie",
@@ -452,6 +457,9 @@
       "sealLocalNotice": "Nic nie opuszcza tej strony: klucz jest pieczętowany tutaj, plik zapisuje się na tym urządzeniu. Tak zwykła kopia tekstowa staje się zaszyfrowana.",
       "sealFailed": "To nie wygląda na klucz prywatny — sprawdź format.",
       "vaultFailed": "Nie udało się przygotować pliku. Spróbuj ponownie.",
+      "readerTitle": "Czytnik kontenera",
+      "readerHint": "Otwiera plik .dvlt Twoim hasłem. To osobna strona celowo: zapisz ją, a będzie działać, gdy serwis będzie niedostępny.",
+      "readerOpen": "Otwórz czytnik",
       "stateOwn": "Twój",
       "stateLost": "Utracony",
       "hintService": "Twój sejf jest szyfrowany kluczem, który Vimana utworzyła i przechowuje. To klucz roboczy, nie tożsamość — nie będziemy prosić, byś ufał kluczowi, który cały czas leżał u nas.",

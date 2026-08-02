@@ -454,6 +454,11 @@
   "profile": {
     "title": "Profile",
     "editButton": "Edit",
+    "keys": {
+      "title": "Access and keys",
+      "hint": "How you sign in, and what this account owns: email and password, devices, recovery codes, your key.",
+      "open": "Open access and keys"
+    },
     "editTitle": "Edit profile",
     "editHint": "Manage saved addresses in the Receiving addresses section.",
     "avatarUpload": "Upload photo",
@@ -504,6 +509,9 @@
       "sealLocalNotice": "This never leaves the page: the key is sealed here and the file is saved to this device. Use it to replace a plain-text backup with an encrypted one.",
       "sealFailed": "That does not look like a private key — check the format.",
       "vaultFailed": "Could not prepare the file. Try again.",
+      "readerTitle": "Vault reader",
+      "readerHint": "Opens a .dvlt file with your passphrase. It is a separate page on purpose: save it and it keeps working when this site does not.",
+      "readerOpen": "Open the reader",
       "stateOwn": "Yours",
       "stateLost": "Lost",
       "hintService": "Your vault is encrypted with a key Vimana generated and keeps. It is a working key, not an identity — we would not ask you to trust a key we have held all along.",

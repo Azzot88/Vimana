@@ -12,6 +12,7 @@ import NewTripPage from './pages/NewTripPage'
 import DealsPage from './pages/DealsPage'
 import DealPage from './pages/DealPage'
 import DealVaultPage from './pages/DealVaultPage'
+import ProfileKeysPage from './pages/ProfileKeysPage'
 import ProfilePage from './pages/ProfilePage'
 import InvitePage from './pages/InvitePage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
@@ -47,6 +48,9 @@ export default function App() {
               <Route path="/deals/:dealId" element={<DealPage />} />
               <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              {/* T_UX.6 — its own path so banners, letters and the reader can
+                  link straight to it. */}
+              <Route path="/profile/keys" element={<ProfileKeysPage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/admin/disputes" element={<AdminDisputesPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />

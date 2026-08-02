@@ -235,11 +235,25 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {user && (
-            <SecuritySection user={user} onChanged={refreshUser} />
-          )}
-          <KeypairSection />
-          <PasskeySection />
+          {/* T_UX.6 — access and keys moved to their own page. This card is the
+              door, not the machinery: the profile answers "who am I to the
+              other party", and how I sign in or what I own is a different
+              question asked at a different moment. */}
+          <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
+            <h2 className="font-display font-semibold text-base text-navy">
+              {t('profile.keys.title')}
+            </h2>
+            <p className="text-sm font-body text-navy/60">
+              {t('profile.keys.hint')}
+            </p>
+            <Link
+              to="/profile/keys"
+              data-testid="profile-keys-link"
+              className="block w-full text-center border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+            >
+              {t('profile.keys.open')}
+            </Link>
+          </div>
 
           <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">

@@ -405,6 +405,11 @@
   },
   "profile": {
     "title": "Perfil",
+    "keys": {
+      "title": "Acceso y claves",
+      "hint": "Con qué entras y qué posee esta cuenta: correo y contraseña, dispositivos, códigos de recuperación, tu clave.",
+      "open": "Abrir acceso y claves"
+    },
     "level": "Nivel de Actividad Empresarial",
     "levelPhase": "Fase 3",
     "levelNote": "Disponible en la próxima fase",
@@ -451,6 +456,9 @@
       "sealLocalNotice": "Nada sale de esta página: la clave se sella aquí y el archivo se guarda en este dispositivo. Sirve para sustituir una copia en texto plano por una cifrada.",
       "sealFailed": "Esto no parece una clave privada: revisa el formato.",
       "vaultFailed": "No se pudo preparar el archivo. Inténtalo de nuevo.",
+      "readerTitle": "Lector del contenedor",
+      "readerHint": "Abre un archivo .dvlt con tu frase de contraseña. Es una página aparte a propósito: guárdala y seguirá funcionando cuando el sitio no responda.",
+      "readerOpen": "Abrir el lector",
       "stateOwn": "Tuya",
       "stateLost": "Perdida",
       "hintService": "Tu caja fuerte se cifra con una clave que Vimana creó y conserva. Es una clave de servicio, no una identidad: no vamos a pedirte que confíes en una clave que ha estado en nuestras manos todo este tiempo.",

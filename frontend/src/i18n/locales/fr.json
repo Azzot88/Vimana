@@ -405,6 +405,11 @@
   },
   "profile": {
     "title": "Profil",
+    "keys": {
+      "title": "Accès et clés",
+      "hint": "Comment vous vous connectez et ce que possède ce compte : e-mail et mot de passe, appareils, codes de récupération, votre clé.",
+      "open": "Ouvrir accès et clés"
+    },
     "level": "Niveau d'Activité Commerciale",
     "levelPhase": "Phase 3",
     "levelNote": "Disponible à la prochaine phase",
@@ -451,6 +456,9 @@
       "sealLocalNotice": "Rien ne quitte cette page : la clé est scellée ici et le fichier enregistré sur cet appareil. De quoi remplacer une sauvegarde en clair par une version chiffrée.",
       "sealFailed": "Cela ne ressemble pas à une clé privée — vérifiez le format.",
       "vaultFailed": "Impossible de préparer le fichier. Réessayez.",
+      "readerTitle": "Lecteur de coffre",
+      "readerHint": "Ouvre un fichier .dvlt avec votre phrase secrète. Page séparée à dessein : enregistrez-la et elle fonctionnera quand le site ne répondra plus.",
+      "readerOpen": "Ouvrir le lecteur",
       "stateOwn": "La vôtre",
       "stateLost": "Perdue",
       "hintService": "Votre coffre est chiffré avec une clé que Vimana a créée et conserve. C'est une clé de service, pas une identité — nous n'allons pas vous demander de faire confiance à une clé que nous avons détenue tout du long.",
