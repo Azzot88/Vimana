@@ -62,7 +62,14 @@ test.describe('identity: establish', () => {
     }
 
     await expect(state).toHaveAttribute('data-state', 'own', { timeout: 10_000 })
-    await expect(page.getByTestId('identity-npub')).toHaveText(/^[0-9a-f]{64}$/)
+
+    // T3.23 shortened the displayed key to `first4…last4` — sixty-four hex
+    // characters are unreadable and nobody compares them by eye. The full value
+    // moved to `title`, so both properties are worth asserting: the key really
+    // is the whole key, and the screen does not try to show it all.
+    const npub = page.getByTestId('identity-npub')
+    await expect(npub).toHaveAttribute('title', /^[0-9a-f]{64}$/)
+    await expect(npub).toHaveText(/^[0-9a-f]{4}…[0-9a-f]{4}$/)
   })
 
   test('the account keeps working after the transition', async ({ page }) => {
