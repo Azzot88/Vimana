@@ -939,8 +939,8 @@ async def test_chain_endpoint_says_where_to_check_and_how_far(
             )
         await db.commit()
 
-        head = await head_of(db, chain_deal.id)
-        anchored_seq = head.seq - 1
+        head_seq, _ = await head_of(db, chain_deal.id)
+        anchored_seq = head_seq - 1
         db.add(
             DealChainAnchor(
                 deal_id=chain_deal.id,
