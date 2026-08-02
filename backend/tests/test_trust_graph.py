@@ -362,3 +362,129 @@ async def test_trust_metrics_are_readable_without_a_session(client, seed_carrier
     resp = await client.get(f"/api/users/{seed_carrier.id}/trust-metrics")
     assert resp.status_code == 200, resp.text
     assert resp.json()["distance_from_viewer"] is None
+
+
+# ── T3.19 — the archive record ───────────────────────────────────────────────
+
+
+async def test_a_live_identity_carries_no_archive(client, carrier_headers):
+    """Absence of the block is not a missing field: there is no record to close
+    while the key still signs."""
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    body = (await client.get(f"/api/identities/{me.json()['nostr_pubkey']}")).json()
+    assert body["archive"] is None
+
+
+async def test_a_retired_identity_shows_counted_numbers_only(
+    client, carrier_headers, session_maker
+):
+    """Everything on the placard is counted from rows. The assertions here are
+    about *what kind* of number may appear at all — a rate or an average would
+    read as measured, and nothing measures it."""
+    import uuid as uuidlib
+    from datetime import datetime, timezone
+
+    from app.models.user import User
+
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuidlib.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.key_lost_at = datetime.now(timezone.utc)
+        await db.commit()
+
+    try:
+        body = (await client.get(f"/api/identities/{npub}")).json()
+        assert body["key_lost"] is True
+        archive = body["archive"]
+        assert archive is not None
+        assert archive["retired_at"]
+
+        # Counts, and the totals they were counted from — never a bare ratio.
+        assert archive["deals_closed"] <= archive["deals_total"]
+        assert archive["routes_measured"] <= archive["routes_closed"]
+        assert archive["signatures"] <= archive["chain_entries"]
+
+        # Distances are a great-circle arc; the field name has to say so, since
+        # the label on the page is written from it.
+        assert "straight_line_km" in archive
+        assert not any(
+            k for k in archive if "percent" in k or "average" in k or "rate" in k
+        )
+
+        # A sum with no measurable route behind it is None, not a confident 0.
+        if archive["routes_measured"] == 0:
+            assert archive["straight_line_km"] is None
+            assert archive["longest_hop_km"] is None
+    finally:
+        async with session_maker() as db:
+            user = await db.get(User, user_id)
+            user.key_lost_at = None
+            await db.commit()
+
+
+async def test_the_archive_of_a_hidden_identity_is_not_reachable(
+    client, carrier_headers, session_maker
+):
+    """Retiring must not open a back door around the visibility gate — the
+    archive rides on the same `require_visible` call as everything else."""
+    import uuid as uuidlib
+    from datetime import datetime, timezone
+
+    from app.models.user import User
+
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuidlib.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.key_lost_at = datetime.now(timezone.utc)
+        user.archive_choice = "hide"
+        await db.commit()
+
+    try:
+        assert (await client.get(f"/api/identities/{npub}")).status_code == 404
+        # The owner still reaches their own page — closing the exhibit is not
+        # locking yourself out of your own history.
+        mine = await client.get(f"/api/identities/{npub}", headers=carrier_headers)
+        assert mine.status_code == 200
+        assert mine.json()["archive"] is not None
+    finally:
+        async with session_maker() as db:
+            user = await db.get(User, user_id)
+            user.key_lost_at = None
+            user.archive_choice = None
+            await db.commit()
+
+
+async def test_minimal_visibility_does_not_leak_the_archive(
+    client, carrier_headers, session_maker
+):
+    """`minimal` answers "is this key real", nothing more. A retirement placard
+    under it would be a portrait drawn by another route."""
+    import uuid as uuidlib
+    from datetime import datetime, timezone
+
+    from app.models.user import User
+
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuidlib.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.key_lost_at = datetime.now(timezone.utc)
+        user.public_profile = "minimal"
+        await db.commit()
+
+    try:
+        body = (await client.get(f"/api/identities/{npub}")).json()
+        assert body["visibility"] == "minimal"
+        assert body["key_lost"] is True, "existence and its end are the same fact"
+        assert body["archive"] is None
+    finally:
+        async with session_maker() as db:
+            user = await db.get(User, user_id)
+            user.key_lost_at = None
+            user.public_profile = "full"
+            await db.commit()

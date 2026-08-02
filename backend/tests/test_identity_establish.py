@@ -631,3 +631,141 @@ async def test_status_reports_the_three_states(client):
     )
     dead = await client.get("/api/me/keypair/status", headers=headers)
     assert dead.json()["key_lost"] is True
+
+
+# ── T3.19 — the archive window ───────────────────────────────────────────────
+
+
+async def _retire(client) -> dict[str, str]:
+    """A user whose identity key is gone but whose access still works.
+
+    That combination is the whole premise of the window: `declare-lost` takes
+    away the ability to sign, never the ability to sign *in*, which is what
+    leaves anyone to answer the question at all.
+    """
+    _, headers = await _fresh_user(client, "arc")
+    await _establish(client, headers)
+    resp = await client.post(
+        "/api/me/identity/declare-lost",
+        headers=headers,
+        json={"step_up_token": await step_up_token(client, headers, "declare_lost", PASSWORD)},
+    )
+    assert resp.status_code == 200, resp.text
+    return headers
+
+
+async def test_a_live_identity_has_no_window(client):
+    """Nothing to decide while the key still signs — and the status says so
+    with nulls rather than by offering a deadline that means nothing."""
+    _, headers = await _fresh_user(client, "arc")
+    status = (await client.get("/api/me/keypair/status", headers=headers)).json()
+    assert status["archive_window_ends_at"] is None
+    assert status["archive_choice"] is None
+
+    refused = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "hide"})
+    assert refused.status_code == 409
+
+
+async def test_retiring_opens_a_window_with_a_date(client):
+    headers = await _retire(client)
+    status = (await client.get("/api/me/keypair/status", headers=headers)).json()
+    # The notice has to name a date, so the API has to have one.
+    assert status["archive_window_ends_at"] is not None
+    assert status["archive_choice"] is None, "silence is not an answer yet"
+    assert status["archive_notice_seen_at"] is None
+
+
+async def test_dismissing_the_notice_is_not_an_answer(client):
+    """Closing a dialog must not register a decision — the default it describes
+    is reached by doing nothing, and consent taken from a close button is not
+    consent."""
+    headers = await _retire(client)
+    seen = await client.post("/api/me/archive/notice-seen", headers=headers)
+    assert seen.status_code == 200
+    assert seen.json()["archive_notice_seen_at"] is not None
+    assert seen.json()["archive_choice"] is None
+
+
+async def test_notice_seen_is_idempotent_and_keeps_the_first_time(client):
+    headers = await _retire(client)
+    first = (await client.post("/api/me/archive/notice-seen", headers=headers)).json()
+    second = (await client.post("/api/me/archive/notice-seen", headers=headers)).json()
+    assert first["archive_notice_seen_at"] == second["archive_notice_seen_at"]
+
+
+async def test_choosing_no_closes_the_page_for_good(client, session_maker):
+    """The one irreversible direction — and the safe one. Nothing is deleted:
+    what closes is the display."""
+    headers = await _retire(client)
+    me = await client.get("/api/auth/me", headers=headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuid.UUID(me.json()["id"])
+
+    chosen = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "hide"})
+    assert chosen.status_code == 200
+    assert chosen.json()["archive_choice"] == "hide"
+    # Answering counts as having read the notice.
+    assert chosen.json()["archive_notice_seen_at"] is not None
+
+    assert (await client.get(f"/api/identities/{npub}")).status_code == 404
+    # …and the record itself is untouched underneath.
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        assert user.nostr_pubkey == npub
+        assert user.key_lost_at is not None
+
+
+async def test_no_is_final(client):
+    headers = await _retire(client)
+    await client.post("/api/me/archive/choice", headers=headers, json={"choice": "hide"})
+
+    back = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "show"})
+    assert back.status_code == 409
+    assert "final" in back.json()["detail"].lower()
+
+    # The ordinary visibility control cannot walk it back either, or the
+    # setting would report one thing while the gate did another.
+    patched = await client.patch(
+        "/api/auth/me", headers=headers, json={"public_profile": "full"}
+    )
+    assert patched.status_code == 409
+
+
+async def test_yes_is_the_default_and_stays_changeable(client):
+    """`show` only writes down what silence would have produced anyway, so it
+    carries no penalty — the asymmetry is deliberate."""
+    headers = await _retire(client)
+    shown = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "show"})
+    assert shown.status_code == 200
+    assert shown.json()["archive_choice"] == "show"
+
+    hidden = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "hide"})
+    assert hidden.status_code == 200, "someone who said yes may still change their mind"
+
+
+async def test_the_window_actually_closes(client, session_maker):
+    """The notice promises a date after which the answer is fixed. An API that
+    kept accepting changes past it would make that promise false."""
+    from datetime import datetime, timedelta, timezone
+
+    headers = await _retire(client)
+    me = await client.get("/api/auth/me", headers=headers)
+    user_id = uuid.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.key_lost_at = datetime.now(timezone.utc) - timedelta(days=16)
+        await db.commit()
+
+    late = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "hide"})
+    assert late.status_code == 409
+    assert "window" in late.json()["detail"].lower()
+
+    # Silence has become the answer: the exhibit is up.
+    npub = me.json()["nostr_pubkey"]
+    assert (await client.get(f"/api/identities/{npub}")).status_code == 200
+
+
+async def test_choice_must_be_one_of_two_words(client):
+    headers = await _retire(client)
+    resp = await client.post("/api/me/archive/choice", headers=headers, json={"choice": "maybe"})
+    assert resp.status_code == 422

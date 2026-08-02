@@ -13,6 +13,7 @@ only `perms_of()` implementation changes — endpoint call-sites don't move.
 from __future__ import annotations
 
 import enum
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 
 from fastapi import Depends, HTTPException
@@ -145,6 +146,13 @@ def visible_to(subject: User, viewer: User | None) -> str:
     """
     if viewer is not None and (viewer.id == subject.id or viewer.role == "superuser"):
         return "full"
+    # T3.19 — a closed archive outranks the ordinary setting. It is the same
+    # word ('hidden') but a different decision: the account below is retired and
+    # its owner said no. Checking it here, rather than in the identity endpoint,
+    # is the whole point of having one gate — the next public slice inherits it
+    # without knowing this feature exists.
+    if (subject.archive_choice or "").lower() == "hide":
+        return "hidden"
     level = (subject.public_profile or "full").lower()
     return level if level in PUBLIC_PROFILE_VALUES else "full"
 
@@ -160,3 +168,41 @@ def require_visible(subject: User, viewer: User | None) -> str:
     if level == "hidden":
         raise HTTPException(status_code=404, detail="No such identity")
     return level
+
+
+# ─────────────────────────────────────────────────────────────
+# T3.19 — the window in which a retired identity may close its archive
+# ─────────────────────────────────────────────────────────────
+
+ARCHIVE_WINDOW_DAYS = 15
+
+
+def archive_window_ends_at(user: User) -> datetime | None:
+    """When this account's say over its own exhibit stops being available.
+
+    None for an identity that is still live — there is nothing to decide while
+    the key works. Derived from `key_lost_at` rather than stored, so the date
+    shown in the notice, the date checked by the endpoint and the date in the
+    email cannot disagree.
+
+    Fifteen days is short enough that the archive is not held hostage by
+    accounts that will never log in again, and long enough that someone who
+    lost a key on holiday still gets to answer.
+    """
+    if user.key_lost_at is None:
+        return None
+    return user.key_lost_at + timedelta(days=ARCHIVE_WINDOW_DAYS)
+
+
+def archive_window_open(user: User, now: datetime | None = None) -> bool:
+    """Whether the choice can still be made or changed.
+
+    Closing is *only* possible inside the window. The notice promises a date
+    after which the decision is fixed, and an API that quietly kept accepting
+    changes afterwards would make that promise false — worse than a stricter
+    rule, because people plan around it.
+    """
+    ends = archive_window_ends_at(user)
+    if ends is None:
+        return False
+    return (now or datetime.now(tz=timezone.utc)) < ends

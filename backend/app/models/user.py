@@ -76,6 +76,18 @@ class User(Base):
     key_lost_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # T3.19 — the retired identity's own say over its exhibit.
+    # `archive_notice_seen_at`: the one-time notice was shown. A permanent modal
+    # over a state that will never change is nagging, and gets closed unread.
+    # `archive_choice`: NULL | 'show' | 'hide'. NULL means the owner has not
+    # spoken; after ARCHIVE_WINDOW_DAYS that silence *becomes* 'show', which is
+    # why the notice must name the date. 'hide' is final, and only 'hide' is:
+    # a wrong "no" costs visibility, a wrong silence costs privacy but has
+    # fifteen days of remedy. Only the safe side is irreversible.
+    archive_notice_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    archive_choice: Mapped[str | None] = mapped_column(String(8), nullable=True)
     business_activity_level: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

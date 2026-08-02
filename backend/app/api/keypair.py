@@ -41,6 +41,7 @@ from app.core.database import get_db
 from app.core.identity import establish_blockers, rewrap_vault_envelopes
 from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
 from app.core.keypair import decrypt_nsec, encrypt_nsec, npub_from_nsec
+from app.core.permissions import archive_window_ends_at, archive_window_open
 from app.core.step_up import StepUpScope, consume as consume_step_up
 from app.core.verification import (
     rewrap_container_to_identity,
@@ -75,6 +76,14 @@ class KeypairStatus(BaseModel):
     # signatures still verify, but not against the key shown today.
     previous_npub: str | None = None
     identity_changed_at: datetime | None = None
+    # T3.19 — the retired identity's say over its own exhibit.
+    #   archive_choice        — null until the owner speaks; 'show' | 'hide'
+    #   archive_notice_seen_at— the one-time explanation has been shown
+    #   archive_window_ends_at— after this, silence has become the answer
+    # All three are null while the key is alive: there is nothing to decide.
+    archive_choice: str | None = None
+    archive_notice_seen_at: datetime | None = None
+    archive_window_ends_at: datetime | None = None
     # DEPRECATED (T3.12) — kept so the existing crypto suite and frontend keep
     # reading. `key_self_custody` is the same bit as `identity_established`;
     # `has_encrypted_nsec` is its inverse for accounts that have any key at all.
@@ -133,6 +142,9 @@ def _status(user: User) -> KeypairStatus:
         key_copies=_key_copies(user),
         previous_npub=user.previous_nostr_pubkey,
         identity_changed_at=user.identity_changed_at,
+        archive_choice=user.archive_choice,
+        archive_notice_seen_at=user.archive_notice_seen_at,
+        archive_window_ends_at=archive_window_ends_at(user),
         key_self_custody=user.key_self_custody,
         has_encrypted_nsec=user.nsec_encrypted is not None,
     )
@@ -381,6 +393,84 @@ async def identity_declare_lost(
     )
 
     current_user.key_lost_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(current_user)
+    return _status(current_user)
+
+
+class ArchiveChoiceBody(BaseModel):
+    """T3.19 — `show` keeps the exhibit, `hide` closes it for good."""
+
+    choice: str
+
+    @field_validator("choice")
+    @classmethod
+    def _known(cls, v: str) -> str:
+        v = v.strip().lower()
+        if v not in ("show", "hide"):
+            raise ValueError("choice must be 'show' or 'hide'")
+        return v
+
+
+@router.post("/me/archive/notice-seen", response_model=KeypairStatus)
+async def archive_notice_seen(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record that the one-time explanation has been shown.
+
+    Separate from the choice on purpose: closing the notice *is not* an answer.
+    Dismissing it leaves `archive_choice` null, which is the default path the
+    notice just described — and a dialog that silently registers a decision
+    because it was closed would be the opposite of informed consent.
+    """
+    if current_user.key_lost_at is None:
+        raise HTTPException(status_code=409, detail="This identity is not retired")
+    if current_user.archive_notice_seen_at is None:
+        current_user.archive_notice_seen_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(current_user)
+    return _status(current_user)
+
+
+@router.post("/me/archive/choice", response_model=KeypairStatus)
+async def archive_choice(
+    body: ArchiveChoiceBody = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Answer the question the notice asked. Only inside the window.
+
+    A retired account can still sign in — that is precisely what `declare-lost`
+    preserves — so the owner can reach this. Whoever lost both the key and their
+    access never sees the question and gets the default; that is honest, and it
+    is why the notice and the email say so out loud instead of assuming everyone
+    comes back.
+
+    Refusals, and why each is not merely defensive:
+
+    - not retired → 409. There is no exhibit to close while the key signs.
+    - window closed → 409. The notice promised a date after which the answer is
+      fixed; an API that kept accepting changes would make that a lie, and
+      people plan around it.
+    - already `hide` → 409. The one irreversible direction, chosen knowingly.
+      Nothing is deleted either way; what closes is the display.
+    """
+    if current_user.key_lost_at is None:
+        raise HTTPException(status_code=409, detail="This identity is not retired")
+    if current_user.archive_choice == "hide":
+        raise HTTPException(
+            status_code=409, detail="The archive is closed — that choice is final"
+        )
+    if not archive_window_open(current_user):
+        raise HTTPException(
+            status_code=409, detail="The window for this choice has closed"
+        )
+
+    current_user.archive_choice = body.choice
+    if current_user.archive_notice_seen_at is None:
+        # Answering it counts as having read it.
+        current_user.archive_notice_seen_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(current_user)
     return _status(current_user)

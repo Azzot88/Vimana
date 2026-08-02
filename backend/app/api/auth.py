@@ -387,7 +387,16 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    for field, value in body.model_dump(exclude_unset=True).items():
+    fields = body.model_dump(exclude_unset=True)
+    # T3.19 — a closed archive outranks the visibility setting, so accepting a
+    # write to it here would leave a control that reports one thing while
+    # `visible_to` does another. Refusing loudly is the only honest option: the
+    # UI hides the setting, and anything reaching this line is not the UI.
+    if "public_profile" in fields and current_user.archive_choice == "hide":
+        raise HTTPException(
+            status_code=409, detail="The archive is closed — that choice is final"
+        )
+    for field, value in fields.items():
         if value is None and field in _NOT_NULL_UPDATE_FIELDS:
             raise HTTPException(
                 status_code=422, detail=f"'{field}' cannot be null"

@@ -4,15 +4,18 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_user_optional
+from app.core.airports import route_distance_km
 from app.core.database import get_db
 from app.core.permissions import require_visible
 from app.core.storage import get_presigned_url
 from app.core.trust import bfs_circles, distance_between
 from app.core.uba import level_of
+from app.models.deal import Deal, DealEvent, DealStatus
+from app.models.marketplace import Trip
 from app.models.trust import TrustEdgeKind
 from app.models.user import User
 
@@ -103,6 +106,122 @@ async def user_trust_metrics(
 # ─────────────────────────────────────────────────────────────
 
 
+class ArchiveRecord(BaseModel):
+    """T3.19 — the historical record of an identity that can no longer act.
+
+    Every field here is counted, never estimated. Losing the key took away the
+    ability to sign; it took nothing away from what was already signed, and this
+    is that — a museum placard, not a damaged profile.
+
+    Two deliberate refusals:
+
+    - **No percentages, no averages, no scores.** "99.98% success" reads as
+      measured and is not; the honest counterpart is a count next to the total
+      it was counted from, which is what `deals_closed` / `deals_total` and
+      `routes_measured` / `routes_closed` are for.
+    - **Distances are `straight_line`, in the field name and in the label.**
+      `route_distance_km` is a great-circle arc: real tracks run 3–7% longer,
+      and we are measuring where a parcel went, not what an aircraft flew.
+      Calling it "kilometres travelled" would be a different number answering a
+      different question.
+
+    `capacity_kg` is the capacity carriers *declared* on completed trips, not
+    weight delivered — we never weighed anything. The label must say so.
+    """
+
+    retired_at: datetime
+    # Chain entries this identity authored, and how many carry a Nostr
+    # signature. An unsigned entry is a real event in a real chain, but calling
+    # it a signature would claim a proof that is not in the row.
+    chain_entries: int
+    signatures: int
+    first_signature_at: datetime | None = None
+    last_signature_at: datetime | None = None
+    deals_total: int
+    deals_closed: int
+    # Closed deals whose route both endpoints of which are known airports, and
+    # the total they came from. Publishing the sum without the denominator would
+    # present a partial total as a complete one.
+    routes_measured: int
+    routes_closed: int
+    straight_line_km: int | None = None
+    # The record, not the average — in a museum the outlier is the exhibit.
+    longest_hop_km: int | None = None
+    longest_hop_route: str | None = None
+    trips_completed: int
+    capacity_kg: float | None = None
+
+
+async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
+    """Count what this identity actually did. Two queries, no estimates."""
+    rows = (
+        await db.execute(
+            select(
+                Deal.status,
+                Deal.carrier_id,
+                Deal.trip_id,
+                Trip.origin,
+                Trip.destination,
+                Trip.capacity,
+            )
+            .join(Trip, Trip.id == Deal.trip_id)
+            .where(or_(Deal.sender_id == subject.id, Deal.carrier_id == subject.id))
+        )
+    ).all()
+
+    deals_closed = 0
+    routes_measured = 0
+    total_km = 0.0
+    longest_km: float | None = None
+    longest_route: str | None = None
+    carried_trips: dict[uuid.UUID, float] = {}
+
+    for status, carrier_id, trip_id, origin, destination, capacity in rows:
+        if status is not DealStatus.closed:
+            continue
+        deals_closed += 1
+        if carrier_id == subject.id:
+            # Per distinct trip: two parcels on one flight are one flight's
+            # capacity, and adding it twice would invent a number.
+            carried_trips[trip_id] = capacity or 0.0
+        km = route_distance_km(origin, destination)
+        if km is None:
+            continue
+        routes_measured += 1
+        total_km += km
+        if longest_km is None or km > longest_km:
+            longest_km, longest_route = km, f"{origin}→{destination}"
+
+    signed = DealEvent.nostr_sig.is_not(None)
+    entries, signatures, first_sig, last_sig = (
+        await db.execute(
+            select(
+                func.count(DealEvent.id),
+                func.count(DealEvent.id).filter(signed),
+                func.min(DealEvent.timestamp).filter(signed),
+                func.max(DealEvent.timestamp).filter(signed),
+            ).where(DealEvent.actor_id == subject.id)
+        )
+    ).one()
+
+    return ArchiveRecord(
+        retired_at=subject.key_lost_at,
+        chain_entries=entries or 0,
+        signatures=signatures or 0,
+        first_signature_at=first_sig,
+        last_signature_at=last_sig,
+        deals_total=len(rows),
+        deals_closed=deals_closed,
+        routes_measured=routes_measured,
+        routes_closed=deals_closed,
+        straight_line_km=round(total_km) if routes_measured else None,
+        longest_hop_km=round(longest_km) if longest_km is not None else None,
+        longest_hop_route=longest_route,
+        trips_completed=len(carried_trips),
+        capacity_kg=round(sum(carried_trips.values()), 1) if carried_trips else None,
+    )
+
+
 class IdentityOut(BaseModel):
     """What a stranger may learn about an identity.
 
@@ -132,6 +251,10 @@ class IdentityOut(BaseModel):
     # weighing old evidence deserves the date rather than a surprise.
     identity_changed_at: datetime | None = None
     previous_npub: str | None = None
+    # T3.19 — present only for a retired identity seen in full. Its absence on a
+    # live one is not a missing field: there is no record to close while the key
+    # still signs.
+    archive: ArchiveRecord | None = None
 
 
 @router.get("/identities/{npub}", response_model=IdentityOut)
@@ -186,4 +309,5 @@ async def public_identity(
         key_lost=subject.key_lost,
         identity_changed_at=subject.identity_changed_at,
         previous_npub=subject.previous_nostr_pubkey,
+        archive=await _archive_record(db, subject) if subject.key_lost else None,
     )
