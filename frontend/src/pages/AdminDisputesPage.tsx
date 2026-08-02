@@ -90,7 +90,7 @@ export default function AdminDisputesPage() {
             return (
               <div
                 key={d.id}
-                className="bg-white rounded-xl border border-navy/10 p-4 space-y-2"
+                className="bg-white rounded-card border border-navy/10 p-4 space-y-2"
               >
                 <div className="flex items-start justify-between gap-2">
                   <MonoText className="text-xs text-navy/50 break-all">
@@ -129,7 +129,7 @@ export default function AdminDisputesPage() {
                   {canClaim && (
                     <button
                       onClick={() => handleClaim(d.id)}
-                      className="text-xs font-display font-medium bg-navy text-ivory px-3 py-1 rounded-lg hover:bg-navy-mid"
+                      className="text-xs font-display font-medium bg-navy text-ivory px-3 py-1 rounded-field hover:bg-navy-mid"
                     >
                       {t('admin.claim')}
                     </button>
@@ -137,7 +137,7 @@ export default function AdminDisputesPage() {
                   {canResolve && (
                     <button
                       onClick={() => setResolvingId(d.id)}
-                      className="text-xs font-display font-medium bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700"
+                      className="text-xs font-display font-medium bg-success text-white px-3 py-1 rounded-field hover:bg-success/90"
                     >
                       {t('admin.resolve')}
                     </button>
@@ -151,7 +151,7 @@ export default function AdminDisputesPage() {
                       onChange={(e) => setVerdict(e.target.value)}
                       rows={3}
                       placeholder={t('admin.verdictPlaceholder') as string}
-                      className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy"
+                      className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy"
                     />
                     <label className="flex items-center gap-2 text-xs font-body text-navy/70">
                       <input
@@ -165,7 +165,7 @@ export default function AdminDisputesPage() {
                       <button
                         onClick={() => handleResolve(d.id)}
                         disabled={!verdict.trim()}
-                        className="bg-navy text-ivory font-display font-medium px-3 py-1.5 rounded-lg text-xs hover:bg-navy-mid disabled:opacity-40"
+                        className="bg-navy text-ivory font-display font-medium px-3 py-1.5 rounded-field text-xs hover:bg-navy-mid disabled:opacity-40"
                       >
                         {t('admin.submitVerdict')}
                       </button>

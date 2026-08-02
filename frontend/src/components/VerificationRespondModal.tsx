@@ -71,12 +71,12 @@ export default function VerificationRespondModal({
 
   return (
     <div
-      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+        className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
       >
         <h2 className="font-display font-semibold text-lg text-navy">
           {t('verification.respondTitle')}
@@ -91,7 +91,7 @@ export default function VerificationRespondModal({
               type="button"
               onClick={() => setShowUpload(true)}
               disabled={busy}
-              className="w-full text-left border border-cyan/40 text-cyan rounded-lg px-4 py-3 text-sm font-body hover:bg-cyan/10 transition-colors"
+              className="w-full text-left border border-cyan/40 text-cyan rounded-field px-4 py-3 text-sm font-body hover:bg-cyan/10 transition-colors"
             >
               📎 {t('verification.actionUpload')}
             </button>
@@ -99,7 +99,7 @@ export default function VerificationRespondModal({
               type="button"
               onClick={() => respond('later_in_person')}
               disabled={busy}
-              className="w-full text-left border border-navy/20 text-navy rounded-lg px-4 py-3 text-sm font-body hover:bg-ivory transition-colors"
+              className="w-full text-left border border-navy/20 text-navy rounded-field px-4 py-3 text-sm font-body hover:bg-ivory transition-colors"
             >
               🕒 {t('verification.actionLater')}
             </button>
@@ -107,7 +107,7 @@ export default function VerificationRespondModal({
               type="button"
               onClick={() => respond(isCarrier ? 'declined_polite' : 'declined')}
               disabled={busy}
-              className={`w-full text-left border rounded-lg px-4 py-3 text-sm font-body transition-colors ${
+              className={`w-full text-left border rounded-field px-4 py-3 text-sm font-body transition-colors ${
                 isCarrier
                   ? 'border-navy/20 text-navy/70 hover:bg-ivory'
                   : 'border-danger/30 text-danger hover:bg-danger/5'
@@ -126,7 +126,7 @@ export default function VerificationRespondModal({
               <select
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
-                className="border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
+                className="border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
               >
                 {DOC_TYPES.map((d) => (
                   <option key={d} value={d}>
@@ -140,10 +140,10 @@ export default function VerificationRespondModal({
                 onChange={(e) => setDocCountry(e.target.value.toUpperCase().slice(0, 2))}
                 placeholder="AE"
                 maxLength={2}
-                className="border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                className="border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
               />
             </div>
-            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-lg px-4 py-2 text-sm font-display font-medium hover:bg-cyan/10 transition-colors">
+            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-field px-4 py-2 text-sm font-display font-medium hover:bg-cyan/10 transition-colors">
               {busy ? '…' : `📎 ${t('verification.chooseFile')}`}
               <input
                 ref={fileRef}

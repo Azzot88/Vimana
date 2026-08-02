@@ -52,13 +52,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ivory flex items-center justify-center px-4">
+    <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
           {t('auth.title')}
         </h1>
         <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
               {t('auth.name')}
@@ -68,7 +68,7 @@ export default function RegisterPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
             />
           </div>
           <div>
@@ -83,7 +83,7 @@ export default function RegisterPage() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               placeholder="user@example.com"
             />
           </div>
@@ -96,7 +96,7 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               placeholder="••••••••"
             />
           </div>
@@ -110,12 +110,12 @@ export default function RegisterPage() {
             <span className="text-sm font-body text-navy">{t('auth.isCarrier')}</span>
           </label>
           {error && (
-            <p className="text-xs font-mono text-orange-600">{error}</p>
+            <p className="text-xs font-mono text-amber">{error}</p>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+            className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
             {loading ? t('auth.registering') : t('auth.register')}
           </button>

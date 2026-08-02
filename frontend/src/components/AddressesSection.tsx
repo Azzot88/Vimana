@@ -123,7 +123,7 @@ export default function AddressesSection() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-base text-navy">
           {t('address.sectionTitle')}
@@ -151,7 +151,7 @@ export default function AddressesSection() {
         <div className="space-y-2">
           {addresses.map((a) =>
             editingId === a.id ? (
-              <div key={a.id} className="border border-cyan rounded-lg p-3 space-y-3">
+              <div key={a.id} className="border border-cyan rounded-field p-3 space-y-3">
                 <AddressFormFields
                   value={draft}
                   onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
@@ -180,7 +180,7 @@ export default function AddressesSection() {
             ) : (
               <div
                 key={a.id}
-                className="border border-navy/10 rounded-lg p-3 flex items-start justify-between gap-3"
+                className="border border-navy/10 rounded-field p-3 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -233,7 +233,7 @@ export default function AddressesSection() {
         </div>
       )}
       {creating && (
-        <div className="border border-cyan rounded-lg p-3 space-y-3">
+        <div className="border border-cyan rounded-field p-3 space-y-3">
           <AddressFormFields
             value={draft}
             onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}

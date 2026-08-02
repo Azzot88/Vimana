@@ -40,7 +40,7 @@ export default function TrustCirclesSection() {
   if (!user) return null
 
   return (
-    <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-base text-navy">
           {t('trust.sectionTitle')}
@@ -71,7 +71,7 @@ export default function TrustCirclesSection() {
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-ivory rounded-lg py-3">
+            <div className="bg-ivory rounded-field py-3">
               <MonoText className="text-lg text-navy font-medium">
                 {metrics?.verifications_issued_count ?? 0}
               </MonoText>
@@ -79,7 +79,7 @@ export default function TrustCirclesSection() {
                 {t('trust.verificationsIssued')}
               </p>
             </div>
-            <div className="bg-ivory rounded-lg py-3">
+            <div className="bg-ivory rounded-field py-3">
               <MonoText className="text-lg text-navy font-medium">
                 {metrics?.verifications_received_count ?? 0}
               </MonoText>
@@ -87,7 +87,7 @@ export default function TrustCirclesSection() {
                 {t('trust.verificationsReceived')}
               </p>
             </div>
-            <div className="bg-ivory rounded-lg py-3">
+            <div className="bg-ivory rounded-field py-3">
               <MonoText className="text-lg text-navy font-medium">
                 {metrics?.dealt_with_count ?? 0}
               </MonoText>

@@ -316,7 +316,7 @@ export default function KeypairSection() {
   const copies = status.key_copies
 
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-5 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-5 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display font-semibold text-lg text-navy">
           {t('profile.identity.title')}
@@ -375,7 +375,7 @@ export default function KeypairSection() {
           that stays signed by the old one. Stated with its date: a bare "your
           key" would let someone assume today's key covers yesterday's records. */}
       {status.previous_npub && status.identity_changed_at && (
-        <div className="bg-navy/5 rounded-lg px-3 py-2 space-y-0.5">
+        <div className="bg-navy/5 rounded-field px-3 py-2 space-y-0.5">
           <p className="text-xs font-body text-navy/70" data-testid="identity-changed">
             {t('profile.identity.changedOn', {
               date: new Date(status.identity_changed_at).toLocaleDateString(),
@@ -391,7 +391,7 @@ export default function KeypairSection() {
       )}
 
       {error && (
-        <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+        <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
           <p className="text-sm font-body text-navy">{error}</p>
         </div>
       )}
@@ -413,7 +413,7 @@ export default function KeypairSection() {
           </div>
 
           {vaultDone && (
-            <div className="bg-cyan/10 border border-cyan/40 rounded-lg px-3 py-2">
+            <div className="bg-cyan/10 border border-cyan/40 rounded-field px-3 py-2">
               <p className="text-xs font-body text-navy" data-testid="vault-done">
                 {t('profile.identity.vaultDone')}
               </p>
@@ -438,14 +438,14 @@ export default function KeypairSection() {
                     rows={2}
                     placeholder={t('profile.identity.sealKeyPlaceholder') as string}
                     data-testid="seal-key"
-                    className="w-full border border-navy/20 rounded-lg px-3 py-2 text-xs font-mono text-navy focus:outline-none focus:border-cyan"
+                    className="w-full border border-navy/20 rounded-field px-3 py-2 text-xs font-mono text-navy focus:outline-none focus:border-cyan"
                   />
                   <input
                     type="password"
                     value={vaultPass}
                     onChange={(e) => setVaultPass(e.target.value)}
                     placeholder={t('profile.identity.vaultPassPlaceholder') as string}
-                    className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                    className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
                   />
                   <p className="text-xs font-body text-navy/50">
                     {t('profile.identity.sealLocalNotice')}
@@ -455,7 +455,7 @@ export default function KeypairSection() {
                     onClick={sealExistingKey}
                     disabled={busy || vaultPass.length < 8 || !sealKey.trim()}
                     data-testid="seal-continue"
-                    className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+                    className="w-full bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
                   >
                     {busy ? '…' : t('profile.identity.sealCta')}
                   </button>
@@ -476,7 +476,7 @@ export default function KeypairSection() {
                   type="button"
                   onClick={() => setSealOpen(true)}
                   data-testid="seal-open"
-                  className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+                  className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
                 >
                   {t('profile.identity.sealCta')}
                 </button>
@@ -491,7 +491,7 @@ export default function KeypairSection() {
                 placeholder={t('profile.identity.vaultPassPlaceholder') as string}
                 autoFocus
                 data-testid="vault-passphrase"
-                className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
               />
               {/* Reassuring, not frightening: at this rung nothing is at stake
                   yet — the platform still holds a copy, so a forgotten
@@ -504,7 +504,7 @@ export default function KeypairSection() {
                 onClick={() => setConfirmingVault(true)}
                 disabled={busy || vaultPass.length < 8}
                 data-testid="vault-continue"
-                className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+                className="w-full bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
               >
                 {busy ? '…' : t('common.continue')}
               </button>
@@ -528,7 +528,7 @@ export default function KeypairSection() {
                 type="button"
                 onClick={() => setVaultOpen(true)}
                 data-testid="vault-download"
-                className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+                className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
               >
                 {copies === 'both'
                   ? t('profile.identity.vaultDownloadAgain')
@@ -556,7 +556,7 @@ export default function KeypairSection() {
       {!lost && copies === 'both' && (
         <div className="border-t border-navy/10 pt-4 space-y-3">
           {dropOpen ? (
-            <div className="border border-amber/40 bg-amber/5 rounded-lg p-3 space-y-3">
+            <div className="border border-amber/40 bg-amber/5 rounded-field p-3 space-y-3">
               <p className="text-sm font-body text-navy font-medium">
                 {t('profile.identity.dropTitle')}
               </p>
@@ -578,7 +578,7 @@ export default function KeypairSection() {
                 onClick={() => setConfirmingDrop(true)}
                 disabled={!dropUnderstood || busy}
                 data-testid="drop-continue"
-                className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+                className="w-full bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
               >
                 {busy ? '…' : t('profile.identity.dropCta')}
               </button>
@@ -598,7 +598,7 @@ export default function KeypairSection() {
               type="button"
               onClick={() => setDropOpen(true)}
               data-testid="drop-platform-copy"
-              className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+              className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
             >
               {t('profile.identity.dropCta')}
             </button>
@@ -636,7 +636,7 @@ export default function KeypairSection() {
 
       {step === 'choose' && (
         <div className="space-y-3">
-          <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2 space-y-1">
+          <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2 space-y-1">
             <p className="text-sm font-body text-navy font-medium">
               {t('profile.identity.warnTitle')}
             </p>
@@ -665,7 +665,7 @@ export default function KeypairSection() {
             data-testid="identity-generate"
             onClick={handleGenerate}
             disabled={established && !swapUnderstood}
-            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"
+            className="w-full bg-navy text-ivory rounded-field py-2.5 text-sm font-body font-medium disabled:opacity-40"
           >
             {t('profile.identity.generateCta')}
           </button>
@@ -673,7 +673,7 @@ export default function KeypairSection() {
             type="button"
             onClick={handleUseNip07}
             disabled={!nip07 || busy || (established && !swapUnderstood)}
-            className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
+            className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy disabled:opacity-40"
           >
             {nip07
               ? t('profile.identity.nip07Cta')
@@ -687,7 +687,7 @@ export default function KeypairSection() {
             onClick={() => setStep('import')}
             disabled={busy || (established && !swapUnderstood)}
             data-testid="identity-import-open"
-            className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
+            className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy disabled:opacity-40"
           >
             {t('profile.identity.importCta')}
           </button>
@@ -732,7 +732,7 @@ export default function KeypairSection() {
               disabled={!!importFile}
               placeholder="nsec1… / ncryptsec1… / hex"
               data-testid="identity-import-key"
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-xs font-mono text-navy focus:outline-none focus:border-cyan disabled:opacity-40"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-xs font-mono text-navy focus:outline-none focus:border-cyan disabled:opacity-40"
             />
           </div>
 
@@ -745,7 +745,7 @@ export default function KeypairSection() {
             onChange={(e) => setImportPass(e.target.value)}
             placeholder={t('profile.identity.importPassPlaceholder') as string}
             data-testid="identity-import-pass"
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
           />
 
           <button
@@ -753,7 +753,7 @@ export default function KeypairSection() {
             onClick={handleImport}
             disabled={busy || (!importFile && !importKey.trim())}
             data-testid="identity-import-submit"
-            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"
+            className="w-full bg-navy text-ivory rounded-field py-2.5 text-sm font-body font-medium disabled:opacity-40"
           >
             {busy ? '…' : t('profile.identity.importSubmit')}
           </button>
@@ -778,7 +778,7 @@ export default function KeypairSection() {
           <p className="text-sm font-body text-navy">
             {t('profile.identity.saveKeyBody')}
           </p>
-          <div className="bg-navy/5 rounded-lg p-3 space-y-2">
+          <div className="bg-navy/5 rounded-field p-3 space-y-2">
             <div>
               <div className="text-xs font-body text-navy/50">
                 {t('profile.identity.npubLabel')}
@@ -800,14 +800,14 @@ export default function KeypairSection() {
             <button
               type="button"
               onClick={downloadBackup}
-              className="flex-1 border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+              className="flex-1 border border-navy/20 rounded-field py-2 text-sm font-body text-navy"
             >
               {t('profile.identity.download')}
             </button>
             <button
               type="button"
               onClick={copyBackup}
-              className="flex-1 border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+              className="flex-1 border border-navy/20 rounded-field py-2 text-sm font-body text-navy"
             >
               {copied ? t('common.copied') : t('profile.identity.copy')}
             </button>
@@ -827,7 +827,7 @@ export default function KeypairSection() {
             data-testid="identity-confirm"
             onClick={handleConfirmGenerated}
             disabled={!saved || busy}
-            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"
+            className="w-full bg-navy text-ivory rounded-field py-2.5 text-sm font-body font-medium disabled:opacity-40"
           >
             {busy ? '…' : t('profile.identity.confirmCta')}
           </button>

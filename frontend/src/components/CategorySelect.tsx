@@ -84,10 +84,10 @@ export default function CategorySelect({ value, onChange, placeholder }: Props) 
           }
         }}
         placeholder={placeholder ?? t('categories.placeholder', { defaultValue: 'Category or custom…' })}
-        className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+        className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
       />
       {open && (results.length > 0 || canAddNew) && (
-        <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-lg shadow-md max-h-56 overflow-y-auto">
+        <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-56 overflow-y-auto">
           {results.map((c) => (
             <li key={c.name_key}>
               <button

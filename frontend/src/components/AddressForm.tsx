@@ -71,7 +71,7 @@ export default function AddressForm({ value, onChange, countryOptions }: Props) 
               receiving_city_geoname_id: null,
             })
           }
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
         >
           <option value="">—</option>
           {countryOptions.map((c) => (
@@ -101,10 +101,10 @@ export default function AddressForm({ value, onChange, countryOptions }: Props) 
           onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
           disabled={!value.receiving_country_iso}
           placeholder={t('profile.address.cityPlaceholder') as string}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
         />
         {showSuggest && suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full bg-white border border-navy/20 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          <ul className="absolute z-10 mt-1 w-full bg-white border border-navy/20 rounded-field shadow-lg max-h-48 overflow-y-auto">
             {suggestions.map((s) => (
               <li key={s.geoname_id}>
                 <button
@@ -137,7 +137,7 @@ export default function AddressForm({ value, onChange, countryOptions }: Props) 
           value={value.receiving_street ?? ''}
           onChange={(e) => onChange({ receiving_street: e.target.value || null })}
           placeholder={t('profile.address.streetPlaceholder') as string}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
         />
       </div>
 
@@ -149,7 +149,7 @@ export default function AddressForm({ value, onChange, countryOptions }: Props) 
           type="text"
           value={value.receiving_postal_code ?? ''}
           onChange={(e) => onChange({ receiving_postal_code: e.target.value || null })}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
         />
       </div>
 
@@ -163,7 +163,7 @@ export default function AddressForm({ value, onChange, countryOptions }: Props) 
           rows={2}
           maxLength={500}
           placeholder={t('profile.address.notePlaceholder') as string}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan resize-none"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan resize-none"
         />
       </div>
     </div>

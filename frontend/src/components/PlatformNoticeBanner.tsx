@@ -30,7 +30,7 @@ export default function PlatformNoticeBanner({ surface = 'all' }: Props) {
       {notices.map((n) => (
         <div
           key={n.id}
-          className={`border rounded-lg px-3 py-2 text-sm font-body ${SEVERITY_CLASS[n.severity]}`}
+          className={`border rounded-field px-3 py-2 text-sm font-body ${SEVERITY_CLASS[n.severity]}`}
         >
           <p className="font-medium">{n.headline || n.key}</p>
           {n.body && <p className="text-xs mt-1 whitespace-pre-line opacity-80">{n.body}</p>}

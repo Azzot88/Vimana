@@ -45,7 +45,7 @@ export default function EmailVerifyBanner() {
   if (needsAddress) {
     if (dismissed || !hasDeals) return null
     return (
-      <div className="bg-amber/10 border border-amber/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div className="bg-amber/10 border border-amber/40 rounded-card px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1">
         <p className="text-sm font-body text-navy flex-1 min-w-[12rem]">
           {t('verifyEmail.addBannerBody')}
         </p>
@@ -72,7 +72,7 @@ export default function EmailVerifyBanner() {
   if (user.email_verified) return null
 
   return (
-    <div className="bg-amber/10 border border-amber/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div className="bg-amber/10 border border-amber/40 rounded-card px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1">
       <p className="text-sm font-body text-navy flex-1 min-w-[12rem]">
         {t('verifyEmail.bannerBody')}
       </p>

@@ -83,13 +83,13 @@ export default function CountryCodeSelect({ value, onChange }: Props) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy hover:border-cyan transition-colors min-w-[6rem] text-left"
+        className="border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy hover:border-cyan transition-colors min-w-[6rem] text-left"
       >
         {selectedLabel}
       </button>
 
       {open && (
-        <div className="absolute z-10 mt-1 left-0 bg-white border border-navy/15 rounded-lg shadow-md w-72">
+        <div className="absolute z-10 mt-1 left-0 bg-white border border-navy/15 rounded-field shadow-md w-72">
           <input
             type="text"
             value={query}

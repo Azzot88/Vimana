@@ -103,7 +103,7 @@ export default function AdminNoticesPage() {
       <h1 className="font-display font-bold text-2xl text-navy">Notices</h1>
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
-      <section className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+      <section className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
         <h2 className="font-display font-semibold text-lg text-navy">Route notes</h2>
         <form onSubmit={submitRouteNote} className="grid grid-cols-2 md:grid-cols-6 gap-2">
           <input
@@ -190,7 +190,7 @@ export default function AdminNoticesPage() {
         </div>
       </section>
 
-      <section className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+      <section className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
         <h2 className="font-display font-semibold text-lg text-navy">Platform notices</h2>
         <form onSubmit={submitPlatformNotice} className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <input

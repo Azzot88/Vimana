@@ -99,14 +99,14 @@ export default function PasskeySection() {
   if (items === null) return null
 
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-5 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-5 space-y-4">
       <h2 className="font-display font-semibold text-lg text-navy">
         {t('passkey.sectionTitle')}
       </h2>
       <p className="text-sm font-body text-navy/60">{t('passkey.sectionHint')}</p>
 
       {error && (
-        <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+        <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
           <p className="text-sm font-body text-navy">{error}</p>
         </div>
       )}
@@ -118,7 +118,7 @@ export default function PasskeySection() {
           {items.map((c) => (
             <li
               key={c.id}
-              className="flex items-center justify-between gap-3 border border-navy/10 rounded-lg px-3 py-2"
+              className="flex items-center justify-between gap-3 border border-navy/10 rounded-field px-3 py-2"
             >
               <div className="min-w-0">
                 <div className="text-sm font-body text-navy truncate">
@@ -151,7 +151,7 @@ export default function PasskeySection() {
           onClick={add}
           disabled={busy}
           data-testid="passkey-add"
-          className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
+          className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy disabled:opacity-40"
         >
           {busy ? '…' : t('passkey.addCta')}
         </button>

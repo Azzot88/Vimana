@@ -118,7 +118,7 @@ export default function VerificationSection() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-base text-navy">
           {t('verification.sectionTitle')}
@@ -140,7 +140,7 @@ export default function VerificationSection() {
         <>
           <div className="grid grid-cols-3 gap-2 text-center">
             {(['auto', 'peer', 'kyc'] as VerificationLevel[]).map((l) => (
-              <div key={l} className="bg-ivory rounded-lg py-2">
+              <div key={l} className="bg-ivory rounded-field py-2">
                 <MonoText className="text-lg text-navy font-medium">
                   {summary?.active_counts[l] ?? 0}
                 </MonoText>
@@ -165,7 +165,7 @@ export default function VerificationSection() {
               <select
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
-                className="border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
+                className="border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
               >
                 {DOC_TYPES.map((d) => (
                   <option key={d} value={d}>
@@ -179,10 +179,10 @@ export default function VerificationSection() {
                 onChange={(e) => setDocCountry(e.target.value.toUpperCase().slice(0, 2))}
                 placeholder="AE"
                 maxLength={2}
-                className="border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                className="border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
               />
             </div>
-            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-lg px-4 py-2 text-xs font-display font-medium hover:bg-cyan/10 transition-colors">
+            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-field px-4 py-2 text-xs font-display font-medium hover:bg-cyan/10 transition-colors">
               {uploading ? '…' : `📎 ${t('verification.uploadButton')}`}
               <input
                 ref={fileRef}

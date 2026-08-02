@@ -181,7 +181,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-5 space-y-5">
+    <div className="bg-white rounded-card border border-navy/10 p-5 space-y-5">
       <div>
         <h2 className="font-display font-semibold text-lg text-navy">
           {t('security.title')}
@@ -190,12 +190,12 @@ export default function SecuritySection({ user, onChanged }: Props) {
       </div>
 
       {error && (
-        <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+        <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
           <p className="text-sm font-body text-navy">{error}</p>
         </div>
       )}
       {notice && !error && (
-        <div className="bg-cyan/10 border border-cyan/40 rounded-lg px-3 py-2">
+        <div className="bg-cyan/10 border border-cyan/40 rounded-field px-3 py-2">
           <p className="text-sm font-body text-navy">{notice}</p>
         </div>
       )}
@@ -208,7 +208,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
         </MonoText>
 
         {pendingEmail ? (
-          <div className="border border-amber/40 bg-amber/5 rounded-lg p-3 space-y-3">
+          <div className="border border-amber/40 bg-amber/5 rounded-field p-3 space-y-3">
             <p className="text-sm font-body text-navy">
               {t('security.pendingBody')}{' '}
               <span className="font-medium break-all">{pendingEmail}</span>
@@ -220,7 +220,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               onChange={(e) => setCode(e.target.value)}
               placeholder={t('security.codePlaceholder') as string}
               data-testid="security-code"
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
             />
             <div className="flex flex-wrap gap-2">
               <button
@@ -228,14 +228,14 @@ export default function SecuritySection({ user, onChanged }: Props) {
                 onClick={confirmCode}
                 disabled={busy || !code.trim()}
                 data-testid="security-confirm-code"
-                className="flex-1 bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+                className="flex-1 bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
               >
                 {busy ? '…' : t('security.confirmCode')}
               </button>
               <button
                 type="button"
                 onClick={resend}
-                className="px-3 border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+                className="px-3 border border-navy/20 rounded-field py-2 text-sm font-body text-navy"
               >
                 {t('security.resend')}
               </button>
@@ -258,7 +258,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               placeholder={t('security.newEmailPlaceholder') as string}
               autoFocus
               data-testid="security-new-email"
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
             <p className="text-xs font-body text-navy/50">
               {t('security.emailNotice')}
@@ -268,7 +268,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               onClick={() => setConfirming('email')}
               disabled={busy || !emailLooksValid}
               data-testid="security-email-continue"
-              className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+              className="w-full bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
             >
               {busy ? '…' : t('common.continue')}
             </button>
@@ -281,7 +281,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
             type="button"
             onClick={() => setPending('email')}
             data-testid="security-change-email"
-            className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+            className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
           >
             {user.email ? t('security.changeEmail') : t('security.addEmail')}
           </button>
@@ -306,14 +306,14 @@ export default function SecuritySection({ user, onChanged }: Props) {
               placeholder={t('security.newPasswordPlaceholder') as string}
               autoFocus
               data-testid="security-new-password"
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
             <p className="text-xs font-body text-navy/50">
               {t('security.passwordNotice')}
             </p>
             {/* Consequence stated before the action, not discovered after it:
                 other devices are about to be signed out. */}
-            <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+            <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
               <p className="text-xs font-body text-navy" data-testid="security-sessions-warning">
                 {t('security.sessionsWarning')}
               </p>
@@ -323,7 +323,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               onClick={() => setConfirming('password')}
               disabled={busy || newPassword.length < 8}
               data-testid="security-password-continue"
-              className="w-full bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+              className="w-full bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
             >
               {busy ? '…' : t('common.continue')}
             </button>
@@ -336,7 +336,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
             type="button"
             onClick={() => setPending('password')}
             data-testid="security-change-password"
-            className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+            className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
           >
             {user.has_password
               ? t('security.changePassword')
@@ -354,7 +354,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
         {freshCodes ? (
           /* Shown once. Not a warning about danger — a reminder that the server
              keeps digests and physically cannot repeat this screen. */
-          <div className="border border-cyan/40 bg-cyan/5 rounded-lg p-3 space-y-3">
+          <div className="border border-cyan/40 bg-cyan/5 rounded-field p-3 space-y-3">
             <p className="text-sm font-body text-navy" data-testid="recovery-once">
               {t('security.recoveryOnce')}
             </p>
@@ -373,14 +373,14 @@ export default function SecuritySection({ user, onChanged }: Props) {
                 type="button"
                 onClick={downloadCodes}
                 data-testid="recovery-download"
-                className="flex-1 bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium"
+                className="flex-1 bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium"
               >
                 {t('security.recoveryDownload')}
               </button>
               <button
                 type="button"
                 onClick={copyCodes}
-                className="px-3 border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+                className="px-3 border border-navy/20 rounded-field py-2 text-sm font-body text-navy"
               >
                 {t('security.recoveryCopy')}
               </button>
@@ -407,7 +407,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
             {/* Low-or-empty is stated where it can be fixed, not as a banner
                 following the user around the product. */}
             {codesLeft <= 2 && (
-              <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+              <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
                 <p className="text-xs font-body text-navy" data-testid="recovery-warning">
                   {t('security.recoveryWarning')}
                 </p>
@@ -426,7 +426,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               onClick={() => setConfirming('recovery')}
               disabled={busy}
               data-testid="recovery-generate"
-              className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
+              className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy disabled:opacity-40"
             >
               {codesLeft > 0
                 ? t('security.recoveryRegenerate')

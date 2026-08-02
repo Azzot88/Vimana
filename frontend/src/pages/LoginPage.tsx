@@ -96,14 +96,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ivory flex items-center justify-center px-4">
+    <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
           {t('auth.title')}
         </h1>
         <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
         {inactivityLogout && (
-          <div className="bg-amber/10 border border-amber/40 rounded-lg px-4 py-3 mb-4">
+          <div className="bg-amber/10 border border-amber/40 rounded-field px-4 py-3 mb-4">
             <p className="text-sm font-body text-navy">
               {t('auth.inactivityLoggedOut')}
             </p>
@@ -111,7 +111,7 @@ export default function LoginPage() {
         )}
         <form
           onSubmit={recovering ? handleRecovery : handleSubmit}
-          className="bg-white rounded-xl border border-navy/10 p-6 space-y-4"
+          className="bg-white rounded-card border border-navy/10 p-6 space-y-4"
         >
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
@@ -127,7 +127,7 @@ export default function LoginPage() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               placeholder="user@example.com"
             />
           </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
                   autoCorrect="off"
                   spellCheck={false}
                   data-testid="recovery-code-input"
-                  className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
                   placeholder="XXXX-XXXX-XXXX"
                 />
               </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
                   onChange={(e) => setRecoveryPassword(e.target.value)}
                   required
                   minLength={8}
-                  className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
                   placeholder="••••••••"
                 />
               </div>
@@ -178,18 +178,18 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+                className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
                 placeholder="••••••••"
               />
             </div>
           )}
           {error && (
-            <p className="text-xs font-mono text-orange-600">{error}</p>
+            <p className="text-xs font-mono text-amber">{error}</p>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+            className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
           >
             {loading
               ? t('auth.logging')

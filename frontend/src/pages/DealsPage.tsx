@@ -44,7 +44,7 @@ export default function DealsPage() {
               <Link
                 key={deal.id}
                 to={`/deals/${deal.id}`}
-                className="bg-white rounded-xl border border-navy/10 p-5 hover:border-cyan/40 transition-colors"
+                className="bg-white rounded-card border border-navy/10 p-5 hover:border-cyan/40 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="space-y-1.5">

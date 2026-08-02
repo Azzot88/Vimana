@@ -102,11 +102,11 @@ export default function AdminUsersPage() {
               value={emailFilter}
               onChange={(e) => setEmailFilter(e.target.value)}
               placeholder="Filter by email substring…"
-              className="border border-navy/20 rounded-lg px-3 py-1.5 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+              className="border border-navy/20 rounded-field px-3 py-1.5 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
             <button
               onClick={load}
-              className="text-xs font-display font-medium border border-navy/20 text-navy px-3 py-1.5 rounded-lg hover:bg-ivory"
+              className="text-xs font-display font-medium border border-navy/20 text-navy px-3 py-1.5 rounded-field hover:bg-ivory"
             >
               Search
             </button>
@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
           {t('common.loading')}
         </p>
       ) : (
-        <div className="bg-white rounded-xl border border-navy/10 overflow-hidden">
+        <div className="bg-white rounded-card border border-navy/10 overflow-hidden">
           <table className="w-full text-sm font-body">
             <thead className="bg-ivory">
               <tr className="text-left text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">
@@ -182,7 +182,7 @@ export default function AdminUsersPage() {
                             onClick={() =>
                               handleToggle(u.id, u.role === 'arbiter')
                             }
-                            className={`text-xs font-display font-medium px-3 py-1 rounded-lg ${
+                            className={`text-xs font-display font-medium px-3 py-1 rounded-field ${
                               u.role === 'arbiter'
                                 ? 'bg-navy/10 text-navy hover:bg-navy/20'
                                 : 'bg-amber text-white hover:opacity-90'
@@ -196,7 +196,7 @@ export default function AdminUsersPage() {
                         {u.id !== me.id && u.role !== 'superuser' && (
                           <button
                             onClick={() => handleDelete(u)}
-                            className="text-xs font-display font-medium px-3 py-1 rounded-lg bg-danger/10 text-danger hover:bg-danger/15"
+                            className="text-xs font-display font-medium px-3 py-1 rounded-field bg-danger/10 text-danger hover:bg-danger/15"
                           >
                             Delete
                           </button>

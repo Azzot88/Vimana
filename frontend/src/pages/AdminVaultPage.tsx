@@ -42,7 +42,7 @@ export default function AdminVaultPage() {
           ← {t('admin.backToDisputes')}
         </Link>
       </div>
-      <div className="bg-amber/10 border border-amber/40 rounded-xl p-4">
+      <div className="bg-amber/10 border border-amber/40 rounded-card p-4">
         <p className="text-sm font-body text-navy">
           ⚖️ {t('admin.arbiterAudit')}
         </p>
@@ -55,7 +55,7 @@ export default function AdminVaultPage() {
           {t('common.loading')}
         </p>
       ) : (
-        <div className="bg-white rounded-xl border border-navy/10 p-4 space-y-3">
+        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
           {messages.map((m) => (
             <div
               key={m.id}

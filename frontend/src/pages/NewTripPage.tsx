@@ -173,7 +173,7 @@ export default function NewTripPage() {
       disabled={!enabled}
       title={label}
       aria-label={label}
-      className={`w-10 h-10 rounded-lg border transition-colors ${
+      className={`w-10 h-10 rounded-field border transition-colors ${
         enabled
           ? 'border-cyan/40 text-cyan hover:bg-cyan/10'
           : 'border-navy/10 text-navy/30 cursor-not-allowed'
@@ -212,7 +212,7 @@ export default function NewTripPage() {
           <button
             type="button"
             aria-label={t('trips.newTripHook.manual') as string}
-            className="w-10 h-10 rounded-lg border border-navy/40 bg-navy text-ivory"
+            className="w-10 h-10 rounded-field border border-navy/40 bg-navy text-ivory"
             title={t('trips.newTripHook.manual') as string}
           >
             <span aria-hidden="true" className="text-lg">
@@ -224,7 +224,7 @@ export default function NewTripPage() {
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Route cell 2x1 */}
-        <div className="md:col-span-2 bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.route')}
           </p>
@@ -258,7 +258,7 @@ export default function NewTripPage() {
         </div>
 
         {/* Date cell 1x1 */}
-        <div className="bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.date')}
           </p>
@@ -267,12 +267,12 @@ export default function NewTripPage() {
             value={draft.departAt}
             onChange={(e) => patch({ departAt: e.target.value })}
             required
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+            className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
           />
         </div>
 
         {/* Capacity cell 1x1 */}
-        <div className="bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.capacity')}
           </p>
@@ -286,7 +286,7 @@ export default function NewTripPage() {
               onChange={(e) => patch({ capacity: e.target.value })}
               required
               placeholder="5"
-              className="w-24 border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
+              className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
             />
             <MonoText className="text-sm text-navy/60">kg</MonoText>
           </div>
@@ -302,7 +302,7 @@ export default function NewTripPage() {
         </div>
 
         {/* Categories cell 1x2 (full row) */}
-        <div className="md:col-span-2 bg-white rounded-2xl border border-navy/10 p-4 space-y-3">
+        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.categories')}
           </p>
@@ -330,7 +330,7 @@ export default function NewTripPage() {
         </div>
 
         {/* Publish cell 1x1 */}
-        <div className="bg-white rounded-2xl border border-navy/10 p-4 space-y-3 flex flex-col">
+        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3 flex flex-col">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.publish')}
           </p>
@@ -346,7 +346,7 @@ export default function NewTripPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-auto bg-amber text-white font-display font-semibold px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="mt-auto bg-amber text-white font-display font-semibold px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('trips.publish')}
           </button>
@@ -356,11 +356,11 @@ export default function NewTripPage() {
         </div>
 
         {/* Preview cell 2x1 — sticky bottom on desktop */}
-        <div className="md:col-span-3 bg-gradient-to-br from-navy/5 to-cyan/5 rounded-2xl border border-navy/10 p-4">
+        <div className="md:col-span-3 bg-gradient-to-br from-navy/5 to-cyan/5 rounded-card border border-navy/10 p-4">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide mb-2">
             {t('trips.newTripCell.preview')}
           </p>
-          <div className="bg-white rounded-xl border border-navy/10 p-4">
+          <div className="bg-white rounded-card border border-navy/10 p-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <MonoText className="text-lg text-navy font-medium">
                 {draft.origin || '???'} → {draft.destination || '???'}
@@ -390,7 +390,7 @@ export default function NewTripPage() {
       </form>
 
       {error && (
-        <p className="text-xs font-mono text-orange-600 text-center">{error}</p>
+        <p className="text-xs font-mono text-amber text-center">{error}</p>
       )}
 
       <div className="text-center">
@@ -405,12 +405,12 @@ export default function NewTripPage() {
 
       {preflightNotes.length > 0 && (
         <div
-          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-modal flex items-center justify-center p-4"
           onClick={() => setPreflightNotes([])}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl"
+            className="bg-white rounded-card p-6 max-w-lg w-full space-y-4 shadow-2xl"
           >
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('routeNote.preflightTitle', 'Route requires attention')}
@@ -425,7 +425,7 @@ export default function NewTripPage() {
               {preflightNotes.map((n) => (
                 <div
                   key={n.id}
-                  className={`border rounded-lg p-3 text-xs font-body ${
+                  className={`border rounded-field p-3 text-xs font-body ${
                     n.status === 'restricted'
                       ? 'bg-danger/5 border-danger/30 text-danger'
                       : 'bg-amber/10 border-amber/40 text-navy'
@@ -454,7 +454,7 @@ export default function NewTripPage() {
                   setAckedPreflight(true)
                   handleSubmit()
                 }}
-                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid"
+                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid"
               >
                 {t('routeNote.iUnderstand', 'I understand — publish anyway')}
               </button>

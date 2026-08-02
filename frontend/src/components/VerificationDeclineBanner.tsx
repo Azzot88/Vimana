@@ -27,7 +27,7 @@ export default function VerificationDeclineBanner({ onRequestCollateral }: Props
   }
 
   return (
-    <div className="bg-amber/10 border border-amber/30 rounded-lg px-4 py-3 space-y-2">
+    <div className="bg-amber/10 border border-amber/30 rounded-field px-4 py-3 space-y-2">
       <p className="text-sm font-body text-navy">
         {t('verification.declinedPolite.senderCopy')}
       </p>
@@ -41,12 +41,12 @@ export default function VerificationDeclineBanner({ onRequestCollateral }: Props
 
       {modalOpen && (
         <div
-          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
           onClick={() => setModalOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+            className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
           >
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('verification.declinedPolite.comingSoonTitle')}
@@ -57,7 +57,7 @@ export default function VerificationDeclineBanner({ onRequestCollateral }: Props
             <div className="flex justify-end">
               <button
                 onClick={() => setModalOpen(false)}
-                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid"
+                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid"
               >
                 {t('common.close')}
               </button>

@@ -41,7 +41,7 @@ export default function ArchiveRecordCard({
   return (
     <div
       data-testid="archive-record"
-      className="bg-navy/5 rounded-2xl border border-navy/10 p-5 space-y-4"
+      className="bg-navy/5 rounded-card border border-navy/10 p-5 space-y-4"
     >
       <div>
         <h2 className="font-display font-semibold text-base text-navy">

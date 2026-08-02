@@ -23,7 +23,7 @@ export default function ImageLightbox({ src, alt, onClose }: Props) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-zoom-out"
+      className="fixed inset-0 z-modal bg-black/85 flex items-center justify-center p-4 cursor-zoom-out"
       role="dialog"
       aria-modal="true"
     >
@@ -39,7 +39,7 @@ export default function ImageLightbox({ src, alt, onClose }: Props) {
         src={src}
         alt={alt ?? ''}
         onClick={(e) => e.stopPropagation()}
-        className="max-w-[95vw] max-h-[92vh] object-contain rounded-md shadow-2xl cursor-zoom-out select-none"
+        className="max-w-[95vw] max-h-[92vh] object-contain rounded-field shadow-2xl cursor-zoom-out select-none"
       />
     </div>
   )

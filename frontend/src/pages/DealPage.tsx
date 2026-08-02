@@ -146,7 +146,7 @@ export default function DealPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-navy/10 overflow-hidden">
+      <div className="bg-white rounded-card border border-navy/10 overflow-hidden">
         <div className="bg-navy px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-1">
@@ -187,7 +187,7 @@ export default function DealPage() {
 
         {error && (
           <div className="px-4 sm:px-6 pb-4">
-            <p className="text-xs font-mono text-orange-600">{error}</p>
+            <p className="text-xs font-mono text-amber">{error}</p>
           </div>
         )}
 
@@ -196,7 +196,7 @@ export default function DealPage() {
             <button
               onClick={() => handleAction('accept')}
               disabled={actionLoading}
-              className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {actionLoading ? '...' : 'Принять сделку'}
             </button>
@@ -205,7 +205,7 @@ export default function DealPage() {
             <button
               onClick={() => handleAction('handoff')}
               disabled={actionLoading}
-              className="bg-amber text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="bg-amber text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {actionLoading ? '...' : 'Зафиксировать передачу'}
             </button>
@@ -214,14 +214,14 @@ export default function DealPage() {
             <button
               onClick={() => handleAction('confirm')}
               disabled={actionLoading}
-              className="bg-green-600 text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="bg-success text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {actionLoading ? '...' : 'Подтвердить получение'}
             </button>
           )}
           <Link
             to={`/deals/${deal.id}/vault`}
-            className="border border-navy/20 text-navy font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:border-cyan transition-colors text-center"
+            className="border border-navy/20 text-navy font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:border-cyan transition-colors text-center"
           >
             DealVault →
           </Link>
@@ -229,7 +229,7 @@ export default function DealPage() {
             ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
               <button
                 onClick={() => setVerifyRequestFor('sender')}
-                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-cyan/10 transition-colors"
+                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-cyan/10 transition-colors"
               >
                 {t('verification.askSenderButton')}
               </button>
@@ -238,7 +238,7 @@ export default function DealPage() {
             ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
               <button
                 onClick={() => setVerifyRequestFor('carrier')}
-                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-cyan/10 transition-colors"
+                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-cyan/10 transition-colors"
               >
                 {t('verification.askCarrierButton')}
               </button>
@@ -248,7 +248,7 @@ export default function DealPage() {
             deal.status !== 'disputed' && (
               <button
                 onClick={() => setDisputeOpen(true)}
-                className="border border-danger/30 text-danger font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-lg text-sm hover:bg-danger/5 transition-colors"
+                className="border border-danger/30 text-danger font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-danger/5 transition-colors"
               >
                 {t('dispute.openButton')}
               </button>
@@ -257,25 +257,25 @@ export default function DealPage() {
       </div>
 
       {disputeCreated && (
-        <div className="bg-amber/10 border border-amber/40 rounded-xl p-4">
+        <div className="bg-amber/10 border border-amber/40 rounded-card p-4">
           <p className="text-sm font-body text-navy">{t('dispute.createdNotice')}</p>
         </div>
       )}
 
       {verifySuccess && (
-        <div className="bg-cyan/10 border border-cyan/40 rounded-xl p-4">
+        <div className="bg-cyan/10 border border-cyan/40 rounded-card p-4">
           <p className="text-sm font-body text-navy">{t('verification.requestSent')}</p>
         </div>
       )}
 
       {openRequestForMe && !pendingRespond && (
-        <div className="bg-amber/10 border border-amber/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="bg-amber/10 border border-amber/40 rounded-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm font-body text-navy">
             ⚠️ {t('verification.pendingForYou')}
           </p>
           <button
             onClick={() => setPendingRespond(openRequestForMe)}
-            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid"
+            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid"
           >
             {t('verification.respondButton')}
           </button>
@@ -312,12 +312,12 @@ export default function DealPage() {
 
       {disputeOpen && (
         <div
-          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
           onClick={() => setDisputeOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+            className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
           >
             <h2 className="font-display font-semibold text-lg text-navy">
               {t('dispute.modalTitle')}
@@ -330,7 +330,7 @@ export default function DealPage() {
               onChange={(e) => setDisputeReason(e.target.value)}
               rows={4}
               placeholder={t('dispute.reasonPlaceholder') as string}
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
             {disputeError && (
               <p className="text-xs font-mono text-danger">{disputeError}</p>
@@ -345,7 +345,7 @@ export default function DealPage() {
               <button
                 onClick={handleDispute}
                 disabled={disputeSubmitting || !disputeReason.trim()}
-                className="bg-danger text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
+                className="bg-danger text-white font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
               >
                 {disputeSubmitting ? '…' : t('dispute.submit')}
               </button>

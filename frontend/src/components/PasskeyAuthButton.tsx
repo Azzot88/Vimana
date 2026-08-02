@@ -105,14 +105,14 @@ export default function PasskeyAuthButton({ mode, displayName, email }: Props) {
         onClick={run}
         disabled={busy}
         data-testid={`passkey-${mode}`}
-        className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40 transition-opacity"
+        className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy disabled:opacity-40 transition-opacity"
       >
         {busy
           ? '…'
           : t(mode === 'signup' ? 'passkey.signupCta' : 'passkey.loginCta')}
       </button>
       {error && (
-        <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+        <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
           <p className="text-sm font-body text-navy">{error}</p>
         </div>
       )}

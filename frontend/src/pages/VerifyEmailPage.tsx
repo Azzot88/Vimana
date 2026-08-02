@@ -78,7 +78,7 @@ export default function VerifyEmailPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="bg-white rounded-2xl border border-navy/10 p-6 space-y-5">
+      <div className="bg-white rounded-card border border-navy/10 p-6 space-y-5">
         <div className="space-y-2">
           <h1 className="font-display font-bold text-2xl text-navy">
             {t('verifyEmail.title')}
@@ -101,13 +101,13 @@ export default function VerifyEmailPage() {
               inputMode="numeric"
               autoComplete="one-time-code"
               required
-              className="w-full border border-navy/20 rounded-lg px-3 py-2 font-mono text-lg tracking-[0.4em] text-navy text-center focus:outline-none focus:border-cyan transition-colors"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 font-mono text-lg tracking-[0.4em] text-navy text-center focus:outline-none focus:border-cyan transition-colors"
               placeholder="000000"
             />
           </div>
 
           {error && (
-            <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+            <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
               <p className="text-sm font-body text-navy">{error}</p>
             </div>
           )}
@@ -118,7 +118,7 @@ export default function VerifyEmailPage() {
           <button
             type="submit"
             disabled={loading || code.length !== 6}
-            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40 transition-opacity"
+            className="w-full bg-navy text-ivory rounded-field py-2.5 text-sm font-body font-medium disabled:opacity-40 transition-opacity"
           >
             {loading ? t('verifyEmail.checking') : t('verifyEmail.submit')}
           </button>

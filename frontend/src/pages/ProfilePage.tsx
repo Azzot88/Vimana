@@ -148,7 +148,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
         {/* Left column — identity + reputation */}
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
+          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
             <div className="flex items-center gap-4">
               {user?.avatar_url ? (
                 <img
@@ -209,7 +209,7 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <AddressesSection />
 
-          <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display font-semibold text-base text-navy">
                 {t('profile.contacts')}
@@ -256,7 +256,7 @@ export default function ProfilePage() {
               profile rather than with the keys — this is about being looked at,
               not about getting in. */}
           {user?.nostr_pubkey && (
-            <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
+            <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
               <h2 className="font-display font-semibold text-base text-navy">
                 {user.key_lost ? t('archive.pageTitle') : t('identity.publicTitle')}
               </h2>
@@ -293,7 +293,7 @@ export default function ProfilePage() {
                 to={`/i/${user.nostr_pubkey}`}
                 target="_blank"
                 data-testid="identity-public-link"
-                className="block w-full text-center border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+                className="block w-full text-center border border-navy/20 rounded-field py-2 text-sm font-body text-navy"
               >
                 {t('identity.openPublic')}
               </Link>
@@ -304,7 +304,7 @@ export default function ProfilePage() {
               door, not the machinery: the profile answers "who am I to the
               other party", and how I sign in or what I own is a different
               question asked at a different moment. */}
-          <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-3">
+          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
             <h2 className="font-display font-semibold text-base text-navy">
               {t('profile.keys.title')}
             </h2>
@@ -314,13 +314,13 @@ export default function ProfilePage() {
             <Link
               to="/profile/keys"
               data-testid="profile-keys-link"
-              className="block w-full text-center border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+              className="block w-full text-center border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
             >
               {t('profile.keys.open')}
             </Link>
           </div>
 
-          <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display font-semibold text-base text-navy">
                 {t('profile.invites')}
@@ -343,7 +343,7 @@ export default function ProfilePage() {
                 {invites.map((inv) => {
                   const statusColor =
                     inv.status === 'accepted'
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-success/10 text-success'
                       : inv.status === 'expired'
                       ? 'bg-navy/10 text-navy/50'
                       : 'bg-cyan/10 text-cyan'
@@ -388,7 +388,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <h2 className="font-display font-semibold text-base text-navy">
               {t('profile.notifications')}
             </h2>
@@ -425,7 +425,7 @@ export default function ProfilePage() {
             {user?.notify_telegram && !user?.telegram_chat_id && (
               <button
                 onClick={handleConnectTelegram}
-                className="w-full text-sm font-body text-cyan border border-cyan/30 rounded-lg py-2 hover:bg-cyan/5 transition-colors"
+                className="w-full text-sm font-body text-cyan border border-cyan/30 rounded-field py-2 hover:bg-cyan/5 transition-colors"
               >
                 {t('profile.connectTelegram')}
               </button>

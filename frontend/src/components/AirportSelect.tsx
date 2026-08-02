@@ -243,14 +243,14 @@ export default function AirportSelect({ value, onChange, placeholder, required }
           autoCapitalize={cityFilter || countryFilter ? 'sentences' : 'characters'}
           autoCorrect="off"
           spellCheck={false}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
         />
         <button
           type="button"
           onClick={handleGeolocation}
           disabled={geoLoading}
           title={t('trips.useGeolocation', { defaultValue: 'Use my location' })}
-          className="border border-navy/20 rounded-lg px-2 min-h-[2.75rem] text-navy/60 hover:text-navy hover:border-cyan transition-colors disabled:opacity-50 flex items-center justify-center"
+          className="border border-navy/20 rounded-field px-2 min-h-[2.75rem] text-navy/60 hover:text-navy hover:border-cyan transition-colors disabled:opacity-50 flex items-center justify-center"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
@@ -260,7 +260,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
       </div>
 
       {open && (countryMatches.length > 0 || cityMatches.length > 0 || airportMatches.length > 0) && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-lg shadow-md max-h-72 overflow-y-auto">
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto">
           {countryMatches.length > 0 && (
             <div>
               <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">

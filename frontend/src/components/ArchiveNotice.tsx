@@ -90,7 +90,7 @@ export default function ArchiveNotice() {
       <div
         data-testid="archive-banner"
         data-state={closed ? 'closed' : windowOpen && !status.archive_choice ? 'undecided' : 'open'}
-        className="bg-navy/5 border border-navy/15 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1"
+        className="bg-navy/5 border border-navy/15 rounded-card px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-1"
       >
         <p className="text-sm font-body text-navy flex-1 min-w-[12rem]">
           <span className="font-medium">{t('archive.bannerTitle')}</span>{' '}
@@ -113,10 +113,10 @@ export default function ArchiveNotice() {
       </div>
 
       {open && (
-        <div className="fixed inset-0 bg-navy/40 flex items-center justify-center px-4 z-50">
+        <div className="fixed inset-0 bg-navy/40 flex items-center justify-center px-4 z-modal">
           <div
             data-testid="archive-modal"
-            className="bg-white rounded-2xl border border-navy/10 p-5 w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-card border border-navy/10 p-5 w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto"
           >
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('archive.modalTitle')}
@@ -127,7 +127,7 @@ export default function ArchiveNotice() {
             <p className="text-sm font-body text-navy/70">{t('archive.modalWhat')}</p>
             <p className="text-sm font-body text-navy/70">{t('archive.modalRemains')}</p>
 
-            <div className="bg-navy/5 rounded-lg px-3 py-2 space-y-1">
+            <div className="bg-navy/5 rounded-field px-3 py-2 space-y-1">
               <p className="text-sm font-body text-navy/70">
                 {windowOpen
                   ? t('archive.modalWindow', { date: deadline })
@@ -146,7 +146,7 @@ export default function ArchiveNotice() {
                   disabled={busy}
                   onClick={() => void choose('show')}
                   data-testid="archive-choose-show"
-                  className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body disabled:opacity-50"
+                  className="w-full bg-navy text-ivory rounded-field py-2.5 text-sm font-body disabled:opacity-50"
                 >
                   {t('archive.keepOpen')}
                 </button>
@@ -154,7 +154,7 @@ export default function ArchiveNotice() {
                   type="button"
                   onClick={() => setConfirmingHide(true)}
                   data-testid="archive-choose-hide"
-                  className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+                  className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
                 >
                   {t('archive.closePage')}
                 </button>
@@ -193,7 +193,7 @@ export default function ArchiveNotice() {
                   disabled={!understood || busy}
                   onClick={() => void choose('hide')}
                   data-testid="archive-hide-confirm"
-                  className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body disabled:opacity-40"
+                  className="w-full bg-navy text-ivory rounded-field py-2.5 text-sm font-body disabled:opacity-40"
                 >
                   {t('archive.hideConfirm')}
                 </button>
@@ -211,7 +211,7 @@ export default function ArchiveNotice() {
               <button
                 type="button"
                 onClick={() => void dismiss()}
-                className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+                className="w-full border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
               >
                 {t('common.close')}
               </button>

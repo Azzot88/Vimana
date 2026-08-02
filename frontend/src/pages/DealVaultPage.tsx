@@ -183,7 +183,7 @@ export default function DealVaultPage() {
           <button
             type="button"
             onClick={() => setPreview({ url: att.url!, alt: KIND_LABEL[att.kind] ?? att.kind })}
-            className="rounded-lg overflow-hidden border border-navy/10 max-w-xs cursor-zoom-in hover:border-cyan/40 transition-colors block"
+            className="rounded-field overflow-hidden border border-navy/10 max-w-xs cursor-zoom-in hover:border-cyan/40 transition-colors block"
             aria-label="Открыть в полный экран"
           >
             <img
@@ -201,14 +201,14 @@ export default function DealVaultPage() {
           const shown = msg.is_e2e ? decrypted[msg.id] : msg.text
           if (msg.is_e2e && shown === undefined) {
             return (
-              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-lg px-3 py-2 inline-block">
+              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
                 🔒 расшифровываю…
               </p>
             )
           }
           if (msg.is_e2e && shown === '') {
             return (
-              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-lg px-3 py-2 inline-block">
+              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
                 🔒 e2e-сообщение — требуется NIP-07 расширение для чтения
               </p>
             )
@@ -218,7 +218,7 @@ export default function DealVaultPage() {
           }
           if (shown) {
             return (
-              <p className="text-sm font-body text-navy/80 bg-ivory rounded-lg px-3 py-2 inline-block max-w-prose whitespace-pre-wrap">
+              <p className="text-sm font-body text-navy/80 bg-ivory rounded-field px-3 py-2 inline-block max-w-prose whitespace-pre-wrap">
                 {shown}
               </p>
             )
@@ -254,27 +254,27 @@ export default function DealVaultPage() {
                 alert(t('recipient.inviteError'))
               }
             }}
-            className="ml-auto text-xs font-display font-medium border border-cyan/40 text-cyan px-3 py-1.5 rounded-lg hover:bg-cyan/10"
+            className="ml-auto text-xs font-display font-medium border border-cyan/40 text-cyan px-3 py-1.5 rounded-field hover:bg-cyan/10"
           >
             {t('recipient.inviteButton')}
           </button>
         )}
       </div>
 
-      <div className="bg-navy/5 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
+      <div className="bg-navy/5 rounded-field px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan"></span>
         <MonoText className="text-xs text-navy/60">Иммутабельно · SHA-256</MonoText>
       </div>
 
       {messages.some((m) => m.is_system && (m.text ?? '').includes('Arbiter')) && (
-        <div className="bg-danger/5 border border-danger/30 rounded-lg px-3 py-2 mb-3 shrink-0">
+        <div className="bg-danger/5 border border-danger/30 rounded-field px-3 py-2 mb-3 shrink-0">
           <p className="text-xs font-body text-danger">
             ⚖️ Арбитр открыл переписку по спору. Обе стороны видят это уведомление.
           </p>
         </div>
       )}
 
-      <div className="flex-1 bg-white rounded-xl border border-navy/10 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white rounded-card border border-navy/10 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
             <div className="text-center py-8">
@@ -291,8 +291,8 @@ export default function DealVaultPage() {
         </div>
 
         {error && (
-          <div className="border-t border-orange-200 bg-orange-50 px-4 py-2">
-            <p className="text-xs font-mono text-orange-700">{error}</p>
+          <div className="border-t border-amber/30 bg-amber/5 px-4 py-2">
+            <p className="text-xs font-mono text-amber">{error}</p>
           </div>
         )}
 
@@ -301,14 +301,14 @@ export default function DealVaultPage() {
             <select
               value={uploadKind}
               onChange={(e) => setUploadKind(e.target.value as AttachmentKind)}
-              className="text-xs font-mono border border-navy/20 rounded-lg px-2 py-2 min-h-[2.5rem] text-navy focus:outline-none focus:border-cyan"
+              className="text-xs font-mono border border-navy/20 rounded-field px-2 py-2 min-h-[2.5rem] text-navy focus:outline-none focus:border-cyan"
             >
               <option value="handoff_photo">Фото передачи</option>
               <option value="receipt_photo">Фото получения</option>
               <option value="doc">Документ</option>
               <option value="payment_receipt">Чек оплаты</option>
             </select>
-            <label className="cursor-pointer border border-navy/20 rounded-lg px-3 py-2 min-h-[2.5rem] text-xs font-body text-navy/60 hover:border-cyan transition-colors flex items-center">
+            <label className="cursor-pointer border border-navy/20 rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body text-navy/60 hover:border-cyan transition-colors flex items-center">
               {sending ? 'Отправка…' : 'Загрузить фото'}
               <input
                 ref={fileRef}
@@ -326,7 +326,7 @@ export default function DealVaultPage() {
                 setShareOpen(true)
               }}
               disabled={sending || !dealId}
-              className="border border-cyan/40 text-cyan rounded-lg px-3 py-2 min-h-[2.5rem] text-xs font-body hover:bg-cyan/10 transition-colors disabled:opacity-40"
+              className="border border-cyan/40 text-cyan rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body hover:bg-cyan/10 transition-colors disabled:opacity-40"
             >
               📍 {t('chat.shareAddress.button')}
             </button>
@@ -337,13 +337,13 @@ export default function DealVaultPage() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Сообщение..."
-              className="flex-1 border border-navy/20 rounded-lg px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
+              className="flex-1 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
               disabled={sending}
             />
             <button
               type="submit"
               disabled={sending || !text.trim()}
-              className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+              className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
             >
               {sending ? '...' : 'Отправить'}
             </button>

@@ -77,7 +77,7 @@ export default function DashboardPage() {
         {isCarrier && currentUser?.can_carry && !currentUser?.key_lost && (
           <Link
             to="/trips/new"
-            className="bg-cyan text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity flex items-center"
+            className="bg-cyan text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity flex items-center"
           >
             {t('dashboard.publishTrip')}
           </Link>
@@ -85,7 +85,7 @@ export default function DashboardPage() {
         {!isCarrier && (
           <Link
             to="/trips"
-            className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-lg text-sm hover:opacity-90 transition-opacity flex items-center"
+            className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity flex items-center"
           >
             {t('dashboard.findTrip')}
           </Link>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
               <Link
                 key={deal.id}
                 to={`/deals/${deal.id}`}
-                className="bg-white rounded-xl border border-navy/10 p-4 hover:border-cyan/40 transition-colors flex items-center justify-between"
+                className="bg-white rounded-card border border-navy/10 p-4 hover:border-cyan/40 transition-colors flex items-center justify-between"
               >
                 <div className="space-y-1">
                   <MonoText className="text-sm text-navy font-medium">
@@ -126,7 +126,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           {myTrips.length === 0 ? (
-            <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
+            <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
               <p className="text-sm font-body text-navy/40">{t('dashboard.noTrips')}</p>
               {!currentUser?.key_lost && (
                 <Link
@@ -142,7 +142,7 @@ export default function DashboardPage() {
               {myTrips.slice(0, 3).map((trip) => (
                 <div
                   key={trip.id}
-                  className="bg-white rounded-xl border border-navy/10 p-4"
+                  className="bg-white rounded-card border border-navy/10 p-4"
                 >
                   <div className="flex items-center justify-between">
                     <MonoText className="text-sm text-navy font-medium">
@@ -172,7 +172,7 @@ export default function DashboardPage() {
           </Link>
         </div>
         {asCarrierDeals.length === 0 && asSenderDeals.length === 0 ? (
-          <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
+          <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
             <p className="text-sm font-body text-navy/40">{t('dashboard.noDeals')}</p>
             <Link
               to="/trips"
@@ -187,7 +187,7 @@ export default function DashboardPage() {
               <Link
                 key={deal.id}
                 to={`/deals/${deal.id}`}
-                className="bg-white rounded-xl border border-navy/10 p-4 hover:border-cyan/40 transition-colors flex items-center justify-between"
+                className="bg-white rounded-card border border-navy/10 p-4 hover:border-cyan/40 transition-colors flex items-center justify-between"
               >
                 <div className="space-y-1">
                   <MonoText className="text-sm text-navy font-medium">
@@ -205,13 +205,13 @@ export default function DashboardPage() {
       {!(currentUser?.active_mode === 'carrier') && (
         <section>
           <h2 className="font-display font-semibold text-lg text-navy mb-3">{t('dashboard.iSend')}</h2>
-          <div className="bg-white rounded-xl border border-navy/10 p-6 text-center">
+          <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
             <p className="text-sm font-body text-navy/60 mb-4">
               {t('dashboard.findCarrier')}
             </p>
             <Link
               to="/trips"
-              className="inline-block bg-amber text-white font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
+              className="inline-block bg-amber text-white font-display font-medium px-5 py-2.5 rounded-field text-sm hover:opacity-90 transition-opacity"
             >
               {t('dashboard.findTrip')}
             </Link>

@@ -57,7 +57,7 @@ export default function AddressCard({ text }: { text: string }) {
   }
 
   return (
-    <div className="border border-cyan/30 bg-cyan/5 rounded-xl p-3 max-w-md space-y-1">
+    <div className="border border-cyan/30 bg-cyan/5 rounded-card p-3 max-w-md space-y-1">
       <p className="text-xs font-display font-semibold text-cyan uppercase tracking-wide">
         📍 {t('chat.addressCard.title')}
       </p>

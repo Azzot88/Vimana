@@ -112,8 +112,8 @@ export default function StepUpDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/40 flex items-center justify-center px-4 z-50">
-      <div className="bg-white rounded-2xl border border-navy/10 p-5 w-full max-w-sm space-y-4">
+    <div className="fixed inset-0 bg-navy/40 flex items-center justify-center px-4 z-modal">
+      <div className="bg-white rounded-card border border-navy/10 p-5 w-full max-w-sm space-y-4">
         <h3 className="font-display font-semibold text-lg text-navy">{title}</h3>
         <p className="text-sm font-body text-navy/60">{body}</p>
 
@@ -143,7 +143,7 @@ export default function StepUpDialog({
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t('stepUp.passwordPlaceholder') as string}
             autoFocus
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
           />
         )}
         {method === 'passkey' && (
@@ -154,7 +154,7 @@ export default function StepUpDialog({
         )}
 
         {error && (
-          <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2">
+          <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
             <p className="text-sm font-body text-navy">{error}</p>
           </div>
         )}
@@ -163,7 +163,7 @@ export default function StepUpDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 border border-navy/20 rounded-lg py-2 text-sm font-body text-navy"
+            className="flex-1 border border-navy/20 rounded-field py-2 text-sm font-body text-navy"
           >
             {t('common.cancel')}
           </button>
@@ -176,7 +176,7 @@ export default function StepUpDialog({
               (method === 'password' && !password)
             }
             data-testid="step-up-confirm"
-            className="flex-1 bg-navy text-ivory rounded-lg py-2 text-sm font-body font-medium disabled:opacity-40"
+            className="flex-1 bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
           >
             {busy ? '…' : t('stepUp.confirm')}
           </button>

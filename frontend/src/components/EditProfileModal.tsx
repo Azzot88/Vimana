@@ -96,12 +96,12 @@ export default function EditProfileModal({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+        className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
       >
         <h3 className="font-display font-semibold text-lg text-navy">
           {t('profile.editTitle')}
@@ -159,7 +159,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={120}
-            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
           />
         </div>
 
@@ -175,7 +175,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
               value={phoneNational}
               onChange={(e) => setPhoneNational(e.target.value)}
               placeholder="555 000 0000"
-              className="flex-1 border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              className="flex-1 border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
             />
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="bg-navy text-ivory font-display font-medium text-sm px-5 py-2 rounded-lg hover:bg-navy-mid disabled:opacity-50"
+            className="bg-navy text-ivory font-display font-medium text-sm px-5 py-2 rounded-field hover:bg-navy-mid disabled:opacity-50"
           >
             {saving ? t('common.sending') : t('common.save')}
           </button>

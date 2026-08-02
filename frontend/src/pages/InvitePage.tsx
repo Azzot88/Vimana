@@ -47,31 +47,31 @@ export default function InvitePage() {
     <div className="max-w-md space-y-6">
       <h1 className="font-display font-bold text-2xl text-navy">Пригласить контакт</h1>
 
-      <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+      <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
         <p className="text-sm font-body text-navy/60">
           Создайте персональную ссылку-приглашение. После перехода по ней пользователь будет добавлен в ваши контакты.
         </p>
 
         {!invite ? (
           <>
-            {error && <p className="text-xs font-mono text-orange-600">{error}</p>}
+            {error && <p className="text-xs font-mono text-amber">{error}</p>}
             <button
               onClick={handleCreate}
               disabled={loading}
-              className="bg-navy text-ivory font-display font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
+              className="bg-navy text-ivory font-display font-medium px-5 py-2.5 rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
             >
               {loading ? 'Создание...' : 'Создать ссылку'}
             </button>
           </>
         ) : (
           <div className="space-y-3">
-            <div className="bg-ivory rounded-lg p-3 border border-navy/10">
+            <div className="bg-ivory rounded-field p-3 border border-navy/10">
               <MonoText className="text-xs text-navy/70 break-all">{inviteUrl}</MonoText>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleCopy}
-                className="bg-cyan text-white font-display font-medium px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity"
+                className="bg-cyan text-white font-display font-medium px-4 py-2 rounded-field text-sm hover:opacity-90 transition-opacity"
               >
                 {copied ? 'Скопировано ✓' : 'Скопировать'}
               </button>

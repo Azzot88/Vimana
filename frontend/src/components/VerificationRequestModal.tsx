@@ -34,12 +34,12 @@ export default function VerificationRequestModal({
 
   return (
     <div
-      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+        className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
       >
         <h2 className="font-display font-semibold text-lg text-navy">
           {t(
@@ -66,7 +66,7 @@ export default function VerificationRequestModal({
           <button
             onClick={handleCreate}
             disabled={busy}
-            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid disabled:opacity-40"
+            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid disabled:opacity-40"
           >
             {busy ? '…' : t('verification.sendRequest')}
           </button>

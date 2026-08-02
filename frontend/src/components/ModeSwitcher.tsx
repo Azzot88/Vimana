@@ -43,7 +43,7 @@ export default function ModeSwitcher() {
       onClick={handleClick}
       disabled={busy}
       title={label as string}
-      className={`hidden md:inline-flex items-center gap-1.5 text-xs font-display font-medium border px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${tint}`}
+      className={`hidden md:inline-flex items-center gap-1.5 text-xs font-display font-medium border px-3 py-1.5 rounded-field transition-colors disabled:opacity-50 ${tint}`}
     >
       <span aria-hidden="true">{icon}</span>
       <span>{label}</span>

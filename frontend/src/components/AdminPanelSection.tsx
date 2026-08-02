@@ -47,7 +47,7 @@ export default function AdminPanelSection() {
   if (visible.length === 0) return null
 
   return (
-    <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
       <div>
         <h2 className="font-display font-semibold text-base text-navy">
           {t('admin.panelTitle')}
@@ -59,7 +59,7 @@ export default function AdminPanelSection() {
           <Link
             key={l.to}
             to={l.to}
-            className="flex items-start gap-3 p-3 rounded-lg border border-navy/10 hover:border-cyan hover:bg-cyan/5 transition-colors"
+            className="flex items-start gap-3 p-3 rounded-field border border-navy/10 hover:border-cyan hover:bg-cyan/5 transition-colors"
           >
             <span className="text-xl leading-none">{l.icon}</span>
             <div className="min-w-0">

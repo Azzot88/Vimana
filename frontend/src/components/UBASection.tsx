@@ -27,7 +27,7 @@ export default function UBASection() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-navy/10 p-6">
+      <div className="bg-white rounded-card border border-navy/10 p-6">
         <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
       </div>
     )
@@ -36,7 +36,7 @@ export default function UBASection() {
   if (!data) return null
 
   return (
-    <div className="bg-white rounded-xl border border-navy/10 p-6 space-y-4">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-base text-navy">
           {t('profile.uba.title')}
@@ -93,7 +93,7 @@ function Tile({
   hint: string
 }) {
   return (
-    <div className="bg-ivory rounded-lg px-3 py-2">
+    <div className="bg-ivory rounded-field px-3 py-2">
       <p className="text-xs font-body text-navy/50">{label}</p>
       <MonoText className="text-lg text-navy tabular-nums">{value}</MonoText>
       <p className="text-xs font-body text-navy/40 mt-1 leading-tight">{hint}</p>

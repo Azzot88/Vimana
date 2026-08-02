@@ -53,12 +53,12 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
       >
         <h3 className="font-display font-semibold text-lg text-navy">
           {t('address.pickerTitle')}
@@ -75,7 +75,7 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
             {addresses.map((a) => (
               <label
                 key={a.id}
-                className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-start gap-3 p-3 border rounded-field cursor-pointer transition-colors ${
                   selected === a.id
                     ? 'border-cyan bg-cyan/5'
                     : 'border-navy/10 hover:border-navy/30'
@@ -128,7 +128,7 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
             type="button"
             onClick={handleShare}
             disabled={busy || !selected || addresses.length === 0}
-            className="bg-navy text-ivory font-display font-medium text-sm px-5 py-2 rounded-lg hover:bg-navy-mid disabled:opacity-50"
+            className="bg-navy text-ivory font-display font-medium text-sm px-5 py-2 rounded-field hover:bg-navy-mid disabled:opacity-50"
           >
             {busy ? t('common.sending') : t('chat.shareAddress.button')}
           </button>

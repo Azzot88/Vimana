@@ -78,10 +78,10 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-navy/40 backdrop-blur-sm z-40 md:hidden"
+        className="fixed inset-0 bg-navy/40 backdrop-blur-sm z-overlay md:hidden"
       />
       <aside
-        className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] md:w-[380px] bg-white shadow-2xl flex flex-col border-l border-navy/10"
+        className="fixed inset-y-0 right-0 z-modal w-full sm:w-[420px] md:w-[380px] bg-white shadow-2xl flex flex-col border-l border-navy/10"
         role="dialog"
         aria-label={t('inquiry.panelLabel')}
       >
@@ -133,7 +133,7 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
                     </div>
                   ) : (
                     <div
-                      className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm font-body ${
+                      className={`max-w-[80%] rounded-card px-3 py-2 text-sm font-body ${
                         mine
                           ? 'bg-cyan/20 text-navy rounded-br-sm'
                           : 'bg-ivory text-navy rounded-bl-sm'
@@ -156,7 +156,7 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
         </div>
 
         {error && (
-          <p className="px-4 pb-1 text-xs font-mono text-orange-600">{error}</p>
+          <p className="px-4 pb-1 text-xs font-mono text-amber">{error}</p>
         )}
 
         <div className="border-t border-navy/10 px-3 pt-2">
@@ -183,12 +183,12 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
             onChange={(e) => setText(e.target.value)}
             placeholder={t('inquiry.placeholder') as string}
             disabled={sending || !inquiryId}
-            className="flex-1 border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
+            className="flex-1 border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={sending || !text.trim() || !inquiryId}
-            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid transition-colors disabled:opacity-40"
+            className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-40"
           >
             {sending ? '…' : t('inquiry.send')}
           </button>

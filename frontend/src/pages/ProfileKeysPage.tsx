@@ -64,7 +64,7 @@ export default function ProfileKeysPage() {
           {/* The reader is a static page outside the app — deliberately, since
               it must work when the app does not. Opening it in a new tab keeps
               that separation visible instead of pretending it is a route. */}
-          <div className="bg-white rounded-2xl border border-navy/10 p-5 space-y-3">
+          <div className="bg-white rounded-card border border-navy/10 p-5 space-y-3">
             <h2 className="font-display font-semibold text-lg text-navy">
               {t('profile.identity.readerTitle')}
             </h2>
@@ -76,7 +76,7 @@ export default function ProfileKeysPage() {
               target="_blank"
               rel="noreferrer"
               data-testid="reader-link"
-              className="block w-full text-center border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy"
+              className="block w-full text-center border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
             >
               {t('profile.identity.readerOpen')}
             </a>

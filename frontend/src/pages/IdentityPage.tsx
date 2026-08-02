@@ -43,7 +43,7 @@ export default function IdentityPage() {
 
   if (state === 'loading') {
     return (
-      <div className="min-h-screen bg-ivory flex items-center justify-center px-4">
+      <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
         <MonoText className="text-sm text-navy/40">{t('common.loading')}</MonoText>
       </div>
     )
@@ -51,7 +51,7 @@ export default function IdentityPage() {
 
   if (state === 'missing' || !identity) {
     return (
-      <div className="min-h-screen bg-ivory flex items-center justify-center px-4">
+      <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
         <div className="max-w-sm text-center space-y-3">
           <h1 className="font-display font-bold text-xl text-navy">
             {t('identity.notFoundTitle')}
@@ -68,9 +68,9 @@ export default function IdentityPage() {
   const minimal = identity.visibility === 'minimal'
 
   return (
-    <div className="min-h-screen bg-ivory px-4 py-10">
+    <div className="min-h-[100dvh] bg-ivory px-4 py-10">
       <div className="max-w-lg mx-auto space-y-4">
-        <div className="bg-white rounded-2xl border border-navy/10 p-6 space-y-4">
+        <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
           <div className="flex items-center gap-4">
             {identity.avatar_url ? (
               <img
@@ -170,7 +170,7 @@ export default function IdentityPage() {
           {/* T3.23 — said plainly, with its date. Records signed before this
               are valid and belong to a key this identity no longer holds. */}
           {identity.identity_changed_at && (
-            <div className="bg-navy/5 rounded-lg px-3 py-2 space-y-0.5">
+            <div className="bg-navy/5 rounded-field px-3 py-2 space-y-0.5">
               <p className="text-xs font-body text-navy/70" data-testid="identity-changed">
                 {t('identity.keyChangedOn', {
                   date: new Date(identity.identity_changed_at).toLocaleDateString(

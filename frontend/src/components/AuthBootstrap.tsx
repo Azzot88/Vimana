@@ -98,7 +98,7 @@ export default function AuthBootstrap({ children }: Props) {
 
   if (authState === 'loading') {
     return (
-      <div className="min-h-screen bg-ivory flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-ivory flex items-center justify-center">
         <p className="text-navy/40 font-mono text-sm">…</p>
       </div>
     )
@@ -109,7 +109,7 @@ export default function AuthBootstrap({ children }: Props) {
       {children}
       {warningOpen && (
         <div
-          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
           onClick={() => {
             bumpActivity()
             setWarningOpen(false)
@@ -117,7 +117,7 @@ export default function AuthBootstrap({ children }: Props) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+            className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
           >
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('auth.inactivityWarningTitle')}
@@ -137,7 +137,7 @@ export default function AuthBootstrap({ children }: Props) {
                   bumpActivity()
                   setWarningOpen(false)
                 }}
-                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-lg text-sm hover:bg-navy-mid"
+                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid"
               >
                 {t('auth.stayLoggedIn')}
               </button>

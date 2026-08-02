@@ -62,7 +62,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
           onChange={(e) => onChange({ label: e.target.value })}
           placeholder={t('address.labelPlaceholder') as string}
           maxLength={60}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
         />
       </div>
 
@@ -79,7 +79,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
               city_geoname_id: null,
             })
           }
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
         >
           <option value="">—</option>
           {countryOptions.map((c) => (
@@ -106,10 +106,10 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
           onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
           disabled={!value.country_iso}
           placeholder={t('profile.address.cityPlaceholder') as string}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
         />
         {showSuggest && suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full bg-white border border-navy/20 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          <ul className="absolute z-10 mt-1 w-full bg-white border border-navy/20 rounded-field shadow-lg max-h-48 overflow-y-auto">
             {suggestions.map((s) => (
               <li key={s.geoname_id}>
                 <button
@@ -139,7 +139,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
           value={value.street ?? ''}
           onChange={(e) => onChange({ street: e.target.value || null })}
           placeholder={t('profile.address.streetPlaceholder') as string}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
         />
       </div>
 
@@ -151,7 +151,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
           type="text"
           value={value.postal_code ?? ''}
           onChange={(e) => onChange({ postal_code: e.target.value || null })}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
         />
       </div>
 
@@ -165,7 +165,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
           rows={2}
           maxLength={500}
           placeholder={t('profile.address.notePlaceholder') as string}
-          className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan resize-none"
+          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan resize-none"
         />
       </div>
     </div>
