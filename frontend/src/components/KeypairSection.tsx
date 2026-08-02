@@ -14,6 +14,8 @@ import {
   generateKeypair,
   keyBackupText,
   npubFromNsec,
+  openIdentityVault,
+  openNsec,
   parseNsecInput,
   shortKey,
   signProofWithKey,
@@ -39,7 +41,7 @@ import StepUpDialog from './StepUpDialog'
  *  on our disks cannot be proven deleted, so the transition always mints a new
  *  one.
  */
-type Step = 'idle' | 'choose' | 'showKey' | 'lost'
+type Step = 'idle' | 'choose' | 'showKey' | 'import' | 'lost'
 
 export default function KeypairSection() {
   const { t } = useTranslation()
@@ -62,6 +64,10 @@ export default function KeypairSection() {
    *  the network: the key is pasted, sealed and downloaded in this tab. */
   /** T3.23 pt.2 — the tick in front of replacing an identity that already exists. */
   const [swapUnderstood, setSwapUnderstood] = useState(false)
+  /** T3.23 — bringing a key from elsewhere. All of it stays in this tab. */
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importKey, setImportKey] = useState('')
+  const [importPass, setImportPass] = useState('')
   const [sealOpen, setSealOpen] = useState(false)
   const [sealKey, setSealKey] = useState('')
   const [dropOpen, setDropOpen] = useState(false)
@@ -139,6 +145,47 @@ export default function KeypairSection() {
 
   const handleUseNip07 = () =>
     submitProof((challenge) => signProofWithNip07(challenge))
+
+  /**
+   * T3.23 — bring a key you already have: an Identity Vault file, an
+   * `ncryptsec` string, or a bare `nsec`.
+   *
+   * All three end in the same place as the browser-generated path: a keypair
+   * held in this tab that signs the server's challenge. The server cannot tell
+   * the routes apart and should not — it checks the one thing that matters,
+   * that the caller controls the key they claim.
+   *
+   * The passphrase is only ever used here, on the file or the encrypted string.
+   */
+  const handleImport = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      let nsecHex: string
+      const file = importFile
+      if (file) {
+        const parsed = JSON.parse(await file.text())
+        if (parsed?.type !== 'identity') throw new Error('not an identity vault')
+        nsecHex = openIdentityVault(parsed, importPass).nsec
+      } else if (importKey.trim().startsWith('ncryptsec1')) {
+        nsecHex = openNsec(importKey.trim(), importPass)
+      } else {
+        nsecHex = parseNsecInput(importKey)
+      }
+      const keypair = { nsecHex, npubHex: npubFromNsec(nsecHex) }
+      setImportKey('')
+      setImportPass('')
+      setImportFile(null)
+      await submitProof(async (challenge) => signProofWithKey(keypair, challenge))
+    } catch {
+      // One message for every failure here: a wrong passphrase, a file that is
+      // not a vault and a mistyped key are indistinguishable to the person in
+      // front of it, and guessing which it was would be guessing out loud.
+      setError(t('profile.identity.importFailed') as string)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   /** T3.15 — confirmation comes from step-up, so an account with no password
    *  can do this too. It used to take a password field, which locked out
@@ -632,9 +679,92 @@ export default function KeypairSection() {
               ? t('profile.identity.nip07Cta')
               : t('profile.identity.nip07Missing')}
           </button>
+          {/* T3.23 — the third way in, for a key that already exists somewhere
+              else. Quieter than the other two because it is the rarer case,
+              not because it is lesser. */}
+          <button
+            type="button"
+            onClick={() => setStep('import')}
+            disabled={busy || (established && !swapUnderstood)}
+            data-testid="identity-import-open"
+            className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
+          >
+            {t('profile.identity.importCta')}
+          </button>
           <button
             type="button"
             onClick={reset}
+            className="w-full text-sm font-body text-navy/50"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      )}
+
+      {/* ── bringing a key from elsewhere ── */}
+      {step === 'import' && (
+        <div className="space-y-3">
+          <p className="text-sm font-body text-navy/70">
+            {t('profile.identity.importHint')}
+          </p>
+
+          <div>
+            <label className="block text-xs font-body text-navy/50 mb-1">
+              {t('profile.identity.importFileLabel')}
+            </label>
+            <input
+              type="file"
+              accept=".dvlt,application/json"
+              onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              data-testid="identity-import-file"
+              className="w-full text-sm font-body text-navy"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-body text-navy/50 mb-1">
+              {t('profile.identity.importStringLabel')}
+            </label>
+            <textarea
+              value={importKey}
+              onChange={(e) => setImportKey(e.target.value)}
+              rows={2}
+              disabled={!!importFile}
+              placeholder="nsec1… / ncryptsec1… / hex"
+              data-testid="identity-import-key"
+              className="w-full border border-navy/20 rounded-lg px-3 py-2 text-xs font-mono text-navy focus:outline-none focus:border-cyan disabled:opacity-40"
+            />
+          </div>
+
+          {/* Needed for a file and for `ncryptsec`, useless for a bare key —
+              shown always rather than appearing and vanishing as the user
+              types, which reads as the form second-guessing them. */}
+          <input
+            type="password"
+            value={importPass}
+            onChange={(e) => setImportPass(e.target.value)}
+            placeholder={t('profile.identity.importPassPlaceholder') as string}
+            data-testid="identity-import-pass"
+            className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+          />
+
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={busy || (!importFile && !importKey.trim())}
+            data-testid="identity-import-submit"
+            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"
+          >
+            {busy ? '…' : t('profile.identity.importSubmit')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStep('choose')
+              setImportFile(null)
+              setImportKey('')
+              setImportPass('')
+            }}
             className="w-full text-sm font-body text-navy/50"
           >
             {t('common.cancel')}
