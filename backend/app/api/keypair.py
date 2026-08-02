@@ -40,7 +40,7 @@ from app.core.challenge import CHALLENGE_TTL_SECONDS
 from app.core.database import get_db
 from app.core.identity import establish_blockers, rewrap_vault_envelopes
 from app.core.identity_proof import PURPOSE_ESTABLISH, verify_proof
-from app.core.keypair import decrypt_nsec
+from app.core.keypair import decrypt_nsec, encrypt_nsec, npub_from_nsec
 from app.core.step_up import StepUpScope, consume as consume_step_up
 from app.core.verification import (
     rewrap_container_to_identity,
@@ -444,6 +444,66 @@ async def delete_platform_copy(
     # that since T3.12 — what changed under `D-KEY-TIERS` is how one gets here:
     # by removing our copy, not by minting a different key.
     current_user.key_self_custody = True
+    await db.commit()
+    await db.refresh(current_user)
+    return _status(current_user)
+
+
+class RestoreCopyBody(BaseModel):
+    step_up_token: str
+    nsec_hex: str
+
+    @field_validator("nsec_hex")
+    @classmethod
+    def _hex_64(cls, v: str) -> str:
+        v = v.strip().lower()
+        if len(v) != 64 or not all(c in "0123456789abcdef" for c in v):
+            raise ValueError("nsec_hex must be 64 lowercase hex chars")
+        return v
+
+
+@router.post("/me/identity/restore-platform-copy", response_model=KeypairStatus)
+async def restore_platform_copy(
+    body: RestoreCopyBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.23 — step back down the ladder: hand us the copy again.
+
+    Rung 3 is a choice, not a sentence. Someone who finds full self-custody
+    inconvenient — a second device, a shared account, simply changing their
+    mind — restores our copy from their Identity Vault and is back on rung 2.
+    Nothing else about the identity moves: same key, same npub, same history.
+
+    **The key must be the account's own.** A different one is not a restore, it
+    is a change of identity, and that path re-encrypts vaults and needs its own
+    proof (`establish`). Deriving the npub here and comparing is what keeps the
+    two from being confused: an account cannot quietly acquire someone else's
+    key through the door marked "restore".
+
+    The nsec arrives over TLS and is encrypted at rest immediately. That is the
+    same exposure as rung 2 in general — which is exactly what the caller is
+    asking to return to, and the screen says so before this call happens.
+    """
+    if current_user.key_lost_at is not None:
+        raise HTTPException(status_code=409, detail="This identity was declared lost")
+    if current_user.nsec_encrypted is not None:
+        return _status(current_user)  # already on rung 2 — nothing to restore
+
+    derived = npub_from_nsec(body.nsec_hex)
+    if derived != (current_user.nostr_pubkey or ""):
+        raise HTTPException(
+            status_code=409,
+            detail="That key belongs to a different identity — restoring is only for this account's own key",
+        )
+
+    await consume_step_up(
+        str(current_user.id), StepUpScope.ADD_AUTH_METHOD, body.step_up_token
+    )
+
+    nonce, ciphertext = encrypt_nsec(body.nsec_hex)
+    current_user.nsec_encrypted = ciphertext
+    current_user.nsec_nonce = nonce
     await db.commit()
     await db.refresh(current_user)
     return _status(current_user)

@@ -137,6 +137,11 @@ revealBtn.addEventListener('click', () => {
   revealBtn.classList.add('hidden')
 })
 
+// `file://` means this is somebody's saved copy: there is no site to return to.
+if (window.location.protocol !== 'file:') {
+  $('backRow').classList.remove('hidden')
+}
+
 $('copyNpub').addEventListener('click', () => void copy($('npub').textContent || '', $('npub')))
 $('copyNsec').addEventListener('click', () => void copy(nsecHex, $('nsec')))
 // The encrypted string, not the bare key: this is the one meant to be pasted

@@ -103,6 +103,12 @@
       Save this page to keep a copy that works offline. What it proves is what
       it can check locally: that the file decrypts with your passphrase and that
       the key inside matches the public one written beside it.
+      <!-- Shown only when this page came from the site. Opened from disk there
+           is nothing to go back to, and a dead link would undercut the whole
+           point of the offline copy. -->
+      <span id="backRow" class="hidden">
+        · <a id="back" href="/profile/keys">Back to access and keys</a>
+      </span>
     </footer>
 
     <script type="module" src="/src/reader.ts"></script>

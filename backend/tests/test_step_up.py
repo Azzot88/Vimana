@@ -847,3 +847,78 @@ async def test_deleting_our_copy_ends_what_the_server_can_do(client, session_mak
         headers={**headers, "X-Step-Up-Token": "unused"},
     )
     assert again.status_code == 200
+
+
+# ── T3.23 — coming back down the ladder ──────────────────────────────────────
+
+
+async def test_restoring_our_copy_puts_the_account_back_on_rung_two(client, session_maker):
+    """Rung 3 is a choice, not a sentence: someone who finds full self-custody
+    inconvenient hands the copy back and nothing else about the identity moves."""
+    _, headers = await _account(client, "restore-ok")
+    released = await _release_and_read_key(client, headers)
+    token = await _token_by_password(client, headers, StepUpScope.DECLARE_LOST)
+    await client.request(
+        "DELETE",
+        "/api/me/identity/platform-copy",
+        headers={**headers, "X-Step-Up-Token": token},
+    )
+
+    grant = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/me/identity/restore-platform-copy",
+        headers=headers,
+        json={"step_up_token": grant, "nsec_hex": released["nsec_hex"]},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["key_copies"] == "both"
+    assert resp.json()["npub"] == released["npub_hex"], "same identity, only the custody moved"
+
+
+async def test_someone_elses_key_cannot_be_restored_into_this_account(client):
+    """A different key is not a restore — it is a change of identity, and that
+    path has its own proof. Without this check the door marked "restore" would
+    quietly accept a stranger's key."""
+    _, headers = await _account(client, "restore-alien")
+    released = await _release_and_read_key(client, headers)
+    token = await _token_by_password(client, headers, StepUpScope.DECLARE_LOST)
+    await client.request(
+        "DELETE",
+        "/api/me/identity/platform-copy",
+        headers={**headers, "X-Step-Up-Token": token},
+    )
+
+    _, other_headers = await _account(client, "restore-other")
+    stranger = await _release_and_read_key(client, other_headers)
+    assert stranger["nsec_hex"] != released["nsec_hex"]
+
+    grant = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/me/identity/restore-platform-copy",
+        headers=headers,
+        json={"step_up_token": grant, "nsec_hex": stranger["nsec_hex"]},
+    )
+    assert resp.status_code == 409
+
+
+async def test_restoring_when_we_already_hold_a_copy_is_a_no_op(client):
+    _, headers = await _account(client, "restore-noop")
+    released = await _release_and_read_key(client, headers)
+    resp = await client.post(
+        "/api/me/identity/restore-platform-copy",
+        headers=headers,
+        json={"step_up_token": "unused", "nsec_hex": released["nsec_hex"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["key_copies"] == "both"
+
+
+async def _release_and_read_key(client, headers) -> dict:
+    """Take a copy of the account's key the way a user does, and keep it —
+    the tests below need the same bytes the browser would have sealed."""
+    token = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    resp = await client.post(
+        "/api/me/identity/release-key", headers=headers, json={"step_up_token": token}
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
