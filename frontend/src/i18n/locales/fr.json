@@ -133,6 +133,17 @@
     "keyChangedOn": "La clé de cette identité a été changée le {{date}}. Tout ce qui a été signé avant appartient à une clé qu'elle n'a plus.",
     "footer": "Tout sur cette page est une information publique de Vimana."
   },
+  "invite": {
+    "title": "Inviter un contact",
+    "hint": "Un lien personnel. Celui qui l'ouvre entre dans vos contacts, et vous le voyez tous les deux.",
+    "create": "Créer un lien",
+    "createAnother": "En créer un autre",
+    "createFailed": "Impossible de créer le lien. Réessayez.",
+    "acceptedTitle": "Vous êtes en contact",
+    "acceptedBody": "Le contact a été ajouté à votre profil.",
+    "acceptFailed": "Ce lien est invalide ou a déjà été utilisé.",
+    "toProfile": "Aller à mon profil"
+  },
   "notFound": {
     "title": "Cette page n'existe pas",
     "body": "Le lien ne mène nulle part : une faute de frappe, une page déplacée ou un enregistrement retiré. Si quelqu'un vous a envoyé ce lien, l'adresse ci-dessous l'aidera à trouver son erreur.",

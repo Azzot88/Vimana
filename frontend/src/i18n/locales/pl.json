@@ -133,6 +133,17 @@
     "keyChangedOn": "Klucz tej tożsamości zmieniono {{date}}. Wszystko podpisane wcześniej należy do klucza, którego już nie ma.",
     "footer": "Wszystko na tej stronie to publiczne informacje Vimana."
   },
+  "invite": {
+    "title": "Zaproś kontakt",
+    "hint": "Osobisty odnośnik. Kto z niego skorzysta, trafia do Twoich kontaktów, i widzicie to oboje.",
+    "create": "Utwórz link",
+    "createAnother": "Utwórz kolejny",
+    "createFailed": "Nie udało się utworzyć linku. Spróbuj ponownie.",
+    "acceptedTitle": "Jesteście połączeni",
+    "acceptedBody": "Kontakt został dodany do Twojego profilu.",
+    "acceptFailed": "Ten link jest nieprawidłowy lub został już użyty.",
+    "toProfile": "Przejdź do profilu"
+  },
   "notFound": {
     "title": "Taka strona nie istnieje",
     "body": "Odnośnik prowadzi donikąd: literówka, przeniesiona strona albo usunięty wpis. Jeśli ktoś przysłał Ci ten link, adres poniżej pomoże mu znaleźć błąd.",

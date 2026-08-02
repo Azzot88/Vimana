@@ -149,6 +149,17 @@
     "keyChangedOn": "The key of this identity was changed on {{date}}. Anything signed before that belongs to a key it no longer holds.",
     "footer": "Everything on this page is public information from Vimana."
   },
+  "invite": {
+    "title": "Invite a contact",
+    "hint": "A personal link. Whoever follows it lands in your contacts, and both of you can see that.",
+    "create": "Create link",
+    "createAnother": "Create another",
+    "createFailed": "Could not create the link. Please try again.",
+    "acceptedTitle": "You are connected",
+    "acceptedBody": "The contact has been added to your profile.",
+    "acceptFailed": "This link is invalid or has already been used.",
+    "toProfile": "Go to my profile"
+  },
   "notFound": {
     "title": "This page does not exist",
     "body": "The link leads nowhere: a typo, a page that moved, or a record that was removed. If somebody sent you this link, the address below will help them find their mistake.",
