@@ -17,6 +17,7 @@
     "@scure/base": "^1.1.9",
     "@simplewebauthn/browser": "^13.0.0",
     "axios": "^1.7.7",
+    "framer-motion": "^11.11.0",
     "i18next": "^23.16.4",
     "libphonenumber-js": "^1.11.15",
     "react": "^18.3.1",
