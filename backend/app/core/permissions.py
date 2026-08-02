@@ -122,3 +122,41 @@ def require_perm(*permissions: Permission):
         return user
 
     return _dep
+
+
+# ─────────────────────────────────────────────────────────────
+# T3.18 — how much of an identity a given viewer may see
+# ─────────────────────────────────────────────────────────────
+
+PUBLIC_PROFILE_VALUES = ("full", "minimal", "hidden")
+
+
+def visible_to(subject: User, viewer: User | None) -> str:
+    """`full` | `minimal` | `hidden` for this pair.
+
+    One function on purpose, called from every public slice. The alternative —
+    the same condition copied into each endpoint — fails the same way every
+    time: the next public field is added by someone who never heard of the
+    setting, and an account that believes itself hidden keeps answering
+    questions about itself through a different URL.
+
+    The owner always sees themselves in full; so does a superuser, whose whole
+    job is looking at accounts. Everyone else gets what the account chose.
+    """
+    if viewer is not None and (viewer.id == subject.id or viewer.role == "superuser"):
+        return "full"
+    level = (subject.public_profile or "full").lower()
+    return level if level in PUBLIC_PROFILE_VALUES else "full"
+
+
+def require_visible(subject: User, viewer: User | None) -> str:
+    """Same, but 404 for `hidden` — not 403.
+
+    403 would confirm that the account exists, which is exactly what hiding is
+    meant to stop. "No such identity" is the only answer that does not leak the
+    thing it refuses to show.
+    """
+    level = visible_to(subject, viewer)
+    if level == "hidden":
+        raise HTTPException(status_code=404, detail="No such identity")
+    return level

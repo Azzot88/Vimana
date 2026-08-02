@@ -269,3 +269,85 @@ async def test_trust_metrics_denormalized_counts_after_edge(
     )
     assert metrics.status_code == 200
     assert metrics.json()["dealt_with_count"] >= 1
+
+
+# ── T3.18 — the public identity page ─────────────────────────────────────────
+
+
+async def test_an_identity_opens_by_its_key_without_signing_in(client, carrier_headers):
+    """The key *is* the identity, so the link carries the key — not a row id
+    that means nothing outside our database."""
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub = me.json()["nostr_pubkey"]
+
+    resp = await client.get(f"/api/identities/{npub}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["npub"] == npub
+    assert body["visibility"] == "full"
+    assert body["display_name"]
+    # A different category of data, not "private fields": these must not appear
+    # at any visibility level.
+    for forbidden in ("email", "phone", "receiving_city"):
+        assert forbidden not in body
+
+
+async def test_hidden_answers_404_rather_than_403(client, carrier_headers, session_maker):
+    """403 would confirm the account exists — precisely what hiding is for."""
+    import uuid as uuidlib
+
+    from app.models.user import User
+
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuidlib.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.public_profile = "hidden"
+        await db.commit()
+
+    try:
+        anon = await client.get(f"/api/identities/{npub}")
+        assert anon.status_code == 404
+
+        # …and the numbers behind the page are hidden too. A setting that hides
+        # the page while the metrics answer one URL over is a setting that lies.
+        metrics = await client.get(f"/api/users/{user_id}/trust-metrics")
+        assert metrics.status_code == 404
+        uba = await client.get(f"/api/users/{user_id}/uba", headers=carrier_headers)
+        assert uba.status_code == 200, "the owner still sees themselves"
+    finally:
+        async with session_maker() as db:
+            user = await db.get(User, user_id)
+            user.public_profile = "full"
+            await db.commit()
+
+
+async def test_minimal_shows_that_the_key_is_real_and_nothing_else(
+    client, carrier_headers, session_maker
+):
+    import uuid as uuidlib
+
+    from app.models.user import User
+
+    me = await client.get("/api/auth/me", headers=carrier_headers)
+    npub, user_id = me.json()["nostr_pubkey"], uuidlib.UUID(me.json()["id"])
+
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.public_profile = "minimal"
+        await db.commit()
+
+    try:
+        resp = await client.get(f"/api/identities/{npub}")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["visibility"] == "minimal"
+        assert body["display_name"] is None
+        assert body["uba"] is None
+        assert body["dealt_with_count"] is None
+    finally:
+        async with session_maker() as db:
+            user = await db.get(User, user_id)
+            user.public_profile = "full"
+            await db.commit()

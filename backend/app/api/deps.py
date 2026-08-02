@@ -85,3 +85,26 @@ def _issued_after_cutoff(user: User, iat) -> bool:
 def is_superuser(user: User) -> bool:
     """Convenience helper — superuser bypasses most role-scoped checks."""
     return user.role == "superuser"
+
+
+_optional_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+
+async def get_current_user_optional(
+    token: str | None = Depends(_optional_oauth2),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """T3.18 — for pages a stranger may read.
+
+    Returns `None` instead of 401 when there is no token, and also when the
+    token is bad: a public page must render for a visitor whose session simply
+    expired, not greet them with an error about credentials they were not asked
+    for. Endpoints using this must therefore treat `None` as "not signed in"
+    and never as "signed in as somebody".
+    """
+    if not token:
+        return None
+    try:
+        return await _resolve_user(token, db, allow_scope=None)
+    except HTTPException:
+        return None

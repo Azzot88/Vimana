@@ -49,6 +49,12 @@ class User(Base):
     # gone (self-custody). Losing the key is not losing access: a live passkey
     # still signs the user in, but they can no longer sign or read their own
     # encrypted history, and counterparties must see that.
+    # T3.18 — `full` | `minimal` | `hidden`. Governs every public slice of this
+    # account, not just the identity page: a setting that hides the page while
+    # the numbers stay readable by direct request is a setting that lies.
+    public_profile: Mapped[str] = mapped_column(
+        String(16), default="full", server_default="full"
+    )
     # T3.23 — the key this account used before the current one, and when it
     # stopped being current. Every `establish` swaps the key, so anything signed
     # earlier stays signed by a key the account no longer holds: valid and
