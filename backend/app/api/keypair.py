@@ -69,6 +69,12 @@ class KeypairStatus(BaseModel):
     # "was one ever released", and a third column would be a second truth about
     # the same two facts.
     key_copies: str
+    # T3.23 — what this account's key used to be, and when it stopped being it.
+    # Both null until the first change. Shown with a date because a key swap is
+    # exactly the kind of fact that quietly invalidates an assumption: past
+    # signatures still verify, but not against the key shown today.
+    previous_npub: str | None = None
+    identity_changed_at: datetime | None = None
     # DEPRECATED (T3.12) — kept so the existing crypto suite and frontend keep
     # reading. `key_self_custody` is the same bit as `identity_established`;
     # `has_encrypted_nsec` is its inverse for accounts that have any key at all.
@@ -125,6 +131,8 @@ def _status(user: User) -> KeypairStatus:
         identity_established=user.identity_established,
         key_lost=user.key_lost,
         key_copies=_key_copies(user),
+        previous_npub=user.previous_nostr_pubkey,
+        identity_changed_at=user.identity_changed_at,
         key_self_custody=user.key_self_custody,
         has_encrypted_nsec=user.nsec_encrypted is not None,
     )
@@ -304,6 +312,11 @@ async def identity_establish(
 
     # The service key dies here: the platform keeps no copy of anything it can
     # sign or decrypt for this user any more.
+    # T3.23 — record what the account used to be. Every establish swaps the key,
+    # including the first one: the service key was this account's identity from
+    # registration, and records signed with it stay signed by it.
+    current_user.previous_nostr_pubkey = current_user.nostr_pubkey
+    current_user.identity_changed_at = datetime.now(timezone.utc)
     current_user.nostr_pubkey = body.npub_hex
     current_user.nsec_encrypted = None
     current_user.nsec_nonce = None

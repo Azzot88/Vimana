@@ -983,3 +983,20 @@ async def test_identity_cannot_be_replaced_when_only_the_user_holds_the_key(clie
     )
     assert resp.status_code == 409
     assert "Restore our copy" in resp.json()["detail"]
+
+
+async def test_a_key_change_leaves_a_dated_trace(client):
+    """The account remembers what it used to be. Past signatures still verify —
+    but not against the key shown today, and that is worth saying out loud with
+    a date rather than leaving people to discover it."""
+    _, headers = await _account(client, "trace")
+    before = await client.get("/api/me/keypair/status", headers=headers)
+    service_npub = before.json()["npub"]
+    assert before.json()["previous_npub"] is None, "nothing has changed yet"
+
+    established = await establish_identity(client, headers)
+
+    after = await client.get("/api/me/keypair/status", headers=headers)
+    assert after.json()["npub"] == established["npub_hex"]
+    assert after.json()["previous_npub"] == service_npub
+    assert after.json()["identity_changed_at"] is not None

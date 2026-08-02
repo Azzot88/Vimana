@@ -11,6 +11,10 @@ export interface KeypairStatus {
    *  `platform_only` only we hold the key · `both` the user has an Identity
    *  Vault too · `user_only` our copy is gone and we can no longer sign. */
   key_copies: 'platform_only' | 'both' | 'user_only'
+  /** T3.23 — the key this account had before the current one, and when it
+   *  stopped being current. Null until the first change. */
+  previous_npub: string | null
+  identity_changed_at: string | null
   /** @deprecated mirrors `identity_established`; kept while callers migrate. */
   key_self_custody: boolean
   /** @deprecated */

@@ -469,6 +469,9 @@ async def _ensure_identity_columns(engine) -> None:
             ("users", "key_lost_at", "TIMESTAMPTZ"),
             # T3.21 — mirrors migration 0036.
             ("users", "identity_file_released_at", "TIMESTAMPTZ"),
+            # T3.23 — mirrors migration 0037.
+            ("users", "previous_nostr_pubkey", "VARCHAR(64)"),
+            ("users", "identity_changed_at", "TIMESTAMPTZ"),
             ("trips", "nostr_published_by_pubkey", "VARCHAR(64)"),
             # T3.12 pt.2b — mirrors migration 0030.
             ("identity_containers", "key_envelope", "TEXT"),

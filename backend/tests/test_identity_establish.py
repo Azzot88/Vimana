@@ -215,13 +215,22 @@ async def test_same_key_cannot_serve_two_accounts(client):
     assert "another account" in second.json()["detail"].lower()
 
 
-async def test_challenge_refused_once_established(client):
+async def test_challenge_is_still_issued_after_an_identity_exists(client):
+    """T3.23 pt.2 — replacing an identity is allowed now (owner's decision
+    2026-08-01), so the nonce is no longer gated.
+
+    This test used to assert 409 here, back when an established identity was
+    final. Guarding the *challenge* was never the protection anyway: a nonce
+    without a signature buys nothing, and the rules live where the change
+    actually happens — `establish` still refuses the same key, a key belonging
+    to someone else, and any change while only the user holds the current key.
+    """
     _, headers = await _fresh_user(client)
     _, _, resp = await _establish(client, headers)
     assert resp.status_code == 200
 
     again = await client.post("/api/me/identity/challenge", headers=headers)
-    assert again.status_code == 409
+    assert again.status_code == 200
 
 
 async def test_container_survives_the_transition(client, session_maker):

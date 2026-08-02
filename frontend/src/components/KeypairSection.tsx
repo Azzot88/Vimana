@@ -15,6 +15,7 @@ import {
   keyBackupText,
   npubFromNsec,
   parseNsecInput,
+  shortKey,
   signProofWithKey,
   signProofWithNip07,
   type Keypair,
@@ -305,9 +306,40 @@ export default function KeypairSection() {
           <div className="text-xs font-body text-navy/50 mb-1">
             {t('profile.identity.npubLabel')}
           </div>
-          <MonoText className="text-xs text-navy break-all">
-            <span data-testid="identity-npub">{status.npub}</span>
+          {/* Shortened on purpose: sixty-four hex characters are unreadable and
+              nobody compares them by eye anyway. Four and four is enough to
+              recognise a key you know, and the full value is one click away. */}
+          <MonoText className="text-sm text-navy">
+            <span data-testid="identity-npub" title={status.npub}>
+              {shortKey(status.npub)}
+            </span>
           </MonoText>
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard?.writeText(status.npub || '')}
+            className="text-xs font-body text-cyan hover:underline mt-1"
+          >
+            {t('profile.identity.copyNpub')}
+          </button>
+        </div>
+      )}
+
+      {/* T3.23 — the key changed at some point, and everything signed before
+          that stays signed by the old one. Stated with its date: a bare "your
+          key" would let someone assume today's key covers yesterday's records. */}
+      {status.previous_npub && status.identity_changed_at && (
+        <div className="bg-navy/5 rounded-lg px-3 py-2 space-y-0.5">
+          <p className="text-xs font-body text-navy/70" data-testid="identity-changed">
+            {t('profile.identity.changedOn', {
+              date: new Date(status.identity_changed_at).toLocaleDateString(),
+            })}
+          </p>
+          <p className="text-xs font-body text-navy/50">
+            {t('profile.identity.previousKey')}{' '}
+            <span className="font-mono" title={status.previous_npub}>
+              {shortKey(status.previous_npub)}
+            </span>
+          </p>
         </div>
       )}
 

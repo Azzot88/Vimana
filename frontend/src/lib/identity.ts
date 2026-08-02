@@ -330,6 +330,16 @@ export function openIdentityVault(
   return JSON.parse(new TextDecoder().decode(plain)) as IdentityVaultContents
 }
 
+/** `3233…4457` — the shape a key takes when a human has to recognise it.
+ *  Sixty-four hex characters are read by nobody and compared by no one; four
+ *  at each end is enough to tell "the key I know" from "a different key", and
+ *  short enough to sit in a line of text. */
+export function shortKey(value: string, edge = 4): string {
+  const v = (value || '').trim()
+  if (v.length <= edge * 2 + 1) return v
+  return `${v.slice(0, edge)}…${v.slice(-edge)}`
+}
+
 /** Accepts what a person actually has in hand: a `nsec1…` string from any
  *  Nostr client, or the raw hex our own backup file printed. Returns hex —
  *  the internal representation everywhere else in this module. */

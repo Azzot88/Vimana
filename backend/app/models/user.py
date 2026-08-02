@@ -49,6 +49,16 @@ class User(Base):
     # gone (self-custody). Losing the key is not losing access: a live passkey
     # still signs the user in, but they can no longer sign or read their own
     # encrypted history, and counterparties must see that.
+    # T3.23 — the key this account used before the current one, and when it
+    # stopped being current. Every `establish` swaps the key, so anything signed
+    # earlier stays signed by a key the account no longer holds: valid and
+    # verifiable, attached to an identifier that no longer answers. That is a
+    # fact worth showing with its date rather than leaving people to notice it.
+    # Public half only — the old private key was never ours to keep.
+    previous_nostr_pubkey: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    identity_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # T3.21 — when the key was last handed to the browser for sealing into an
     # Identity Vault file. It is the only evidence the platform can honestly
     # have that a second copy exists: whether the user actually kept the file
