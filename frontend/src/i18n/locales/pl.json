@@ -468,6 +468,7 @@
       "npubLabel": "Klucz publiczny",
       "nsecLabel": "Klucz prywatny",
       "startCta": "Użyj innego klucza",
+      "swapCheckbox": "Rozumiem, że wszystko podpisane dotąd pozostanie podpisane kluczem, którego to konto już nie będzie miało",
       "dropCta": "Usuń naszą kopię klucza",
       "dropTitle": "Po tym nie będziemy mogli działać za Ciebie.",
       "dropBody": "Klucz, npub i Twoje transakcje pozostają bez zmian. Kończy się nasza możliwość: nie podpiszemy ani nie otworzymy Twoich sejfów — nie będzie tu czym. Dalej robi to Twój plik Identity Vault albo rozszerzenie Nostr.",

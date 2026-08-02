@@ -467,6 +467,7 @@
       "npubLabel": "Clé publique",
       "nsecLabel": "Clé privée",
       "startCta": "Utiliser une autre clé",
+      "swapCheckbox": "Je comprends que tout ce qui a été signé jusqu'ici reste signé par une clé que ce compte n'aura plus",
       "dropCta": "Supprimer notre copie de la clé",
       "dropTitle": "Après cela, nous ne pourrons plus agir pour vous.",
       "dropBody": "Votre clé, votre npub et vos transactions restent identiques. Ce qui prend fin, c'est notre capacité : nous ne pourrons plus signer ni ouvrir vos coffres — il n'y aura plus rien ici pour le faire. Ensuite, c'est votre fichier Identity Vault ou une extension Nostr qui s'en charge.",

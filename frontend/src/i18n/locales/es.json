@@ -467,6 +467,7 @@
       "npubLabel": "Clave pública",
       "nsecLabel": "Clave privada",
       "startCta": "Usar otra clave",
+      "swapCheckbox": "Entiendo que todo lo firmado hasta ahora seguirá firmado con una clave que esta cuenta ya no tendrá",
       "dropCta": "Eliminar nuestra copia de la clave",
       "dropTitle": "Después de esto no podremos actuar por ti.",
       "dropBody": "Tu clave, tu npub y tus operaciones quedan igual. Lo que termina es nuestra capacidad: ya no podremos firmar ni abrir tus cajas fuertes, porque aquí no quedará nada con qué hacerlo. A partir de ahí lo hace tu archivo Identity Vault o una extensión Nostr.",

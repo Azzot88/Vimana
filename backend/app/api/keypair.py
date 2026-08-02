@@ -139,8 +139,8 @@ async def keypair_status(current_user: User = Depends(get_current_user)):
 async def identity_challenge(current_user: User = Depends(get_current_user)):
     """Hand out a one-time nonce to sign. Requesting a new one invalidates the
     previous — a reloaded page must not leave a signable stale nonce around."""
-    if current_user.identity_established:
-        raise HTTPException(status_code=409, detail="Identity already established")
+    # T3.23 pt.2 — no longer refused for an established identity: replacing one
+    # is allowed now, and a nonce is useless without the signature anyway.
     try:
         nonce = await issue_challenge(_CHALLENGE_SCOPE, str(current_user.id))
     except ChallengeUnavailable:
@@ -165,10 +165,31 @@ async def identity_establish(
     — and deliberately so: there is one code path, and it checks the only thing
     that matters, that the caller controls the key.
     """
-    if current_user.identity_established:
-        raise HTTPException(status_code=409, detail="Identity already established")
     if current_user.key_lost_at is not None:
         raise HTTPException(status_code=403, detail="Account is retired (key lost)")
+    # T3.23 pt.2 (owner's decision 2026-08-01) — an account that already has an
+    # identity may replace it. What that costs is stated on the screen before
+    # this call: the previous key stops being this account's, and everything it
+    # signed stays signed by a key the account no longer has.
+    #
+    # The one hard limit is not policy but arithmetic: the vaults are encrypted
+    # to the *current* key, and re-encrypting them needs it. On rung 3 we do not
+    # have it, so the honest answer is "hand the copy back first" — which
+    # `restore-platform-copy` exists for — rather than a half-finished switch
+    # that strands the deals.
+    if current_user.nsec_encrypted is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Restore our copy of your current key first — changing identity "
+                "re-encrypts your deal vaults, and that needs the key they are "
+                "encrypted with"
+            ),
+        )
+    if current_user.nostr_pubkey == body.npub_hex:
+        raise HTTPException(
+            status_code=409, detail="That is already this account's key"
+        )
 
     # Refuse before touching anything if the transition would strand data.
     blockers = await establish_blockers(db, current_user)
@@ -287,6 +308,10 @@ async def identity_establish(
     current_user.nsec_encrypted = None
     current_user.nsec_nonce = None
     current_user.key_self_custody = True
+    # T3.23 pt.2 — the file the user holds belongs to the *previous* key. Leaving
+    # this stamped would have the profile claim they have a copy of the new one,
+    # which is the kind of quiet lie the whole ladder exists to avoid.
+    current_user.identity_file_released_at = None
     await db.commit()
     await db.refresh(current_user)
 

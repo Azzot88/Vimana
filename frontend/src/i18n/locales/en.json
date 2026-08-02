@@ -520,6 +520,7 @@
       "npubLabel": "Public key",
       "nsecLabel": "Private key",
       "startCta": "Use a different key instead",
+      "swapCheckbox": "I understand that everything signed so far stays signed by a key this account will no longer have",
       "warnTitle": "This replaces your identity.",
       "warnBody": "A different key becomes this account's identity: your deal vaults are re-encrypted to it and the current key is destroyed. Your deals, history and activity level stay. To own your existing key, download the Identity Vault above and then remove our copy — that keeps the identity you already have.",
       "dropCta": "Remove our copy of the key",

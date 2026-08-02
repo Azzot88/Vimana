@@ -59,6 +59,8 @@ export default function KeypairSection() {
   /** T3.22 — dropping our copy of the key: the one irreversible step. */
   /** T3.24 pt.1 — sealing a key the user already holds. Nothing here touches
    *  the network: the key is pasted, sealed and downloaded in this tab. */
+  /** T3.23 pt.2 — the tick in front of replacing an identity that already exists. */
+  const [swapUnderstood, setSwapUnderstood] = useState(false)
   const [sealOpen, setSealOpen] = useState(false)
   const [sealKey, setSealKey] = useState('')
   const [dropOpen, setDropOpen] = useState(false)
@@ -553,7 +555,7 @@ export default function KeypairSection() {
         </button>
       )}
 
-      {!established && step === 'choose' && (
+      {step === 'choose' && (
         <div className="space-y-3">
           <div className="bg-amber/10 border border-amber/40 rounded-lg px-3 py-2 space-y-1">
             <p className="text-sm font-body text-navy font-medium">
@@ -562,19 +564,36 @@ export default function KeypairSection() {
             <p className="text-sm font-body text-navy/70">
               {t('profile.identity.warnBody')}
             </p>
+            {/* T3.23 pt.2 — for an account that already has an identity this is
+                not a first step but a replacement: everything signed before
+                stays signed by a key the account no longer has. That deserves
+                the same deliberate tick as deleting our copy. */}
+            {established && (
+              <label className="flex items-start gap-2 text-sm font-body text-navy pt-1">
+                <input
+                  type="checkbox"
+                  checked={swapUnderstood}
+                  onChange={(e) => setSwapUnderstood(e.target.checked)}
+                  data-testid="identity-swap-understood"
+                  className="mt-1"
+                />
+                <span>{t('profile.identity.swapCheckbox')}</span>
+              </label>
+            )}
           </div>
           <button
             type="button"
             data-testid="identity-generate"
             onClick={handleGenerate}
-            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium"
+            disabled={established && !swapUnderstood}
+            className="w-full bg-navy text-ivory rounded-lg py-2.5 text-sm font-body font-medium disabled:opacity-40"
           >
             {t('profile.identity.generateCta')}
           </button>
           <button
             type="button"
             onClick={handleUseNip07}
-            disabled={!nip07 || busy}
+            disabled={!nip07 || busy || (established && !swapUnderstood)}
             className="w-full border border-navy/20 rounded-lg py-2.5 text-sm font-body text-navy disabled:opacity-40"
           >
             {nip07

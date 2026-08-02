@@ -922,3 +922,64 @@ async def _release_and_read_key(client, headers) -> dict:
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
+
+
+# ── T3.23 pt.2 — replacing an identity ───────────────────────────────────────
+
+
+async def test_identity_can_be_replaced_while_we_still_hold_the_current_key(
+    client, session_maker
+):
+    """Owner's decision 2026-08-01. The account keeps its history; what changes
+    is which key speaks for it from now on."""
+    _, headers = await _account(client, "swap-ok")
+    first = await establish_identity(client, headers)
+
+    # Back to rung 2 so the vaults can be re-encrypted — that is the arithmetic
+    # limit, not a policy one.
+    grant = await _token_by_password(client, headers, StepUpScope.ADD_AUTH_METHOD)
+    restored = await client.post(
+        "/api/me/identity/restore-platform-copy",
+        headers=headers,
+        json={"step_up_token": grant, "nsec_hex": first["nsec_hex"]},
+    )
+    assert restored.status_code == 200, restored.text
+
+    second = await establish_identity(client, headers)
+    assert second["npub_hex"] != first["npub_hex"]
+
+    status = await client.get("/api/me/keypair/status", headers=headers)
+    assert status.json()["npub"] == second["npub_hex"]
+    # The downloaded file belongs to the old key; claiming otherwise would be
+    # the profile lying about where a copy exists.
+    assert status.json()["key_copies"] == "user_only"
+
+
+async def test_identity_cannot_be_replaced_when_only_the_user_holds_the_key(client):
+    """Rung 3 answers with what to do, not just with a refusal: the vaults are
+    encrypted to the current key and we do not have it."""
+    _, headers = await _account(client, "swap-rung3")
+    await establish_identity(client, headers)
+
+    ch = await client.post("/api/me/identity/challenge", headers=headers)
+    assert ch.status_code == 200, "a nonce is useless without a signature — not gated"
+
+    from app.core.identity_proof import proof_event_id
+    from app.core.keypair import generate_keypair, sign_event_id
+    from app.core.identity_proof import PURPOSE_ESTABLISH
+
+    nsec, npub = generate_keypair()
+    created_at = int(time.time())
+    event_id = proof_event_id(npub, PURPOSE_ESTABLISH, ch.json()["challenge"], created_at)
+    resp = await client.post(
+        "/api/me/identity/establish",
+        headers=headers,
+        json={
+            "npub_hex": npub,
+            "challenge": ch.json()["challenge"],
+            "created_at": created_at,
+            "sig": sign_event_id(event_id, nsec),
+        },
+    )
+    assert resp.status_code == 409
+    assert "Restore our copy" in resp.json()["detail"]
