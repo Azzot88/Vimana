@@ -5,13 +5,13 @@
  *   session_key <- random(32)
  *   ciphertext  <- AES-256-GCM(session_key, plaintext)
  *   [A, B, C]   <- shamir.split(session_key, 3, 2)
- *   wrapped_shares.sender   = NIP-04(A, writer_priv → sender_pub)
- *   wrapped_shares.carrier  = NIP-04(B, writer_priv → carrier_pub)
- *   wrapped_shares.arbiter  = NIP-04(C, writer_priv → arbiter_pub)
- *   read_packages.sender    = NIP-04(session_key, writer_priv → sender_pub)
- *   read_packages.carrier   = NIP-04(session_key, writer_priv → carrier_pub)
+ *   wrapped_shares.sender   = NIP-44(A, writer_priv → sender_pub)
+ *   wrapped_shares.carrier  = NIP-44(B, writer_priv → carrier_pub)
+ *   wrapped_shares.arbiter  = NIP-44(C, writer_priv → arbiter_pub)
+ *   read_packages.sender    = NIP-44(session_key, writer_priv → sender_pub)
+ *   read_packages.carrier   = NIP-44(session_key, writer_priv → carrier_pub)
  *
- * Encryption/decryption uses `window.nostr.nip04.*` (self-custody only). We
+ * Encryption/decryption uses `window.nostr.nip44.*` (self-custody only). We
  * intentionally do NOT expose a custodial fallback — the whole point of T2.3
  * is that the server never touches the session key.
  */
@@ -58,20 +58,37 @@ function requireNip07(): NonNullable<Window['nostr']> {
   return window.nostr
 }
 
-/** Encrypt session-key material as NIP-04 ciphertext addressed to `recipientNpub`.
- * Uses the extension's own privkey — writer identity is implicit in NIP-07. */
-async function nip04Encrypt(payload: Uint8Array, recipientNpub: string): Promise<string> {
+/**
+ * T_KEYS.1 — envelopes are NIP-44 v2, not NIP-04.
+ *
+ * NIP-04 is deprecated in the Nostr spec for the reason that matters here:
+ * AES-CBC with a raw ECDH x-coordinate and **no MAC**. A stored envelope could
+ * be modified and the reader had no way to notice — the wrong primitive to be
+ * holding session keys in a vault built on "changes are detectable".
+ *
+ * Still delegated to the extension rather than implemented here, and that is
+ * the point: the user's private key never enters this page. What changed is
+ * which method we call, so the property is preserved and the format is fixed.
+ *
+ * Extensions that predate NIP-44 expose only `nip04`. They get a clear refusal
+ * instead of a silent fallback: quietly writing an unauthenticated envelope
+ * because the browser is old is exactly the failure this migration removes.
+ * The backend counterpart is `core/threshold.py`.
+ */
+async function nip44Encrypt(payload: Uint8Array, recipientNpub: string): Promise<string> {
   const nostr = requireNip07()
-  const nip04 = (nostr as unknown as { nip04?: { encrypt(pub: string, text: string): Promise<string> } }).nip04
-  if (!nip04) throw new Error('NIP-07 extension does not expose nip04.encrypt')
-  return nip04.encrypt(recipientNpub, bytesToHex(payload))
+  const nip44 = (nostr as unknown as { nip44?: { encrypt(pub: string, text: string): Promise<string> } }).nip44
+  if (!nip44) throw new Error('NIP-07 extension does not expose nip44.encrypt')
+  // Hex, not raw bytes: the extension API is string-to-string, and hex round-trips
+  // through it without an encoding to argue about.
+  return nip44.encrypt(recipientNpub, bytesToHex(payload))
 }
 
-async function nip04Decrypt(ct: string, senderNpub: string): Promise<Uint8Array> {
+async function nip44Decrypt(ct: string, senderNpub: string): Promise<Uint8Array> {
   const nostr = requireNip07()
-  const nip04 = (nostr as unknown as { nip04?: { decrypt(pub: string, ct: string): Promise<string> } }).nip04
-  if (!nip04) throw new Error('NIP-07 extension does not expose nip04.decrypt')
-  const hex = await nip04.decrypt(senderNpub, ct)
+  const nip44 = (nostr as unknown as { nip44?: { decrypt(pub: string, ct: string): Promise<string> } }).nip44
+  if (!nip44) throw new Error('NIP-07 extension does not expose nip44.decrypt')
+  const hex = await nip44.decrypt(senderNpub, ct)
   return hexToBytes(hex)
 }
 
@@ -97,11 +114,11 @@ export async function encryptE2E(
     wSender, wCarrier, wArbiter,
     rSender, rCarrier,
   ] = await Promise.all([
-    nip04Encrypt(shareA, senderNpub),
-    nip04Encrypt(shareB, carrierNpub),
-    nip04Encrypt(shareC, arbiterNpub),
-    nip04Encrypt(sessionKey, senderNpub),
-    nip04Encrypt(sessionKey, carrierNpub),
+    nip44Encrypt(shareA, senderNpub),
+    nip44Encrypt(shareB, carrierNpub),
+    nip44Encrypt(shareC, arbiterNpub),
+    nip44Encrypt(sessionKey, senderNpub),
+    nip44Encrypt(sessionKey, carrierNpub),
   ])
 
   return {
@@ -116,10 +133,10 @@ export async function encryptE2E(
  * Normal-read path: caller has their own read_package. Decrypts under
  * NIP-07 → session_key, then AES-256-GCM-decrypts the ciphertext.
  *
- * `writerNpub` is the message author (whose privkey encrypted the NIP-04
- * envelope) — passed as `sender_pub` to `window.nostr.nip04.decrypt`.
+ * `writerNpub` is the message author (whose privkey encrypted the
+ * envelope) — passed as `sender_pub` to `window.nostr.nip44.decrypt`.
  */
-/** A stored NIP-04 envelope. T3.12 pt.2c added the object shape so an envelope
+/** A stored envelope. T3.12 pt.2c added the object shape so an envelope
  *  can name its own sender: when a user takes their own key, the platform
  *  re-addresses their envelopes from the retiring service key, and the reader
  *  has to know whose public key completes the ECDH. Legacy bare strings were
@@ -141,7 +158,7 @@ export async function decryptE2E(
   ownReadPackage: string,
   writerNpub: string,
 ): Promise<string> {
-  const sessionKey = await nip04Decrypt(ownReadPackage, writerNpub)
+  const sessionKey = await nip44Decrypt(ownReadPackage, writerNpub)
   const ct = fromB64(ciphertextB64)
   const nonce = fromB64(nonceB64)
   const pt = gcm(sessionKey, nonce).decrypt(ct)
