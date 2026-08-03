@@ -24,12 +24,17 @@ rejected dirt never reaches storage.
    answer "is this really a JPEG"; this one answers "is this a *known bad*
    JPEG", which no amount of signature checking can.
 
-   **Off unless configured, fail-closed once it is.** With `CLAMAV_HOST` unset
-   the scan does not run and nothing in the product claims it did. With the
-   host set, an unreachable or erroring scanner **rejects** the upload rather
-   than waving it through: a vault whose files are shown to a counterparty must
-   not quietly stop scanning because a container restarted. The switch is the
-   presence of the setting, so the two states are impossible to confuse.
+   **Fail-open with a queue** (owner's decision 2026-08-02). An unreachable or
+   unconfigured scanner does not block the upload; it records `pending` on the
+   attachment, alerts the administrators and leaves the file for
+   `tasks.malware_rescan` to pick up. A found signature still refuses the
+   upload outright — that is the one case where we know something.
+
+   The trade being accepted, stated plainly: between upload and the deferred
+   scan the file is downloadable by the counterparty **unscanned**. The
+   alternative was breaking every upload whenever a container restarted, and
+   the owner chose availability. `pending` is therefore never a synonym for
+   safe, and no screen may render it as one.
 """
 from __future__ import annotations
 
@@ -38,6 +43,7 @@ import logging
 import os
 import socket
 import struct
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -129,8 +135,17 @@ def _clamav_target() -> tuple[str, int] | None:
     return host, port
 
 
-def scan_for_malware(data: bytes) -> None:
-    """Send the bytes to clamd and raise `FileValidationError` on anything but OK.
+#: The three things we can know about a file. `PENDING` covers both "no scanner
+#: configured" and "scanner did not answer" on purpose: from the reader's side
+#: they are the same situation — nobody has looked — and a separate word for
+#: one of them would invite treating it as safer than the other.
+SCAN_PENDING = "pending"
+SCAN_CLEAN = "clean"
+SCAN_INFECTED = "infected"
+
+
+def scan_for_malware(data: bytes) -> str:
+    """Send the bytes to clamd. Returns one of the three `SCAN_*` states.
 
     Raw `INSTREAM` over a socket rather than a client library: the only
     maintained-looking option on PyPI (`clamd`) last shipped in 2018, and the
@@ -138,13 +153,16 @@ def scan_for_malware(data: bytes) -> None:
     chunk. Taking an unmaintained dependency to avoid twenty lines is the wrong
     trade for a security control.
 
-    A timeout, refused connection or malformed reply is a **rejection**, not a
-    pass. The alternative — accepting uploads while the scanner is down —
-    turns "we scan uploads" into a statement that is true only when convenient.
+    Never raises for infrastructure problems — a timeout, a refused connection
+    or a malformed reply all return `SCAN_PENDING` and alert the
+    administrators. Refusing the upload instead was the earlier design and the
+    owner replaced it: an outage should cost a delayed check, not a broken
+    product. Only `SCAN_INFECTED` is a fact about the file, and only the caller
+    turns that into a refusal.
     """
     target = _clamav_target()
     if target is None:
-        return
+        return SCAN_PENDING
 
     host, port = target
     try:
@@ -163,23 +181,57 @@ def scan_for_malware(data: bytes) -> None:
                     break
                 reply += part
     except OSError as exc:
-        logger.error("clamav unreachable at %s:%s — rejecting upload: %s", host, port, exc)
-        raise FileValidationError("virus scan unavailable")
+        logger.error("clamav unreachable at %s:%s — queueing file: %s", host, port, exc)
+        alert_scanner_down(f"{host}:{port} — {type(exc).__name__}")
+        return SCAN_PENDING
 
     answer = reply.split(b"\0", 1)[0].decode("utf-8", "replace").strip()
     if answer.endswith("OK"):
-        return
+        return SCAN_CLEAN
     if "FOUND" in answer:
         # The signature name is logged, never returned: telling an uploader
         # which signature matched is a free oracle for tuning the next attempt.
-        logger.warning("clamav rejected an upload: %s", answer)
-        raise FileValidationError("file rejected by virus scan")
+        logger.warning("clamav found a signature: %s", answer)
+        return SCAN_INFECTED
     logger.error("clamav answered unexpectedly: %.200s", answer)
-    raise FileValidationError("virus scan unavailable")
+    alert_scanner_down(f"{host}:{port} — unexpected reply")
+    return SCAN_PENDING
 
 
-def validate_upload(data: bytes, declared_mime: str) -> None:
+#: Throttle for the administrator alert. Without it, a scanner that goes down
+#: during an active upload session produces one message per file — which is how
+#: an alert channel gets muted, and then the next real alert goes unread.
+_ALERT_INTERVAL_SECONDS = 3600
+_last_alert_at: float = 0.0
+
+
+def alert_scanner_down(detail: str) -> None:
+    """Tell the administrators the scanner is not answering, at most hourly.
+
+    Fire-and-forget through Celery: an upload must not fail because the alert
+    could not be delivered — that would reintroduce the failure mode this whole
+    redesign removed.
+    """
+    global _last_alert_at
+    now = time.monotonic()
+    if now - _last_alert_at < _ALERT_INTERVAL_SECONDS:
+        return
+    _last_alert_at = now
+    try:
+        from app.tasks.notifications import notify_admins_scanner_down
+
+        notify_admins_scanner_down.delay(detail)
+    except Exception:
+        logger.warning("could not dispatch the scanner-down alert", exc_info=True)
+
+
+def validate_upload(data: bytes, declared_mime: str) -> str:
     """Raise `FileValidationError` unless `data` really is `declared_mime`.
+
+    Returns the scan state (`SCAN_CLEAN` or `SCAN_PENDING`) so the caller can
+    record it on the row it is about to write. Callers that have nowhere to put
+    it — the avatar path has no attachment — may ignore the value; what they
+    must not do is treat "no exception" as "scanned".
 
     Callers map the error to HTTP 422 and log `reason` — metadata only, the
     file bytes are never logged.
@@ -190,7 +242,9 @@ def validate_upload(data: bytes, declared_mime: str) -> None:
     # Before the structural checks: a known-bad file should be refused whether
     # or not it is also a well-formed JPEG, and the cheapest way to guarantee
     # that ordering is to put the scan first.
-    scan_for_malware(data)
+    status = scan_for_malware(data)
+    if status == SCAN_INFECTED:
+        raise FileValidationError("file rejected by virus scan")
 
     if not _signature_matches(data, declared_mime):
         raise FileValidationError(
@@ -216,3 +270,5 @@ def validate_upload(data: bytes, declared_mime: str) -> None:
             raise FileValidationError(
                 f"decoded format '{fmt}' does not match declared {declared_mime}"
             )
+
+    return status

@@ -218,34 +218,37 @@ async def test_verification_self_upload_rejects_dirt(client, sender_headers):
 # ── T3.8 follow-up — malware scan ────────────────────────────────────────────
 
 
-def test_scan_is_off_until_a_host_is_configured(monkeypatch):
-    """No `CLAMAV_HOST` means no scan and no claim of one.
+def test_no_scanner_means_pending_not_clean(monkeypatch):
+    """Unconfigured is `pending`, never `clean`.
 
-    The alternative — a `CLAMAV_ENABLED` flag next to the host — allows a
-    configuration that says "scanning on" while pointing at nothing, which is
-    the worst of the three possible states.
+    This is the whole safety property of the fail-open design: a file nobody
+    looked at must not be recorded as one that passed. `pending` is what the
+    rescan task looks for, so the honest value is also the one that gets the
+    file checked later.
     """
-    from app.core.file_validation import scan_for_malware
+    from app.core.file_validation import SCAN_PENDING, scan_for_malware
 
     monkeypatch.delenv("CLAMAV_HOST", raising=False)
-    scan_for_malware(b"anything at all")  # must not raise, must not connect
+    assert scan_for_malware(b"anything at all") == SCAN_PENDING
 
 
-def test_unreachable_scanner_rejects_rather_than_passes(monkeypatch):
-    """Fail-closed, deliberately.
+def test_unreachable_scanner_queues_rather_than_blocks(monkeypatch):
+    """Fail-open, by owner's decision 2026-08-02.
 
-    A vault whose files are shown to the counterparty must not quietly stop
-    scanning because a container restarted. "We scan uploads" has to stay true
-    on the bad days too, and the only way to keep it true is to refuse.
+    An outage costs a delayed check, not a broken product. The earlier design
+    refused the upload; that kept "we scanned it" true at the price of breaking
+    every upload whenever a container restarted.
+
+    The cost being accepted, and the reason `pending` exists: until the deferred
+    scan runs, the file is downloadable by the counterparty unscanned.
     """
-    from app.core.file_validation import FileValidationError, scan_for_malware
+    from app.core.file_validation import SCAN_PENDING, scan_for_malware
 
     monkeypatch.setenv("CLAMAV_HOST", "127.0.0.1")
     # Port 1 is reserved and nothing listens there; connection is refused fast.
     monkeypatch.setenv("CLAMAV_PORT", "1")
 
-    with pytest.raises(FileValidationError):
-        scan_for_malware(b"anything at all")
+    assert scan_for_malware(b"anything at all") == SCAN_PENDING
 
 
 def test_a_found_signature_is_refused_without_naming_it(monkeypatch):
@@ -276,8 +279,11 @@ def test_a_found_signature_is_refused_without_naming_it(monkeypatch):
 
     monkeypatch.setattr(fv.socket, "create_connection", lambda *a, **k: _Sock())
 
+    # The scan reports the fact; `validate_upload` turns it into a refusal.
+    assert fv.scan_for_malware(b"x" * 32) == fv.SCAN_INFECTED
+
     with pytest.raises(fv.FileValidationError) as exc:
-        fv.scan_for_malware(b"x" * 32)
+        fv.validate_upload(b"%PDF-" + b"x" * 32, "application/pdf")
     assert "Eicar" not in str(exc.value)
 
 
@@ -303,7 +309,7 @@ def test_a_clean_reply_passes(monkeypatch):
             return b"stream: OK\0"
 
     monkeypatch.setattr(fv.socket, "create_connection", lambda *a, **k: _Sock())
-    fv.scan_for_malware(b"x" * 32)
+    assert fv.scan_for_malware(b"x" * 32) == fv.SCAN_CLEAN
 
 
 def test_validate_upload_scans_before_it_inspects(monkeypatch):
@@ -312,11 +318,16 @@ def test_validate_upload_scans_before_it_inspects(monkeypatch):
     import app.core.file_validation as fv
 
     called: list[str] = []
-    monkeypatch.setattr(
-        fv, "scan_for_malware", lambda data: called.append("scanned")
-    )
+
+    def _scan(_data):
+        called.append("scanned")
+        return fv.SCAN_CLEAN
+
+    monkeypatch.setattr(fv, "scan_for_malware", _scan)
     monkeypatch.setattr(
         fv, "_signature_matches", lambda data, mime: called.append("inspected") or True
     )
-    fv.validate_upload(b"x" * 32, "application/pdf")
+    # The returned state is what the caller records on the attachment row, so
+    # it is part of the contract, not an implementation detail.
+    assert fv.validate_upload(b"x" * 32, "application/pdf") == fv.SCAN_CLEAN
     assert called[0] == "scanned"

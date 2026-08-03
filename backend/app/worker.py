@@ -21,6 +21,7 @@ _TASK_MODULES = [
     "app.tasks.nostr_publish",
     "app.tasks.nostr_whitelist",
     "app.tasks.chain_anchor",
+    "app.tasks.malware_rescan",
 ]
 
 celery_app = Celery(
@@ -49,6 +50,11 @@ celery_app.conf.beat_schedule = {
         "schedule": 86400.0,
     },
     # T3.6 — head-only, so one tick costs one event per deal that moved.
+    # T3.8 — drain the queue of files stored while the scanner was unreachable.
+    "rescan-pending-attachments-hourly": {
+        "task": "app.tasks.malware_rescan.rescan_pending_attachments",
+        "schedule": 3600.0,
+    },
     "anchor-deal-chains-hourly": {
         "task": "app.tasks.chain_anchor.anchor_deal_chains",
         "schedule": 3600.0,
@@ -60,4 +66,5 @@ celery_app.conf.task_routes = {
     "app.tasks.nostr_whitelist.*": {"queue": "notifications"},
     "app.tasks.cleanup.*": {"queue": "notifications"},
     "app.tasks.chain_anchor.*": {"queue": "notifications"},
+    "app.tasks.malware_rescan.*": {"queue": "notifications"},
 }

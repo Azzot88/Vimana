@@ -2,6 +2,7 @@ import hashlib
 import io
 import logging
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
@@ -365,7 +366,9 @@ async def upload_attachment(
     # signature whitelist + full image decode. Metadata only in the log.
     # Decode runs in the threadpool (T_PERF.1) — see `api/avatar.py` for why.
     try:
-        await run_in_threadpool(validate_upload, buffer.getvalue(), content_type)
+        scan_status = await run_in_threadpool(
+            validate_upload, buffer.getvalue(), content_type
+        )
     except FileValidationError as exc:
         logger.warning(
             "upload rejected: deal=%s user=%s kind=%s declared=%s size=%d reason=%s",
@@ -389,6 +392,11 @@ async def upload_attachment(
         r2_key=r2_key,
         file_hash=file_hash,
         kind=attachment_kind,
+        # T3.8 — what we know about these bytes, recorded with them. `pending`
+        # means the scanner was unreachable or absent and the file is queued;
+        # it never means "safe" (owner's decision 2026-08-02).
+        scan_status=scan_status,
+        scanned_at=datetime.now(timezone.utc) if scan_status != "pending" else None,
     )
     db.add(attachment)
     # T3.7 — chain the file in the same transaction as its row. `file_hash`

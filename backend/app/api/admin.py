@@ -551,3 +551,44 @@ async def delete_user(
     await db.execute(delete(User).where(User.id.in_(ids)))
     await db.commit()
     return
+
+
+class ScanQueueOut(BaseModel):
+    """T3.8 — how many stored files nobody has looked at yet.
+
+    Exists because the Telegram alert is a moment and this is a state. An alert
+    that arrives while nobody is at the keyboard is gone; a counter is still
+    here tomorrow, and the number climbing is the signal that matters more than
+    any single outage.
+
+    `scanner_configured` is included so the page can tell two very different
+    situations apart: a queue that is draining, and a queue that will never
+    drain because no scanner exists.
+    """
+
+    pending: int
+    infected: int
+    clean: int
+    scanner_configured: bool
+
+
+@router.get("/admin/scan-queue", response_model=ScanQueueOut)
+async def scan_queue(
+    _: User = Depends(require_perm(Permission.USERS_MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.core.file_validation import _clamav_target
+    from app.models.deal import Attachment
+
+    rows = (
+        await db.execute(
+            select(Attachment.scan_status, func.count()).group_by(Attachment.scan_status)
+        )
+    ).all()
+    counts = {status: int(n) for status, n in rows}
+    return ScanQueueOut(
+        pending=counts.get("pending", 0),
+        infected=counts.get("infected", 0),
+        clean=counts.get("clean", 0),
+        scanner_configured=_clamav_target() is not None,
+    )

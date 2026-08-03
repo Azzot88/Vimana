@@ -226,3 +226,64 @@ def send_archive_window_opened(user_id: str, ends_at_iso: str) -> None:
             "Если вы потеряете и доступ к аккаунту, выбирать будет некому и "
             "сработает то же самое: страница останется.",
         )
+
+
+@celery_app.task(name="app.tasks.notifications.notify_admins_scanner_down")
+def notify_admins_scanner_down(detail: str) -> None:
+    """T3.8 — the malware scanner is not answering; files are being queued.
+
+    Goes to the administrators, not to the uploader: the person sending a photo
+    has no action available and no reason to be told that our infrastructure is
+    unwell. The throttle lives at the call site (`file_validation`), because
+    that is where the storm would originate.
+    """
+    import os
+
+    from app.core.telegram import send_telegram
+
+    chat_ids = [c.strip() for c in os.getenv("ADMIN_TELEGRAM_CHAT_IDS", "").split(",") if c.strip()]
+    if not chat_ids:
+        logger.warning("clamav down (%s) and no ADMIN_TELEGRAM_CHAT_IDS to tell", detail)
+        return
+    for chat_id in chat_ids:
+        send_telegram(
+            chat_id,
+            "⚠️ Vimana · сканер загрузок не отвечает\n\n"
+            f"{detail}\n\n"
+            "Загрузки продолжают приниматься и складываются в очередь на "
+            "проверку. Файлы в очереди доступны участникам непроверенными — "
+            "это принятый размен, но чем дольше очередь, тем он дороже.",
+        )
+
+
+@celery_app.task(name="app.tasks.notifications.notify_admins_infected_file")
+def notify_admins_infected_file(attachment_id: str, deal_id: str, signature: str) -> None:
+    """T3.8 — a deferred scan found something in a file that is already stored.
+
+    Owner's decision 2026-08-02: mark and tell a human, do not block the
+    download automatically. So this message is the whole mechanism — if it is
+    not read, nothing happens — and it says what to look at rather than what we
+    did about it.
+    """
+    import os
+
+    from app.core.telegram import send_telegram
+
+    chat_ids = [c.strip() for c in os.getenv("ADMIN_TELEGRAM_CHAT_IDS", "").split(",") if c.strip()]
+    if not chat_ids:
+        logger.error(
+            "infected attachment %s in deal %s (%s) and no admin chat configured",
+            attachment_id, deal_id, signature,
+        )
+        return
+    for chat_id in chat_ids:
+        send_telegram(
+            chat_id,
+            "🦠 Vimana · отложенная проверка нашла заражённый файл\n\n"
+            f"Вложение: {attachment_id}\n"
+            f"Сделка: {deal_id}\n"
+            f"Сигнатура: {signature}\n\n"
+            "Скачивание **не** заблокировано автоматически — решение за вами. "
+            "Файл остаётся в хранилище: он часть цепи доказательств, и его "
+            "удаление сделало бы проверку сделки неотличимой от подмены.",
+        )

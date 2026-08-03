@@ -312,6 +312,17 @@ class Attachment(Base):
     file_hash: Mapped[str] = mapped_column(String(64))
     ipfs_cid: Mapped[str | None] = mapped_column(String(100), nullable=True)
     kind: Mapped[AttachmentKind] = mapped_column(SAEnum(AttachmentKind))
+    # T3.8 — what we actually know about these bytes: `pending` | `clean` |
+    # `infected`. `pending` is not a synonym for safe; it means nobody has
+    # looked. Owner's decision 2026-08-02: an unreachable scanner queues the
+    # file rather than refusing the upload, so this column is the difference
+    # between "we scan uploads" and "we scanned this upload".
+    scan_status: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="pending", server_default="pending"
+    )
+    scanned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

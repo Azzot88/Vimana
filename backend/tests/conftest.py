@@ -479,6 +479,11 @@ async def _ensure_identity_columns(engine) -> None:
             # words in their mouth on every existing row.
             ("users", "archive_notice_seen_at", "TIMESTAMPTZ"),
             ("users", "archive_choice", "VARCHAR(8)"),
+            # T3.8 — mirrors migration 0040. `pending` for existing rows is the
+            # honest default: nothing stored before this ever went past a
+            # scanner, and the rescan task is meant to find exactly those.
+            ("attachments", "scan_status", "VARCHAR(10) NOT NULL DEFAULT 'pending'"),
+            ("attachments", "scanned_at", "TIMESTAMPTZ"),
             ("trips", "nostr_published_by_pubkey", "VARCHAR(64)"),
             # T3.12 pt.2b — mirrors migration 0030.
             ("identity_containers", "key_envelope", "TEXT"),

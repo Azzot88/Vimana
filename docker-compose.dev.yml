@@ -203,11 +203,11 @@ services:
   #   docker compose -f docker-compose.dev.yml --profile clamav up -d clamav
   #
   # and the backend only talks to it once `CLAMAV_HOST=clamav` is in `.env`.
-  # Two switches on purpose, and they point the same way: the profile decides
-  # whether the scanner exists, the setting decides whether we rely on it.
-  # Enabling the setting without the container makes every upload fail — which
-  # is the intended failure direction (see `core/file_validation.py`), and the
-  # reason both steps are written down together everywhere they appear.
+  # The profile decides whether the scanner exists; `CLAMAV_HOST` decides where
+  # to find it. Neither can break an upload: a missing or unreachable scanner
+  # queues the file instead (owner's decision 2026-08-02), so the worst outcome
+  # of a misconfiguration is a growing queue and an hourly alert, not a product
+  # that stops accepting files.
   clamav:
     # Pinned for the same reason as the relay: a floating tag would let a
     # rebuild swap a security control under us.
