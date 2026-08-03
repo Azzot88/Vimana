@@ -213,3 +213,110 @@ async def test_verification_self_upload_rejects_dirt(client, sender_headers):
     )
     assert resp.status_code == 422
     assert "validation" in resp.json()["detail"]
+
+
+# ── T3.8 follow-up — malware scan ────────────────────────────────────────────
+
+
+def test_scan_is_off_until_a_host_is_configured(monkeypatch):
+    """No `CLAMAV_HOST` means no scan and no claim of one.
+
+    The alternative — a `CLAMAV_ENABLED` flag next to the host — allows a
+    configuration that says "scanning on" while pointing at nothing, which is
+    the worst of the three possible states.
+    """
+    from app.core.file_validation import scan_for_malware
+
+    monkeypatch.delenv("CLAMAV_HOST", raising=False)
+    scan_for_malware(b"anything at all")  # must not raise, must not connect
+
+
+def test_unreachable_scanner_rejects_rather_than_passes(monkeypatch):
+    """Fail-closed, deliberately.
+
+    A vault whose files are shown to the counterparty must not quietly stop
+    scanning because a container restarted. "We scan uploads" has to stay true
+    on the bad days too, and the only way to keep it true is to refuse.
+    """
+    from app.core.file_validation import FileValidationError, scan_for_malware
+
+    monkeypatch.setenv("CLAMAV_HOST", "127.0.0.1")
+    # Port 1 is reserved and nothing listens there; connection is refused fast.
+    monkeypatch.setenv("CLAMAV_PORT", "1")
+
+    with pytest.raises(FileValidationError):
+        scan_for_malware(b"anything at all")
+
+
+def test_a_found_signature_is_refused_without_naming_it(monkeypatch):
+    """The signature name goes to the log, never to the uploader.
+
+    Returning it would hand whoever is probing a free oracle for tuning the
+    next attempt.
+    """
+    import app.core.file_validation as fv
+
+    monkeypatch.setenv("CLAMAV_HOST", "clamav")
+
+    class _Sock:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def settimeout(self, _):
+            pass
+
+        def sendall(self, _):
+            pass
+
+        def recv(self, _):
+            return b"stream: Eicar-Test-Signature FOUND\0"
+
+    monkeypatch.setattr(fv.socket, "create_connection", lambda *a, **k: _Sock())
+
+    with pytest.raises(fv.FileValidationError) as exc:
+        fv.scan_for_malware(b"x" * 32)
+    assert "Eicar" not in str(exc.value)
+
+
+def test_a_clean_reply_passes(monkeypatch):
+    import app.core.file_validation as fv
+
+    monkeypatch.setenv("CLAMAV_HOST", "clamav")
+
+    class _Sock:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def settimeout(self, _):
+            pass
+
+        def sendall(self, _):
+            pass
+
+        def recv(self, _):
+            return b"stream: OK\0"
+
+    monkeypatch.setattr(fv.socket, "create_connection", lambda *a, **k: _Sock())
+    fv.scan_for_malware(b"x" * 32)
+
+
+def test_validate_upload_scans_before_it_inspects(monkeypatch):
+    """Order matters: a known-bad file is refused whether or not it also
+    happens to be a well-formed JPEG."""
+    import app.core.file_validation as fv
+
+    called: list[str] = []
+    monkeypatch.setattr(
+        fv, "scan_for_malware", lambda data: called.append("scanned")
+    )
+    monkeypatch.setattr(
+        fv, "_signature_matches", lambda data, mime: called.append("inspected") or True
+    )
+    fv.validate_upload(b"x" * 32, "application/pdf")
+    assert called[0] == "scanned"

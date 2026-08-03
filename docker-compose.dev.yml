@@ -193,6 +193,45 @@ services:
       - nostr_data:/app/strfry-db
       - nostr_whitelist:/data
 
+  # T3.8 follow-up — malware scanning for uploads.
+  #
+  # Behind a profile because it is genuinely expensive: clamd loads the full
+  # signature database into memory and wants ~1.5–2 GB of RAM to itself. On an
+  # instance sized for the rest of this stack that is not a rounding error, so
+  # it starts only when asked for:
+  #
+  #   docker compose -f docker-compose.dev.yml --profile clamav up -d clamav
+  #
+  # and the backend only talks to it once `CLAMAV_HOST=clamav` is in `.env`.
+  # Two switches on purpose, and they point the same way: the profile decides
+  # whether the scanner exists, the setting decides whether we rely on it.
+  # Enabling the setting without the container makes every upload fail — which
+  # is the intended failure direction (see `core/file_validation.py`), and the
+  # reason both steps are written down together everywhere they appear.
+  clamav:
+    # Pinned for the same reason as the relay: a floating tag would let a
+    # rebuild swap a security control under us.
+    image: clamav/clamav:1.4
+    profiles: ["clamav"]
+    restart: unless-stopped
+    logging: *default-logging
+    # Internal only. Nothing outside the compose network has any business
+    # talking to clamd (T_SEC.3).
+    expose:
+      - "3310"
+    volumes:
+      # Signatures survive restarts. Without this every start re-downloads
+      # roughly a gigabyte from the mirrors, which is slow and rude.
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      # Generous: the first start downloads the database before clamd answers
+      # anything, and marking it unhealthy in the meantime helps nobody.
+      start_period: 300s
+      retries: 5
+
   # T_AGENT.1 pt.1 — optional MCP server exposing Vimana tools to AI agents.
   # Not started by default. Enable:
   #   docker compose --profile mcp up -d mcp-server
@@ -215,3 +254,6 @@ volumes:
   # T3.5 pt.2 — shared writePolicy whitelist. Backend Celery task refreshes
   # /data/allowed_pubkeys.txt hourly from the trust graph.
   nostr_whitelist:
+  # T3.8 — clamd signature database. Persisted so a restart does not re-download
+  # ~1 GB from the mirrors.
+  clamav_db:

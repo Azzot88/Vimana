@@ -17,13 +17,27 @@ validates the *bytes*:
    scope; PDFs are only served back for download, never rendered server-side.
 
 Validation runs on the fully-buffered upload *before* the R2 write, so
-rejected dirt never reaches storage. ClamAV is a deliberate follow-up, not
-part of this layer.
+rejected dirt never reaches storage.
+
+4. **Malware scan** (T3.8 follow-up, done 2026-08-02) — the bytes go to clamd
+   over `INSTREAM` before anything else touches them. The three layers above
+   answer "is this really a JPEG"; this one answers "is this a *known bad*
+   JPEG", which no amount of signature checking can.
+
+   **Off unless configured, fail-closed once it is.** With `CLAMAV_HOST` unset
+   the scan does not run and nothing in the product claims it did. With the
+   host set, an unreachable or erroring scanner **rejects** the upload rather
+   than waving it through: a vault whose files are shown to a counterparty must
+   not quietly stop scanning because a container restarted. The switch is the
+   presence of the setting, so the two states are impossible to confuse.
 """
 from __future__ import annotations
 
 import io
 import logging
+import os
+import socket
+import struct
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +107,77 @@ def validate_document(data: bytes) -> str:
     return detected
 
 
+#: clamd's own cap is 25 MB by default (`StreamMaxLength`); ours is smaller
+#: still, so a chunk size well under it keeps the protocol simple.
+_CLAMD_CHUNK = 64 * 1024
+
+
+def _clamav_target() -> tuple[str, int] | None:
+    """`(host, port)` when a scanner is configured, else None.
+
+    Presence of `CLAMAV_HOST` is the on/off switch. There is deliberately no
+    `CLAMAV_ENABLED` flag: two settings that can disagree would let the product
+    be configured to claim scanning while pointing at nothing.
+    """
+    host = os.getenv("CLAMAV_HOST", "").strip()
+    if not host:
+        return None
+    try:
+        port = int(os.getenv("CLAMAV_PORT", "3310").strip() or 3310)
+    except ValueError:
+        port = 3310
+    return host, port
+
+
+def scan_for_malware(data: bytes) -> None:
+    """Send the bytes to clamd and raise `FileValidationError` on anything but OK.
+
+    Raw `INSTREAM` over a socket rather than a client library: the only
+    maintained-looking option on PyPI (`clamd`) last shipped in 2018, and the
+    protocol here is a length-prefixed stream terminated by a zero-length
+    chunk. Taking an unmaintained dependency to avoid twenty lines is the wrong
+    trade for a security control.
+
+    A timeout, refused connection or malformed reply is a **rejection**, not a
+    pass. The alternative — accepting uploads while the scanner is down —
+    turns "we scan uploads" into a statement that is true only when convenient.
+    """
+    target = _clamav_target()
+    if target is None:
+        return
+
+    host, port = target
+    try:
+        with socket.create_connection((host, port), timeout=10.0) as sock:
+            sock.settimeout(10.0)
+            sock.sendall(b"zINSTREAM\0")
+            for offset in range(0, len(data), _CLAMD_CHUNK):
+                chunk = data[offset : offset + _CLAMD_CHUNK]
+                sock.sendall(struct.pack("!L", len(chunk)) + chunk)
+            sock.sendall(struct.pack("!L", 0))
+
+            reply = b""
+            while b"\0" not in reply and len(reply) < 4096:
+                part = sock.recv(4096)
+                if not part:
+                    break
+                reply += part
+    except OSError as exc:
+        logger.error("clamav unreachable at %s:%s — rejecting upload: %s", host, port, exc)
+        raise FileValidationError("virus scan unavailable")
+
+    answer = reply.split(b"\0", 1)[0].decode("utf-8", "replace").strip()
+    if answer.endswith("OK"):
+        return
+    if "FOUND" in answer:
+        # The signature name is logged, never returned: telling an uploader
+        # which signature matched is a free oracle for tuning the next attempt.
+        logger.warning("clamav rejected an upload: %s", answer)
+        raise FileValidationError("file rejected by virus scan")
+    logger.error("clamav answered unexpectedly: %.200s", answer)
+    raise FileValidationError("virus scan unavailable")
+
+
 def validate_upload(data: bytes, declared_mime: str) -> None:
     """Raise `FileValidationError` unless `data` really is `declared_mime`.
 
@@ -101,6 +186,11 @@ def validate_upload(data: bytes, declared_mime: str) -> None:
     """
     if len(data) < 12:
         raise FileValidationError("file too small to be valid")
+
+    # Before the structural checks: a known-bad file should be refused whether
+    # or not it is also a well-formed JPEG, and the cheapest way to guarantee
+    # that ordering is to put the scan first.
+    scan_for_malware(data)
 
     if not _signature_matches(data, declared_mime):
         raise FileValidationError(
