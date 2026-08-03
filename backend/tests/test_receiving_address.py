@@ -115,14 +115,14 @@ async def test_share_address_in_dealvault_creates_system_message(
     client, sender_headers, carrier_headers, seed_deal
 ):
     # Set sender's address first
-    await client.patch(
-        "/api/auth/me",
+    # T_KEYS.1 (слой 4) — через текущий путь, а не старые колонки
+    # `User.receiving_*`: чтение из них снято, потому что на проде ветка была
+    # недостижима. Тест, продолжавший ими пользоваться, проверял снятую дорогу,
+    # а не сам обмен адресом.
+    await client.post(
+        "/api/me/addresses",
         headers=sender_headers,
-        json={
-            "receiving_country_iso": "AE",
-            "receiving_city": "Dubai",
-            "receiving_street": "Marina Walk",
-        },
+        json={"label": "Home", "country_iso": "AE", "city": "Dubai", "street": "Marina Walk"},
     )
     resp = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages/share-address",
@@ -177,16 +177,11 @@ async def test_share_address_in_inquiry_chat(
     inquiry_id = inq.json()["id"]
 
     # Set sender's address
-    await client.patch(
-        "/api/auth/me",
+    await client.post(
+        "/api/me/addresses",
         headers=sender_headers,
-        json={
-            "receiving_country_iso": "US",
-            "receiving_city": "New York",
-            "receiving_street": "5th Ave 1",
-        },
+        json={"label": "Home", "country_iso": "US", "city": "New York", "street": "5th Ave 1"},
     )
-
     resp = await client.post(
         f"/api/inquiries/{inquiry_id}/messages/share-address",
         headers=sender_headers,
