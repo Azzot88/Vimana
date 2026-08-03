@@ -41,13 +41,6 @@ export interface User {
   telegram_chat_id: string | null
   whatsapp_number: string | null
   created_at?: string
-  // T1.26 — private receiving address (only present on /me responses).
-  receiving_country_iso?: string | null
-  receiving_city?: string | null
-  receiving_city_geoname_id?: number | null
-  receiving_street?: string | null
-  receiving_postal_code?: string | null
-  receiving_note?: string | null
   // T_UX.4 B — presigned R2 URL, minted per /me response. null if not set.
   avatar_url?: string | null
   // T3.11 — only present on /me. False for an account with no email at all,
@@ -187,12 +180,6 @@ export interface UserUpdate {
   active_mode?: 'sender' | 'carrier'
   can_carry?: boolean
   can_send?: boolean
-  receiving_country_iso?: string | null
-  receiving_city?: string | null
-  receiving_city_geoname_id?: number | null
-  receiving_street?: string | null
-  receiving_postal_code?: string | null
-  receiving_note?: string | null
   whatsapp_number?: string
 }
 

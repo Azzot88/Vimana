@@ -811,15 +811,14 @@ async def _ensure_nostr_event_columns(engine) -> None:
 
 
 async def _ensure_receiving_address_columns(engine) -> None:
-    """T1.26 + T_UX.4 B schema fix: nullable columns on users. Idempotent."""
+    """T_UX.4 B schema fix: `avatar_key` on users. Idempotent.
+
+    The six `receiving_*` columns left this mirror with migration 0041: the
+    single-address fields were dropped after the read fallback proved
+    unreachable (T_KEYS.1). The long-lived test DB keeps whatever columns it
+    already has — harmless, since nothing reads them any more."""
     async with engine.begin() as conn:
         for col, ddl in (
-            ("receiving_country_iso", "VARCHAR(2)"),
-            ("receiving_city", "VARCHAR(150)"),
-            ("receiving_city_geoname_id", "INTEGER"),
-            ("receiving_street", "VARCHAR(255)"),
-            ("receiving_postal_code", "VARCHAR(20)"),
-            ("receiving_note", "VARCHAR(500)"),
             ("avatar_key", "VARCHAR(255)"),
         ):
             row = (

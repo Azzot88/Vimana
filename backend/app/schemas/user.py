@@ -105,15 +105,6 @@ class UserUpdate(BaseModel):
     active_mode: str | None = None
     can_carry: bool | None = None
     can_send: bool | None = None
-    # T1.26 receiving address (private, updated only via /me)
-    receiving_country_iso: str | None = None
-    receiving_city: str | None = None
-    # int32 bound: Postgres INTEGER column — out-of-range dies in asyncpg as
-    # an unhandled 500 (schemathesis finding, same as addresses.py).
-    receiving_city_geoname_id: int | None = Field(default=None, ge=1, le=2_147_483_647)
-    receiving_street: str | None = None
-    receiving_postal_code: str | None = None
-    receiving_note: str | None = None
 
     @field_validator("active_mode")
     @classmethod
@@ -122,20 +113,11 @@ class UserUpdate(BaseModel):
             raise ValueError("active_mode must be 'sender' or 'carrier'")
         return v
 
-    @field_validator("receiving_country_iso")
-    @classmethod
-    def country_iso_upper(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        v = v.strip().upper()
-        if len(v) != 2:
-            raise ValueError("receiving_country_iso must be ISO 3166-1 alpha-2 (2 chars)")
-        return v
 
 
 class UserOut(BaseModel):
     """Public user representation — DOES NOT include private fields.
-    `receiving_*` fields never appear here; use `MeOut` for the owner's view.
+    Private contacts and the owner-only flags live in `MeOut`.
     """
     id: uuid.UUID
     email: str | None
@@ -163,7 +145,9 @@ class UserOut(BaseModel):
 
 
 class MeOut(UserOut):
-    """Owner-only view — includes private receiving address."""
+    """Owner-only view. Receiving addresses moved to `receiving_addresses` and
+    its own endpoints (T_UX.4); the single-address `receiving_*` fields were
+    dropped in `T_KEYS.1` after the read fallback proved unreachable."""
     # T3.11 — drives the "confirm your email" banner and nothing else:
     # verification gates no endpoint. Derived from `User.email_verified_at`; an
     # account with no email reads False, and the banner skips it (nothing was
@@ -185,12 +169,6 @@ class MeOut(UserOut):
     # endpoint so the shell can answer "is anything different about this
     # session" without asking a second question on every page.
     key_lost: bool = False
-    receiving_country_iso: str | None = None
-    receiving_city: str | None = None
-    receiving_city_geoname_id: int | None = None
-    receiving_street: str | None = None
-    receiving_postal_code: str | None = None
-    receiving_note: str | None = None
     # T_UX.4 B — presigned R2 URL, minted per response. None if not set.
     avatar_url: str | None = None
 

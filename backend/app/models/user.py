@@ -115,14 +115,6 @@ class User(Base):
     verifications_received_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     dealt_with_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
-    # T1.26 — private receiving address. Never exposed in list-endpoints or via
-    # any UserOut except /me. Sharing into a chat is an explicit user action.
-    receiving_country_iso: Mapped[str | None] = mapped_column(String(2), nullable=True)
-    receiving_city: Mapped[str | None] = mapped_column(String(150), nullable=True)
-    receiving_city_geoname_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    receiving_street: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    receiving_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    receiving_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # T_UX.4 B — R2 object key for the user's avatar. Presigned URL is
     # generated on-the-fly, never stored.
     avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
