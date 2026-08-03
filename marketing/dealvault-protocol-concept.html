@@ -1,0 +1,330 @@
+<!doctype html>
+<!--
+  T3.10 — презентация концепции Verifiable Vault Protocol.
+
+  Предмет отличается от трёх предыдущих колод в этой папке: v1, v2a и v2b —
+  питчи маркетплейса («ваша посылка летит в чужом чемодане»). Здесь описан
+  механизм: что такое vault, чем он отличается от базы данных, и что именно
+  он доказывает.
+
+  Лежит в marketing/, а не в public/ — не отдаётся. Публикация отдельным
+  решением владельца.
+
+  Дисциплина утверждений (DESIGNGUIDELINES §9.1) здесь не ограничение, а
+  содержание: раздел «Границы» — такая же часть презентации, как раздел о
+  возможностях. Всё, что заявлено работающим, работает на 2026-08-02.
+-->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verifiable Vault Protocol — концепция</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1626; --navy-mid:#16304F; --ivory:#F5F3EE;
+    --cyan:#58B0D9; --amber:#FF7A2F; --success:#16A34A;
+    --line:rgba(10,22,38,.12); --line-soft:rgba(10,22,38,.07);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--ivory); color:var(--navy);
+    font-family:'Inter',sans-serif; font-size:15px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding:0 24px}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .label{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:rgba(10,22,38,.42);
+  }
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; letter-spacing:-.02em; margin:0}
+  h1{font-size:clamp(34px,5vw,56px); font-weight:700; line-height:1.04}
+  h2{font-size:clamp(24px,3.2vw,34px); font-weight:700; line-height:1.15}
+  h3{font-size:18px; font-weight:600}
+  p{margin:0 0 14px; max-width:62ch}
+  section{padding:56px 0; border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:none}
+
+  /* Шапка */
+  header{padding:52px 0 40px; border-bottom:1px solid var(--line)}
+  .brand{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px}
+  .brand span{color:var(--amber)}
+  .head-row{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:34px}
+
+  /* Двухколоночная секция: заголовок слева, текст справа */
+  .split{display:grid; gap:26px; grid-template-columns:1fr}
+  @media(min-width:780px){ .split{grid-template-columns:.85fr 1.15fr; gap:44px} }
+
+  /* Сравнение */
+  .versus{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:16px; overflow:hidden; margin-top:28px}
+  @media(min-width:680px){ .versus{grid-template-columns:1fr 1fr} }
+  .versus > div{background:#fff; padding:22px}
+  .versus h3{margin-bottom:10px}
+  .versus p{font-size:14px; color:rgba(10,22,38,.72); margin-bottom:0}
+
+  /* Нумерованные слои */
+  ol.layers{list-style:none; margin:28px 0 0; padding:0; display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:16px; overflow:hidden}
+  ol.layers > li{background:#fff; padding:22px; display:grid; gap:6px}
+  @media(min-width:780px){ ol.layers > li{grid-template-columns:64px 1fr 1.15fr; gap:20px; align-items:start} }
+  .num{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--amber); font-weight:500}
+  .layer-what{font-size:14px; color:rgba(10,22,38,.72); margin:0}
+  .layer-lim{font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.65; color:rgba(10,22,38,.46); margin:0}
+
+  /* Факты */
+  .facts{display:grid; gap:22px; margin-top:26px}
+  @media(min-width:680px){ .facts{grid-template-columns:repeat(4,1fr)} }
+  .facts .v{font-family:'Space Grotesk',sans-serif; font-size:23px; font-weight:700; letter-spacing:-.02em}
+  .facts .k{font-size:13px; color:rgba(10,22,38,.6); line-height:1.4; margin-top:3px}
+
+  /* Границы — единственный тёмный блок */
+  .limits{background:var(--navy); color:var(--ivory); border-radius:20px; padding:34px 28px; margin-top:28px}
+  .limits h2{color:var(--ivory)}
+  .limits .label{color:rgba(245,243,238,.45)}
+  .limits ul{list-style:none; margin:22px 0 0; padding:0; display:grid; gap:16px}
+  .limits li{display:grid; gap:4px; padding-left:16px; border-left:2px solid var(--amber)}
+  .limits b{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px}
+  .limits span{font-size:14px; color:rgba(245,243,238,.72); max-width:64ch}
+
+  /* Дорожная карта */
+  table{width:100%; border-collapse:collapse; margin-top:24px; font-size:14px}
+  th,td{text-align:left; padding:12px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+  th{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:rgba(10,22,38,.42); font-weight:500}
+  td.state{white-space:nowrap; font-family:'IBM Plex Mono',monospace; font-size:12px}
+  .on{color:var(--success)} .off{color:rgba(10,22,38,.4)}
+
+  footer{padding:34px 0 56px; font-size:12px; color:rgba(10,22,38,.42)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="head-row">
+      <span class="brand">Vimana<span>.</span></span>
+      <span class="label">Verifiable Vault Protocol · концепция · 2 августа 2026</span>
+    </div>
+    <h1>Сделка, о которой можно<br>спорить с записью на руках</h1>
+    <p style="margin-top:20px; font-size:17px; max-width:56ch">
+      DealVault — не хранилище переписки. Это способ сделать так, чтобы изменение
+      уже случившегося было <em>заметно</em>, и чтобы проверить это можно было
+      не спрашивая нас.
+    </p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <span class="label">01 · Задача</span>
+      <h2 style="margin-top:14px">Договорённость живёт в памяти двоих</h2>
+    </div>
+    <div>
+      <p>
+        Двое договорились в чате: что везём, когда передаём, сколько стоит.
+        Пока всё идёт хорошо, записи не нужны никому. Когда что-то пошло не так,
+        выясняется, что предъявить нечего: переписку можно удалить, скриншот
+        нарисовать, а память у сторон устроена удобно для их владельцев.
+      </p>
+      <p>
+        Обычный ответ индустрии — доверенный посредник, который «всё видел».
+        Он работает ровно настолько, насколько ему доверяют обе стороны, и
+        перестаёт работать в тот момент, когда спор касается его самого.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="label">02 · Различие</span>
+    <h2 style="margin-top:14px">Vault — не база данных</h2>
+    <p style="margin-top:16px">
+      Разница не в надёжности хранения и не в шифровании. Она в том,
+      <strong>кто может ответить на вопрос «это подлинная запись?»</strong>
+    </p>
+    <div class="versus">
+      <div>
+        <h3>База данных</h3>
+        <p>
+          Отвечает: «вот что записано сейчас». Ответ приходит от владельца базы,
+          и его достоверность равна доверию к владельцу. Строку можно изменить,
+          и снаружи это ничем не отличается от того, что её не меняли.
+        </p>
+      </div>
+      <div>
+        <h3>Vault</h3>
+        <p>
+          Отвечает: «вот что записано, и вот почему изменение было бы видно».
+          Каждая запись запечатана хешем предыдущей: порядок и содержание
+          образуют цепь, которая сходится только в одном варианте. Проверку
+          выполняет тот, кто спрашивает, а не тот, кого спрашивают.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="label">03 · Механизм</span>
+    <h2 style="margin-top:14px">Три уровня фиксации, и каждый отвечает на свой вопрос</h2>
+    <ol class="layers">
+      <li>
+        <span class="num">01</span>
+        <div>
+          <h3>Цепь</h3>
+          <p class="layer-what">Что произошло и в каком порядке.</p>
+        </div>
+        <p class="layer-lim">
+          Каждая запись содержит хеш предыдущей. Вставка, удаление и правка
+          ломают сходимость всей цепи ниже. Защищает от того, у кого есть доступ
+          к базе, — но не от того, кто присваивает номера записям.
+        </p>
+      </li>
+      <li>
+        <span class="num">02</span>
+        <div>
+          <h3>Подпись</h3>
+          <p class="layer-what">Кто это сделал.</p>
+        </div>
+        <p class="layer-lim">
+          Событие подписывается ключом участника по NIP-01 (secp256k1, Schnorr).
+          Ключ и есть личность: проверка подписи не требует обращения к нам.
+          Владение ключом — лестница из четырёх ступеней, от «копия у платформы»
+          до «копия только у вас».
+        </p>
+      </li>
+      <li>
+        <span class="num">03</span>
+        <div>
+          <h3>Якорь</h3>
+          <p class="layer-what">Когда — по чужим часам.</p>
+        </div>
+        <p class="layer-lim">
+          Голова цепи публикуется на Nostr-релеях, которыми мы не владеем.
+          После этого переписать историю под опубликованной головой нельзя и
+          нам: старая голова уже лежит на чужом диске с чужой отметкой времени.
+          Работает с 1 августа 2026 года, четыре сторонних релея.
+        </p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <span class="label">04 · Формат</span>
+      <h2 style="margin-top:14px">Два хранилища, один файл, один читатель</h2>
+    </div>
+    <div>
+      <p>
+        <strong>Deal Vault</strong> — события сделки: сообщения, фотографии,
+        передача, получение, печать при закрытии. <strong>Identity Vault</strong> —
+        ключ личности, запечатанный парольной фразой в браузере по NIP-49; фраза
+        на сервер не уходит никогда.
+      </p>
+      <p>
+        Это не два формата, а один: <span class="mono">.dvlt</span> с полем
+        <span class="mono">type</span>. Один файл может нести и личность, и её
+        сделки, и открывает их одна и та же страница-читатель — сохранённая на
+        диск, она работает без сети и без нас. Проверка в ней сводится к
+        арифметике: сходится ли цепь и выводится ли записанный публичный ключ
+        из приватного.
+      </p>
+      <div class="facts">
+        <div><div class="v">SHA-256</div><div class="k">цепь событий</div></div>
+        <div><div class="v">NIP-01</div><div class="k">подписи</div></div>
+        <div><div class="v">NIP-49</div><div class="k">запечатывание ключа</div></div>
+        <div><div class="v">4 релея</div><div class="k">якоря на чужих серверах</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="limits">
+      <span class="label">05 · Границы</span>
+      <h2 style="margin-top:14px">Чего механизм не даёт</h2>
+      <p style="color:rgba(245,243,238,.72); margin-top:14px; max-width:62ch">
+        Этот раздел — такая же часть концепции, как предыдущие. Протокол, чьи
+        границы не названы, обещает больше, чем делает, и первый же спорный
+        случай это обнаружит.
+      </p>
+      <ul>
+        <li>
+          <b>Обнаружимость, а не невозможность</b>
+          <span>
+            Цепь tamper-evident, не tamper-proof. Строку в базе изменить можно;
+            что нельзя — сделать это незаметно. Формулировка «никто не может
+            изменить» была бы ложной.
+          </span>
+        </li>
+        <li>
+          <b>Проверяемость — по состоянию на дату последнего якоря</b>
+          <span>
+            Записанное после последнего якоря подтверждено пока только нашей же
+            проверкой целостности. Утверждение без даты сильнее механизма.
+          </span>
+        </li>
+        <li>
+          <b>Пока копия ключа у платформы — платформа может подписывать</b>
+          <span>
+            «Мы не имеем доступа» становится правдой только на верхней ступени,
+            когда копия удалена. До этого верно другое: «удалите копию — и мы не
+            сможем».
+          </span>
+        </li>
+        <li>
+          <b>Доказательства стареют</b>
+          <span>
+            Проверка личности годичной давности — не то же, что вчерашняя. У
+            каждой отметки стоит дата, и её вес снижается со временем по
+            зафиксированной шкале, а не по ощущению.
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="label">06 · Состояние и дорожная карта</span>
+    <h2 style="margin-top:14px">Что работает, а что нет</h2>
+    <p style="margin-top:14px">Сроков не называем, пока не знаем их сами.</p>
+    <table>
+      <thead>
+        <tr><th>Механизм</th><th>Состояние</th><th>Замечание</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Цепь событий сделки</td><td class="state on">работает</td><td>сообщения, файлы, статусы, печать при закрытии</td></tr>
+        <tr><td>Подписи участников</td><td class="state on">работает</td><td>NIP-01; ключ создаётся при регистрации</td></tr>
+        <tr><td>Якоря на сторонних релеях</td><td class="state on">работает</td><td>с 1 августа 2026, четыре релея</td></tr>
+        <tr><td>Identity Vault <span class="mono">.dvlt</span></td><td class="state on">работает</td><td>NIP-49, запечатывание в браузере</td></tr>
+        <tr><td>Читатель <span class="mono">.dvlt</span></td><td class="state on">работает</td><td>одна страница, открывается с диска без сети</td></tr>
+        <tr><td>Выгрузка сделки в <span class="mono">.dvlt</span></td><td class="state off">в планах</td><td>формат общий с Identity Vault, отложено осознанно</td></tr>
+        <tr><td>Query API по хранилищу</td><td class="state off">в планах</td><td>—</td></tr>
+        <tr><td>Якоря OpenTimestamps</td><td class="state off">в планах</td><td>второй бэкенд якорения; IPFS — адресация, не отметка времени</td></tr>
+        <tr><td>Оплата и защищённая ячейка</td><td class="state off">в планах</td><td>сегодня оплата идёт между сторонами напрямую</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Vimana · Verifiable Vault Protocol · концепция от 2 августа 2026.
+    Все утверждения о работающих механизмах верны на эту дату и проверяемы
+    в коде: <span class="mono">core/deal_chain.py</span>,
+    <span class="mono">core/chain_anchor.py</span>,
+    <span class="mono">lib/identity.ts</span>.
+  </div>
+</footer>
+
+</body>
+</html>
