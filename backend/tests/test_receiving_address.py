@@ -177,14 +177,18 @@ async def test_share_address_in_inquiry_chat(
     inquiry_id = inq.json()["id"]
 
     # Set sender's address
-    await client.post(
+    # Явно по id, а не «какой окажется по умолчанию»: сид-пользователь общий
+    # для файла, и адрес из соседнего теста остаётся дефолтным. Тест про обмен
+    # конкретным адресом и не должен зависеть от порядка запуска.
+    addr = await client.post(
         "/api/me/addresses",
         headers=sender_headers,
-        json={"label": "Home", "country_iso": "US", "city": "New York", "street": "5th Ave 1"},
+        json={"label": "NY office", "country_iso": "US", "city": "New York", "street": "5th Ave 1"},
     )
     resp = await client.post(
         f"/api/inquiries/{inquiry_id}/messages/share-address",
         headers=sender_headers,
+        json={"address_id": addr.json()["id"]},
     )
     assert resp.status_code == 201, resp.text
     body = resp.json()
