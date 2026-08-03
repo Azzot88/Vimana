@@ -136,7 +136,19 @@ class E2EPayload:
                 detail="e2e_payload.read_packages must contain sender and carrier",
             )
         for role, val in self.wrapped_shares.items():
-            if not isinstance(val, str) or "?iv=" not in val:
+            # T_KEYS.1 — this used to look for `?iv=`, the NIP-04 marker. The
+            # check is deliberately shallow: a NIP-44 payload is base64 whose
+            # first byte is the version, and that is all the server can judge
+            # without the key. Verifying more would mean pretending to validate
+            # something only the recipient can open.
+            ok = isinstance(val, str)
+            if ok:
+                try:
+                    raw = base64.b64decode(val, validate=True)
+                    ok = len(raw) >= 97 and raw[0] == NIP44_VERSION
+                except (ValueError, TypeError):
+                    ok = False
+            if not ok:
                 raise HTTPException(
                     status_code=422,
                     detail=f"wrapped_shares.{role} must be a NIP-44 payload string",

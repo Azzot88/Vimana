@@ -28,8 +28,8 @@ _settings = settings(
 
 
 @_settings
-@given(pt=st.binary(min_size=0, max_size=500))
-def test_nip04_roundtrip_any_bytes(pt: bytes) -> None:
+@given(pt=st.binary(min_size=1, max_size=500))
+def test_nip44_roundtrip_any_bytes(pt: bytes) -> None:
     """A→B encrypt, B→A decrypt using paired keys recovers the plaintext bytes."""
     ct = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     recovered = nip44_decrypt(ct, _B_NSEC, _A_NPUB)
@@ -37,8 +37,8 @@ def test_nip04_roundtrip_any_bytes(pt: bytes) -> None:
 
 
 @_settings
-@given(pt=st.text(min_size=0, max_size=500))
-def test_nip04_roundtrip_any_utf8(pt: str) -> None:
+@given(pt=st.text(min_size=1, max_size=500))
+def test_nip44_roundtrip_any_utf8(pt: str) -> None:
     """UTF-8 text — including emojis, control chars, RTL — survives the round-trip."""
     ct = nip44_encrypt(pt.encode("utf-8"), _A_NSEC, _B_NPUB)
     recovered = nip44_decrypt(ct, _B_NSEC, _A_NPUB)
@@ -47,24 +47,35 @@ def test_nip04_roundtrip_any_utf8(pt: str) -> None:
 
 @_settings
 @given(pt=st.binary(min_size=1, max_size=200))
-def test_nip04_ciphertext_is_probabilistic(pt: bytes) -> None:
-    """Two encryptions of the same plaintext must differ (random IV per NIP-04)."""
+def test_nip44_ciphertext_is_probabilistic(pt: bytes) -> None:
+    """Two encryptions of the same plaintext must differ (random 32-byte nonce per NIP-44)."""
     ct1 = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     ct2 = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
-    assert ct1 != ct2, "identical ciphertext for same plaintext → IV isn't random"
+    assert ct1 != ct2, 'identical ciphertext for same plaintext → nonce is not random'
 
 
 @_settings
 @given(pt=st.binary(min_size=1, max_size=200))
-def test_nip04_ciphertext_has_iv_separator(pt: bytes) -> None:
-    """NIP-04 wire format is `<b64_ct>?iv=<b64_iv>` — separator must be present."""
-    ct = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
-    assert "?iv=" in ct
+def test_nip44_payload_shape(pt: bytes) -> None:
+    """NIP-44 v2 wire format: base64(version || nonce(32) || ct || mac(32)).
+
+    Replaces a check for NIP-04's `?iv=` separator. The shape matters beyond
+    tidiness: `E2EPayload.validate` refuses anything that does not parse this
+    way, so a frontend emitting the old format is rejected at the edge instead
+    of storing an envelope nobody can open.
+    """
+    import base64
+
+    from app.core.threshold import NIP44_VERSION
+
+    raw = base64.b64decode(nip44_encrypt(pt, _A_NSEC, _B_NPUB), validate=True)
+    assert raw[0] == NIP44_VERSION
+    assert len(raw) >= 1 + 32 + 32 + 32
 
 
 @_settings
 @given(pt=st.binary(min_size=1, max_size=200))
-def test_nip04_wrong_recipient_cannot_decrypt(pt: bytes) -> None:
+def test_nip44_wrong_recipient_cannot_decrypt(pt: bytes) -> None:
     """A→B encrypted ciphertext must NOT decrypt with C's key."""
     ct = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     # Wrong recipient (C instead of B) → either wrong plaintext or 422.
@@ -80,7 +91,7 @@ def test_nip04_wrong_recipient_cannot_decrypt(pt: bytes) -> None:
 
 @_settings
 @given(pt=st.binary(min_size=0, max_size=200))
-def test_nip04_symmetric_direction(pt: bytes) -> None:
+def test_nip44_symmetric_direction(pt: bytes) -> None:
     """A→B and B→A produce different ciphertexts but each roundtrips correctly."""
     ct_ab = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     ct_ba = nip44_encrypt(pt, _B_NSEC, _A_NPUB)
