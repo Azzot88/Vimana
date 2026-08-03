@@ -165,6 +165,8 @@
     "straightLineKm": "Trajets, km à vol d'oiseau",
     "measuredOn": "calculé sur {{part}} trajets sur {{total}}",
     "longestHop": "Plus long saut, km à vol d'oiseau",
+    "rarestCorridor": "Le corridor le plus rare",
+    "corridorTrips": "trajets sur cette route sur toute la plateforme : {{count}}",
     "capacityKg": "Capacité déclarée, kg",
     "tripsCompleted": "sur {{count}} voyages effectués",
     "footnote": "« À vol d'oiseau » est l'arc entre aéroports : la trace réelle est plus longue, et il s'agit du trajet du colis, pas des heures de vol de l'avion. La capacité est celle déclarée par le transporteur ; rien n'a été pesé. Les signatures ont été faites tant que la clé vivait, et elles se vérifient toujours.",

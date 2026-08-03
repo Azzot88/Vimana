@@ -165,6 +165,8 @@
     "straightLineKm": "Rutas, km en línea recta",
     "measuredOn": "calculado sobre {{part}} rutas de {{total}}",
     "longestHop": "Salto más largo, km en línea recta",
+    "rarestCorridor": "El corredor más raro",
+    "corridorTrips": "viajes por esta ruta en toda la plataforma: {{count}}",
     "capacityKg": "Capacidad declarada, kg",
     "tripsCompleted": "en {{count}} viajes completados",
     "footnote": "«En línea recta» es el arco entre aeropuertos: la ruta real es más larga, y esto mide por dónde fue el paquete, no lo que voló el avión. La capacidad es la declarada por el transportista; nada se pesó. Las firmas se hicieron mientras la clave estaba viva y siguen verificándose.",

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_user_optional
@@ -197,6 +197,12 @@ class ArchiveRecord(BaseModel):
     # The record, not the average — in a museum the outlier is the exhibit.
     longest_hop_km: int | None = None
     longest_hop_route: str | None = None
+    # T3.19 — the rarest route this identity used, and how many trips the whole
+    # platform has on it. Rarity is a property of the map, not of the person,
+    # and the label has to say so; the count travels with the corridor so the
+    # claim cannot be read as bigger than it is.
+    rarest_corridor: str | None = None
+    rarest_corridor_trips: int | None = None
     trips_completed: int
     capacity_kg: float | None = None
     # T3.20 — the date the claim is allowed to reach, and no further. Anchors
@@ -234,10 +240,13 @@ async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
     longest_route: str | None = None
     carried_trips: dict[uuid.UUID, float] = {}
 
+    corridors: set[tuple[str, str]] = set()
+
     for status, carrier_id, trip_id, origin, destination, capacity in rows:
         if status is not DealStatus.closed:
             continue
         deals_closed += 1
+        corridors.add((origin, destination))
         if carrier_id == subject.id:
             # Per distinct trip: two parcels on one flight are one flight's
             # capacity, and adding it twice would invent a number.
@@ -261,6 +270,29 @@ async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
             ).where(DealEvent.actor_id == subject.id)
         )
     ).one()
+
+    # T3.19 — the rarest corridor this identity actually flew, measured the same
+    # way `core/publish_filter.py` measures rarity: how many trips the whole
+    # platform has on that route. One query for every corridor at once.
+    #
+    # Rarity is a property of the route, not of the person, and the label has to
+    # say so — "flew where almost nobody flies" is a fact about the map. It is
+    # here because in a museum the outlier is the exhibit, and a corridor two
+    # people have ever used is more interesting than an average.
+    rarest_corridor: str | None = None
+    rarest_corridor_trips: int | None = None
+    if corridors:
+        counted = (
+            await db.execute(
+                select(Trip.origin, Trip.destination, func.count())
+                .where(tuple_(Trip.origin, Trip.destination).in_(corridors))
+                .group_by(Trip.origin, Trip.destination)
+            )
+        ).all()
+        for origin, destination, seen in counted:
+            if rarest_corridor_trips is None or seen < rarest_corridor_trips:
+                rarest_corridor_trips = int(seen)
+                rarest_corridor = f"{origin}→{destination}"
 
     # T3.20 — how far a third party can check this without taking our word.
     anchored_deals, last_anchor_at = (
@@ -287,6 +319,8 @@ async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
         straight_line_km=round(total_km) if routes_measured else None,
         longest_hop_km=round(longest_km) if longest_km is not None else None,
         longest_hop_route=longest_route,
+        rarest_corridor=rarest_corridor,
+        rarest_corridor_trips=rarest_corridor_trips,
         trips_completed=len(carried_trips),
         capacity_kg=round(sum(carried_trips.values()), 1) if carried_trips else None,
         last_anchor_at=last_anchor_at,

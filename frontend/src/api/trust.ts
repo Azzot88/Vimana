@@ -84,6 +84,11 @@ export interface ArchiveRecord {
   straight_line_km: number | null
   longest_hop_km: number | null
   longest_hop_route: string | null
+  /** T3.19 — the rarest route this identity used, with how many trips the whole
+   *  platform has on it. The count travels with the corridor because rarity is
+   *  a fact about the map, not a compliment to the person. */
+  rarest_corridor: string | null
+  rarest_corridor_trips: number | null
   trips_completed: number
   capacity_kg: number | null
   /** T3.20 — how far the record is checkable without taking our word. An anchor

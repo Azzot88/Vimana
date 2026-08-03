@@ -181,6 +181,8 @@
     "straightLineKm": "Routes, km straight line",
     "measuredOn": "measured on {{part}} routes of {{total}}",
     "longestHop": "Longest hop, km straight line",
+    "rarestCorridor": "Rarest corridor",
+    "corridorTrips": "trips on this route platform-wide: {{count}}",
     "capacityKg": "Declared capacity, kg",
     "tripsCompleted": "across {{count}} completed trips",
     "footnote": "\"Straight line\" is the arc between airports: real tracks run longer, and this measures where a parcel went, not what an aircraft flew. Capacity is what carriers declared — nothing was weighed. The signatures were made while the key was live, and they still verify.",

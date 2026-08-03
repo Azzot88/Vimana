@@ -124,6 +124,21 @@ export default function ArchiveRecordCard({
             </dd>
           </div>
         )}
+        {record.rarest_corridor && (
+          <div>
+            {/* Rarity is a property of the route. The trip count travels with
+                it so the line cannot be read as "this person is rare". */}
+            <dt className="text-xs text-navy/50">{t('archive.rarestCorridor')}</dt>
+            <dd className="text-navy">
+              <MonoText className="text-sm">{record.rarest_corridor}</MonoText>
+              {record.rarest_corridor_trips !== null && (
+                <span className="block text-xs text-navy/40">
+                  {t('archive.corridorTrips', { count: record.rarest_corridor_trips })}
+                </span>
+              )}
+            </dd>
+          </div>
+        )}
         {record.capacity_kg !== null && (
           <div>
             <dt className="text-xs text-navy/50">{t('archive.capacityKg')}</dt>

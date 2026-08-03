@@ -23,6 +23,8 @@ const record = (over: Partial<ArchiveRecord> = {}): ArchiveRecord => ({
   straight_line_km: 41230,
   longest_hop_km: 7180,
   longest_hop_route: 'TBS→ULN',
+  rarest_corridor: 'TBS→ULN',
+  rarest_corridor_trips: 2,
   trips_completed: 7,
   capacity_kg: 48.5,
   last_anchor_at: null,

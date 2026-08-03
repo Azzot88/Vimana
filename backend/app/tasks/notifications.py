@@ -182,3 +182,47 @@ def send_platform_copy_deleted(user_id: str) -> None:
             "Если это были не вы — войдите и верните нашу копию из своего "
             "файла Identity Vault: страница «Доступ и ключи» в профиле.",
         )
+
+
+@celery_app.task(name="app.tasks.notifications.send_archive_window_opened")
+def send_archive_window_opened(user_id: str, ends_at_iso: str) -> None:
+    """T3.19 — the identity was retired; here is the one decision left, and its date.
+
+    The modal says all of this too, but the modal only reaches someone who signs
+    in. This letter exists for the case the modal cannot cover: an owner who
+    lost the key *and* stopped opening the site. For them the default applies —
+    the archive stays visible — and they deserve to learn that from us rather
+    than from a search engine.
+
+    Sent regardless of `notify_email`, like the recovery-code letter and for the
+    same reason: nobody subscribes to being told their identity ended, and the
+    date after which the choice fixes is not something to leave to a
+    preference toggle.
+
+    The date is passed in rather than recomputed here. It comes from
+    `core.permissions.archive_window_ends_at`, the single source for this
+    deadline — a second calculation in a Celery task is how the letter and the
+    screen start disagreeing about the day.
+    """
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        send_email(
+            user.email,
+            "Vimana · Личность завершена. Что теперь",
+            "Ключ вашей личности объявлен утраченным. Подписывать новые записи "
+            "вы больше не можете, но вход в аккаунт работает, а всё "
+            "подписанное раньше остаётся в силе и проверяется.\n\n"
+            "Осталось одно решение: сохранять ли вашу публичную страницу.\n\n"
+            f"Если ничего не делать, {ends_at_iso} она останется открытой, и "
+            "выбор зафиксируется. Если хотите её закрыть — войдите и выберите "
+            "это до указанной даты; отменить закрытие потом будет нельзя.\n\n"
+            "Ничего не удаляется ни в одном случае: цепь, подписи и события "
+            "сделок остаются, потому что они наполовину принадлежат вашим "
+            "контрагентам. Закрывается только витрина.\n\n"
+            "Если вы потеряете и доступ к аккаунту, выбирать будет некому и "
+            "сработает то же самое: страница останется.",
+        )

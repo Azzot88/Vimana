@@ -165,6 +165,8 @@
     "straightLineKm": "Trasy, km w linii prostej",
     "measuredOn": "policzone dla {{part}} tras z {{total}}",
     "longestHop": "Najdłuższy odcinek, km w linii prostej",
+    "rarestCorridor": "Najrzadszy korytarz",
+    "corridorTrips": "przelotów tą trasą w całym serwisie: {{count}}",
     "capacityKg": "Zadeklarowana pojemność, kg",
     "tripsCompleted": "na {{count}} zrealizowanych podróży",
     "footnote": "„W linii prostej” to łuk między lotniskami: rzeczywista trasa jest dłuższa, a mierzymy drogę przesyłki, nie nalot samolotu. Pojemność jest tą zadeklarowaną przez przewoźnika — nic nie było ważone. Podpisy powstały, gdy klucz działał, i nadal się weryfikują.",

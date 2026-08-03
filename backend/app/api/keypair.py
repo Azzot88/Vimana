@@ -395,6 +395,22 @@ async def identity_declare_lost(
     current_user.key_lost_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(current_user)
+
+    # T3.19 — the window opens now, so the letter goes now. The modal covers
+    # whoever signs in again; this covers whoever does not, and they are exactly
+    # the people the default silently decides for. Fire-and-forget: a broker
+    # hiccup must not fail an irreversible action the user already confirmed.
+    ends_at = archive_window_ends_at(current_user)
+    if current_user.email and ends_at is not None:
+        from app.tasks.notifications import send_archive_window_opened
+
+        try:
+            send_archive_window_opened.delay(
+                str(current_user.id), ends_at.strftime("%d.%m.%Y")
+            )
+        except Exception:
+            pass
+
     return _status(current_user)
 
 
