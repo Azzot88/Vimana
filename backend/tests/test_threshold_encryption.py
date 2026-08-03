@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from fastapi import HTTPException
 
 from app.core.threshold import nip04_encrypt
 
@@ -377,3 +378,79 @@ async def test_nip04_roundtrip_correctness():
     payload = b"session-key-abc-123-XYZ"
     ct = nip04_encrypt(payload, a_nsec, b_npub)
     assert nip04_decrypt(ct, b_nsec, a_npub) == payload
+
+
+# ── T_KEYS.1 — NIP-44 v2 ─────────────────────────────────────────────────────
+
+
+def test_nip44_round_trip_both_directions():
+    """ECDH is symmetric, so either side derives the same conversation key."""
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_decrypt, nip44_encrypt
+
+    a_priv, a_pub = generate_keypair()
+    b_priv, b_pub = generate_keypair()
+    secret = "сессионный ключ и немного текста".encode()
+
+    assert nip44_decrypt(nip44_encrypt(secret, a_priv, b_pub), b_priv, a_pub) == secret
+    assert nip44_decrypt(nip44_encrypt(secret, b_priv, a_pub), a_priv, b_pub) == secret
+
+
+@pytest.mark.parametrize(
+    "unpadded,padded",
+    # The schedule from the NIP-44 spec. Pinned as a table because it is an
+    # interop contract: a frontend padding to different buckets produces
+    # payloads this backend rejects, and the failure would look like a key
+    # problem rather than an arithmetic one.
+    [(16, 32), (32, 32), (33, 64), (65, 96), (100, 128), (200, 224), (250, 256),
+     (320, 320), (383, 384), (384, 384), (400, 448), (515, 640), (1020, 1024)],
+)
+def test_nip44_padding_schedule(unpadded, padded):
+    from app.core.threshold import _nip44_padded_len
+
+    assert _nip44_padded_len(unpadded) == padded
+
+
+def test_nip44_hides_length_within_a_bucket():
+    """Two different plaintexts of nearby length must be indistinguishable by
+    size. Without padding, "да" and "нет" are told apart by the ciphertext
+    alone — which for a vault of negotiations is a real leak."""
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_encrypt
+
+    a_priv, _ = generate_keypair()
+    _, b_pub = generate_keypair()
+    short = len(nip44_encrypt(b"yes", a_priv, b_pub))
+    longer = len(nip44_encrypt(b"no, and here is why not", a_priv, b_pub))
+    assert short == longer
+
+
+def test_nip44_rejects_a_tampered_payload():
+    """The reason for the whole migration: NIP-04 had no MAC, so a modified
+    envelope decrypted to garbage and nothing distinguished that from a wrong
+    key. Here it is refused, and refused before decryption."""
+    import base64
+
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_decrypt, nip44_encrypt
+
+    a_priv, a_pub = generate_keypair()
+    b_priv, b_pub = generate_keypair()
+    raw = bytearray(base64.b64decode(nip44_encrypt(b"authentic message", a_priv, b_pub)))
+    raw[40] ^= 0x01  # one bit inside the ciphertext
+
+    with pytest.raises(HTTPException) as exc:
+        nip44_decrypt(base64.b64encode(bytes(raw)).decode(), b_priv, a_pub)
+    assert exc.value.status_code == 422
+
+
+def test_nip44_rejects_the_wrong_reader():
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_decrypt, nip44_encrypt
+
+    a_priv, a_pub = generate_keypair()
+    _, b_pub = generate_keypair()
+    stranger_priv, _ = generate_keypair()
+
+    with pytest.raises(HTTPException):
+        nip44_decrypt(nip44_encrypt(b"not for you", a_priv, b_pub), stranger_priv, a_pub)

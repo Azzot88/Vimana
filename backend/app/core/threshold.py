@@ -20,6 +20,8 @@ via T2.2 pt.2) is the "sender pubkey" for the recipient's NIP-04 decrypt.
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import os
 import uuid
 
@@ -186,3 +188,136 @@ class E2EPayload:
             "read_packages": self.read_packages,
         }
         return ct, nonce, combined
+
+
+# ─────────────────────────────────────────────────────────────
+# T_KEYS.1 — NIP-44 v2 (замена NIP-04)
+# ─────────────────────────────────────────────────────────────
+#
+# NIP-04 above is deprecated *in the Nostr spec itself*, and for the reason
+# that matters here: AES-256-CBC with a raw ECDH x-coordinate and no MAC.
+# Unauthenticated. A stored envelope can be modified and the reader has no way
+# to notice — in a vault built on "changes are detectable", that is the wrong
+# primitive to be holding the session keys.
+#
+# NIP-44 v2 fixes exactly that:
+#   - ChaCha20 instead of AES-CBC (stream, no padding oracle)
+#   - HMAC-SHA256 over nonce||ciphertext — authentication, which NIP-04 lacks
+#   - length padding, so the size of a message stops leaking its content
+#   - HKDF over the ECDH output instead of using the raw x-coordinate as a key
+#
+# Migration is single-shot, no compatibility branch. Measured on prod
+# 2026-08-02: zero E2E messages, zero identity containers, therefore zero
+# NIP-04 envelopes in existence. There is nothing to re-encrypt and nothing to
+# stay compatible with — see `TASKS.md` `T_KEYS.1`.
+
+NIP44_VERSION = 2
+
+
+def nip44_conversation_key(priv_hex: str, xonly_pub_hex: str) -> bytes:
+    """HKDF-extract over the ECDH x-coordinate, salt `nip44-v2`.
+
+    NIP-04 used the x-coordinate directly as an AES key. It is a curve point
+    coordinate, not uniformly random, and reusing it per conversation means one
+    key for every message ever exchanged between two identities. HKDF fixes the
+    distribution; the per-message nonce below fixes the reuse.
+    """
+    shared_x = nip04_shared_x(priv_hex, xonly_pub_hex)
+    return hmac.new(b"nip44-v2", shared_x, hashlib.sha256).digest()
+
+
+def _nip44_message_keys(conversation_key: bytes, nonce: bytes) -> tuple[bytes, bytes, bytes]:
+    """HKDF-expand to (chacha_key, chacha_nonce, hmac_key) = 32 + 12 + 32."""
+    okm = b""
+    block = b""
+    counter = 1
+    while len(okm) < 76:
+        block = hmac.new(
+            conversation_key, block + nonce + bytes([counter]), hashlib.sha256
+        ).digest()
+        okm += block
+        counter += 1
+    return okm[0:32], okm[32:44], okm[44:76]
+
+
+def _nip44_padded_len(unpadded: int) -> int:
+    """Padding schedule from the NIP-44 spec.
+
+    The point is that ciphertext length stops being a fingerprint of the
+    plaintext: everything up to 32 bytes looks identical, and beyond that
+    lengths collapse into buckets. Without it, "yes"/"no" are distinguishable
+    by size alone, which for a vault of negotiations is a real leak.
+    """
+    if unpadded <= 32:
+        return 32
+    next_power = 1 << (unpadded - 1).bit_length()
+    chunk = 32 if next_power <= 256 else next_power // 8
+    return chunk * ((unpadded - 1) // chunk + 1)
+
+
+def _nip44_pad(plaintext: bytes) -> bytes:
+    if not 1 <= len(plaintext) <= 65535:
+        raise HTTPException(status_code=422, detail="NIP-44 plaintext length out of range")
+    prefixed = len(plaintext).to_bytes(2, "big") + plaintext
+    return prefixed + b"\x00" * (_nip44_padded_len(len(plaintext)) + 2 - len(prefixed))
+
+
+def _nip44_unpad(padded: bytes) -> bytes:
+    if len(padded) < 2:
+        raise HTTPException(status_code=422, detail="NIP-44 padding truncated")
+    declared = int.from_bytes(padded[:2], "big")
+    plaintext = padded[2 : 2 + declared]
+    # Both checks matter: a wrong declared length must not silently yield a
+    # shorter message, and the total must match what the schedule would have
+    # produced — otherwise the padding itself becomes a place to hide bytes.
+    if declared < 1 or len(plaintext) != declared or len(padded) != _nip44_padded_len(declared) + 2:
+        raise HTTPException(status_code=422, detail="NIP-44 padding invalid")
+    return plaintext
+
+
+def _chacha20(key: bytes, nonce12: bytes, data: bytes) -> bytes:
+    """ChaCha20 keystream with counter 0.
+
+    `cryptography` takes a 16-byte nonce laid out as counter(4, little-endian)
+    followed by the 12-byte nonce, so the leading zeros are the counter the NIP
+    specifies — not padding.
+    """
+    cipher = Cipher(algorithms.ChaCha20(key, b"\x00" * 4 + nonce12), mode=None)
+    enc = cipher.encryptor()
+    return enc.update(data) + enc.finalize()
+
+
+def nip44_encrypt(plaintext: bytes, sender_priv_hex: str, recipient_xonly_pub_hex: str) -> str:
+    """NIP-44 v2 payload, base64: version || nonce(32) || ciphertext || mac(32)."""
+    conversation_key = nip44_conversation_key(sender_priv_hex, recipient_xonly_pub_hex)
+    nonce = os.urandom(32)
+    chacha_key, chacha_nonce, hmac_key = _nip44_message_keys(conversation_key, nonce)
+    ciphertext = _chacha20(chacha_key, chacha_nonce, _nip44_pad(plaintext))
+    mac = hmac.new(hmac_key, nonce + ciphertext, hashlib.sha256).digest()
+    return base64.b64encode(bytes([NIP44_VERSION]) + nonce + ciphertext + mac).decode("ascii")
+
+
+def nip44_decrypt(payload_b64: str, recipient_priv_hex: str, sender_xonly_pub_hex: str) -> bytes:
+    """Inverse of `nip44_encrypt`. 422 on any structural or authentication failure.
+
+    The MAC is checked **before** decryption and in constant time. This is the
+    whole reason for the migration: NIP-04 had nothing to check, so a modified
+    envelope decrypted to garbage and the caller had no way to tell that from a
+    wrong key.
+    """
+    if payload_b64.startswith("#"):
+        raise HTTPException(status_code=422, detail="NIP-44: unsupported version")
+    try:
+        raw = base64.b64decode(payload_b64, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=f"NIP-44 base64: {exc}") from exc
+    if len(raw) < 1 + 32 + 32 + 32 or raw[0] != NIP44_VERSION:
+        raise HTTPException(status_code=422, detail="NIP-44: bad version or length")
+
+    nonce, ciphertext, mac = raw[1:33], raw[33:-32], raw[-32:]
+    conversation_key = nip44_conversation_key(recipient_priv_hex, sender_xonly_pub_hex)
+    chacha_key, chacha_nonce, hmac_key = _nip44_message_keys(conversation_key, nonce)
+    expected = hmac.new(hmac_key, nonce + ciphertext, hashlib.sha256).digest()
+    if not hmac.compare_digest(mac, expected):
+        raise HTTPException(status_code=422, detail="NIP-44: authentication failed")
+    return _nip44_unpad(_chacha20(chacha_key, chacha_nonce, ciphertext))
