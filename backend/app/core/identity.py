@@ -62,8 +62,8 @@ async def rewrap_vault_envelopes(
     Raises `ValueError` if any re-wrap cannot be proven to round-trip, so the
     caller's transaction rolls back with the service key still intact.
     """
-    from app.core.threshold import envelope_parts, make_envelope, nip04_decrypt
-    from app.core.threshold import nip04_encrypt
+    from app.core.threshold import envelope_parts, make_envelope, nip44_decrypt
+    from app.core.threshold import nip44_encrypt
 
     rows = await db.execute(
         select(DealVaultMessage, Deal)
@@ -98,13 +98,13 @@ async def rewrap_vault_envelopes(
                 raise ValueError(
                     f"message {msg.id}: {field}[{key}] has no sender pubkey"
                 )
-            plaintext = nip04_decrypt(ciphertext, old_nsec_hex, sender_pubkey)
-            new_ct = nip04_encrypt(plaintext, old_nsec_hex, new_npub_hex)
+            plaintext = nip44_decrypt(ciphertext, old_nsec_hex, sender_pubkey)
+            new_ct = nip44_encrypt(plaintext, old_nsec_hex, new_npub_hex)
 
             # Prove it round-trips before the sender key is destroyed. Symmetric
             # ECDH lets the platform read what only the new owner will be able
             # to read afterwards.
-            if nip04_decrypt(new_ct, old_nsec_hex, new_npub_hex) != plaintext:
+            if nip44_decrypt(new_ct, old_nsec_hex, new_npub_hex) != plaintext:
                 raise ValueError(f"message {msg.id}: {field}[{key}] failed round-trip")
 
             # JSON columns only register a change on reassignment.

@@ -13,7 +13,7 @@ from app.core.database import get_db
 from app.core.deal_chain import append_deal_event
 from app.core.keypair import decrypt_nsec
 from app.core.permissions import Permission, require_perm
-from app.core.threshold import envelope_parts, get_arbiter_user_id, nip04_decrypt
+from app.core.threshold import envelope_parts, get_arbiter_user_id, nip44_decrypt
 from app.models.deal import Deal, DealEventType, DealVaultMessage, Dispute
 from app.models.user import User
 
@@ -138,7 +138,7 @@ async def arbiter_reveal(
             # No key to complete the ECDH with — author had none at write time
             # and the envelope carries no sender of its own.
             continue
-        share_bytes = nip04_decrypt(ciphertext, arbiter_nsec_hex, sender_pubkey)
+        share_bytes = nip44_decrypt(ciphertext, arbiter_nsec_hex, sender_pubkey)
         revealed.append(
             {
                 "message_id": str(msg.id),

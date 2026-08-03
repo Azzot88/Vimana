@@ -240,7 +240,7 @@ async def test_container_survives_the_transition(client, session_maker):
     destroys — nobody could ever open it again. Now the blob moves to a random
     content key wrapped to the new identity.
     """
-    from app.core.threshold import nip04_decrypt
+    from app.core.threshold import nip44_decrypt
     from app.core.verification import encrypt_container, sha256_hex
     from app.models.verification import IdentityContainer
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -282,7 +282,7 @@ async def test_container_survives_the_transition(client, session_maker):
         assert stored.key_envelope_sender_pubkey
 
         # The owner opens it with the key the server never saw.
-        content_key = nip04_decrypt(
+        content_key = nip44_decrypt(
             stored.key_envelope, new_nsec, stored.key_envelope_sender_pubkey
         )
         plaintext = AESGCM(content_key).decrypt(
@@ -303,7 +303,7 @@ async def test_e2e_read_package_survives_the_transition(
     the sender. Symmetric ECDH means the new owner can open it.
     """
     from app.core.keypair import decrypt_nsec
-    from app.core.threshold import envelope_parts, nip04_decrypt, nip04_encrypt
+    from app.core.threshold import envelope_parts, nip44_decrypt, nip44_encrypt
     from app.models.deal import Deal, DealVaultMessage
 
     session_key = b"S" * 32
@@ -334,7 +334,7 @@ async def test_e2e_read_package_survives_the_transition(
             nostr_pubkey=author_npub,
             # Legacy shape: a bare string, sender implied to be the author.
             read_packages={
-                "sender": nip04_encrypt(session_key, author_nsec, user.nostr_pubkey)
+                "sender": nip44_encrypt(session_key, author_nsec, user.nostr_pubkey)
             },
         )
         db.add(msg)
@@ -359,7 +359,7 @@ async def test_e2e_read_package_survives_the_transition(
     ciphertext, sender_pubkey = envelope_parts(entry, stored.nostr_pubkey)
     assert sender_pubkey != author_npub, "sender must now be the service key"
     # The new owner recovers the session key with a key the server never saw.
-    assert nip04_decrypt(ciphertext, new_nsec, sender_pubkey) == session_key
+    assert nip44_decrypt(ciphertext, new_nsec, sender_pubkey) == session_key
 
 
 async def test_other_participants_packages_are_left_alone(
@@ -367,7 +367,7 @@ async def test_other_participants_packages_are_left_alone(
 ):
     """Only the migrating user's envelope is touched — the counterparty keeps
     reading theirs with the sender it always had."""
-    from app.core.threshold import nip04_encrypt
+    from app.core.threshold import nip44_encrypt
     from app.models.deal import Deal, DealVaultMessage
 
     email, headers = await _fresh_user(client, "idn-e2e-other")
@@ -384,7 +384,7 @@ async def test_other_participants_packages_are_left_alone(
         )
         db.add(own_deal)
         await db.flush()
-        carrier_pkg = nip04_encrypt(
+        carrier_pkg = nip44_encrypt(
             b"C" * 32, author_nsec, seed_carrier.nostr_pubkey
         )
         msg = DealVaultMessage(
@@ -393,7 +393,7 @@ async def test_other_participants_packages_are_left_alone(
             is_e2e=True,
             nostr_pubkey=author_npub,
             read_packages={
-                "sender": nip04_encrypt(b"S" * 32, author_nsec, user.nostr_pubkey),
+                "sender": nip44_encrypt(b"S" * 32, author_nsec, user.nostr_pubkey),
                 "carrier": carrier_pkg,
             },
         )

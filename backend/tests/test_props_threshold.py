@@ -12,7 +12,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings, strategies as st
 
 from app.core.keypair import generate_keypair
-from app.core.threshold import nip04_decrypt, nip04_encrypt
+from app.core.threshold import nip44_decrypt, nip44_encrypt
 
 # Fixed keypairs at module load — regenerating in every hypothesis loop would
 # slow tests to a crawl (secp256k1 keygen is ~0.5ms but with 200 examples adds up).
@@ -31,8 +31,8 @@ _settings = settings(
 @given(pt=st.binary(min_size=0, max_size=500))
 def test_nip04_roundtrip_any_bytes(pt: bytes) -> None:
     """A→B encrypt, B→A decrypt using paired keys recovers the plaintext bytes."""
-    ct = nip04_encrypt(pt, _A_NSEC, _B_NPUB)
-    recovered = nip04_decrypt(ct, _B_NSEC, _A_NPUB)
+    ct = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
+    recovered = nip44_decrypt(ct, _B_NSEC, _A_NPUB)
     assert recovered == pt
 
 
@@ -40,8 +40,8 @@ def test_nip04_roundtrip_any_bytes(pt: bytes) -> None:
 @given(pt=st.text(min_size=0, max_size=500))
 def test_nip04_roundtrip_any_utf8(pt: str) -> None:
     """UTF-8 text — including emojis, control chars, RTL — survives the round-trip."""
-    ct = nip04_encrypt(pt.encode("utf-8"), _A_NSEC, _B_NPUB)
-    recovered = nip04_decrypt(ct, _B_NSEC, _A_NPUB)
+    ct = nip44_encrypt(pt.encode("utf-8"), _A_NSEC, _B_NPUB)
+    recovered = nip44_decrypt(ct, _B_NSEC, _A_NPUB)
     assert recovered.decode("utf-8") == pt
 
 
@@ -49,8 +49,8 @@ def test_nip04_roundtrip_any_utf8(pt: str) -> None:
 @given(pt=st.binary(min_size=1, max_size=200))
 def test_nip04_ciphertext_is_probabilistic(pt: bytes) -> None:
     """Two encryptions of the same plaintext must differ (random IV per NIP-04)."""
-    ct1 = nip04_encrypt(pt, _A_NSEC, _B_NPUB)
-    ct2 = nip04_encrypt(pt, _A_NSEC, _B_NPUB)
+    ct1 = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
+    ct2 = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     assert ct1 != ct2, "identical ciphertext for same plaintext → IV isn't random"
 
 
@@ -58,7 +58,7 @@ def test_nip04_ciphertext_is_probabilistic(pt: bytes) -> None:
 @given(pt=st.binary(min_size=1, max_size=200))
 def test_nip04_ciphertext_has_iv_separator(pt: bytes) -> None:
     """NIP-04 wire format is `<b64_ct>?iv=<b64_iv>` — separator must be present."""
-    ct = nip04_encrypt(pt, _A_NSEC, _B_NPUB)
+    ct = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     assert "?iv=" in ct
 
 
@@ -66,10 +66,10 @@ def test_nip04_ciphertext_has_iv_separator(pt: bytes) -> None:
 @given(pt=st.binary(min_size=1, max_size=200))
 def test_nip04_wrong_recipient_cannot_decrypt(pt: bytes) -> None:
     """A→B encrypted ciphertext must NOT decrypt with C's key."""
-    ct = nip04_encrypt(pt, _A_NSEC, _B_NPUB)
+    ct = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
     # Wrong recipient (C instead of B) → either wrong plaintext or 422.
     try:
-        recovered = nip04_decrypt(ct, _C_NSEC, _A_NPUB)
+        recovered = nip44_decrypt(ct, _C_NSEC, _A_NPUB)
         # PKCS7 unpadding may succeed by luck with wrong key — assert it's not
         # the actual plaintext, or (better) that it failed to decode.
         assert recovered != pt, "wrong recipient key produced correct plaintext"
@@ -82,8 +82,8 @@ def test_nip04_wrong_recipient_cannot_decrypt(pt: bytes) -> None:
 @given(pt=st.binary(min_size=0, max_size=200))
 def test_nip04_symmetric_direction(pt: bytes) -> None:
     """A→B and B→A produce different ciphertexts but each roundtrips correctly."""
-    ct_ab = nip04_encrypt(pt, _A_NSEC, _B_NPUB)
-    ct_ba = nip04_encrypt(pt, _B_NSEC, _A_NPUB)
+    ct_ab = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
+    ct_ba = nip44_encrypt(pt, _B_NSEC, _A_NPUB)
     # Both directions should roundtrip.
-    assert nip04_decrypt(ct_ab, _B_NSEC, _A_NPUB) == pt
-    assert nip04_decrypt(ct_ba, _A_NSEC, _B_NPUB) == pt
+    assert nip44_decrypt(ct_ab, _B_NSEC, _A_NPUB) == pt
+    assert nip44_decrypt(ct_ba, _A_NSEC, _B_NPUB) == pt

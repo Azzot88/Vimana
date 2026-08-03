@@ -273,7 +273,7 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
     import base64
     import os as _os
 
-    from app.core.threshold import nip04_encrypt
+    from app.core.threshold import nip44_encrypt
     from app.models.deal import DealVaultMessage
     from app.models.user import User
     from tests.conftest import SEED_PASSWORD
@@ -326,14 +326,14 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
         "ciphertext": base64.b64encode(ciphertext).decode("ascii"),
         "nonce": base64.b64encode(fake_nonce).decode("ascii"),
         "wrapped_shares": {
-            "sender": nip04_encrypt(b"\x01" + session_key, sender_nsec, sender_npub),
-            "carrier": nip04_encrypt(b"\x02" + session_key, sender_nsec, carrier_npub),
-            "arbiter": nip04_encrypt(b"\x03" + session_key, sender_nsec, sender_npub),  # no real arbiter — reuse sender npub for shape only
+            "sender": nip44_encrypt(b"\x01" + session_key, sender_nsec, sender_npub),
+            "carrier": nip44_encrypt(b"\x02" + session_key, sender_nsec, carrier_npub),
+            "arbiter": nip44_encrypt(b"\x03" + session_key, sender_nsec, sender_npub),  # no real arbiter — reuse sender npub for shape only
         },
         "read_packages": {
-            "sender": nip04_encrypt(session_key, sender_nsec, sender_npub),
-            "carrier": nip04_encrypt(session_key, sender_nsec, carrier_npub),
-            f"recipient_{recipient_id}": nip04_encrypt(
+            "sender": nip44_encrypt(session_key, sender_nsec, sender_npub),
+            "carrier": nip44_encrypt(session_key, sender_nsec, carrier_npub),
+            f"recipient_{recipient_id}": nip44_encrypt(
                 session_key, sender_nsec, recipient_npub
             ),
         },

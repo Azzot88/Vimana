@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import HTTPException
 
-from app.core.threshold import nip04_encrypt
+from app.core.threshold import nip44_encrypt
 
 
 def _make_e2e_payload(
@@ -34,13 +34,13 @@ def _make_e2e_payload(
         "ciphertext": base64.b64encode(fake_ct).decode("ascii"),
         "nonce": base64.b64encode(fake_nonce).decode("ascii"),
         "wrapped_shares": {
-            "sender": nip04_encrypt(share_sender, sender_nsec, sender_npub),
-            "carrier": nip04_encrypt(share_carrier, sender_nsec, carrier_npub),
-            "arbiter": nip04_encrypt(share_arbiter, sender_nsec, arbiter_npub),
+            "sender": nip44_encrypt(share_sender, sender_nsec, sender_npub),
+            "carrier": nip44_encrypt(share_carrier, sender_nsec, carrier_npub),
+            "arbiter": nip44_encrypt(share_arbiter, sender_nsec, arbiter_npub),
         },
         "read_packages": {
-            "sender": nip04_encrypt(session_key, sender_nsec, sender_npub),
-            "carrier": nip04_encrypt(session_key, sender_nsec, carrier_npub),
+            "sender": nip44_encrypt(session_key, sender_nsec, sender_npub),
+            "carrier": nip44_encrypt(session_key, sender_nsec, carrier_npub),
         },
     }
 
@@ -371,13 +371,13 @@ async def test_arbiter_reveal_requires_arbiter_role(client, _e2e_deal):
 async def test_nip04_roundtrip_correctness():
     """Sanity: NIP-04 encrypt→decrypt is symmetric on our helpers."""
     from app.core.keypair import generate_keypair
-    from app.core.threshold import nip04_decrypt, nip04_encrypt
+    from app.core.threshold import nip44_decrypt, nip44_encrypt
 
     a_nsec, a_npub = generate_keypair()
     b_nsec, b_npub = generate_keypair()
     payload = b"session-key-abc-123-XYZ"
-    ct = nip04_encrypt(payload, a_nsec, b_npub)
-    assert nip04_decrypt(ct, b_nsec, a_npub) == payload
+    ct = nip44_encrypt(payload, a_nsec, b_npub)
+    assert nip44_decrypt(ct, b_nsec, a_npub) == payload
 
 
 # ── T_KEYS.1 — NIP-44 v2 ─────────────────────────────────────────────────────

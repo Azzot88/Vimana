@@ -4,7 +4,7 @@ Runtime split:
 
 - **Frontend** (`frontend/src/lib/threshold.ts`) generates a per-message
   `session_key`, AES-256-GCM encrypts the plaintext, Shamir-splits(2, 3) the
-  key into three shares, and NIP-04-wraps each share (and a per-participant
+  key into three shares, and NIP-44-wraps each share (and a per-participant
   session-key "read package") under the target npub.
 
 - **Backend** stores the opaque blob and, on `POST /threshold/disputes/
@@ -12,10 +12,10 @@ Runtime split:
   arbiter's server-held nsec (custodial). Arbiter's client combines it with a
   cooperating party's share to reconstruct the session key locally.
 
-We use **NIP-04** (kind-4 DM format: AES-256-CBC + raw-x ECDH) so any NIP-07
-extension (Alby, nos2x, ...) can unwrap read-packages client-side without our
+We use **NIP-44 v2** (ChaCha20 + HMAC-SHA256 + length padding) so any NIP-07
+extension exposing `nip44` can unwrap read-packages client-side without our
 having to bundle custom crypto. Author's npub (already stored on the message
-via T2.2 pt.2) is the "sender pubkey" for the recipient's NIP-04 decrypt.
+via T2.2 pt.2) is the "sender pubkey" for the recipient's NIP-44 decrypt.
 """
 from __future__ import annotations
 
@@ -26,8 +26,7 @@ import os
 import uuid
 
 from coincurve import PrivateKey, PublicKey
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 from fastapi import HTTPException
 
 
@@ -36,49 +35,15 @@ def _pub_from_xonly(xonly_hex: str) -> PublicKey:
 
 
 def nip04_shared_x(priv_hex: str, xonly_pub_hex: str) -> bytes:
-    """ECDH x-coordinate as a raw 32-byte AES-256 key (NIP-04 spec)."""
+    """ECDH x-coordinate, 32 bytes. NIP-44 runs it through HKDF (see below);
+    NIP-04 used it as an AES key directly, which is one of the reasons it went."""
     priv = PrivateKey(bytes.fromhex(priv_hex))
     pub = _pub_from_xonly(xonly_pub_hex)
     shared_point = pub.multiply(priv.secret)
     return shared_point.format(compressed=True)[1:33]
 
-
-def nip04_encrypt(plaintext: bytes, sender_priv_hex: str, recipient_xonly_pub_hex: str) -> str:
-    """NIP-04 kind-4 ciphertext: `<b64_ct>?iv=<b64_iv>`.
-
-    Symmetric key = ECDH x-coord (32 bytes). AES-256-CBC + PKCS7 padding.
-    """
-    key = nip04_shared_x(sender_priv_hex, recipient_xonly_pub_hex)
-    iv = os.urandom(16)
-    padder = padding.PKCS7(128).padder()
-    padded = padder.update(plaintext) + padder.finalize()
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv)).encryptor()
-    ct = cipher.update(padded) + cipher.finalize()
-    return f"{base64.b64encode(ct).decode('ascii')}?iv={base64.b64encode(iv).decode('ascii')}"
-
-
-def nip04_decrypt(nip04_ct: str, recipient_priv_hex: str, sender_xonly_pub_hex: str) -> bytes:
-    """Inverse of `nip04_encrypt`. Raises 422 on any structural or auth failure."""
-    if "?iv=" not in nip04_ct:
-        raise HTTPException(status_code=422, detail="Malformed NIP-04 ciphertext")
-    ct_b64, iv_b64 = nip04_ct.split("?iv=", 1)
-    try:
-        ct = base64.b64decode(ct_b64)
-        iv = base64.b64decode(iv_b64)
-    except (ValueError, TypeError) as exc:
-        raise HTTPException(status_code=422, detail=f"NIP-04 base64: {exc}")
-    key = nip04_shared_x(recipient_priv_hex, sender_xonly_pub_hex)
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
-    try:
-        padded = cipher.update(ct) + cipher.finalize()
-        unpadder = padding.PKCS7(128).unpadder()
-        return unpadder.update(padded) + unpadder.finalize()
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"NIP-04 decrypt: {exc}") from exc
-
-
 def envelope_parts(entry, default_sender_pubkey: str | None) -> tuple[str, str | None]:
-    """Split a stored NIP-04 envelope into (ciphertext, sender_pubkey).
+    """Split a stored envelope into (ciphertext, sender_pubkey).
 
     Two shapes exist (T3.12 pt.2c):
 
@@ -86,7 +51,7 @@ def envelope_parts(entry, default_sender_pubkey: str | None) -> tuple[str, str |
       supplies it as `default_sender_pubkey`;
     - `{"ct": "<ct>", "sender_pubkey": "<hex>"}` — carries its own sender.
 
-    The second shape exists because NIP-04 is ECDH: re-addressing an envelope to
+    The second shape exists because the envelope is ECDH-addressed: re-addressing an envelope to
     a new key requires the *sender's* private key. When a user takes their own
     identity, the platform re-wraps their envelopes using the retiring service
     key as sender — which only works if the reader can be told that is who to
@@ -128,13 +93,13 @@ class E2EPayload:
       "ciphertext": "<b64 AES-GCM ct>",
       "nonce":      "<b64 12-byte AES-GCM nonce>",
       "wrapped_shares": {
-        "sender":  "<NIP-04 ct string>",
-        "carrier": "<NIP-04 ct string>",
-        "arbiter": "<NIP-04 ct string>"
+        "sender":  "<NIP-44 payload>",
+        "carrier": "<NIP-44 payload>",
+        "arbiter": "<NIP-44 payload>"
       },
       "read_packages": {
-        "sender":  "<NIP-04 ct of session_key>",
-        "carrier": "<NIP-04 ct of session_key>"
+        "sender":  "<NIP-44 payload of session_key>",
+        "carrier": "<NIP-44 payload of session_key>"
       }
     }
     ```
@@ -174,7 +139,7 @@ class E2EPayload:
             if not isinstance(val, str) or "?iv=" not in val:
                 raise HTTPException(
                     status_code=422,
-                    detail=f"wrapped_shares.{role} must be a NIP-04 ct string",
+                    detail=f"wrapped_shares.{role} must be a NIP-44 payload string",
                 )
 
     def to_blob(self) -> tuple[bytes, bytes, dict]:
@@ -194,8 +159,8 @@ class E2EPayload:
 # T_KEYS.1 — NIP-44 v2 (замена NIP-04)
 # ─────────────────────────────────────────────────────────────
 #
-# NIP-04 above is deprecated *in the Nostr spec itself*, and for the reason
-# that matters here: AES-256-CBC with a raw ECDH x-coordinate and no MAC.
+# NIP-04, which this replaced, is deprecated *in the Nostr spec itself*, for the
+# reason that matters here: AES-256-CBC with a raw ECDH x-coordinate and no MAC.
 # Unauthenticated. A stored envelope can be modified and the reader has no way
 # to notice — in a vault built on "changes are detectable", that is the wrong
 # primitive to be holding the session keys.

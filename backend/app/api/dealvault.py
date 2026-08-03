@@ -27,7 +27,7 @@ from app.core.file_validation import FileValidationError, validate_upload
 from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, presign_ttl_for_kind, upload_file
-from app.core.threshold import E2EPayload, envelope_parts, nip04_decrypt
+from app.core.threshold import E2EPayload, envelope_parts, nip44_decrypt
 from app.models.deal import Attachment, AttachmentKind, Deal, DealEventType, DealVaultMessage
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
@@ -506,7 +506,7 @@ async def decrypt_message_for_me(
         )
 
     caller_nsec = decrypt_nsec(bytes(current_user.nsec_nonce), bytes(current_user.nsec_encrypted))
-    session_key = nip04_decrypt(ciphertext, caller_nsec, sender_pubkey)
+    session_key = nip44_decrypt(ciphertext, caller_nsec, sender_pubkey)
 
     # Now AES-GCM decrypt the ciphertext with the recovered session_key.
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
