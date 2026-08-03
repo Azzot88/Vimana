@@ -62,18 +62,18 @@ async def resolve_share_address(
     if default is not None:
         return _view_from_row(default)
 
-    # Legacy fallback — user filled the old fields but never migrated to
-    # multiple addresses.
-    if user.receiving_country_iso:
-        return _AddressView(
-            label="Default",
-            country_iso=user.receiving_country_iso,
-            city=user.receiving_city,
-            street=user.receiving_street,
-            postal_code=user.receiving_postal_code,
-            note=user.receiving_note,
-        )
-
+    # T_KEYS.1 (слой 4) — the `User.receiving_*` fallback is gone.
+    #
+    # It existed since T_UX.4 for accounts that filled the old single-address
+    # fields and never got a row in `receiving_addresses`. Measured on prod
+    # 2026-08-02: one account still carries the old columns, and it has a row
+    # too — so the branch could not fire for anyone. Unreachable code in the
+    # path that decides where a parcel is delivered is worth removing precisely
+    # because it looks like a safety net and is not one.
+    #
+    # The columns themselves stay for now: dropping them is the contract phase
+    # and reaches `MeOut`, `UserUpdate` and the frontend `User` type. Removing
+    # the read first is safe on its own and makes that migration a pure delete.
     raise AddressNotSetError("No receiving address set")
 
 
