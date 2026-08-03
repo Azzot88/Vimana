@@ -18,6 +18,14 @@
     "createdNotice": "Litige ouvert. En attente d'un arbitre."
   },
   "admin": {
+    "scanQueue": {
+      "title": "Analyse des fichiers envoyés",
+      "pending": "en attente",
+      "clean": "vérifiés",
+      "infected": "infectés",
+      "noScanner": "aucun scanner configuré",
+      "hint": "« En attente » ne veut pas dire « en cours d'analyse ». Ces fichiers sont déjà dans les coffres et téléchargeables par les participants ; personne ne les a encore regardés."
+    },
     "disputesTitle": "Litiges",
     "usersTitle": "Utilisateurs",
     "disputesEmpty": "Aucun litige à examiner.",

@@ -18,6 +18,14 @@
     "createdNotice": "Disputa abierta. Esperando un árbitro."
   },
   "admin": {
+    "scanQueue": {
+      "title": "Análisis de archivos subidos",
+      "pending": "en espera",
+      "clean": "revisados",
+      "infected": "infectados",
+      "noScanner": "sin escáner configurado",
+      "hint": "«En espera» no significa «analizándose». Estos archivos ya están en las cajas y los participantes pueden descargarlos; simplemente nadie los ha mirado."
+    },
     "disputesTitle": "Disputas",
     "usersTitle": "Usuarios",
     "disputesEmpty": "No hay disputas para revisar.",

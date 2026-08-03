@@ -18,6 +18,14 @@
     "createdNotice": "Spór otwarty. Czekamy na arbitra."
   },
   "admin": {
+    "scanQueue": {
+      "title": "Skanowanie przesłanych plików",
+      "pending": "oczekują",
+      "clean": "sprawdzone",
+      "infected": "zainfekowane",
+      "noScanner": "brak skanera",
+      "hint": "„Oczekują” nie znaczy „są sprawdzane”. Te pliki już leżą w sejfach i uczestnicy mogą je pobrać — po prostu nikt na nie jeszcze nie spojrzał."
+    },
     "disputesTitle": "Spory",
     "usersTitle": "Użytkownicy",
     "disputesEmpty": "Brak sporów do rozpatrzenia.",

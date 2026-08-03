@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { getScanQueue, type ScanQueue } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
+import MonoText from './MonoText'
 
 interface AdminLink {
   to: string
@@ -39,8 +42,20 @@ const LINKS: AdminLink[] = [
 export default function AdminPanelSection() {
   const { user } = useAuthStore()
   const { t } = useTranslation()
+  const [queue, setQueue] = useState<ScanQueue | null>(null)
 
   const role = user?.role
+  const isSuper = role === 'superuser'
+
+  // T3.8 — only the superuser. `scan-queue` is behind `USERS_MANAGE`, so
+  // asking as an arbiter would spend a request to be told 403.
+  useEffect(() => {
+    if (!isSuper) return
+    getScanQueue()
+      .then(({ data }) => setQueue(data))
+      .catch(() => {})
+  }, [isSuper])
+
   if (role !== 'arbiter' && role !== 'superuser') return null
 
   const visible = LINKS.filter((l) => l.roles.includes(role))
@@ -73,6 +88,56 @@ export default function AdminPanelSection() {
           </Link>
         ))}
       </div>
+
+      {/* T3.8 — the scan queue as a state, not an alert.
+          The Telegram message is a moment: it arrives, and if nobody is at the
+          keyboard it is gone. This number is still here tomorrow, and a queue
+          that keeps climbing says more than any single outage did. */}
+      {queue && (
+        <div
+          data-testid="scan-queue"
+          className="rounded-field border border-navy/10 bg-ivory p-4 space-y-2"
+        >
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-display font-medium text-sm text-navy">
+              {t('admin.scanQueue.title')}
+            </p>
+            {!queue.scanner_configured && (
+              <MonoText className="text-[11px] text-amber">
+                {t('admin.scanQueue.noScanner')}
+              </MonoText>
+            )}
+          </div>
+          <dl className="flex flex-wrap gap-x-6 gap-y-1">
+            {([
+              ['pending', queue.pending],
+              ['clean', queue.clean],
+              ['infected', queue.infected],
+            ] as const).map(([key, value]) => (
+              <div key={key} className="flex items-baseline gap-2">
+                <dt className="text-xs font-body text-navy/50">
+                  {t(`admin.scanQueue.${key}`)}
+                </dt>
+                <dd>
+                  <MonoText
+                    className={`text-sm ${
+                      key === 'infected' && value > 0 ? 'text-danger' : 'text-navy'
+                    }`}
+                  >
+                    {value}
+                  </MonoText>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {/* Said every time the number is shown, because the number invites
+              exactly the wrong reading: pending files are not "being checked",
+              they are stored and downloadable while nobody has looked. */}
+          <p className="text-[11px] font-body text-navy/45 leading-snug">
+            {t('admin.scanQueue.hint')}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

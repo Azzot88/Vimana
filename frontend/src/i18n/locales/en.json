@@ -9,16 +9,6 @@
     "notices": "Notices",
     "logout": "Sign out"
   },
-  "admin": {
-    "panelTitle": "Administration",
-    "panelHint": "Restricted to arbiters and platform owner.",
-    "disputes": "Disputes",
-    "disputesDesc": "Review open disputes and escrow decisions.",
-    "users": "Users",
-    "usersDesc": "Manage users, roles, and bulk actions.",
-    "notices": "Route notes",
-    "noticesDesc": "Corridor advisories and platform-wide banners."
-  },
   "dispute": {
     "openButton": "Open dispute",
     "modalTitle": "Open dispute",
@@ -29,6 +19,22 @@
     "createdNotice": "Dispute opened. Waiting for an arbiter to claim it."
   },
   "admin": {
+    "scanQueue": {
+      "title": "Upload scanning",
+      "pending": "waiting",
+      "clean": "checked",
+      "infected": "infected",
+      "noScanner": "no scanner configured",
+      "hint": "\"Waiting\" does not mean \"being checked\". These files are already in vaults and downloadable by participants — nobody has looked at them yet."
+    },
+    "panelTitle": "Administration",
+    "panelHint": "Restricted to arbiters and platform owner.",
+    "disputes": "Disputes",
+    "disputesDesc": "Review open disputes and escrow decisions.",
+    "users": "Users",
+    "usersDesc": "Manage users, roles, and bulk actions.",
+    "notices": "Route notes",
+    "noticesDesc": "Corridor advisories and platform-wide banners.",
     "disputesTitle": "Disputes",
     "usersTitle": "Users",
     "disputesEmpty": "No disputes to review.",

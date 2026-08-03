@@ -52,3 +52,18 @@ export const promoteArbiter = (userId: string, isArbiter: boolean) =>
 /** T_TEST.3 — superuser hard-delete for e2e/junk cleanup. Cascade. */
 export const deleteUser = (userId: string) =>
   api.delete<void>(`/api/admin/users/${userId}`)
+
+/** T3.8 — how many stored files nobody has looked at yet.
+ *
+ *  `pending` is not "safe": it means no scanner has seen the bytes, either
+ *  because none is configured or because it was unreachable when the file
+ *  arrived. `scanner_configured` separates a queue that is draining from one
+ *  that never will. */
+export interface ScanQueue {
+  pending: number
+  infected: number
+  clean: number
+  scanner_configured: boolean
+}
+
+export const getScanQueue = () => api.get<ScanQueue>('/api/admin/scan-queue')
