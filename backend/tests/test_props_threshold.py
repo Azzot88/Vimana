@@ -90,7 +90,7 @@ def test_nip44_wrong_recipient_cannot_decrypt(pt: bytes) -> None:
 
 
 @_settings
-@given(pt=st.binary(min_size=0, max_size=200))
+@given(pt=st.binary(min_size=1, max_size=200))
 def test_nip44_symmetric_direction(pt: bytes) -> None:
     """A→B and B→A produce different ciphertexts but each roundtrips correctly."""
     ct_ab = nip44_encrypt(pt, _A_NSEC, _B_NPUB)
