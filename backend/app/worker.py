@@ -1,3 +1,5 @@
+from importlib import import_module
+
 from celery import Celery
 from app.core.config import settings
 
@@ -68,3 +70,19 @@ celery_app.conf.task_routes = {
     "app.tasks.chain_anchor.*": {"queue": "notifications"},
     "app.tasks.malware_rescan.*": {"queue": "notifications"},
 }
+
+# T3.8 (2026-08-02) — import the task modules, do not merely list them.
+#
+# `include=` above did nothing. Every task in the registry got there because
+# something else imported its module: the API imports `notifications`, the UBA
+# endpoint imports `uba`, and so on. `malware_rescan` was the first module with
+# no caller — beat is its only user — and so the first to expose that the
+# mechanism had never worked. `test_worker.py` could not see it either, because
+# the modules it checked were all being imported by accident.
+#
+# The loop reads the same list, so there is still one place to add a module. It
+# lives at the bottom of the file on purpose: each task module does
+# `from app.worker import celery_app`, and by this line `celery_app` exists in
+# the partially-initialised module, which is what makes the cycle resolve.
+for _task_module in _TASK_MODULES:
+    import_module(_task_module)

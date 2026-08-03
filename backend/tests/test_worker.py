@@ -67,3 +67,24 @@ def test_every_task_module_is_included():
         f"task modules not included in the Celery app: {sorted(missing)}. "
         "Their tasks would be dropped by the worker."
     )
+
+
+def test_every_listed_module_is_actually_imported():
+    """T3.8 — `_TASK_MODULES` must import, not merely enumerate.
+
+    Celery's `include=` was set for six modules and imported none of them. The
+    registry looked healthy anyway because the API imports `notifications`, the
+    UBA endpoint imports `uba`, and so on — every task module happened to have
+    a caller. `malware_rescan` was the first without one (beat is its only
+    user), and it surfaced as "scheduled but not registered".
+
+    This asserts the mechanism rather than the outcome: a module in the list is
+    in `sys.modules` after importing `app.worker`, whether or not anything else
+    in the app happens to want it.
+    """
+    import sys
+
+    from app.worker import _TASK_MODULES
+
+    missing = [m for m in _TASK_MODULES if m not in sys.modules]
+    assert not missing, f"listed but never imported: {missing}"
