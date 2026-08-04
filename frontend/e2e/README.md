@@ -24,6 +24,7 @@ npm run headed                    # запускает все 3 спека с н
 | `npm run headed:single` | То же в 1 worker (медленнее, но детерминированнее) |
 | `npm run trace` | Headless + trace.zip (не открывает окно; для сервера/CI) |
 | `npm run ci` | Headless, только failures пишут screenshot/video/trace |
+| `npm run a11y` | Только `a11y.spec.ts` — axe-core по 5 страницам (T_TEST.8) |
 | `npm run show-trace <file.zip>` | Просмотр trace как машины времени |
 | `npm run show-report` | HTML-отчёт последнего прогона |
 
@@ -63,6 +64,14 @@ Deals / Messages / TrustEdges.
 - **`admin-guard.spec.ts`** — обычный юзер → /admin/{notices,users,disputes}
   → всегда редирект на /dashboard. Также проверяет что AdminPanelSection не
   протекает в /profile для не-admin ролей.
+
+**T_TEST.8** — доступность:
+- **`a11y.spec.ts`** — axe-core на `/`, `/login`, `/register`, `/dashboard`,
+  `/profile`. Проверяются теги WCAG 2.2 AA (`wcag2a…wcag22aa`), исключения — в
+  `axe-rules.json`, каждое с причиной. Зелёный прогон означает «машина не нашла
+  нарушений», а не «стандарт выполнен»: axe покрывает примерно треть AA,
+  осмысленность порядка фокуса и текста ошибок остаётся за человеком.
+  Требует `npm install` (добавлен `@axe-core/playwright`).
 
 Отложено: `smoke-nostr.spec.ts` (нужен T3.5 включённым), Docker profile
 `smoke-live` (VNC), CI-hook, R2 trace артефакты.

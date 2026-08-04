@@ -32,3 +32,7 @@ Thumbs.db
 
 # Docker volumes (if mapped locally)
 postgres_data/
+
+# Scan / load artefacts — snapshots of one moment, they age badly in a repo
+.zap/zap-report.*
+load/results/*.json

@@ -1,0 +1,44 @@
+# T_TEST.7 pt.1 — known findings, each with the reason it is known.
+#
+# Format (ZAP baseline `-c`):  <ruleId>\tIGNORE|WARN|FAIL\t<comment>
+# Columns are separated by a single TAB. Lines starting with `#` are comments.
+#
+# The rule for this file: a line exists only when somebody can say why the
+# finding does not apply here. "Noisy" is not a reason on its own — a rule that
+# fires on every page and is silenced without a sentence is how a real finding
+# gets hidden six months later. Anything not listed stays at ZAP's default, and
+# the pass/fail decision itself lives in `app/cli/zap_report.py`, not here:
+# exit codes spread across a TSV and a shell script are a gate nobody can read.
+#
+# Reviewed: 2026-08-03.
+
+# Timestamp Disclosure — matches any 10-digit number in a response. Our bundles
+# are minified JS full of hashes and ids, and the SPA sends `expires_at` /
+# `verified_at` on purpose (D-EVIDENCE-DECAYS: a date is *required* next to a
+# claim). Every hit so far is one of those two.
+10096	IGNORE	Dates are deliberate (D-EVIDENCE-DECAYS); the rest are bundle hashes.
+
+# Suspicious Comments — fires on `TODO`, `FIXME`, `admin` etc. inside vendored
+# minified JS. Our own comments do not ship: the production build strips them
+# (T_SEC.2, static bundle), so what remains is third-party source text.
+10027	IGNORE	Hits are inside vendored minified JS; our comments are stripped at build.
+
+# Modern Web Application — informational, and correct: this is a React SPA.
+# It reports that links are rendered by script, not that anything is wrong.
+10109	IGNORE	Informational: yes, it is an SPA.
+
+# Non-Storable Content — informational. API responses are deliberately
+# non-storable; that is the intended answer for authenticated JSON.
+10049	IGNORE	Informational; non-storable is the intent for authenticated JSON.
+
+# Sec-Fetch-* headers not set — these are request headers set by browsers, not
+# something the server can emit. Fires because ZAP's own spider does not send
+# them.
+90005	IGNORE	Request-side headers; the scanner not sending them is not a server defect.
+
+# --- deliberately NOT ignored, listed so nobody adds them later without ---
+# --- reading this: ---
+# 10035 HSTS, 10038 CSP, 10020 X-Frame-Options, 10021 X-Content-Type-Options,
+# 10063 Permissions-Policy — all five are set by nginx (T_SEC.1, D-DOCS-EXPOSURE).
+# If any of them fires, the header stopped being sent. That is a real regression
+# and must not be silenced here.

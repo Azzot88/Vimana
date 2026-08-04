@@ -248,6 +248,29 @@ services:
   # образ (`docker exec -i` с той же машины), но не как запущенный сервис.
   # Возвращать сюда — только вместе с сетевым транспортом (вариант A в T7.1).
 
+  # T_TEST.6 — k6 load scenarios. Never part of `up`: it is a tool you point at
+  # a host, not a service that runs.
+  #
+  #   docker compose -f docker-compose.dev.yml --profile load run --rm \
+  #     -e BASE_URL=https://<staging-host> k6 run /load/scripts/browse_trips.js
+  #
+  # The whole `load/` directory is mounted (rw) rather than the scripts alone:
+  # the scenarios import `../lib/`, the summary reads `../baseline.json`, and
+  # results are written back next to it. Mounting the pieces separately made
+  # those three relative paths mean three different things.
+  #
+  # Floating tag, like ZAP and for the same reason — this is invoked by hand,
+  # not run under us. It matters here in one way: a k6 upgrade can move the
+  # numbers, so a baseline worth keeping records the version it was taken with
+  # and pins it back via K6_IMAGE.
+  k6:
+    image: ${K6_IMAGE:-grafana/k6:latest}
+    profiles: ["load"]
+    logging: *default-logging
+    volumes:
+      - ./load:/load
+    # No `depends_on`: the target is a URL, and usually not this machine.
+
 volumes:
   postgres_data:
   nostr_data:

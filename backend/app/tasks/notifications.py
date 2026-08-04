@@ -287,3 +287,40 @@ def notify_admins_infected_file(attachment_id: str, deal_id: str, signature: str
             "Файл остаётся в хранилище: он часть цепи доказательств, и его "
             "удаление сделало бы проверку сделки неотличимой от подмены.",
         )
+
+
+@celery_app.task(name="app.tasks.notifications.notify_admins_zap_findings")
+def notify_admins_zap_findings(high: list[str], medium_count: int) -> None:
+    """T_TEST.7 pt.1 — the passive scan found something at High.
+
+    Dispatched by `app.cli.zap_report`, which is run by hand from
+    `.zap/baseline.sh`. There is no schedule behind it on purpose: a scan needs
+    a human to have chosen a target and a moment, and a weekly cron against
+    production would be an unattended active-ish crawl nobody reads.
+
+    The message carries the findings themselves, not a count and a link to a
+    report file — the report lives on whichever machine ran the scan, and a
+    pointer to a path on somebody's laptop is not an alert.
+    """
+    import os
+
+    from app.core.telegram import send_telegram
+
+    chat_ids = [c.strip() for c in os.getenv("ADMIN_TELEGRAM_CHAT_IDS", "").split(",") if c.strip()]
+    listing = "\n".join(f"• {item}" for item in high[:10])
+    if len(high) > 10:
+        listing += f"\n• …ещё {len(high) - 10}"
+
+    if not chat_ids:
+        logger.error("ZAP found %s High and no admin chat is configured:\n%s", len(high), listing)
+        return
+
+    for chat_id in chat_ids:
+        send_telegram(
+            chat_id,
+            "🛡 Vimana · ZAP baseline нашёл High\n\n"
+            f"{listing}\n\n"
+            f"Medium в этом же прогоне: {medium_count}.\n"
+            "Baseline — пассивный скан: это то, что видно снаружи без единого "
+            "атакующего запроса.",
+        )

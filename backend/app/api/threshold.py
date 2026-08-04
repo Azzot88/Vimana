@@ -60,9 +60,13 @@ async def reveal_my_share(
     msg = await db.get(DealVaultMessage, message_id)
     if msg is None:
         raise HTTPException(status_code=404, detail="Message not found")
-    if not msg.is_e2e or not msg.wrapped_shares:
-        raise HTTPException(status_code=400, detail="Message is not e2e-encrypted")
 
+    # Participation first, shape second (T_TEST.7 pt.2, 2026-08-03). The other
+    # order answered a stranger with 400 "not e2e-encrypted" — an id they did
+    # not own, and the reply confirmed the message existed and told them what
+    # kind it was. Nothing else leaked, but the endpoint was describing rows to
+    # people with no claim on them, and the fix is free: the participant check
+    # needs no more data than the shape check does.
     deal = await db.get(Deal, msg.deal_id)
     if deal is None:
         raise HTTPException(status_code=404, detail="Deal not found")
@@ -74,6 +78,9 @@ async def reveal_my_share(
         role = "carrier"
     else:
         raise HTTPException(status_code=403, detail="Not a deal participant")
+
+    if not msg.is_e2e or not msg.wrapped_shares:
+        raise HTTPException(status_code=400, detail="Message is not e2e-encrypted")
 
     entry = msg.wrapped_shares.get(role)
     if entry is None:
