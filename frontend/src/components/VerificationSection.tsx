@@ -162,7 +162,13 @@ export default function VerificationSection() {
               {t('verification.uploadTitle')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* T_TEST.8 — a control whose only description is the option it
+                  happens to be showing has no name at all for a screen reader.
+                  The visible heading above says "Self-verify", not what this
+                  picks, so an `aria-label` is the honest fix rather than
+                  pointing at it with `aria-labelledby`. */}
               <select
+                aria-label={t('verification.docTypeLabel')}
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
                 className="border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan"
@@ -175,6 +181,7 @@ export default function VerificationSection() {
               </select>
               <input
                 type="text"
+                aria-label={t('verification.docCountryLabel')}
                 value={docCountry}
                 onChange={(e) => setDocCountry(e.target.value.toUpperCase().slice(0, 2))}
                 placeholder="AE"

@@ -325,6 +325,8 @@
     "expiredOn": "wygasła {{date}}",
     "uploadTitle": "Self-verify (poziom: auto)",
     "uploadButton": "Wgraj dokument",
+    "docTypeLabel": "Typ dokumentu",
+    "docCountryLabel": "Kraj wydania (kod dwuliterowy)",
     "chooseFile": "Wybierz plik",
     "uploadError": "Nie udało się wgrać.",
     "pickCountry": "Najpierw podaj dwuliterowy kod kraju.",

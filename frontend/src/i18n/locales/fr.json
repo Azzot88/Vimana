@@ -324,6 +324,8 @@
     "expiredOn": "expirée le {{date}}",
     "uploadTitle": "Auto-vérification (niveau : auto)",
     "uploadButton": "Téléverser un document",
+    "docTypeLabel": "Type de document",
+    "docCountryLabel": "Pays de délivrance (code à deux lettres)",
     "chooseFile": "Choisir un fichier",
     "uploadError": "Échec du téléversement.",
     "pickCountry": "Indiquez d'abord un code pays à 2 lettres.",

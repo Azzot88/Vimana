@@ -324,6 +324,8 @@
     "expiredOn": "caducó el {{date}}",
     "uploadTitle": "Auto-verificar (nivel: auto)",
     "uploadButton": "Subir documento",
+    "docTypeLabel": "Tipo de documento",
+    "docCountryLabel": "País de emisión (código de dos letras)",
     "chooseFile": "Elegir archivo",
     "uploadError": "Error al subir.",
     "pickCountry": "Indica primero un código de país de 2 letras.",

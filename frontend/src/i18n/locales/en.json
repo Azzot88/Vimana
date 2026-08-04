@@ -370,6 +370,8 @@
     "expiredOn": "lapsed {{date}}",
     "uploadTitle": "Self-verify (level: auto)",
     "uploadButton": "Upload document",
+    "docTypeLabel": "Document type",
+    "docCountryLabel": "Country of issue (2-letter code)",
     "chooseFile": "Choose file",
     "uploadError": "Upload failed.",
     "pickCountry": "Enter a 2-letter country code first.",

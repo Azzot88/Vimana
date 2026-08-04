@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { searchCities, type City } from '../api/cities'
 
@@ -50,13 +50,20 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
 
   const countryDisplay = new Intl.DisplayNames([i18n.language], { type: 'region' })
 
+  // T_TEST.8 — a <label> that is a sibling of its field names nothing: the
+  // association has to be written down. `useId` because two address forms can
+  // be open at once, and fixed ids would point the second form's labels at the
+  // first form's fields.
+  const uid = useId()
+
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-label`} className="block text-xs font-body font-medium text-navy/60 mb-1">
           {t('address.label')}
         </label>
         <input
+          id={`${uid}-label`}
           type="text"
           value={value.label}
           onChange={(e) => onChange({ label: e.target.value })}
@@ -67,10 +74,11 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-country`} className="block text-xs font-body font-medium text-navy/60 mb-1">
           {t('profile.address.country')}
         </label>
         <select
+          id={`${uid}-country`}
           value={value.country_iso}
           onChange={(e) =>
             onChange({
@@ -91,10 +99,11 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div className="relative">
-        <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-city`} className="block text-xs font-body font-medium text-navy/60 mb-1">
           {t('profile.address.city')}
         </label>
         <input
+          id={`${uid}-city`}
           type="text"
           value={cityQuery}
           onChange={(e) => {
@@ -131,10 +140,11 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-street`} className="block text-xs font-body font-medium text-navy/60 mb-1">
           {t('profile.address.street')}
         </label>
         <input
+          id={`${uid}-street`}
           type="text"
           value={value.street ?? ''}
           onChange={(e) => onChange({ street: e.target.value || null })}
@@ -144,10 +154,11 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-postal`} className="block text-xs font-body font-medium text-navy/60 mb-1">
           {t('profile.address.postal')}
         </label>
         <input
+          id={`${uid}-postal`}
           type="text"
           value={value.postal_code ?? ''}
           onChange={(e) => onChange({ postal_code: e.target.value || null })}
@@ -156,10 +167,11 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-note`} className="block text-xs font-body font-medium text-navy/60 mb-1">
           {t('profile.address.note')}
         </label>
         <textarea
+          id={`${uid}-note`}
           value={value.note ?? ''}
           onChange={(e) => onChange({ note: e.target.value || null })}
           rows={2}

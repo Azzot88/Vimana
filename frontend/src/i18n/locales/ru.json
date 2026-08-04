@@ -371,6 +371,8 @@
     "expiredOn": "истекла {{date}}",
     "uploadTitle": "Self-verify (уровень: auto)",
     "uploadButton": "Загрузить документ",
+    "docTypeLabel": "Тип документа",
+    "docCountryLabel": "Страна выдачи (двухбуквенный код)",
     "chooseFile": "Выбрать файл",
     "uploadError": "Не удалось загрузить.",
     "pickCountry": "Сначала укажите двухбуквенный код страны.",

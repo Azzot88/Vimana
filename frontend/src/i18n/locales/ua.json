@@ -338,6 +338,8 @@
     "expiredOn": "збігла {{date}}",
     "uploadTitle": "Self-verify (рівень: auto)",
     "uploadButton": "Завантажити документ",
+    "docTypeLabel": "Тип документа",
+    "docCountryLabel": "Країна видачі (дволітерний код)",
     "chooseFile": "Обрати файл",
     "uploadError": "Не вдалося завантажити.",
     "pickCountry": "Спочатку вкажіть двобуквений код країни.",
