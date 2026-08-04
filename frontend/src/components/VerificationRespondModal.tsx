@@ -81,7 +81,7 @@ export default function VerificationRespondModal({
         <h2 className="font-display font-semibold text-lg text-navy">
           {t('verification.respondTitle')}
         </h2>
-        <p className="text-sm font-body text-muted">
+        <p className="text-sm font-body text-navy/60">
           {t(isCarrier ? 'verification.respondCarrierHint' : 'verification.respondSenderHint')}
         </p>
 
@@ -91,7 +91,7 @@ export default function VerificationRespondModal({
               type="button"
               onClick={() => setShowUpload(true)}
               disabled={busy}
-              className="w-full text-left border border-cyan/40 text-link rounded-field px-4 py-3 text-sm font-body hover:bg-cyan/10 transition-colors"
+              className="w-full text-left border border-cyan/40 text-cyan rounded-field px-4 py-3 text-sm font-body hover:bg-cyan/10 transition-colors"
             >
               📎 {t('verification.actionUpload')}
             </button>
@@ -109,7 +109,7 @@ export default function VerificationRespondModal({
               disabled={busy}
               className={`w-full text-left border rounded-field px-4 py-3 text-sm font-body transition-colors ${
                 isCarrier
-                  ? 'border-navy/20 text-muted hover:bg-ivory'
+                  ? 'border-navy/20 text-navy/70 hover:bg-ivory'
                   : 'border-danger/30 text-danger hover:bg-danger/5'
               }`}
             >
@@ -143,7 +143,7 @@ export default function VerificationRespondModal({
                 className="border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
               />
             </div>
-            <label className="inline-flex cursor-pointer border border-cyan/40 text-link rounded-field px-4 py-2 text-sm font-display font-medium hover:bg-cyan/10 transition-colors">
+            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-field px-4 py-2 text-sm font-display font-medium hover:bg-cyan/10 transition-colors">
               {busy ? '…' : `📎 ${t('verification.chooseFile')}`}
               <input
                 ref={fileRef}
@@ -154,7 +154,7 @@ export default function VerificationRespondModal({
                 disabled={busy}
               />
             </label>
-            <p className="text-[10px] font-mono text-muted">
+            <p className="text-[10px] font-mono text-navy/30">
               🔒 {t('verification.privacyHint')}
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function VerificationRespondModal({
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="text-sm font-body text-muted hover:text-navy px-3 py-2"
+            className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
           >
             {t('common.cancel')}
           </button>

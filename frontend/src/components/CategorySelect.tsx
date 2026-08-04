@@ -98,11 +98,11 @@ export default function CategorySelect({ value, onChange, placeholder }: Props) 
                 <span className="text-navy">
                   {label(c.name_key)}
                   {!c.is_default && (
-                    <span className="ml-2 text-[10px] font-mono text-muted">custom</span>
+                    <span className="ml-2 text-[10px] font-mono text-navy/40">custom</span>
                   )}
                 </span>
                 {c.usage_count > 0 && (
-                  <span className="text-[10px] font-mono text-muted">{c.usage_count}</span>
+                  <span className="text-[10px] font-mono text-navy/40">{c.usage_count}</span>
                 )}
               </button>
             </li>
@@ -112,7 +112,7 @@ export default function CategorySelect({ value, onChange, placeholder }: Props) 
               <button
                 type="button"
                 onClick={submitCustom}
-                className="w-full text-left px-3 py-2 hover:bg-ivory text-sm text-link"
+                className="w-full text-left px-3 py-2 hover:bg-ivory text-sm text-cyan"
               >
                 {t('categories.addNew', { defaultValue: '+ Use' })} "{query.trim().toLowerCase()}"
               </button>

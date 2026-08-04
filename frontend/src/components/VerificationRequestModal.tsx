@@ -48,7 +48,7 @@ export default function VerificationRequestModal({
               : 'verification.askCarrierTitle',
           )}
         </h2>
-        <p className="text-sm font-body text-muted">
+        <p className="text-sm font-body text-navy/60">
           {t(
             targetRole === 'sender'
               ? 'verification.askSenderHint'
@@ -59,7 +59,7 @@ export default function VerificationRequestModal({
         <div className="flex gap-2 justify-end">
           <button
             onClick={onClose}
-            className="text-sm font-body text-muted hover:text-navy px-3 py-2"
+            className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
           >
             {t('common.cancel')}
           </button>

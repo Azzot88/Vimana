@@ -16,7 +16,7 @@ export default function Navbar() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `text-sm font-body font-medium transition-colors ${
-      isActive ? 'text-link' : 'text-muted hover:text-navy'
+      isActive ? 'text-cyan' : 'text-navy/60 hover:text-navy'
     }`
 
   return (
@@ -25,7 +25,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Link
             to="/"
-            className="font-display font-bold text-navy text-lg tracking-tight hover:text-link transition-colors"
+            className="font-display font-bold text-navy text-lg tracking-tight hover:text-cyan transition-colors"
           >
             Vimana
           </Link>
@@ -63,13 +63,13 @@ export default function Navbar() {
           <ModeSwitcher />
           <LanguageSwitcher />
           {user && (
-            <span className="hidden md:inline text-xs font-mono text-muted">
+            <span className="hidden md:inline text-xs font-mono text-navy/50">
               {user.display_name}
             </span>
           )}
           <button
             onClick={handleLogout}
-            className="hidden md:inline text-xs font-body text-muted hover:text-navy transition-colors"
+            className="hidden md:inline text-xs font-body text-navy/50 hover:text-navy transition-colors"
           >
             {t('nav.logout')}
           </button>

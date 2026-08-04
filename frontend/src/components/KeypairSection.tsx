@@ -326,10 +326,10 @@ export default function KeypairSection() {
           data-state={lost ? 'lost' : established ? 'own' : 'service'}
           className={`text-xs font-body px-2 py-0.5 rounded ${
             lost
-              ? 'bg-navy/10 text-muted'
+              ? 'bg-navy/10 text-navy/50'
               : established
-                ? 'bg-cyan/10 text-link'
-                : 'bg-navy/5 text-muted'
+                ? 'bg-cyan/10 text-cyan'
+                : 'bg-navy/5 text-navy/60'
           }`}
         >
           {lost
@@ -340,7 +340,7 @@ export default function KeypairSection() {
         </span>
       </div>
 
-      <p className="text-sm font-body text-muted">
+      <p className="text-sm font-body text-navy/60">
         {lost
           ? t('profile.identity.hintLost')
           : established
@@ -350,7 +350,7 @@ export default function KeypairSection() {
 
       {established && status.npub && (
         <div>
-          <div className="text-xs font-body text-muted mb-1">
+          <div className="text-xs font-body text-navy/50 mb-1">
             {t('profile.identity.npubLabel')}
           </div>
           {/* Shortened on purpose: sixty-four hex characters are unreadable and
@@ -364,7 +364,7 @@ export default function KeypairSection() {
           <button
             type="button"
             onClick={() => void navigator.clipboard?.writeText(status.npub || '')}
-            className="text-xs font-body text-link hover:underline mt-1"
+            className="text-xs font-body text-cyan hover:underline mt-1"
           >
             {t('profile.identity.copyNpub')}
           </button>
@@ -376,12 +376,12 @@ export default function KeypairSection() {
           key" would let someone assume today's key covers yesterday's records. */}
       {status.previous_npub && status.identity_changed_at && (
         <div className="bg-navy/5 rounded-field px-3 py-2 space-y-0.5">
-          <p className="text-xs font-body text-muted" data-testid="identity-changed">
+          <p className="text-xs font-body text-navy/70" data-testid="identity-changed">
             {t('profile.identity.changedOn', {
               date: new Date(status.identity_changed_at).toLocaleDateString(),
             })}
           </p>
-          <p className="text-xs font-body text-muted">
+          <p className="text-xs font-body text-navy/50">
             {t('profile.identity.previousKey')}{' '}
             <span className="font-mono" title={status.previous_npub}>
               {shortKey(status.previous_npub)}
@@ -400,13 +400,13 @@ export default function KeypairSection() {
       {!lost && (
         <div className="border-t border-navy/10 pt-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-body text-muted">
+            <div className="text-xs font-body text-navy/50">
               {t('profile.identity.vaultLabel')}
             </div>
             <span
               data-testid="identity-copies"
               data-copies={copies}
-              className="text-xs font-body text-muted"
+              className="text-xs font-body text-navy/50"
             >
               {t(`profile.identity.copies.${copies}`)}
             </span>
@@ -427,7 +427,7 @@ export default function KeypairSection() {
                accounts that took the old T3.12 path were left holding a .txt
                with the key in clear text. */
             <div className="space-y-2">
-              <p className="text-sm font-body text-muted">
+              <p className="text-sm font-body text-navy/60">
                 {t('profile.identity.vaultOnlyYours')}
               </p>
               {sealOpen ? (
@@ -447,7 +447,7 @@ export default function KeypairSection() {
                     placeholder={t('profile.identity.vaultPassPlaceholder') as string}
                     className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
                   />
-                  <p className="text-xs font-body text-muted">
+                  <p className="text-xs font-body text-navy/50">
                     {t('profile.identity.sealLocalNotice')}
                   </p>
                   <button
@@ -466,7 +466,7 @@ export default function KeypairSection() {
                       setSealKey('')
                       setVaultPass('')
                     }}
-                    className="text-sm font-body text-muted"
+                    className="text-sm font-body text-navy/50"
                   >
                     {t('common.cancel')}
                   </button>
@@ -496,7 +496,7 @@ export default function KeypairSection() {
               {/* Reassuring, not frightening: at this rung nothing is at stake
                   yet — the platform still holds a copy, so a forgotten
                   passphrase costs one more download, not the identity. */}
-              <p className="text-xs font-body text-muted">
+              <p className="text-xs font-body text-navy/50">
                 {t('profile.identity.vaultPassNotice')}
               </p>
               <button
@@ -514,14 +514,14 @@ export default function KeypairSection() {
                   setVaultOpen(false)
                   setVaultPass('')
                 }}
-                className="text-sm font-body text-muted"
+                className="text-sm font-body text-navy/50"
               >
                 {t('common.cancel')}
               </button>
             </div>
           ) : (
             <>
-              <p className="text-sm font-body text-muted">
+              <p className="text-sm font-body text-navy/60">
                 {t('profile.identity.vaultHint')}
               </p>
               <button
@@ -560,7 +560,7 @@ export default function KeypairSection() {
               <p className="text-sm font-body text-navy font-medium">
                 {t('profile.identity.dropTitle')}
               </p>
-              <p className="text-sm font-body text-muted">
+              <p className="text-sm font-body text-navy/70">
                 {t('profile.identity.dropBody')}
               </p>
               <label className="flex items-start gap-2 text-sm font-body text-navy">
@@ -588,7 +588,7 @@ export default function KeypairSection() {
                   setDropOpen(false)
                   setDropUnderstood(false)
                 }}
-                className="w-full text-sm font-body text-muted"
+                className="w-full text-sm font-body text-navy/50"
               >
                 {t('common.cancel')}
               </button>
@@ -628,7 +628,7 @@ export default function KeypairSection() {
           type="button"
           data-testid="identity-start"
           onClick={() => setStep('choose')}
-          className="w-full text-sm font-body text-muted underline"
+          className="w-full text-sm font-body text-navy/50 underline"
         >
           {t('profile.identity.startCta')}
         </button>
@@ -640,7 +640,7 @@ export default function KeypairSection() {
             <p className="text-sm font-body text-navy font-medium">
               {t('profile.identity.warnTitle')}
             </p>
-            <p className="text-sm font-body text-muted">
+            <p className="text-sm font-body text-navy/70">
               {t('profile.identity.warnBody')}
             </p>
             {/* T3.23 pt.2 — for an account that already has an identity this is
@@ -694,7 +694,7 @@ export default function KeypairSection() {
           <button
             type="button"
             onClick={reset}
-            className="w-full text-sm font-body text-muted"
+            className="w-full text-sm font-body text-navy/50"
           >
             {t('common.cancel')}
           </button>
@@ -704,12 +704,12 @@ export default function KeypairSection() {
       {/* ── bringing a key from elsewhere ── */}
       {step === 'import' && (
         <div className="space-y-3">
-          <p className="text-sm font-body text-muted">
+          <p className="text-sm font-body text-navy/70">
             {t('profile.identity.importHint')}
           </p>
 
           <div>
-            <label className="block text-xs font-body text-muted mb-1">
+            <label className="block text-xs font-body text-navy/50 mb-1">
               {t('profile.identity.importFileLabel')}
             </label>
             <input
@@ -722,7 +722,7 @@ export default function KeypairSection() {
           </div>
 
           <div>
-            <label className="block text-xs font-body text-muted mb-1">
+            <label className="block text-xs font-body text-navy/50 mb-1">
               {t('profile.identity.importStringLabel')}
             </label>
             <textarea
@@ -765,7 +765,7 @@ export default function KeypairSection() {
               setImportKey('')
               setImportPass('')
             }}
-            className="w-full text-sm font-body text-muted"
+            className="w-full text-sm font-body text-navy/50"
           >
             {t('common.cancel')}
           </button>
@@ -780,7 +780,7 @@ export default function KeypairSection() {
           </p>
           <div className="bg-navy/5 rounded-field p-3 space-y-2">
             <div>
-              <div className="text-xs font-body text-muted">
+              <div className="text-xs font-body text-navy/50">
                 {t('profile.identity.npubLabel')}
               </div>
               <MonoText className="text-xs text-navy break-all">
@@ -788,7 +788,7 @@ export default function KeypairSection() {
               </MonoText>
             </div>
             <div>
-              <div className="text-xs font-body text-muted">
+              <div className="text-xs font-body text-navy/50">
                 {t('profile.identity.nsecLabel')}
               </div>
               <MonoText className="text-xs text-navy break-all">
@@ -834,7 +834,7 @@ export default function KeypairSection() {
           <button
             type="button"
             onClick={reset}
-            className="w-full text-sm font-body text-muted"
+            className="w-full text-sm font-body text-navy/50"
           >
             {t('common.cancel')}
           </button>
@@ -846,7 +846,7 @@ export default function KeypairSection() {
         <button
           type="button"
           onClick={() => setStep('lost')}
-          className="text-sm font-body text-muted underline underline-offset-2"
+          className="text-sm font-body text-navy/50 underline underline-offset-2"
         >
           {t('profile.identity.declareLostCta')}
         </button>

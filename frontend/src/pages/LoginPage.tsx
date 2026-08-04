@@ -101,7 +101,7 @@ export default function LoginPage() {
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
           {t('auth.title')}
         </h1>
-        <p className="text-center text-muted text-sm font-body mb-8">{t('auth.subtitle')}</p>
+        <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
         {inactivityLogout && (
           <div className="bg-amber/10 border border-amber/40 rounded-field px-4 py-3 mb-4">
             <p className="text-sm font-body text-navy">
@@ -114,7 +114,7 @@ export default function LoginPage() {
           className="bg-white rounded-card border border-navy/10 p-6 space-y-4"
         >
           <div>
-            <label className="block text-xs font-body font-medium text-muted mb-1">
+            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
               {recovering ? t('auth.recoveryIdentifier') : t('auth.email')}
             </label>
             <input
@@ -134,7 +134,7 @@ export default function LoginPage() {
           {recovering ? (
             <>
               <div>
-                <label className="block text-xs font-body font-medium text-muted mb-1">
+                <label className="block text-xs font-body font-medium text-navy/60 mb-1">
                   {t('auth.recoveryCode')}
                 </label>
                 <input
@@ -151,7 +151,7 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-body font-medium text-muted mb-1">
+                <label className="block text-xs font-body font-medium text-navy/60 mb-1">
                   {t('auth.recoveryNewPassword')}
                 </label>
                 <input
@@ -164,13 +164,13 @@ export default function LoginPage() {
                   placeholder="••••••••"
                 />
               </div>
-              <p className="text-xs font-body text-muted">
+              <p className="text-xs font-body text-navy/50">
                 {t('auth.recoveryNotice')}
               </p>
             </>
           ) : (
             <div>
-              <label className="block text-xs font-body font-medium text-muted mb-1">
+              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
                 {t('auth.password')}
               </label>
               <input
@@ -204,7 +204,7 @@ export default function LoginPage() {
               setError('')
             }}
             data-testid="recovery-toggle"
-            className="w-full text-xs font-body text-muted"
+            className="w-full text-xs font-body text-navy/50"
           >
             {recovering ? t('auth.recoveryBack') : t('auth.recoveryStart')}
           </button>
@@ -212,7 +212,7 @@ export default function LoginPage() {
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-px bg-navy/10 flex-1" />
-            <span className="text-xs font-body text-muted">
+            <span className="text-xs font-body text-navy/40">
               {t('nostrAuth.or')}
             </span>
             <div className="h-px bg-navy/10 flex-1" />
@@ -223,13 +223,13 @@ export default function LoginPage() {
           </div>
         </div>
         <div className="flex items-center justify-between mt-4">
-          <p className="text-xs font-body text-muted">
+          <p className="text-xs font-body text-navy/50">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="text-link underline underline-offset-2">
+            <Link to="/register" className="text-cyan hover:underline">
               {t('auth.signUp')}
             </Link>
           </p>
-          <span className="font-mono text-xs text-muted">v{APP_VERSION}</span>
+          <span className="font-mono text-xs text-navy/20">v{APP_VERSION}</span>
         </div>
       </div>
     </div>

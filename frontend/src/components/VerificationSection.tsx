@@ -85,7 +85,7 @@ export default function VerificationSection() {
         <div className="flex items-center gap-3">
           <VerificationBadgeChip level={b.level} at={b.verified_at} />
           <div>
-            <MonoText className="text-xs text-muted">
+            <MonoText className="text-xs text-navy/40">
               {t(`verification.source.${b.source}`)}
             </MonoText>
             {/* T_TRUST.1 — expiry belongs next to the badge, not only in the
@@ -93,7 +93,7 @@ export default function VerificationSection() {
                 verified", and the account holder is the person who can act on
                 it before it lapses. */}
             {b.expires_at && (
-              <MonoText className="text-xs text-muted">
+              <MonoText className="text-xs text-navy/30">
                 {t(
                   new Date(b.expires_at) < new Date()
                     ? 'verification.expiredOn'
@@ -108,7 +108,7 @@ export default function VerificationSection() {
           <button
             type="button"
             onClick={() => handleRevoke(b.id)}
-            className="text-xs font-body text-muted hover:text-danger"
+            className="text-xs font-body text-navy/40 hover:text-danger"
           >
             {t('verification.revoke')}
           </button>
@@ -130,12 +130,12 @@ export default function VerificationSection() {
         />
       </div>
 
-      <p className="text-xs font-body text-muted">
+      <p className="text-xs font-body text-navy/50">
         {t('verification.sectionHint')}
       </p>
 
       {loading ? (
-        <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
+        <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -144,7 +144,7 @@ export default function VerificationSection() {
                 <MonoText className="text-lg text-navy font-medium">
                   {summary?.active_counts[l] ?? 0}
                 </MonoText>
-                <p className="text-xs font-body text-muted">
+                <p className="text-xs font-body text-navy/40">
                   {t(`verification.level.${l}`)}
                 </p>
               </div>
@@ -158,7 +158,7 @@ export default function VerificationSection() {
           )}
 
           <div className="pt-3 border-t border-navy/5 space-y-2">
-            <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
+            <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">
               {t('verification.uploadTitle')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -189,7 +189,7 @@ export default function VerificationSection() {
                 className="border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
               />
             </div>
-            <label className="inline-flex cursor-pointer border border-cyan/40 text-link rounded-field px-4 py-2 text-xs font-display font-medium hover:bg-cyan/10 transition-colors">
+            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-field px-4 py-2 text-xs font-display font-medium hover:bg-cyan/10 transition-colors">
               {uploading ? '…' : `📎 ${t('verification.uploadButton')}`}
               <input
                 ref={fileRef}
@@ -200,7 +200,7 @@ export default function VerificationSection() {
                 disabled={uploading}
               />
             </label>
-            <p className="text-[10px] font-mono text-muted">
+            <p className="text-[10px] font-mono text-navy/30">
               🔒 {t('verification.privacyHint')}
             </p>
             {error && <p className="text-xs font-mono text-danger">{error}</p>}

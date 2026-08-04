@@ -134,7 +134,7 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => setEditOpen(true)}
-          className="text-sm font-body font-medium text-link hover:underline"
+          className="text-sm font-body font-medium text-cyan hover:underline"
         >
           ✎ {t('profile.editButton')}
         </button>
@@ -167,7 +167,7 @@ export default function ProfilePage() {
                 <p className="font-display font-semibold text-lg text-navy truncate">
                   {user?.display_name}
                 </p>
-                <p className="text-xs font-mono text-muted">
+                <p className="text-xs font-mono text-navy/40">
                   {user?.active_mode === 'carrier'
                     ? t('dashboard.carrier')
                     : t('dashboard.sender')}
@@ -177,7 +177,7 @@ export default function ProfilePage() {
             <div className="pt-2 border-t border-navy/10 space-y-2">
               {user?.email && (
                 <div>
-                  <p className="text-xs font-body font-medium text-muted mb-0.5">
+                  <p className="text-xs font-body font-medium text-navy/40 mb-0.5">
                     {t('profile.email')}
                   </p>
                   <MonoText className="text-sm text-navy break-all">{user.email}</MonoText>
@@ -185,7 +185,7 @@ export default function ProfilePage() {
               )}
               {user?.phone && (
                 <div>
-                  <p className="text-xs font-body font-medium text-muted mb-0.5">
+                  <p className="text-xs font-body font-medium text-navy/40 mb-0.5">
                     {t('auth.phone')}
                   </p>
                   <MonoText className="text-sm text-navy">{user.phone}</MonoText>
@@ -214,14 +214,14 @@ export default function ProfilePage() {
               <h2 className="font-display font-semibold text-base text-navy">
                 {t('profile.contacts')}
               </h2>
-              <Link to="/invite" className="text-xs font-body text-link hover:underline">
+              <Link to="/invite" className="text-xs font-body text-cyan hover:underline">
                 {t('profile.invite')}
               </Link>
             </div>
             {loading ? (
-              <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
+              <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
             ) : connections.length === 0 ? (
-              <p className="text-sm font-body text-muted">{t('profile.noContacts')}</p>
+              <p className="text-sm font-body text-navy/40">{t('profile.noContacts')}</p>
             ) : (
               <div className="space-y-2">
                 {connections.map((conn) => (
@@ -237,12 +237,12 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <p className="text-sm font-body text-navy">{conn.display_name}</p>
-                        <p className="text-xs font-mono text-muted">
+                        <p className="text-xs font-mono text-navy/40">
                           {conn.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
                         </p>
                       </div>
                     </div>
-                    <MonoText className="text-xs text-muted">
+                    <MonoText className="text-xs text-navy/30">
                       {new Date(conn.connected_at).toLocaleDateString(i18n.language)}
                     </MonoText>
                   </div>
@@ -260,7 +260,7 @@ export default function ProfilePage() {
               <h2 className="font-display font-semibold text-base text-navy">
                 {user.key_lost ? t('archive.pageTitle') : t('identity.publicTitle')}
               </h2>
-              <p className="text-sm font-body text-muted">
+              <p className="text-sm font-body text-navy/60">
                 {user.key_lost ? t('archive.pageHint') : t('identity.publicHint')}
               </p>
               {/* T3.19 — a retired identity has one question about its page, and
@@ -281,7 +281,7 @@ export default function ProfilePage() {
                       />
                       <span>
                         <span className="text-navy">{t(`identity.visibility.${value}`)}</span>
-                        <span className="block text-xs text-muted">
+                        <span className="block text-xs text-navy/50">
                           {t(`identity.visibilityHint.${value}`)}
                         </span>
                       </span>
@@ -308,7 +308,7 @@ export default function ProfilePage() {
             <h2 className="font-display font-semibold text-base text-navy">
               {t('profile.keys.title')}
             </h2>
-            <p className="text-sm font-body text-muted">
+            <p className="text-sm font-body text-navy/60">
               {t('profile.keys.hint')}
             </p>
             <Link
@@ -329,15 +329,15 @@ export default function ProfilePage() {
                 type="button"
                 onClick={handleCreateInvite}
                 disabled={creatingInvite}
-                className="text-xs font-body text-link hover:underline disabled:opacity-50"
+                className="text-xs font-body text-cyan hover:underline disabled:opacity-50"
               >
                 {creatingInvite ? t('common.sending') : t('profile.inviteCreate')}
               </button>
             </div>
             {invitesLoading ? (
-              <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
+              <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
             ) : invites.length === 0 ? (
-              <p className="text-sm font-body text-muted">{t('profile.noInvites')}</p>
+              <p className="text-sm font-body text-navy/40">{t('profile.noInvites')}</p>
             ) : (
               <div className="space-y-2">
                 {invites.map((inv) => {
@@ -345,8 +345,8 @@ export default function ProfilePage() {
                     inv.status === 'accepted'
                       ? 'bg-success/10 text-success'
                       : inv.status === 'expired'
-                      ? 'bg-navy/10 text-muted'
-                      : 'bg-cyan/10 text-link'
+                      ? 'bg-navy/10 text-navy/50'
+                      : 'bg-cyan/10 text-cyan'
                   return (
                     <div
                       key={inv.token}
@@ -358,17 +358,17 @@ export default function ProfilePage() {
                             {t(`profile.inviteStatus.${inv.status}`)}
                           </span>
                           {inv.status === 'pending' && (
-                            <span className="text-xs font-mono text-muted">
+                            <span className="text-xs font-mono text-navy/40">
                               {t('profile.inviteExpiresIn', { time: formatRemaining(inv.expires_at) })}
                             </span>
                           )}
                           {inv.status === 'accepted' && inv.accepted_by_display_name && (
-                            <span className="text-xs font-body text-muted">
+                            <span className="text-xs font-body text-navy/60">
                               → {inv.accepted_by_display_name}
                             </span>
                           )}
                         </div>
-                        <MonoText className="text-xs text-muted truncate mt-0.5">
+                        <MonoText className="text-xs text-navy/30 truncate mt-0.5">
                           {inv.token.slice(0, 24)}…
                         </MonoText>
                       </div>
@@ -376,7 +376,7 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => copyInviteLink(inv.token)}
-                          className="text-xs font-body text-link hover:text-link shrink-0"
+                          className="text-xs font-body text-cyan/70 hover:text-cyan shrink-0"
                         >
                           {t('profile.inviteCopy')}
                         </button>
@@ -410,7 +410,7 @@ export default function ProfilePage() {
               <div key={key} className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-body text-navy">{label}</p>
-                  <p className="text-xs font-mono text-muted">{sub}</p>
+                  <p className="text-xs font-mono text-navy/40">{sub}</p>
                 </div>
                 <button
                   onClick={() => handleToggle(key)}
@@ -425,7 +425,7 @@ export default function ProfilePage() {
             {user?.notify_telegram && !user?.telegram_chat_id && (
               <button
                 onClick={handleConnectTelegram}
-                className="w-full text-sm font-body text-link border border-cyan/30 rounded-field py-2 hover:bg-cyan/5 transition-colors"
+                className="w-full text-sm font-body text-cyan border border-cyan/30 rounded-field py-2 hover:bg-cyan/5 transition-colors"
               >
                 {t('profile.connectTelegram')}
               </button>
@@ -440,11 +440,11 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between pt-2">
         <button
           onClick={handleLogout}
-          className="text-sm font-body text-muted hover:text-navy transition-colors"
+          className="text-sm font-body text-navy/40 hover:text-navy transition-colors"
         >
           {t('profile.logout')}
         </button>
-        <MonoText className="text-xs text-muted">v{APP_VERSION}</MonoText>
+        <MonoText className="text-xs text-navy/20">v{APP_VERSION}</MonoText>
       </div>
 
       <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />

@@ -126,7 +126,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={avatarBusy}
-              className="text-xs font-body text-link hover:underline disabled:opacity-50"
+              className="text-xs font-body text-cyan hover:underline disabled:opacity-50"
             >
               {avatarBusy ? t('common.sending') : t('profile.avatarUpload')}
             </button>
@@ -151,7 +151,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
         </div>
 
         <div>
-          <label className="block text-xs font-body font-medium text-muted mb-1">
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">
             {t('auth.name')}
           </label>
           <input
@@ -164,7 +164,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
         </div>
 
         <div>
-          <label className="block text-xs font-body font-medium text-muted mb-1">
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">
             {t('auth.phone')}
           </label>
           <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
@@ -180,7 +180,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
           </div>
         </div>
 
-        <p className="text-xs font-mono text-muted">{t('profile.editHint')}</p>
+        <p className="text-xs font-mono text-navy/40">{t('profile.editHint')}</p>
 
         {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
@@ -188,7 +188,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="text-sm font-body text-muted hover:text-navy px-4 py-2"
+            className="text-sm font-body text-navy/60 hover:text-navy px-4 py-2"
           >
             {t('common.cancel')}
           </button>

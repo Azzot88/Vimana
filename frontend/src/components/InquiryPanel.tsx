@@ -90,14 +90,14 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
             <p className="font-display font-semibold text-navy text-sm">
               {t('inquiry.chatWith', { name: carrierName })}
             </p>
-            <p className="text-xs font-mono text-muted mt-0.5">
+            <p className="text-xs font-mono text-navy/40 mt-0.5">
               {t('inquiry.encryptedNotice')}
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label={t('common.close')}
-            className="text-muted hover:text-navy text-xl leading-none px-2"
+            className="text-navy/50 hover:text-navy text-xl leading-none px-2"
           >
             ×
           </button>
@@ -105,11 +105,11 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {loading ? (
-            <p className="text-center text-sm font-body text-muted py-8">
+            <p className="text-center text-sm font-body text-navy/40 py-8">
               {t('common.loading')}
             </p>
           ) : messages.length === 0 ? (
-            <p className="text-center text-sm font-body text-muted py-8">
+            <p className="text-center text-sm font-body text-navy/40 py-8">
               {t('inquiry.empty')}
             </p>
           ) : (
@@ -124,7 +124,7 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
                   {isAddr && m.text ? (
                     <div className="max-w-[85%]">
                       <AddressCard text={m.text} />
-                      <p className="text-[10px] font-mono text-muted mt-1 text-right">
+                      <p className="text-[10px] font-mono text-navy/40 mt-1 text-right">
                         {new Date(m.created_at).toLocaleTimeString(i18n.language, {
                           hour: '2-digit',
                           minute: '2-digit',
@@ -140,7 +140,7 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words">{m.text}</p>
-                      <p className="text-[10px] font-mono text-muted mt-1">
+                      <p className="text-[10px] font-mono text-navy/40 mt-1">
                         {new Date(m.created_at).toLocaleTimeString(i18n.language, {
                           hour: '2-digit',
                           minute: '2-digit',
@@ -167,7 +167,7 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
               setShareOpen(true)
             }}
             disabled={sending || !inquiryId}
-            className="text-xs font-body text-link hover:underline disabled:opacity-40"
+            className="text-xs font-body text-cyan hover:underline disabled:opacity-40"
           >
             📍 {t('chat.shareAddress.button')}
           </button>

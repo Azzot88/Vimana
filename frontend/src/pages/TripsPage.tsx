@@ -92,15 +92,15 @@ export default function TripsPage() {
 
       <form onSubmit={handleSearch} className="bg-white rounded-card border border-navy/10 p-4 grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-3 md:items-end">
         <div className="md:flex-1 md:min-w-[160px]">
-          <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.from')}</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
           <AirportSelect value={origin} onChange={setOrigin} placeholder="DXB" />
         </div>
         <div className="md:flex-1 md:min-w-[160px]">
-          <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.to')}</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
           <AirportSelect value={destination} onChange={setDestination} placeholder="JFK" />
         </div>
         <div className="md:flex-1 md:min-w-[140px]">
-          <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.date')}</label>
+          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>
           <input
             type="date"
             value={date}
@@ -124,11 +124,11 @@ export default function TripsPage() {
 
       {loading ? (
         <div className="text-center py-12">
-          <MonoText className="text-muted text-sm">{t('common.loading')}</MonoText>
+          <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
         </div>
       ) : trips.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-sm font-body text-muted">{t('trips.noTrips')}</p>
+          <p className="text-sm font-body text-navy/40">{t('trips.noTrips')}</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -139,7 +139,7 @@ export default function TripsPage() {
                   <MonoText className="text-base text-navy font-medium">
                     {trip.origin} → {trip.destination}
                   </MonoText>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-muted">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
                       {t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span>
                       <UBAChip uba={trip.carrier_uba} level={trip.carrier_uba_level} />
@@ -151,7 +151,7 @@ export default function TripsPage() {
                         <span
                           data-testid="carrier-key-lost"
                           title={t('trips.keyLostHint') as string}
-                          className="text-xs font-body px-2 py-0.5 rounded bg-navy/10 text-muted"
+                          className="text-xs font-body px-2 py-0.5 rounded bg-navy/10 text-navy/50"
                         >
                           {t('trips.keyLost')}
                         </span>
@@ -167,7 +167,7 @@ export default function TripsPage() {
                   {trip.allowed_categories.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {trip.allowed_categories.map((cat) => (
-                        <span key={cat} className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-muted">
+                        <span key={cat} className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-navy/60">
                           {cat}
                         </span>
                       ))}
@@ -195,10 +195,10 @@ export default function TripsPage() {
 
               {orderTripId === trip.id && (
                 <form onSubmit={handleOrder} className="mt-4 pt-4 border-t border-navy/10 space-y-3">
-                  <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">{t('trips.requestTitle')}</p>
+                  <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">{t('trips.requestTitle')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.recipientContact')}</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.recipientContact')}</label>
                       <input
                         type="text"
                         value={recipientContact}
@@ -208,7 +208,7 @@ export default function TripsPage() {
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.cargoDescription')}</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.cargoDescription')}</label>
                       <input
                         type="text"
                         value={cargoDesc}
@@ -217,7 +217,7 @@ export default function TripsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.declaredValue')}</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.declaredValue')}</label>
                       <input
                         type="number"
                         step="0.01"
@@ -230,7 +230,7 @@ export default function TripsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-body font-medium text-muted mb-1">{t('trips.category')}</label>
+                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.category')}</label>
                       <CategorySelect value={cargoCategory} onChange={setCargoCategory} />
                     </div>
                   </div>
@@ -246,7 +246,7 @@ export default function TripsPage() {
                     <button
                       type="button"
                       onClick={() => setOrderTripId(null)}
-                      className="text-sm font-body text-muted hover:text-navy transition-colors px-3"
+                      className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3"
                     >
                       {t('common.cancel')}
                     </button>

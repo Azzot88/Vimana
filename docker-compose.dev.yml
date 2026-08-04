@@ -267,6 +267,12 @@ services:
     image: ${K6_IMAGE:-grafana/k6:latest}
     profiles: ["load"]
     logging: *default-logging
+    # The image runs as its own `k6` user (uid 12345), which cannot write into a
+    # host directory owned by the deploy user — the first run produced every
+    # number and then lost the file to `permission denied`. Matching the host
+    # owner keeps the written summary editable afterwards, which matters because
+    # recording a baseline is `cp`-ing that very file.
+    user: "${K6_USER:-1000:1000}"
     volumes:
       - ./load:/load
     # No `depends_on`: the target is a URL, and usually not this machine.

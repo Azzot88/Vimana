@@ -168,16 +168,16 @@ export default function DealVaultPage() {
       <div key={msg.id} className="space-y-1">
         <div className="flex items-center gap-2">
           {att && (
-            <span className="text-xs font-mono text-muted bg-navy/5 px-1.5 py-0.5 rounded">
+            <span className="text-xs font-mono text-navy/30 bg-navy/5 px-1.5 py-0.5 rounded">
               {t(KIND_KEY[att.kind]) ?? att.kind}
             </span>
           )}
           {msg.is_system && (
-            <span className="text-xs font-mono text-link bg-cyan/5 px-1.5 py-0.5 rounded">
+            <span className="text-xs font-mono text-cyan bg-cyan/5 px-1.5 py-0.5 rounded">
               {t('admin.systemMessage')}
             </span>
           )}
-          <MonoText className="text-xs text-muted ml-auto">
+          <MonoText className="text-xs text-navy/30 ml-auto">
             {new Date(msg.created_at).toLocaleTimeString(i18n.language)}
           </MonoText>
         </div>
@@ -204,14 +204,14 @@ export default function DealVaultPage() {
           const shown = msg.is_e2e ? decrypted[msg.id] : msg.text
           if (msg.is_e2e && shown === undefined) {
             return (
-              <p className="text-sm font-body text-muted italic bg-ivory rounded-field px-3 py-2 inline-block">
+              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
                 🔒 {t('chat.decrypting')}
               </p>
             )
           }
           if (msg.is_e2e && shown === '') {
             return (
-              <p className="text-sm font-body text-muted italic bg-ivory rounded-field px-3 py-2 inline-block">
+              <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
                 🔒 {t('chat.needsNip07')}
               </p>
             )
@@ -230,7 +230,7 @@ export default function DealVaultPage() {
         })()}
 
         {att && (
-          <MonoText className="text-xs text-muted block">
+          <MonoText className="text-xs text-navy/20 block">
             sha256:{att.file_hash.slice(0, 16)}…
           </MonoText>
         )}
@@ -241,7 +241,7 @@ export default function DealVaultPage() {
   return (
     <div className="max-w-2xl flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
       <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
-        <Link to={`/deals/${dealId}`} className="text-xs font-body text-muted hover:text-navy transition-colors">
+        <Link to={`/deals/${dealId}`} className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
           ← {t('chat.backToDeal')}
         </Link>
         <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
@@ -257,7 +257,7 @@ export default function DealVaultPage() {
                 alert(t('recipient.inviteError'))
               }
             }}
-            className="ml-auto text-xs font-display font-medium border border-cyan/40 text-link px-3 py-1.5 rounded-field hover:bg-cyan/10"
+            className="ml-auto text-xs font-display font-medium border border-cyan/40 text-cyan px-3 py-1.5 rounded-field hover:bg-cyan/10"
           >
             {t('recipient.inviteButton')}
           </button>
@@ -266,7 +266,7 @@ export default function DealVaultPage() {
 
       <div className="bg-navy/5 rounded-field px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan"></span>
-        <MonoText className="text-xs text-muted">{t('chat.immutable')}</MonoText>
+        <MonoText className="text-xs text-navy/60">{t('chat.immutable')}</MonoText>
       </div>
 
       {messages.some((m) => m.is_system && (m.text ?? '').includes('Arbiter')) && (
@@ -281,11 +281,11 @@ export default function DealVaultPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
             <div className="text-center py-8">
-              <MonoText className="text-muted text-sm">{t('common.loading')}</MonoText>
+              <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm font-body text-muted">{t('chat.empty')}</p>
+              <p className="text-sm font-body text-navy/30">{t('chat.empty')}</p>
             </div>
           ) : (
             messages.map(renderMessage)
@@ -311,7 +311,7 @@ export default function DealVaultPage() {
               <option value="doc">{t("chat.kind.doc")}</option>
               <option value="payment_receipt">{t("chat.kind.payment_receipt")}</option>
             </select>
-            <label className="cursor-pointer border border-navy/20 rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body text-muted hover:border-cyan transition-colors flex items-center">
+            <label className="cursor-pointer border border-navy/20 rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body text-navy/60 hover:border-cyan transition-colors flex items-center">
               {sending ? t('common.sending') : t('chat.uploadPhoto')}
               <input
                 ref={fileRef}
@@ -329,7 +329,7 @@ export default function DealVaultPage() {
                 setShareOpen(true)
               }}
               disabled={sending || !dealId}
-              className="border border-cyan/40 text-link rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body hover:bg-cyan/10 transition-colors disabled:opacity-40"
+              className="border border-cyan/40 text-cyan rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body hover:bg-cyan/10 transition-colors disabled:opacity-40"
             >
               📍 {t('chat.shareAddress.button')}
             </button>

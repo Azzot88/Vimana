@@ -215,13 +215,13 @@ export default function AirportSelect({ value, onChange, placeholder, required }
     <div ref={wrapperRef} className="relative">
       {chip && (
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-[11px] font-body font-bold text-muted tracking-wide">
+          <span className="text-[11px] font-body font-bold text-navy/70 tracking-wide">
             {chip}
           </span>
           <button
             type="button"
             onClick={clearAll}
-            className="text-[11px] font-body text-muted hover:text-muted"
+            className="text-[11px] font-body text-navy/40 hover:text-navy/70"
           >
             ×
           </button>
@@ -250,7 +250,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
           onClick={handleGeolocation}
           disabled={geoLoading}
           title={t('trips.useGeolocation', { defaultValue: 'Use my location' })}
-          className="border border-navy/20 rounded-field px-2 min-h-[2.75rem] text-muted hover:text-navy hover:border-cyan transition-colors disabled:opacity-50 flex items-center justify-center"
+          className="border border-navy/20 rounded-field px-2 min-h-[2.75rem] text-navy/60 hover:text-navy hover:border-cyan transition-colors disabled:opacity-50 flex items-center justify-center"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
@@ -263,7 +263,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
         <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto">
           {countryMatches.length > 0 && (
             <div>
-              <div className="px-3 py-1 text-[10px] font-body font-semibold text-muted uppercase tracking-wider bg-ivory">
+              <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">
                 {t('airports.groupCountries', { defaultValue: 'Countries' })}
               </div>
               {countryMatches.map((c) => (
@@ -277,14 +277,14 @@ export default function AirportSelect({ value, onChange, placeholder, required }
                     <span className="mr-2">{isoToFlag(c.iso)}</span>
                     {c.name}
                   </span>
-                  <span className="font-mono text-xs text-muted">{c.iso}</span>
+                  <span className="font-mono text-xs text-navy/40">{c.iso}</span>
                 </button>
               ))}
             </div>
           )}
           {cityMatches.length > 0 && (
             <div>
-              <div className="px-3 py-1 text-[10px] font-body font-semibold text-muted uppercase tracking-wider bg-ivory">
+              <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">
                 {t('airports.groupCities', { defaultValue: 'Cities' })}
               </div>
               {cityMatches.map((c) => (
@@ -298,14 +298,14 @@ export default function AirportSelect({ value, onChange, placeholder, required }
                     <span className="mr-2">{isoToFlag(c.iso)}</span>
                     {c.city}
                   </span>
-                  <span className="font-mono text-xs text-muted">{c.count} airp.</span>
+                  <span className="font-mono text-xs text-navy/40">{c.count} airp.</span>
                 </button>
               ))}
             </div>
           )}
           {airportMatches.length > 0 && (
             <div>
-              <div className="px-3 py-1 text-[10px] font-body font-semibold text-muted uppercase tracking-wider bg-ivory">
+              <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">
                 {t('airports.groupAirports', { defaultValue: 'Airports' })}
               </div>
               {airportMatches.map((a) => (
@@ -316,7 +316,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
                   className="w-full text-left px-3 py-2 hover:bg-ivory border-b border-navy/5 last:border-0 text-sm"
                 >
                   <span className="font-mono font-bold text-navy">{a.iata}</span>
-                  <span className="text-muted ml-2">{a.city} · {a.country_iso}</span>
+                  <span className="text-navy/60 ml-2">{a.city} · {a.country_iso}</span>
                 </button>
               ))}
             </div>

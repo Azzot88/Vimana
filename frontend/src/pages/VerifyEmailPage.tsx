@@ -83,16 +83,16 @@ export default function VerifyEmailPage() {
           <h1 className="font-display font-bold text-2xl text-navy">
             {t('verifyEmail.title')}
           </h1>
-          <p className="text-sm font-body text-muted">
+          <p className="text-sm font-body text-navy/60">
             {t('verifyEmail.sentTo')}{' '}
             <MonoText className="text-navy">{user?.email}</MonoText>
           </p>
-          <p className="text-sm font-body text-muted">{t('verifyEmail.why')}</p>
+          <p className="text-sm font-body text-navy/60">{t('verifyEmail.why')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-body font-medium text-muted mb-1">
+            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
               {t('verifyEmail.codeLabel')}
             </label>
             <input
@@ -112,7 +112,7 @@ export default function VerifyEmailPage() {
             </div>
           )}
           {notice && (
-            <p className="text-sm font-body text-muted">{notice}</p>
+            <p className="text-sm font-body text-navy/60">{notice}</p>
           )}
 
           <button
@@ -129,7 +129,7 @@ export default function VerifyEmailPage() {
             type="button"
             onClick={handleResend}
             disabled={cooldown > 0}
-            className="text-sm font-body text-link disabled:text-muted transition-colors"
+            className="text-sm font-body text-cyan disabled:text-navy/30 transition-colors"
           >
             {cooldown > 0
               ? t('verifyEmail.resendIn', { seconds: cooldown })

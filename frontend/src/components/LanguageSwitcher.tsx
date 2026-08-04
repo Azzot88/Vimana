@@ -38,7 +38,7 @@ export default function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="text-xs font-body px-2 py-1.5 rounded text-muted hover:text-navy border border-transparent hover:border-navy/10 transition-colors flex items-center gap-1"
+        className="text-xs font-body px-2 py-1.5 rounded text-navy/70 hover:text-navy border border-transparent hover:border-navy/10 transition-colors flex items-center gap-1"
       >
         <span>{current.endonym}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -55,8 +55,8 @@ export default function LanguageSwitcher() {
                 onClick={() => pick(l.code)}
                 className={`w-full text-left px-3 py-2 text-sm font-body transition-colors ${
                   i18n.language === l.code
-                    ? 'text-link font-medium bg-cyan/5'
-                    : 'text-muted hover:bg-ivory'
+                    ? 'text-cyan font-medium bg-cyan/5'
+                    : 'text-navy/70 hover:bg-ivory'
                 }`}
               >
                 {l.endonym}

@@ -47,7 +47,7 @@ export default function ArchiveRecordCard({
         <h2 className="font-display font-semibold text-base text-navy">
           {t('archive.title')}
         </h2>
-        <p className="text-sm font-body text-muted mt-1">
+        <p className="text-sm font-body text-navy/60 mt-1">
           {memberSince
             ? t('archive.period', {
                 from: date(memberSince),
@@ -59,7 +59,7 @@ export default function ArchiveRecordCard({
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm font-body">
         <div>
-          <dt className="text-xs text-muted">{t('archive.deals')}</dt>
+          <dt className="text-xs text-navy/50">{t('archive.deals')}</dt>
           <dd className="text-navy">
             {t('archive.ofTotal', {
               part: number(record.deals_closed),
@@ -71,7 +71,7 @@ export default function ArchiveRecordCard({
           {/* A chain entry with no Nostr signature is a real event in a real
               chain — calling it a signature would claim a proof the row does
               not carry, so both numbers are shown. */}
-          <dt className="text-xs text-muted">{t('archive.signatures')}</dt>
+          <dt className="text-xs text-navy/50">{t('archive.signatures')}</dt>
           <dd className="text-navy">
             {t('archive.ofEntries', {
               part: number(record.signatures),
@@ -81,7 +81,7 @@ export default function ArchiveRecordCard({
         </div>
         {record.last_signature_at && (
           <div>
-            <dt className="text-xs text-muted">{t('archive.lastSignature')}</dt>
+            <dt className="text-xs text-navy/50">{t('archive.lastSignature')}</dt>
             <dd className="text-navy">
               <MonoText className="text-sm">{date(record.last_signature_at)}</MonoText>
             </dd>
@@ -89,7 +89,7 @@ export default function ArchiveRecordCard({
         )}
         {record.first_signature_at && (
           <div>
-            <dt className="text-xs text-muted">{t('archive.firstSignature')}</dt>
+            <dt className="text-xs text-navy/50">{t('archive.firstSignature')}</dt>
             <dd className="text-navy">
               <MonoText className="text-sm">{date(record.first_signature_at)}</MonoText>
             </dd>
@@ -97,10 +97,10 @@ export default function ArchiveRecordCard({
         )}
         {record.straight_line_km !== null && (
           <div>
-            <dt className="text-xs text-muted">{t('archive.straightLineKm')}</dt>
+            <dt className="text-xs text-navy/50">{t('archive.straightLineKm')}</dt>
             <dd className="text-navy">
               <MonoText className="text-sm">{number(record.straight_line_km)}</MonoText>
-              <span className="block text-xs text-muted">
+              <span className="block text-xs text-navy/40">
                 {t('archive.measuredOn', {
                   part: number(record.routes_measured),
                   total: number(record.routes_closed),
@@ -113,11 +113,11 @@ export default function ArchiveRecordCard({
           <div>
             {/* The record, not the mean: in a museum the outlier is the
                 exhibit, and an average of four routes says nothing. */}
-            <dt className="text-xs text-muted">{t('archive.longestHop')}</dt>
+            <dt className="text-xs text-navy/50">{t('archive.longestHop')}</dt>
             <dd className="text-navy">
               <MonoText className="text-sm">{number(record.longest_hop_km)}</MonoText>
               {record.longest_hop_route && (
-                <span className="block text-xs font-mono text-muted">
+                <span className="block text-xs font-mono text-navy/40">
                   {record.longest_hop_route}
                 </span>
               )}
@@ -128,11 +128,11 @@ export default function ArchiveRecordCard({
           <div>
             {/* Rarity is a property of the route. The trip count travels with
                 it so the line cannot be read as "this person is rare". */}
-            <dt className="text-xs text-muted">{t('archive.rarestCorridor')}</dt>
+            <dt className="text-xs text-navy/50">{t('archive.rarestCorridor')}</dt>
             <dd className="text-navy">
               <MonoText className="text-sm">{record.rarest_corridor}</MonoText>
               {record.rarest_corridor_trips !== null && (
-                <span className="block text-xs text-muted">
+                <span className="block text-xs text-navy/40">
                   {t('archive.corridorTrips', { count: record.rarest_corridor_trips })}
                 </span>
               )}
@@ -141,10 +141,10 @@ export default function ArchiveRecordCard({
         )}
         {record.capacity_kg !== null && (
           <div>
-            <dt className="text-xs text-muted">{t('archive.capacityKg')}</dt>
+            <dt className="text-xs text-navy/50">{t('archive.capacityKg')}</dt>
             <dd className="text-navy">
               <MonoText className="text-sm">{number(record.capacity_kg)}</MonoText>
-              <span className="block text-xs text-muted">
+              <span className="block text-xs text-navy/40">
                 {t('archive.tripsCompleted', { count: record.trips_completed })}
               </span>
             </dd>
@@ -160,7 +160,7 @@ export default function ArchiveRecordCard({
       {record.last_anchor_at && (
         <p
           data-testid="archive-anchor"
-          className="text-xs font-body text-muted border-t border-navy/10 pt-3"
+          className="text-xs font-body text-navy/60 border-t border-navy/10 pt-3"
         >
           {t('archive.anchoredAsOf', {
             date: date(record.last_anchor_at),
@@ -170,7 +170,7 @@ export default function ArchiveRecordCard({
         </p>
       )}
 
-      <p className="text-xs font-body text-muted border-t border-navy/10 pt-3">
+      <p className="text-xs font-body text-navy/50 border-t border-navy/10 pt-3">
         {t('archive.footnote')}
       </p>
     </div>

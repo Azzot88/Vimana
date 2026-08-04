@@ -41,7 +41,7 @@ export default function AcceptInvitePage() {
       <div className="w-full max-w-sm text-center space-y-4">
         <h1 className="font-display font-bold text-3xl text-navy">Vimana</h1>
         {status === 'loading' && (
-          <MonoText className="text-sm text-muted">{t('common.loading')}</MonoText>
+          <MonoText className="text-sm text-navy/40">{t('common.loading')}</MonoText>
         )}
         {status === 'success' && (
           <div
@@ -52,7 +52,7 @@ export default function AcceptInvitePage() {
               <span className="text-success text-xl" aria-hidden="true">✓</span>
             </div>
             <p className="font-display font-semibold text-navy">{t('invite.acceptedTitle')}</p>
-            <p className="text-sm font-body text-muted">{t('invite.acceptedBody')}</p>
+            <p className="text-sm font-body text-navy/50">{t('invite.acceptedBody')}</p>
             <button
               type="button"
               onClick={() => navigate('/profile')}
@@ -64,11 +64,11 @@ export default function AcceptInvitePage() {
         )}
         {status === 'error' && (
           <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
-            <p className="font-body text-muted">{t('invite.acceptFailed')}</p>
+            <p className="font-body text-navy/60">{t('invite.acceptFailed')}</p>
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="text-sm text-link hover:underline font-body"
+              className="text-sm text-cyan hover:underline font-body"
             >
               {t('notFound.toHome')}
             </button>

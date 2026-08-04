@@ -37,7 +37,7 @@ export default function AdminVaultPage() {
       <div className="flex items-center gap-3">
         <Link
           to="/admin/disputes"
-          className="text-xs font-body text-muted hover:text-navy"
+          className="text-xs font-body text-navy/40 hover:text-navy"
         >
           ← {t('admin.backToDisputes')}
         </Link>
@@ -51,7 +51,7 @@ export default function AdminVaultPage() {
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
       {loading ? (
-        <p className="text-sm font-body text-muted text-center py-8">
+        <p className="text-sm font-body text-navy/40 text-center py-8">
           {t('common.loading')}
         </p>
       ) : (
@@ -64,12 +64,12 @@ export default function AdminVaultPage() {
               }`}
             >
               <div className="flex items-baseline justify-between gap-2">
-                <MonoText className="text-xs text-muted">
+                <MonoText className="text-xs text-navy/40">
                   {m.is_system
                     ? t('admin.systemMessage')
                     : m.sender_id?.slice(0, 8) ?? '—'}
                 </MonoText>
-                <MonoText className="text-xs text-muted">
+                <MonoText className="text-xs text-navy/40">
                   {new Date(m.created_at).toLocaleString(i18n.language)}
                 </MonoText>
               </div>
@@ -81,7 +81,7 @@ export default function AdminVaultPage() {
               {m.attachments.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {m.attachments.map((a) => (
-                    <MonoText key={a.id} className="text-xs text-muted">
+                    <MonoText key={a.id} className="text-xs text-navy/50">
                       📎 {a.kind}
                     </MonoText>
                   ))}

@@ -99,7 +99,7 @@ export default function AuthBootstrap({ children }: Props) {
   if (authState === 'loading') {
     return (
       <div className="min-h-[100dvh] bg-ivory flex items-center justify-center">
-        <p className="text-muted font-mono text-sm">…</p>
+        <p className="text-navy/40 font-mono text-sm">…</p>
       </div>
     )
   }
@@ -122,13 +122,13 @@ export default function AuthBootstrap({ children }: Props) {
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('auth.inactivityWarningTitle')}
             </h3>
-            <p className="text-sm font-body text-muted">
+            <p className="text-sm font-body text-navy/70">
               {t('auth.inactivityWarningBody')}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => logout('inactivity')}
-                className="text-sm font-body text-muted hover:text-navy px-3 py-2"
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
               >
                 {t('auth.logoutNow')}
               </button>

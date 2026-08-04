@@ -136,7 +136,7 @@ export default function AddressesSection() {
               setEditingId(null)
               setDraft(_emptyDraft())
             }}
-            className="text-xs font-body text-link hover:underline"
+            className="text-xs font-body text-cyan hover:underline"
           >
             + {t('address.add')}
           </button>
@@ -144,9 +144,9 @@ export default function AddressesSection() {
       </div>
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
       {loading ? (
-        <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
+        <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
       ) : addresses.length === 0 && !creating ? (
-        <p className="text-sm font-body text-muted">{t('address.empty')}</p>
+        <p className="text-sm font-body text-navy/40">{t('address.empty')}</p>
       ) : (
         <div className="space-y-2">
           {addresses.map((a) =>
@@ -164,7 +164,7 @@ export default function AddressesSection() {
                       setEditingId(null)
                       setDraft(_emptyDraft())
                     }}
-                    className="text-xs font-body text-muted px-3 py-1.5"
+                    className="text-xs font-body text-navy/50 px-3 py-1.5"
                   >
                     {t('common.cancel')}
                   </button>
@@ -188,18 +188,18 @@ export default function AddressesSection() {
                       {a.label}
                     </p>
                     {a.is_default && (
-                      <span className="text-[10px] font-mono uppercase bg-cyan/15 text-link px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] font-mono uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 rounded">
                         {t('address.default')}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-body text-muted">
+                  <p className="text-xs font-body text-navy/60">
                     {[a.country_iso, a.city, a.street, a.postal_code]
                       .filter(Boolean)
                       .join(' · ')}
                   </p>
                   {a.note && (
-                    <p className="text-xs font-mono text-muted mt-0.5">{a.note}</p>
+                    <p className="text-xs font-mono text-navy/40 mt-0.5">{a.note}</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-1 shrink-0">
@@ -207,7 +207,7 @@ export default function AddressesSection() {
                     <button
                       type="button"
                       onClick={() => handleMakeDefault(a)}
-                      className="text-[11px] font-body text-link hover:underline"
+                      className="text-[11px] font-body text-cyan hover:underline"
                     >
                       {t('address.makeDefault')}
                     </button>
@@ -215,7 +215,7 @@ export default function AddressesSection() {
                   <button
                     type="button"
                     onClick={() => startEdit(a)}
-                    className="text-[11px] font-body text-muted hover:text-navy"
+                    className="text-[11px] font-body text-navy/60 hover:text-navy"
                   >
                     {t('common.edit')}
                   </button>
@@ -246,7 +246,7 @@ export default function AddressesSection() {
                 setCreating(false)
                 setDraft(_emptyDraft())
               }}
-              className="text-xs font-body text-muted px-3 py-1.5"
+              className="text-xs font-body text-navy/50 px-3 py-1.5"
             >
               {t('common.cancel')}
             </button>

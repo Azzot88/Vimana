@@ -175,8 +175,8 @@ export default function NewTripPage() {
       aria-label={label}
       className={`w-10 h-10 rounded-field border transition-colors ${
         enabled
-          ? 'border-cyan/40 text-link hover:bg-cyan/10'
-          : 'border-navy/10 text-muted cursor-not-allowed'
+          ? 'border-cyan/40 text-cyan hover:bg-cyan/10'
+          : 'border-navy/10 text-navy/30 cursor-not-allowed'
       }`}
     >
       <span aria-hidden="true" className="text-lg">
@@ -188,7 +188,7 @@ export default function NewTripPage() {
   if (!user?.can_carry) {
     return (
       <div className="text-center py-24">
-        <p className="text-sm font-body text-muted">{t('trips.carriersOnly')}</p>
+        <p className="text-sm font-body text-navy/40">{t('trips.carriersOnly')}</p>
       </div>
     )
   }
@@ -225,12 +225,12 @@ export default function NewTripPage() {
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Route cell 2x1 */}
         <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.route')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
             <div>
-              <label className="block text-xs font-body font-medium text-muted mb-1">
+              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
                 {t('trips.from')}
               </label>
               <AirportSelect
@@ -240,11 +240,11 @@ export default function NewTripPage() {
                 placeholder="DXB"
               />
             </div>
-            <MonoText className="text-2xl text-link text-center pb-2 hidden sm:block">
+            <MonoText className="text-2xl text-cyan text-center pb-2 hidden sm:block">
               →
             </MonoText>
             <div>
-              <label className="block text-xs font-body font-medium text-muted mb-1">
+              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
                 {t('trips.to')}
               </label>
               <AirportSelect
@@ -259,7 +259,7 @@ export default function NewTripPage() {
 
         {/* Date cell 1x1 */}
         <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.date')}
           </p>
           <input
@@ -273,7 +273,7 @@ export default function NewTripPage() {
 
         {/* Capacity cell 1x1 */}
         <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.capacity')}
           </p>
           <div className="flex items-baseline gap-2">
@@ -288,7 +288,7 @@ export default function NewTripPage() {
               placeholder="5"
               className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
             />
-            <MonoText className="text-sm text-muted">kg</MonoText>
+            <MonoText className="text-sm text-navy/60">kg</MonoText>
           </div>
           <input
             type="range"
@@ -303,7 +303,7 @@ export default function NewTripPage() {
 
         {/* Categories cell 1x2 (full row) */}
         <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.categories')}
           </p>
           {draft.categories.length > 0 && (
@@ -331,10 +331,10 @@ export default function NewTripPage() {
 
         {/* Publish cell 1x1 */}
         <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3 flex flex-col">
-          <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.publish')}
           </p>
-          <label className="flex items-start gap-2 text-xs font-body text-muted">
+          <label className="flex items-start gap-2 text-xs font-body text-navy/60">
             <input
               type="checkbox"
               checked={draft.alsoOnNostr}
@@ -350,14 +350,14 @@ export default function NewTripPage() {
           >
             {loading ? t('common.loading') : t('trips.publish')}
           </button>
-          <p className="text-[10px] font-mono text-muted text-center">
+          <p className="text-[10px] font-mono text-navy/30 text-center">
             ⌘/Ctrl + ⏎
           </p>
         </div>
 
         {/* Preview cell 2x1 — sticky bottom on desktop */}
         <div className="md:col-span-3 bg-gradient-to-br from-navy/5 to-cyan/5 rounded-card border border-navy/10 p-4">
-          <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide mb-2">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide mb-2">
             {t('trips.newTripCell.preview')}
           </p>
           <div className="bg-white rounded-card border border-navy/10 p-4">
@@ -365,9 +365,9 @@ export default function NewTripPage() {
               <MonoText className="text-lg text-navy font-medium">
                 {draft.origin || '???'} → {draft.destination || '???'}
               </MonoText>
-              <MonoText className="text-sm text-muted">{previewDate}</MonoText>
+              <MonoText className="text-sm text-navy/60">{previewDate}</MonoText>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-muted">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
               <span>
                 {t('trips.capacity')}:{' '}
                 <MonoText className="text-xs">{draft.capacity || '?'} {t('trips.kg')}</MonoText>
@@ -377,7 +377,7 @@ export default function NewTripPage() {
                   {draft.categories.map((c) => (
                     <span
                       key={c}
-                      className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-muted"
+                      className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-navy/60"
                     >
                       {c}
                     </span>
@@ -397,7 +397,7 @@ export default function NewTripPage() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="text-sm font-body text-muted hover:text-navy transition-colors"
+          className="text-sm font-body text-navy/50 hover:text-navy transition-colors"
         >
           {t('common.cancel')}
         </button>
@@ -415,7 +415,7 @@ export default function NewTripPage() {
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('routeNote.preflightTitle', 'Route requires attention')}
             </h3>
-            <p className="text-sm font-body text-muted">
+            <p className="text-sm font-body text-navy/70">
               {t(
                 'routeNote.preflightBody',
                 'This corridor has known specifics. Read them below and confirm you understand before publishing.',
@@ -436,7 +436,7 @@ export default function NewTripPage() {
                   </p>
                   <p className="font-medium mb-1">{n.headline}</p>
                   {n.body && (
-                    <p className="text-muted whitespace-pre-line">{n.body}</p>
+                    <p className="text-navy/70 whitespace-pre-line">{n.body}</p>
                   )}
                 </div>
               ))}
@@ -444,7 +444,7 @@ export default function NewTripPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setPreflightNotes([])}
-                className="text-sm font-body text-muted hover:text-navy px-3 py-2"
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
               >
                 {t('common.cancel')}
               </button>

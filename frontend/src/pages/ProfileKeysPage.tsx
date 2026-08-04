@@ -47,7 +47,7 @@ export default function ProfileKeysPage() {
         <h1 className="font-display font-bold text-2xl text-navy">
           {t('profile.keys.title')}
         </h1>
-        <Link to="/profile" className="text-sm font-body text-link hover:underline">
+        <Link to="/profile" className="text-sm font-body text-cyan hover:underline">
           ← {t('profile.title')}
         </Link>
       </div>
@@ -68,7 +68,7 @@ export default function ProfileKeysPage() {
             <h2 className="font-display font-semibold text-lg text-navy">
               {t('profile.identity.readerTitle')}
             </h2>
-            <p className="text-sm font-body text-muted">
+            <p className="text-sm font-body text-navy/60">
               {t('profile.identity.readerHint')}
             </p>
             <a

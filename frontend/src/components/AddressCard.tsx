@@ -58,38 +58,38 @@ export default function AddressCard({ text }: { text: string }) {
 
   return (
     <div className="border border-cyan/30 bg-cyan/5 rounded-card p-3 max-w-md space-y-1">
-      <p className="text-xs font-display font-semibold text-link uppercase tracking-wide">
+      <p className="text-xs font-display font-semibold text-cyan uppercase tracking-wide">
         📍 {t('chat.addressCard.title')}
       </p>
       <dl className="text-sm font-body text-navy grid grid-cols-[auto,1fr] gap-x-2 gap-y-0.5">
         {addr.country && (
           <>
-            <dt className="text-muted">{t('chat.addressCard.country')}:</dt>
+            <dt className="text-navy/40">{t('chat.addressCard.country')}:</dt>
             <dd>{addr.country}</dd>
           </>
         )}
         {addr.city && (
           <>
-            <dt className="text-muted">{t('chat.addressCard.city')}:</dt>
+            <dt className="text-navy/40">{t('chat.addressCard.city')}:</dt>
             <dd>{addr.city}</dd>
           </>
         )}
         {addr.street && (
           <>
-            <dt className="text-muted">{t('chat.addressCard.street')}:</dt>
+            <dt className="text-navy/40">{t('chat.addressCard.street')}:</dt>
             <dd>{addr.street}</dd>
           </>
         )}
         {addr.postal && (
           <>
-            <dt className="text-muted">{t('chat.addressCard.postal')}:</dt>
+            <dt className="text-navy/40">{t('chat.addressCard.postal')}:</dt>
             <dd className="font-mono text-xs">{addr.postal}</dd>
           </>
         )}
         {addr.note && (
           <>
-            <dt className="text-muted">{t('chat.addressCard.note')}:</dt>
-            <dd className="text-muted italic">{addr.note}</dd>
+            <dt className="text-navy/40">{t('chat.addressCard.note')}:</dt>
+            <dd className="text-navy/70 italic">{addr.note}</dd>
           </>
         )}
       </dl>
@@ -97,7 +97,7 @@ export default function AddressCard({ text }: { text: string }) {
         <button
           type="button"
           onClick={handleCopy}
-          className="text-xs font-body text-link hover:underline"
+          className="text-xs font-body text-cyan hover:underline"
         >
           {copied ? t('chat.addressCard.copied') : t('chat.addressCard.copy')}
         </button>
@@ -105,7 +105,7 @@ export default function AddressCard({ text }: { text: string }) {
           href={buildMapsUrl(addr)}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-body text-link hover:underline"
+          className="text-xs font-body text-cyan hover:underline"
         >
           {t('chat.addressCard.openMaps')}
         </a>

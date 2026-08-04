@@ -60,7 +60,7 @@ export default function InvitePage() {
       <h1 className="font-display font-bold text-2xl text-navy">{t('invite.title')}</h1>
 
       <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
-        <p className="text-sm font-body text-muted">{t('invite.hint')}</p>
+        <p className="text-sm font-body text-navy/60">{t('invite.hint')}</p>
 
         {!invite ? (
           <>
@@ -79,7 +79,7 @@ export default function InvitePage() {
         ) : (
           <div className="space-y-3">
             <div className="bg-ivory rounded-field p-3 border border-navy/10">
-              <MonoText className="text-xs text-muted break-anywhere">{inviteUrl}</MonoText>
+              <MonoText className="text-xs text-navy/70 break-anywhere">{inviteUrl}</MonoText>
             </div>
             <div className="flex gap-2">
               <button
@@ -95,7 +95,7 @@ export default function InvitePage() {
                   setInvite(null)
                   setCopied(false)
                 }}
-                className="text-sm font-body text-muted hover:text-navy transition-colors px-3"
+                className="text-sm font-body text-navy/40 hover:text-navy transition-colors px-3"
               >
                 {t('invite.createAnother')}
               </button>

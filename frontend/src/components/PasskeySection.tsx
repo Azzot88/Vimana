@@ -103,7 +103,7 @@ export default function PasskeySection() {
       <h2 className="font-display font-semibold text-lg text-navy">
         {t('passkey.sectionTitle')}
       </h2>
-      <p className="text-sm font-body text-muted">{t('passkey.sectionHint')}</p>
+      <p className="text-sm font-body text-navy/60">{t('passkey.sectionHint')}</p>
 
       {error && (
         <div className="bg-amber/10 border border-amber/40 rounded-field px-3 py-2">
@@ -112,7 +112,7 @@ export default function PasskeySection() {
       )}
 
       {items.length === 0 ? (
-        <p className="text-sm font-body text-muted">{t('passkey.empty')}</p>
+        <p className="text-sm font-body text-navy/50">{t('passkey.empty')}</p>
       ) : (
         <ul className="space-y-2" data-testid="passkey-list">
           {items.map((c) => (
@@ -124,7 +124,7 @@ export default function PasskeySection() {
                 <div className="text-sm font-body text-navy truncate">
                   {c.device_name || t('passkey.unnamedDevice')}
                 </div>
-                <div className="text-xs font-body text-muted">
+                <div className="text-xs font-body text-navy/50">
                   {t(`passkey.kind.${c.device_kind}`)}
                   {c.last_used_at
                     ? ` · ${t('passkey.lastUsed')} ${new Date(
@@ -136,7 +136,7 @@ export default function PasskeySection() {
               <button
                 type="button"
                 onClick={() => setPendingRemoval(c.id)}
-                className="text-xs font-body text-muted hover:text-navy shrink-0"
+                className="text-xs font-body text-navy/50 hover:text-navy shrink-0"
               >
                 {t('passkey.remove')}
               </button>
@@ -156,7 +156,7 @@ export default function PasskeySection() {
           {busy ? '…' : t('passkey.addCta')}
         </button>
       ) : (
-        <p className="text-xs font-body text-muted">
+        <p className="text-xs font-body text-navy/50">
           {t('passkey.unsupported')}
         </p>
       )}

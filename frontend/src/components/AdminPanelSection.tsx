@@ -67,7 +67,7 @@ export default function AdminPanelSection() {
         <h2 className="font-display font-semibold text-base text-navy">
           {t('admin.panelTitle')}
         </h2>
-        <p className="text-xs font-body text-muted mt-0.5">{t('admin.panelHint')}</p>
+        <p className="text-xs font-body text-navy/40 mt-0.5">{t('admin.panelHint')}</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         {visible.map((l) => (
@@ -81,7 +81,7 @@ export default function AdminPanelSection() {
               <p className="font-display font-medium text-sm text-navy">
                 {t(l.labelKey)}
               </p>
-              <p className="text-xs font-body text-muted leading-snug">
+              <p className="text-xs font-body text-navy/50 leading-snug">
                 {t(l.descKey)}
               </p>
             </div>
@@ -115,7 +115,7 @@ export default function AdminPanelSection() {
               ['infected', queue.infected],
             ] as const).map(([key, value]) => (
               <div key={key} className="flex items-baseline gap-2">
-                <dt className="text-xs font-body text-muted">
+                <dt className="text-xs font-body text-navy/50">
                   {t(`admin.scanQueue.${key}`)}
                 </dt>
                 <dd>
@@ -133,7 +133,7 @@ export default function AdminPanelSection() {
           {/* Said every time the number is shown, because the number invites
               exactly the wrong reading: pending files are not "being checked",
               they are stored and downloadable while nobody has looked. */}
-          <p className="text-[11px] font-body text-muted leading-snug">
+          <p className="text-[11px] font-body text-navy/45 leading-snug">
             {t('admin.scanQueue.hint')}
           </p>
         </div>

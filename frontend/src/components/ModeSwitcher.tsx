@@ -36,7 +36,7 @@ export default function ModeSwitcher() {
   const icon = isCarrier ? '📤' : '✈️'
   const tint = isCarrier
     ? 'border-amber/40 text-amber hover:bg-amber/10'
-    : 'border-cyan/50 text-link hover:bg-cyan/10'
+    : 'border-cyan/50 text-cyan hover:bg-cyan/10'
 
   return (
     <button

@@ -40,6 +40,14 @@ Playwright suite uses. The TLD is unresolvable, so no mail is ever sent, and
 them after 24 h. That task is the only reason repeated runs are safe — if it is
 disabled, staging fills up with deals nobody will ever close.
 
+## Первый прогон по проду, 2026-08-03
+
+`browse_trips`, 100 VUs × 5 мин: **p95 1064 ms · median 543 ms · failed 0.08 % · 105 rps · 10 606 итераций.**
+
+Порог `p95 < 500` **не выполнен**, порог по ошибкам выполнен с большим запасом. Это не «тест сломался» — это ответ: под сотней параллельных читателей публичная выдача отвечает вдвое медленнее целевого. Дальше нужен разрез по тегам (`trips:list`, `trips:page2`, `airports`, `categories`), а не общий p95: они меряют разные запросы, и медиана вдвое ниже p95 говорит, что тормозит хвост, а не всё подряд.
+
+Прогон был по **проду** (`ALLOW_PROD=1`) за неимением staging — то есть в числах сидит и TLS, и реальный размер инстанса.
+
 ## Baseline
 
 The thresholds (`p95 < 500 ms`, `failed < 1%`) answer "is it acceptable". The

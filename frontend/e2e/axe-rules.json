@@ -6,13 +6,21 @@
     "the finding. Anything not listed runs, and a violation fails the suite.",
     "Reviewed: 2026-08-03.",
     "",
-    "`tags` decides what is checked at all: WCAG 2.2 AA is what",
-    "DESIGNGUIDELINES promises, so the suite asserts exactly that and no more —",
-    "best-practice rules are advice, and failing a suite on advice teaches",
-    "people to disable the suite."
+    "`tags` decides what is checked at all: the WCAG 2.2 AA tags, minus the two",
+    "colour rules below. What remains is the part of accessibility that is a bug",
+    "when it fails — an unnamed control, a broken list, a field with no label —",
+    "and none of it has an opinion about how the product looks."
   ],
   "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
   "disabled": [
+    {
+      "id": "color-contrast",
+      "why": "Owner's decision, 2026-08-03. The muted scale is built from navy at 20–60% opacity, and most of it sits under 4.5:1 on light surfaces. Raising it to AA was tried and reverted: replacing the ramp with a solid token flattened the hierarchy the landing depends on, and the page stopped looking like the thing it was designed to be. The palette is a product decision and it is made deliberately, not by a test. Consequence written down rather than hidden: Vimana does not meet WCAG 2.2 AA on text contrast, and any claim to the contrary is a §9.1 violation — see DESIGNGUIDELINES §6."
+    },
+    {
+      "id": "link-in-text-block",
+      "why": "Follows from the rule above. It fires when a link inside a paragraph is distinguished from the surrounding text by colour alone, and the fix is either a permanent underline or a contrast ratio between the two colours — both are the same visual decision, and it was made the same way."
+    },
     {
       "id": "region",
       "why": "Best-practice rule (not WCAG AA) that wants every node inside a landmark. It is out of scope for the tags above and is listed only so nobody re-adds it as if it were a level-AA requirement."

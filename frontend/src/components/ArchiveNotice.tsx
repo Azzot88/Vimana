@@ -124,11 +124,11 @@ export default function ArchiveNotice() {
 
             {/* What happened · what remains · what now. In that order, because
                 that is the order the questions arrive in. */}
-            <p className="text-sm font-body text-muted">{t('archive.modalWhat')}</p>
-            <p className="text-sm font-body text-muted">{t('archive.modalRemains')}</p>
+            <p className="text-sm font-body text-navy/70">{t('archive.modalWhat')}</p>
+            <p className="text-sm font-body text-navy/70">{t('archive.modalRemains')}</p>
 
             <div className="bg-navy/5 rounded-field px-3 py-2 space-y-1">
-              <p className="text-sm font-body text-muted">
+              <p className="text-sm font-body text-navy/70">
                 {windowOpen
                   ? t('archive.modalWindow', { date: deadline })
                   : t('archive.modalWindowClosed')}
@@ -136,7 +136,7 @@ export default function ArchiveNotice() {
               {/* Said plainly rather than discovered later: someone who lost
                   their access too will never read this, and the default applies
                   to them anyway. */}
-              <p className="text-xs font-body text-muted">{t('archive.modalNoAccess')}</p>
+              <p className="text-xs font-body text-navy/50">{t('archive.modalNoAccess')}</p>
             </div>
 
             {windowOpen && !confirmingHide && (
@@ -162,7 +162,7 @@ export default function ArchiveNotice() {
                   type="button"
                   onClick={() => void dismiss()}
                   data-testid="archive-decide-later"
-                  className="w-full text-sm font-body text-muted py-1"
+                  className="w-full text-sm font-body text-navy/50 py-1"
                 >
                   {t('archive.decideLater')}
                 </button>
@@ -175,10 +175,10 @@ export default function ArchiveNotice() {
                     destroyed. The chain, the signatures and the deal history
                     stay — half that record belongs to the counterparty. What
                     closes is the display. */}
-                <p className="text-sm font-body text-muted">
+                <p className="text-sm font-body text-navy/70">
                   {t('archive.hideConsequences')}
                 </p>
-                <label className="flex items-start gap-2 text-sm font-body text-muted">
+                <label className="flex items-start gap-2 text-sm font-body text-navy/70">
                   <input
                     type="checkbox"
                     checked={understood}
@@ -200,7 +200,7 @@ export default function ArchiveNotice() {
                 <button
                   type="button"
                   onClick={() => setConfirmingHide(false)}
-                  className="w-full text-sm font-body text-muted py-1"
+                  className="w-full text-sm font-body text-navy/50 py-1"
                 >
                   {t('common.cancel')}
                 </button>

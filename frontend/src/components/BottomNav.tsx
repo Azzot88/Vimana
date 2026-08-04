@@ -42,7 +42,7 @@ export default function BottomNav() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[3.5rem] text-[10px] font-body transition-colors ${
-      isActive ? 'text-link' : 'text-muted hover:text-navy'
+      isActive ? 'text-cyan' : 'text-navy/50 hover:text-navy'
     }`
 
   return (

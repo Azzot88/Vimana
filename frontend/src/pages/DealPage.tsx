@@ -117,7 +117,7 @@ export default function DealPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <MonoText className="text-muted text-sm">{t('common.loading')}</MonoText>
+        <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
       </div>
     )
   }
@@ -125,7 +125,7 @@ export default function DealPage() {
   if (!deal) {
     return (
       <div className="text-center py-24">
-        <p className="text-sm font-body text-muted">{error || t('deals.notFound')}</p>
+        <p className="text-sm font-body text-navy/40">{error || t('deals.notFound')}</p>
       </div>
     )
   }
@@ -136,7 +136,7 @@ export default function DealPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
-        <Link to="/deals" className="text-xs font-body text-muted hover:text-navy transition-colors">
+        <Link to="/deals" className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
           ← {t('nav.deals')}
         </Link>
       </div>
@@ -154,7 +154,7 @@ export default function DealPage() {
         <div className="bg-navy px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-xs font-mono text-white/70 uppercase tracking-widest">{t('deals.boardingPass')}</p>
+              <p className="text-xs font-mono text-white/40 uppercase tracking-widest">{t('deals.boardingPass')}</p>
               <MonoText className="text-xl text-white font-medium">
                 {deal.origin} → {deal.destination}
               </MonoText>
@@ -168,24 +168,24 @@ export default function DealPage() {
 
         <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <p className="text-xs font-body font-medium text-muted mb-1">{t('deals.sender')}</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.sender')}</p>
             <p className="text-sm font-body text-navy font-medium">{deal.sender_name}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-muted mb-1">{t('deals.carrier')}</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.carrier')}</p>
             <p className="text-sm font-body text-navy font-medium">{deal.carrier_name}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-muted mb-1">{t('deals.cargo')}</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.cargo')}</p>
             <p className="text-sm font-body text-navy">{deal.cargo_description}</p>
           </div>
           <div>
-            <p className="text-xs font-body font-medium text-muted mb-1">{t('deals.category')}</p>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.category')}</p>
             <MonoText className="text-sm text-navy">{deal.cargo_category}</MonoText>
           </div>
           <div className="sm:col-span-2">
-            <p className="text-xs font-body font-medium text-muted mb-1">{t('deals.dealId')}</p>
-            <MonoText className="text-xs text-muted break-all">{deal.id}</MonoText>
+            <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.dealId')}</p>
+            <MonoText className="text-xs text-navy/50 break-all">{deal.id}</MonoText>
           </div>
         </div>
 
@@ -233,7 +233,7 @@ export default function DealPage() {
             ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
               <button
                 onClick={() => setVerifyRequestFor('sender')}
-                className="border border-cyan/40 text-link font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-cyan/10 transition-colors"
+                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-cyan/10 transition-colors"
               >
                 {t('verification.askSenderButton')}
               </button>
@@ -242,7 +242,7 @@ export default function DealPage() {
             ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
               <button
                 onClick={() => setVerifyRequestFor('carrier')}
-                className="border border-cyan/40 text-link font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-cyan/10 transition-colors"
+                className="border border-cyan/40 text-cyan font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-cyan/10 transition-colors"
               >
                 {t('verification.askCarrierButton')}
               </button>
@@ -326,7 +326,7 @@ export default function DealPage() {
             <h2 className="font-display font-semibold text-lg text-navy">
               {t('dispute.modalTitle')}
             </h2>
-            <p className="text-sm font-body text-muted">
+            <p className="text-sm font-body text-navy/60">
               {t('dispute.modalHint')}
             </p>
             <textarea
@@ -342,7 +342,7 @@ export default function DealPage() {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setDisputeOpen(false)}
-                className="text-sm font-body text-muted hover:text-navy px-3 py-2"
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
               >
                 {t('common.cancel')}
               </button>

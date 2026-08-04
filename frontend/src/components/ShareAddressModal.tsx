@@ -65,9 +65,9 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
         </h3>
 
         {loading ? (
-          <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
+          <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
         ) : addresses.length === 0 ? (
-          <p className="text-sm font-body text-muted">
+          <p className="text-sm font-body text-navy/60">
             {t('address.empty')}
           </p>
         ) : (
@@ -95,18 +95,18 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
                       {a.label}
                     </p>
                     {a.is_default && (
-                      <span className="text-[10px] font-mono uppercase bg-cyan/15 text-link px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] font-mono uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 rounded">
                         {t('address.default')}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-body text-muted">
+                  <p className="text-xs font-body text-navy/60">
                     {[a.country_iso, a.city, a.street, a.postal_code]
                       .filter(Boolean)
                       .join(' · ')}
                   </p>
                   {a.note && (
-                    <p className="text-xs font-mono text-muted mt-0.5">{a.note}</p>
+                    <p className="text-xs font-mono text-navy/40 mt-0.5">{a.note}</p>
                   )}
                 </div>
               </label>
@@ -120,7 +120,7 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="text-sm font-body text-muted hover:text-navy px-4 py-2"
+            className="text-sm font-body text-navy/60 hover:text-navy px-4 py-2"
           >
             {t('common.cancel')}
           </button>
