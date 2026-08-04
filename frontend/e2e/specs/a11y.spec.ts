@@ -55,8 +55,17 @@ async function scan(page: Page, label: string) {
     .disableRules(DISABLED)
     .analyze()
 
+  // Assert on a one-line-per-rule projection, not on the raw violations.
+  // Passing the axe objects to `toEqual` made Playwright print its own diff of
+  // the whole tree — hundreds of lines of nested `Object {}` per page, with the
+  // readable message buried under it. The detail is still here, in the message;
+  // what the diff shows is now the summary a person actually reads first.
+  const summary = results.violations.map(
+    (v) => `${v.id} (${v.impact ?? 'unknown'}) ×${v.nodes.length}`,
+  )
+
   expect(
-    results.violations,
+    summary,
     `${label} — ${results.violations.length} accessibility violation(s):\n\n${describe(results.violations)}\n`,
   ).toEqual([])
 }
