@@ -764,6 +764,10 @@
     "boardingDeparts": "Departs",
     "boardingCargo": "Cargo",
     "boardingCapacity": "Free",
+    "boardingEscrow": "Escrow",
+    "boardingEscrowValue": "BTC / USDT held",
+    "boardingStatus": "Status",
+    "boardingStatusValue": "Confirmed",
     "boardingConfirmed": "Receipt confirmed by both sides",
     "factsLabel": "What works today",
     "fact": {

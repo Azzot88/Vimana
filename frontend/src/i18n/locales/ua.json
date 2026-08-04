@@ -727,6 +727,10 @@
     "boardingDeparts": "Виліт",
     "boardingCargo": "Вантаж",
     "boardingCapacity": "Вільно",
+    "boardingEscrow": "Ескроу",
+    "boardingEscrowValue": "BTC / USDT у заставі",
+    "boardingStatus": "Статус",
+    "boardingStatusValue": "Підтверджено",
     "boardingConfirmed": "Отримання підтверджено обома сторонами",
     "factsLabel": "Що працює сьогодні",
     "fact": {

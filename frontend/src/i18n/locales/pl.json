@@ -714,6 +714,10 @@
     "boardingDeparts": "Wylot",
     "boardingCargo": "Ładunek",
     "boardingCapacity": "Wolne",
+    "boardingEscrow": "Escrow",
+    "boardingEscrowValue": "BTC / USDT zablokowane",
+    "boardingStatus": "Status",
+    "boardingStatusValue": "Potwierdzone",
     "boardingConfirmed": "Odbiór potwierdzony przez obie strony",
     "factsLabel": "Co działa dzisiaj",
     "fact": {

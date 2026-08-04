@@ -713,6 +713,10 @@
     "boardingDeparts": "Sale",
     "boardingCargo": "Carga",
     "boardingCapacity": "Libre",
+    "boardingEscrow": "Depósito",
+    "boardingEscrowValue": "BTC / USDT retenidos",
+    "boardingStatus": "Estado",
+    "boardingStatusValue": "Confirmado",
     "boardingConfirmed": "Recepción confirmada por ambas partes",
     "factsLabel": "Lo que funciona hoy",
     "fact": {

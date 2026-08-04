@@ -765,6 +765,10 @@
     "boardingDeparts": "Вылет",
     "boardingCargo": "Груз",
     "boardingCapacity": "Свободно",
+    "boardingEscrow": "Эскроу",
+    "boardingEscrowValue": "BTC / USDT в залоге",
+    "boardingStatus": "Статус",
+    "boardingStatusValue": "Подтверждено",
     "boardingConfirmed": "Получение подтверждено обеими сторонами",
     "factsLabel": "Что работает сегодня",
     "fact": {

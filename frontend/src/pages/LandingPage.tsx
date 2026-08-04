@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -36,6 +37,86 @@ import { APP_VERSION } from '../version'
 const GATES = ['post', 'match', 'handoff', 'release'] as const
 const EVIDENCE = ['chain', 'identity', 'verification'] as const
 const PENDING = ['payments', 'escrow', 'export'] as const
+
+/**
+ * The flight arc, restored from the original ticket
+ * (`~/Downloads/Output/peerflew-offer/peerflew-investor-offer.html`, June).
+ *
+ * A dashed corridor with a plane travelling it is the one thing that made the
+ * card read as a *ticket* rather than as a box with two airport codes in it.
+ * The geometry is the original's: `M6 38 Q60 -6 114 38` in a 120×46 box, dash
+ * `3 4`, navy dot at the origin and amber at the destination.
+ *
+ * Position comes from `getPointAtLength` and the heading from the tangent, so
+ * the plane leans into the curve instead of sliding along it flat. It
+ * ping-pongs rather than looping: a parcel goes there and comes back, and a
+ * hard reset at the end of a loop reads as a glitch.
+ *
+ * Two guards, both deliberate:
+ * - `useReducedMotion` — the plane is parked mid-arc instead of removed. The
+ *   drawing is the point; the movement is the decoration.
+ * - the effect never runs during prerender (`entry-ssr` has no DOM and no
+ *   rAF), and the static markup already contains the plane, so the
+ *   prerendered page is the same picture minus the motion.
+ */
+const FlightArc = () => {
+  const reduced = useReducedMotion()
+  const pathRef = useRef<SVGPathElement>(null)
+  const planeRef = useRef<SVGGElement>(null)
+
+  useEffect(() => {
+    const path = pathRef.current
+    const plane = planeRef.current
+    if (!path || !plane || reduced) return
+
+    const length = path.getTotalLength()
+    let t = 0
+    let direction = 1
+    let frame = 0
+
+    const step = () => {
+      t += 0.0045 * direction
+      if (t >= 1) {
+        t = 1
+        direction = -1
+      }
+      if (t <= 0) {
+        t = 0
+        direction = 1
+      }
+      const point = path.getPointAtLength(t * length)
+      const ahead = path.getPointAtLength(Math.min(1, t + 0.01) * length)
+      const angle = (Math.atan2(ahead.y - point.y, ahead.x - point.x) * 180) / Math.PI
+      plane.setAttribute('transform', `translate(${point.x} ${point.y}) rotate(${angle})`)
+      frame = requestAnimationFrame(step)
+    }
+
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [reduced])
+
+  return (
+    <svg
+      viewBox="0 0 120 46"
+      fill="none"
+      className="h-[46px] w-full max-w-[160px] shrink"
+      aria-hidden="true"
+    >
+      <path
+        ref={pathRef}
+        d="M6 38 Q60 -6 114 38"
+        stroke="#FF7A2F"
+        strokeWidth="1.6"
+        strokeDasharray="3 4"
+      />
+      <circle cx="6" cy="38" r="3.2" fill="#0A1626" />
+      <circle cx="114" cy="38" r="3.2" fill="#FF7A2F" />
+      <g ref={planeRef} transform="translate(60 12) rotate(0)">
+        <path d="M-5 0 L6 0 L2 -3 L8 0 L2 3 Z" fill="#0A1626" />
+      </g>
+    </svg>
+  )
+}
 
 export default function LandingPage() {
   const { t } = useTranslation()
@@ -173,45 +254,90 @@ export default function LandingPage() {
               one image the product already owns: a parcel riding an existing
               flight is exactly what a boarding pass depicts. */}
           <div>
-            <div className="rounded-card border border-navy/12 bg-white shadow-card">
-              <div className="flex items-center justify-between border-b border-dashed border-navy/15 px-5 py-3">
-                <MonoText className="text-[10px] uppercase tracking-[0.2em] text-navy/45">
-                  {t('landing.boardingBrand')}
-                </MonoText>
-                <MonoText className="text-[10px] text-navy/35">VMN-2026-07841</MonoText>
-              </div>
-              <div className="flex items-end justify-between gap-4 px-5 py-5">
-                <div>
-                  <div className="font-display text-3xl font-bold leading-none tracking-tight">DXB</div>
-                  <MonoText className="mt-1 text-[10px] text-navy/40">Dubai Intl</MonoText>
+            {/* `relative`, and no `overflow-hidden`: the two notches below hang
+                off the card's edges, and clipping them turns a punched ticket
+                back into a rounded rectangle. */}
+            <div className="relative rounded-card border border-navy/12 bg-white shadow-lift">
+              {/* Stub. The dashed rule plus the two cut-outs at its ends are the
+                  whole illusion — a ticket is a thing that tears. Filled with
+                  the page colour so they read as holes, ringed so the edge of
+                  the hole is visible against white. */}
+              <div className="relative border-b-2 border-dashed border-navy/15 px-5 pb-5 pt-3">
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-[11px] -left-[11px] h-[22px] w-[22px] rounded-full border border-navy/12 bg-ivory"
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-[11px] -right-[11px] h-[22px] w-[22px] rounded-full border border-navy/12 bg-ivory"
+                />
+                <div className="flex items-center justify-between">
+                  <MonoText className="text-[10px] uppercase tracking-[0.2em] text-navy/45">
+                    {t('landing.boardingBrand')}
+                  </MonoText>
+                  <MonoText className="text-[10px] text-navy/35">VMN-2026-07841</MonoText>
                 </div>
-                <div className="pb-2 text-amber" aria-hidden="true">✈</div>
-                <div className="text-right">
-                  <div className="font-display text-3xl font-bold leading-none tracking-tight">JFK</div>
-                  <MonoText className="mt-1 text-[10px] text-navy/40">New York Kennedy</MonoText>
+                <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <div>
+                    <div className="font-display text-[38px] font-bold leading-none tracking-tight">
+                      DXB
+                    </div>
+                    <MonoText className="mt-1 text-[10px] uppercase tracking-[0.1em] text-navy/40">
+                      Dubai Intl
+                    </MonoText>
+                  </div>
+                  <FlightArc />
+                  <div className="text-right">
+                    <div className="font-display text-[38px] font-bold leading-none tracking-tight">
+                      JFK
+                    </div>
+                    <MonoText className="mt-1 text-[10px] uppercase tracking-[0.1em] text-navy/40">
+                      New York Kennedy
+                    </MonoText>
+                  </div>
                 </div>
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-navy/10 px-5 py-4">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 pb-2 pt-5">
                 {[
                   ['boardingCarrier', 'Anastasia K.'],
                   ['boardingDeparts', '14 JUL · 02:35'],
                   ['boardingCargo', 'Document · 0.4 kg'],
                   ['boardingCapacity', '2.5 kg free'],
+                  ['boardingEscrow', t('landing.boardingEscrowValue')],
+                  ['boardingStatus', t('landing.boardingStatusValue')],
                 ].map(([key, value]) => (
                   <div key={key}>
                     <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-navy/35">
                       {t(`landing.${key}`)}
                     </dt>
-                    <dd className="mt-0.5 font-mono text-[13px] text-navy">{value}</dd>
+                    {/* Status carries the accent and the tick, as on the
+                        original: the one field of the six that is an outcome. */}
+                    <dd
+                      className={
+                        key === 'boardingStatus'
+                          ? 'mt-0.5 font-mono text-[13px] text-amber'
+                          : 'mt-0.5 font-mono text-[13px] text-navy'
+                      }
+                    >
+                      {value}
+                      {key === 'boardingStatus' ? ' ✓' : ''}
+                    </dd>
                   </div>
                 ))}
               </dl>
-              <div className="flex items-center gap-2 border-t border-dashed border-navy/15 px-5 py-3">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan" aria-hidden="true" />
-                <MonoText className="text-[11px] text-navy/55">
-                  {t('landing.boardingConfirmed')}
-                </MonoText>
-              </div>
+              {/* Barcode. Decoration, and honestly so — it encodes nothing.
+                  Written as a gradient rather than an image so it stays sharp at
+                  any width; the hex is `navy.DEFAULT`, spelled out because a
+                  gradient cannot take a Tailwind colour token. */}
+              <div
+                aria-hidden="true"
+                className="mx-5 mb-6 mt-3 h-[46px] rounded-[4px]"
+                style={{
+                  backgroundImage:
+                    'repeating-linear-gradient(90deg,#0A1626 0,#0A1626 2px,transparent 2px,transparent 4px,#0A1626 4px,#0A1626 5px,transparent 5px,transparent 9px,#0A1626 9px,#0A1626 12px,transparent 12px,transparent 14px)',
+                }}
+              />
+              <MonoText className="sr-only">{t('landing.boardingConfirmed')}</MonoText>
             </div>
           </div>
         </section>

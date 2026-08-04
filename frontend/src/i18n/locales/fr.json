@@ -713,6 +713,10 @@
     "boardingDeparts": "Départ",
     "boardingCargo": "Colis",
     "boardingCapacity": "Libre",
+    "boardingEscrow": "Séquestre",
+    "boardingEscrowValue": "BTC / USDT bloqués",
+    "boardingStatus": "Statut",
+    "boardingStatusValue": "Confirmé",
     "boardingConfirmed": "Réception confirmée par les deux parties",
     "factsLabel": "Ce qui fonctionne aujourd'hui",
     "fact": {
