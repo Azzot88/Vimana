@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import type { VerificationLevel } from '../api/verification'
 
 const STYLES: Record<VerificationLevel, string> = {
-  auto: 'bg-navy/10 text-navy/70',
-  peer: 'bg-cyan/20 text-cyan',
+  auto: 'bg-navy/10 text-muted',
+  peer: 'bg-cyan/20 text-link',
   kyc: 'bg-amber/20 text-amber',
 }
 

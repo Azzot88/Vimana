@@ -35,7 +35,30 @@ export default {
           soft: '#1C3252',
         },
         // Sky. Progress, active state, anything the user is doing right now.
+        // Reads beautifully on navy. As *text on paper* it is 2.43:1, which is
+        // why `link` exists below — the accent and the readable version of the
+        // accent are two different values, and pretending otherwise is how the
+        // contrast debt happened in the first place.
         cyan: { DEFAULT: '#58B0D9' },
+        // T_TEST.8 — secondary text is a colour, not an opacity.
+        //
+        // Muted text used to be `text-navy/40…/60`, and the whole ramp sat under
+        // WCAG AA on light surfaces: /40 is 2.57:1, /50 is 3.43:1, /20 is
+        // 1.52:1, against the 4.5:1 that DESIGNGUIDELINES promises. An opacity
+        // ramp invites this — every step looks like a design choice and none of
+        // them carries a number, so the palette drifts below the line one
+        // component at a time. Same reasoning that made `danger` a token.
+        //
+        // `#545C67` is navy at 70% over white, frozen as a solid so it renders
+        // identically on white and on ivory: 6.79:1 and 6.12:1. Both pass with
+        // room, which matters because the *next* value someone picks will be
+        // relative to this one.
+        muted: { DEFAULT: '#545C67' },
+        // Cyan darkened until it passes on both light surfaces: 5.37:1 on white,
+        // 4.84:1 on ivory. Not the 4.72:1 candidate — that one fails on ivory
+        // (4.26:1), and "passes on the background I happened to test" is exactly
+        // the bug being fixed here.
+        link: { DEFAULT: '#1A7299' },
         // Runway lights. "Pay attention", never "danger" — that distinction is
         // the whole reason both exist.
         amber: { DEFAULT: '#FF7A2F' },

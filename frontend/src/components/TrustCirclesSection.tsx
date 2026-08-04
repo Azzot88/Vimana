@@ -45,7 +45,7 @@ export default function TrustCirclesSection() {
         <h2 className="font-display font-semibold text-base text-navy">
           {t('trust.sectionTitle')}
         </h2>
-        <div className="flex items-center gap-1 text-xs font-body text-navy/50">
+        <div className="flex items-center gap-1 text-xs font-body text-muted">
           <span>{t('trust.depth')}</span>
           {[1, 2, 3, 4, 5, 6].map((d) => (
             <button
@@ -55,7 +55,7 @@ export default function TrustCirclesSection() {
               className={`w-6 h-6 rounded ${
                 d === depth
                   ? 'bg-cyan text-white'
-                  : 'text-navy/40 hover:text-navy hover:bg-ivory'
+                  : 'text-muted hover:text-navy hover:bg-ivory'
               }`}
             >
               {d}
@@ -64,10 +64,10 @@ export default function TrustCirclesSection() {
         </div>
       </div>
 
-      <p className="text-xs font-body text-navy/50">{t('trust.sectionHint')}</p>
+      <p className="text-xs font-body text-muted">{t('trust.sectionHint')}</p>
 
       {loading ? (
-        <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
+        <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -75,7 +75,7 @@ export default function TrustCirclesSection() {
               <MonoText className="text-lg text-navy font-medium">
                 {metrics?.verifications_issued_count ?? 0}
               </MonoText>
-              <p className="text-xs font-body text-navy/40">
+              <p className="text-xs font-body text-muted">
                 {t('trust.verificationsIssued')}
               </p>
             </div>
@@ -83,7 +83,7 @@ export default function TrustCirclesSection() {
               <MonoText className="text-lg text-navy font-medium">
                 {metrics?.verifications_received_count ?? 0}
               </MonoText>
-              <p className="text-xs font-body text-navy/40">
+              <p className="text-xs font-body text-muted">
                 {t('trust.verificationsReceived')}
               </p>
             </div>
@@ -91,14 +91,14 @@ export default function TrustCirclesSection() {
               <MonoText className="text-lg text-navy font-medium">
                 {metrics?.dealt_with_count ?? 0}
               </MonoText>
-              <p className="text-xs font-body text-navy/40">
+              <p className="text-xs font-body text-muted">
                 {t('trust.dealtWith')}
               </p>
             </div>
           </div>
 
           <div className="space-y-2 pt-2 border-t border-navy/5">
-            <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">
+            <p className="text-xs font-display font-semibold text-muted uppercase tracking-wide">
               {t('trust.circlesTitle', { total: circles?.total_reachable ?? 0 })}
             </p>
             {circles && Object.keys(circles.circles).length > 0 ? (
@@ -111,21 +111,21 @@ export default function TrustCirclesSection() {
                       className="flex items-center justify-between py-2 border-b border-navy/5 last:border-0"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-cyan/20 text-cyan text-xs font-mono flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-full bg-cyan/20 text-link text-xs font-mono flex items-center justify-center">
                           {level}
                         </span>
                         <p className="text-sm font-body text-navy">
                           {t('trust.hopLabel', { count: users.length })}
                         </p>
                       </div>
-                      <MonoText className="text-xs text-navy/40">
+                      <MonoText className="text-xs text-muted">
                         {users.length}
                       </MonoText>
                     </div>
                   ))}
               </div>
             ) : (
-              <p className="text-sm font-body text-navy/40 py-4 text-center">
+              <p className="text-sm font-body text-muted py-4 text-center">
                 {t('trust.empty')}
               </p>
             )}

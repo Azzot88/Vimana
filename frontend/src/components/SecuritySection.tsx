@@ -186,7 +186,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
         <h2 className="font-display font-semibold text-lg text-navy">
           {t('security.title')}
         </h2>
-        <p className="text-sm font-body text-navy/60 mt-1">{t('security.hint')}</p>
+        <p className="text-sm font-body text-muted mt-1">{t('security.hint')}</p>
       </div>
 
       {error && (
@@ -202,7 +202,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
 
       {/* ── email ── */}
       <div className="space-y-3">
-        <div className="text-xs font-body text-navy/50">{t('security.emailLabel')}</div>
+        <div className="text-xs font-body text-muted">{t('security.emailLabel')}</div>
         <MonoText className="text-sm text-navy break-all">
           <span data-testid="security-email">{user.email || '—'}</span>
         </MonoText>
@@ -244,7 +244,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               type="button"
               onClick={cancel}
               data-testid="security-cancel-change"
-              className="w-full text-sm font-body text-navy/50"
+              className="w-full text-sm font-body text-muted"
             >
               {t('security.cancelChange')}
             </button>
@@ -260,7 +260,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               data-testid="security-new-email"
               className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
-            <p className="text-xs font-body text-navy/50">
+            <p className="text-xs font-body text-muted">
               {t('security.emailNotice')}
             </p>
             <button
@@ -272,7 +272,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
             >
               {busy ? '…' : t('common.continue')}
             </button>
-            <button type="button" onClick={reset} className="text-sm font-body text-navy/50">
+            <button type="button" onClick={reset} className="text-sm font-body text-muted">
               {t('common.cancel')}
             </button>
           </div>
@@ -290,10 +290,10 @@ export default function SecuritySection({ user, onChanged }: Props) {
 
       {/* ── password ── */}
       <div className="space-y-3 border-t border-navy/10 pt-4">
-        <div className="text-xs font-body text-navy/50">
+        <div className="text-xs font-body text-muted">
           {t('security.passwordLabel')}
         </div>
-        <p className="text-sm font-body text-navy/60">
+        <p className="text-sm font-body text-muted">
           {user.has_password ? t('security.passwordSet') : t('security.passwordNone')}
         </p>
 
@@ -308,7 +308,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
               data-testid="security-new-password"
               className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
-            <p className="text-xs font-body text-navy/50">
+            <p className="text-xs font-body text-muted">
               {t('security.passwordNotice')}
             </p>
             {/* Consequence stated before the action, not discovered after it:
@@ -327,7 +327,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
             >
               {busy ? '…' : t('common.continue')}
             </button>
-            <button type="button" onClick={reset} className="text-sm font-body text-navy/50">
+            <button type="button" onClick={reset} className="text-sm font-body text-muted">
               {t('common.cancel')}
             </button>
           </div>
@@ -347,7 +347,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
 
       {/* ── recovery codes ── */}
       <div className="space-y-3 border-t border-navy/10 pt-4">
-        <div className="text-xs font-body text-navy/50">
+        <div className="text-xs font-body text-muted">
           {t('security.recoveryLabel')}
         </div>
 
@@ -389,14 +389,14 @@ export default function SecuritySection({ user, onChanged }: Props) {
               type="button"
               onClick={() => setFreshCodes(null)}
               data-testid="recovery-saved"
-              className="w-full text-sm font-body text-navy/50"
+              className="w-full text-sm font-body text-muted"
             >
               {t('security.recoverySaved')}
             </button>
           </div>
         ) : (
           <>
-            <p className="text-sm font-body text-navy/60" data-testid="recovery-left">
+            <p className="text-sm font-body text-muted" data-testid="recovery-left">
               {codesLeft > 0
                 ? /* `n`, not `count`: i18next treats `count` as the plural
                      selector, and the phrasing is deliberately number-first so
@@ -413,7 +413,7 @@ export default function SecuritySection({ user, onChanged }: Props) {
                 </p>
               </div>
             )}
-            <p className="text-xs font-body text-navy/50">
+            <p className="text-xs font-body text-muted">
               {/* The honest boundary, and it moves with the rung the account is
                   on (D-KEY-TIERS): a code brings back the way in, and — while
                   the platform still holds a copy of the key — the vaults too. */}

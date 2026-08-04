@@ -59,7 +59,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
   return (
     <div className="space-y-3">
       <div>
-        <label htmlFor={`${uid}-label`} className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-label`} className="block text-xs font-body font-medium text-muted mb-1">
           {t('address.label')}
         </label>
         <input
@@ -74,7 +74,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label htmlFor={`${uid}-country`} className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-country`} className="block text-xs font-body font-medium text-muted mb-1">
           {t('profile.address.country')}
         </label>
         <select
@@ -99,7 +99,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div className="relative">
-        <label htmlFor={`${uid}-city`} className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-city`} className="block text-xs font-body font-medium text-muted mb-1">
           {t('profile.address.city')}
         </label>
         <input
@@ -140,7 +140,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label htmlFor={`${uid}-street`} className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-street`} className="block text-xs font-body font-medium text-muted mb-1">
           {t('profile.address.street')}
         </label>
         <input
@@ -154,7 +154,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label htmlFor={`${uid}-postal`} className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-postal`} className="block text-xs font-body font-medium text-muted mb-1">
           {t('profile.address.postal')}
         </label>
         <input
@@ -167,7 +167,7 @@ export default function AddressFormFields({ value, onChange, countryOptions }: P
       </div>
 
       <div>
-        <label htmlFor={`${uid}-note`} className="block text-xs font-body font-medium text-navy/60 mb-1">
+        <label htmlFor={`${uid}-note`} className="block text-xs font-body font-medium text-muted mb-1">
           {t('profile.address.note')}
         </label>
         <textarea

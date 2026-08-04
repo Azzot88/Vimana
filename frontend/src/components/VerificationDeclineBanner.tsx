@@ -51,7 +51,7 @@ export default function VerificationDeclineBanner({ onRequestCollateral }: Props
             <h3 className="font-display font-semibold text-lg text-navy">
               {t('verification.declinedPolite.comingSoonTitle')}
             </h3>
-            <p className="text-sm font-body text-navy/70">
+            <p className="text-sm font-body text-muted">
               {t('verification.declinedPolite.comingSoonBody')}
             </p>
             <div className="flex justify-end">

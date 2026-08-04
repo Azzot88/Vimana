@@ -3,7 +3,7 @@ import type { RouteNote } from '../api/notices'
 
 const STATUS_CLASS: Record<RouteNote['status'], string> = {
   standard: '',
-  attention: 'bg-cyan/15 text-cyan border-cyan/30',
+  attention: 'bg-cyan/15 text-link border-cyan/30',
   complex: 'bg-amber/20 text-amber border-amber/40',
   restricted: 'bg-danger/10 text-danger border-danger/30',
 }
@@ -47,7 +47,7 @@ export default function RouteNoteBadge({ note, compact = false }: Props) {
       {expanded && (
         <div className={`mt-1 max-w-md text-xs font-body p-2 rounded border ${STATUS_CLASS[note.status]}`}>
           <p className="font-medium mb-1">{headline}</p>
-          {note.body && <p className="text-navy/70 whitespace-pre-line">{note.body}</p>}
+          {note.body && <p className="text-muted whitespace-pre-line">{note.body}</p>}
         </div>
       )}
     </div>

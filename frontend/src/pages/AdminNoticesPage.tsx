@@ -163,16 +163,16 @@ export default function AdminNoticesPage() {
 
         <div className="border-t border-navy/5 pt-3 space-y-1">
           {routeNotes.length === 0 && (
-            <p className="text-xs font-body text-navy/30">No route notes yet.</p>
+            <p className="text-xs font-body text-muted">No route notes yet.</p>
           )}
           {routeNotes.map((n) => (
             <div key={n.id} className="flex items-center justify-between text-xs font-mono">
               <span className="text-navy">
                 {n.origin_iso}→{n.destination_iso}
-                <span className="ml-2 text-navy/50">
+                <span className="ml-2 text-muted">
                   [{n.status}/{n.severity}]
                 </span>
-                <span className="ml-2 text-navy/70 font-body">{n.headline}</span>
+                <span className="ml-2 text-muted font-body">{n.headline}</span>
               </span>
               <button
                 onClick={async () => {
@@ -243,16 +243,16 @@ export default function AdminNoticesPage() {
 
         <div className="border-t border-navy/5 pt-3 space-y-1">
           {platformNotices.length === 0 && (
-            <p className="text-xs font-body text-navy/30">No platform notices yet.</p>
+            <p className="text-xs font-body text-muted">No platform notices yet.</p>
           )}
           {platformNotices.map((n) => (
             <div key={n.id} className="flex items-center justify-between text-xs font-mono">
               <span className="text-navy">
                 <MonoText className="inline">{n.key}</MonoText>
-                <span className="ml-2 text-navy/50">
+                <span className="ml-2 text-muted">
                   [{n.severity}/{n.target_surface}]
                 </span>
-                <span className="ml-2 text-navy/70 font-body">{n.headline}</span>
+                <span className="ml-2 text-muted font-body">{n.headline}</span>
               </span>
               <button
                 onClick={async () => {

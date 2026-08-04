@@ -115,7 +115,7 @@ export default function StepUpDialog({
     <div className="fixed inset-0 bg-navy/40 flex items-center justify-center px-4 z-modal">
       <div className="bg-white rounded-card border border-navy/10 p-5 w-full max-w-sm space-y-4">
         <h3 className="font-display font-semibold text-lg text-navy">{title}</h3>
-        <p className="text-sm font-body text-navy/60">{body}</p>
+        <p className="text-sm font-body text-muted">{body}</p>
 
         {options && options.methods.length > 1 && (
           <div className="flex gap-2 flex-wrap">
@@ -126,8 +126,8 @@ export default function StepUpDialog({
                 onClick={() => setMethod(m)}
                 className={`text-xs font-body px-2.5 py-1 rounded border transition-colors ${
                   method === m
-                    ? 'border-cyan text-cyan bg-cyan/5'
-                    : 'border-navy/20 text-navy/60'
+                    ? 'border-cyan text-link bg-cyan/5'
+                    : 'border-navy/20 text-muted'
                 }`}
               >
                 {t(`stepUp.method.${m}`)}
@@ -147,10 +147,10 @@ export default function StepUpDialog({
           />
         )}
         {method === 'passkey' && (
-          <p className="text-sm font-body text-navy/50">{t('stepUp.passkeyHint')}</p>
+          <p className="text-sm font-body text-muted">{t('stepUp.passkeyHint')}</p>
         )}
         {method === 'nostr' && (
-          <p className="text-sm font-body text-navy/50">{t('stepUp.nostrHint')}</p>
+          <p className="text-sm font-body text-muted">{t('stepUp.nostrHint')}</p>
         )}
 
         {error && (

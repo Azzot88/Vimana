@@ -45,7 +45,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
+        <MonoText className="text-muted text-sm">{t('common.loading')}</MonoText>
       </div>
     )
   }
@@ -106,7 +106,7 @@ export default function DashboardPage() {
                   <MonoText className="text-sm text-navy font-medium">
                     {deal.origin} → {deal.destination}
                   </MonoText>
-                  <p className="text-xs font-body text-navy/50">
+                  <p className="text-xs font-body text-muted">
                     {deal.carrier_id === currentUser?.id ? t('dashboard.carrier') : t('dashboard.sender')} · {deal.cargo_description}
                   </p>
                 </div>
@@ -121,17 +121,17 @@ export default function DashboardPage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display font-semibold text-lg text-navy">{t('dashboard.iCarry')}</h2>
-            <Link to="/trips" className="text-xs text-cyan hover:underline font-body">
+            <Link to="/trips" className="text-xs text-link hover:underline font-body">
               {t('dashboard.allTrips')}
             </Link>
           </div>
           {myTrips.length === 0 ? (
             <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
-              <p className="text-sm font-body text-navy/40">{t('dashboard.noTrips')}</p>
+              <p className="text-sm font-body text-muted">{t('dashboard.noTrips')}</p>
               {!currentUser?.key_lost && (
                 <Link
                   to="/trips/new"
-                  className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
+                  className="inline-block mt-3 text-sm text-link hover:underline font-body"
                 >
                   {t('dashboard.publishFirst')}
                 </Link>
@@ -148,11 +148,11 @@ export default function DashboardPage() {
                     <MonoText className="text-sm text-navy font-medium">
                       {trip.origin} → {trip.destination}
                     </MonoText>
-                    <MonoText className="text-xs text-navy/50">
+                    <MonoText className="text-xs text-muted">
                       {new Date(trip.depart_at).toLocaleDateString(i18n.language)}
                     </MonoText>
                   </div>
-                  <p className="text-xs font-body text-navy/50 mt-1">
+                  <p className="text-xs font-body text-muted mt-1">
                     {t('trips.capacity')}: {trip.capacity} {t('trips.kg')}
                   </p>
                 </div>
@@ -167,16 +167,16 @@ export default function DashboardPage() {
           <h2 className="font-display font-semibold text-lg text-navy">
             {(currentUser?.active_mode === 'carrier') ? t('dashboard.myCargoCarrier') : t('dashboard.myCargoSender')}
           </h2>
-          <Link to="/deals" className="text-xs text-cyan hover:underline font-body">
+          <Link to="/deals" className="text-xs text-link hover:underline font-body">
             {t('dashboard.allDeals')}
           </Link>
         </div>
         {asCarrierDeals.length === 0 && asSenderDeals.length === 0 ? (
           <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
-            <p className="text-sm font-body text-navy/40">{t('dashboard.noDeals')}</p>
+            <p className="text-sm font-body text-muted">{t('dashboard.noDeals')}</p>
             <Link
               to="/trips"
-              className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
+              className="inline-block mt-3 text-sm text-link hover:underline font-body"
             >
               {t('dashboard.findTrip')}
             </Link>
@@ -193,7 +193,7 @@ export default function DashboardPage() {
                   <MonoText className="text-sm text-navy font-medium">
                     {deal.origin} → {deal.destination}
                   </MonoText>
-                  <p className="text-xs font-body text-navy/50">{deal.cargo_description}</p>
+                  <p className="text-xs font-body text-muted">{deal.cargo_description}</p>
                 </div>
                 <StatusBadge status={deal.status} />
               </Link>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
         <section>
           <h2 className="font-display font-semibold text-lg text-navy mb-3">{t('dashboard.iSend')}</h2>
           <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
-            <p className="text-sm font-body text-navy/60 mb-4">
+            <p className="text-sm font-body text-muted mb-4">
               {t('dashboard.findCarrier')}
             </p>
             <Link
@@ -220,7 +220,7 @@ export default function DashboardPage() {
       )}
 
       <div className="flex justify-end pt-4">
-        <MonoText className="text-xs text-navy/20">v{APP_VERSION}</MonoText>
+        <MonoText className="text-xs text-muted">v{APP_VERSION}</MonoText>
       </div>
     </div>
   )

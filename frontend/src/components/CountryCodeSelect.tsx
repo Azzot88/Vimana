@@ -109,11 +109,11 @@ export default function CountryCodeSelect({ value, onChange }: Props) {
                   <span className="text-base">{isoToFlag(c.iso)}</span>
                   <span className="text-navy">{c.name}</span>
                 </span>
-                <span className="font-mono text-navy/50">+{c.dial}</span>
+                <span className="font-mono text-muted">+{c.dial}</span>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-4 text-sm text-navy/40 text-center font-body">—</li>
+              <li className="px-3 py-4 text-sm text-muted text-center font-body">—</li>
             )}
           </ul>
         </div>

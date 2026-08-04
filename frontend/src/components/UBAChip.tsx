@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next'
 import type { UBALevel } from '../api/uba'
 
 const LEVEL_CLASS: Record<UBALevel, string> = {
-  newbie:   'bg-navy/10 text-navy/70',
-  verified: 'bg-cyan/15 text-cyan',
-  reliable: 'bg-cyan/25 text-cyan',
+  newbie:   'bg-navy/10 text-muted',
+  verified: 'bg-cyan/15 text-link',
+  reliable: 'bg-cyan/25 text-link',
   trusted:  'bg-amber/20 text-amber',
   elite:    'bg-amber/35 text-amber',
 }

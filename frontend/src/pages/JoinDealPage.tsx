@@ -39,7 +39,7 @@ export default function JoinDealPage() {
         {t('recipient.joinTitle')}
       </h1>
       {state === 'pending' && (
-        <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
+        <MonoText className="text-xs text-muted">{t('common.loading')}</MonoText>
       )}
       {state !== 'pending' && state !== 'ok' && (
         <p className="text-sm font-body text-danger">{state}</p>

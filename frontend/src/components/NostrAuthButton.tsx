@@ -118,7 +118,7 @@ export default function NostrAuthButton({ mode, displayName }: Props) {
             : t('nostrAuth.noExtension')}
       </button>
       {!available && (
-        <p className="text-xs font-body text-navy/50">
+        <p className="text-xs font-body text-muted">
           {/* Naming a way forward beats a dead end — most people hitting this
               have never heard of NIP-07. */}
           {t('nostrAuth.noExtensionHint')}

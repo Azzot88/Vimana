@@ -44,7 +44,7 @@ export default function IdentityPage() {
   if (state === 'loading') {
     return (
       <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
-        <MonoText className="text-sm text-navy/40">{t('common.loading')}</MonoText>
+        <MonoText className="text-sm text-muted">{t('common.loading')}</MonoText>
       </div>
     )
   }
@@ -56,8 +56,8 @@ export default function IdentityPage() {
           <h1 className="font-display font-bold text-xl text-navy">
             {t('identity.notFoundTitle')}
           </h1>
-          <p className="text-sm font-body text-navy/60">{t('identity.notFoundBody')}</p>
-          <Link to="/" className="text-sm font-body text-cyan hover:underline">
+          <p className="text-sm font-body text-muted">{t('identity.notFoundBody')}</p>
+          <Link to="/" className="text-sm font-body text-link hover:underline">
             {t('identity.toHome')}
           </Link>
         </div>
@@ -89,14 +89,14 @@ export default function IdentityPage() {
               <h1 className="font-display font-semibold text-lg text-navy truncate">
                 {identity.display_name ?? t('identity.unnamed')}
               </h1>
-              <MonoText className="text-xs text-navy/40" >
+              <MonoText className="text-xs text-muted" >
                 <span title={identity.npub}>{shortKey(identity.npub)}</span>
               </MonoText>
             </div>
             {identity.key_lost && (
               <span
                 data-testid="identity-key-lost"
-                className="text-xs font-body px-2 py-0.5 rounded bg-navy/10 text-navy/50"
+                className="text-xs font-body px-2 py-0.5 rounded bg-navy/10 text-muted"
               >
                 {t('trips.keyLost')}
               </span>
@@ -109,7 +109,7 @@ export default function IdentityPage() {
                offer, how well proven this key is, comes with its date like
                everywhere else (T_TRUST.1). */
             <div className="space-y-2">
-              <p className="text-sm font-body text-navy/60">{t('identity.minimalBody')}</p>
+              <p className="text-sm font-body text-muted">{t('identity.minimalBody')}</p>
               <VerificationBadgeChip
                 level={identity.highest_verification_level as never}
                 at={identity.verified_at}
@@ -130,7 +130,7 @@ export default function IdentityPage() {
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-body">
                 <div>
-                  <dt className="text-xs text-navy/50">{t('identity.memberSince')}</dt>
+                  <dt className="text-xs text-muted">{t('identity.memberSince')}</dt>
                   <dd className="text-navy">
                     {identity.member_since
                       ? new Date(identity.member_since).toLocaleDateString(i18n.language)
@@ -138,22 +138,22 @@ export default function IdentityPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-navy/50">{t('identity.dealtWith')}</dt>
+                  <dt className="text-xs text-muted">{t('identity.dealtWith')}</dt>
                   <dd className="text-navy">{identity.dealt_with_count ?? 0}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-navy/50">{t('identity.vouchedFor')}</dt>
+                  <dt className="text-xs text-muted">{t('identity.vouchedFor')}</dt>
                   <dd className="text-navy">{identity.verifications_issued_count ?? 0}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-navy/50">{t('identity.vouchedBy')}</dt>
+                  <dt className="text-xs text-muted">{t('identity.vouchedBy')}</dt>
                   <dd className="text-navy">
                     {identity.verifications_received_count ?? 0}
                     {/* A counter is silent about time, and that silence reads as
                         "recently". The date of the newest vouch is the cheapest
                         way to stop it saying that. */}
                     {identity.last_vouched_at && (
-                      <span className="block text-xs text-navy/40">
+                      <span className="block text-xs text-muted">
                         {t('identity.lastVouchedOn', {
                           date: new Date(identity.last_vouched_at).toLocaleDateString(
                             i18n.language,
@@ -171,7 +171,7 @@ export default function IdentityPage() {
               are valid and belong to a key this identity no longer holds. */}
           {identity.identity_changed_at && (
             <div className="bg-navy/5 rounded-field px-3 py-2 space-y-0.5">
-              <p className="text-xs font-body text-navy/70" data-testid="identity-changed">
+              <p className="text-xs font-body text-muted" data-testid="identity-changed">
                 {t('identity.keyChangedOn', {
                   date: new Date(identity.identity_changed_at).toLocaleDateString(
                     i18n.language,
@@ -179,7 +179,7 @@ export default function IdentityPage() {
                 })}
               </p>
               {identity.previous_npub && (
-                <p className="text-xs font-body text-navy/50">
+                <p className="text-xs font-body text-muted">
                   {t('profile.identity.previousKey')}{' '}
                   <span className="font-mono" title={identity.previous_npub}>
                     {shortKey(identity.previous_npub)}
@@ -200,7 +200,7 @@ export default function IdentityPage() {
           />
         )}
 
-        <p className="text-xs font-body text-navy/40 text-center">
+        <p className="text-xs font-body text-muted text-center">
           {t('identity.footer')}
         </p>
       </div>

@@ -29,14 +29,14 @@ export default function NotFoundPage() {
   return (
     <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-5">
-        <MonoText className="text-xs text-navy/40">404</MonoText>
+        <MonoText className="text-xs text-muted">404</MonoText>
         <h1 className="font-display font-bold text-2xl text-navy text-balance">
           {t('notFound.title')}
         </h1>
-        <p className="text-sm font-body text-navy/60">{t('notFound.body')}</p>
+        <p className="text-sm font-body text-muted">{t('notFound.body')}</p>
 
         <div className="bg-white rounded-card border border-navy/10 px-4 py-3">
-          <p className="text-xs font-body text-navy/40 mb-1">{t('notFound.pathLabel')}</p>
+          <p className="text-xs font-body text-muted mb-1">{t('notFound.pathLabel')}</p>
           <MonoText className="text-sm text-navy break-anywhere">{pathname}</MonoText>
         </div>
 

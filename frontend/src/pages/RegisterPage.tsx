@@ -57,10 +57,10 @@ export default function RegisterPage() {
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
           {t('auth.title')}
         </h1>
-        <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
+        <p className="text-center text-muted text-sm font-body mb-8">{t('auth.subtitle')}</p>
         <form onSubmit={handleSubmit} className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
           <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+            <label className="block text-xs font-body font-medium text-muted mb-1">
               {t('auth.name')}
             </label>
             <input
@@ -72,7 +72,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+            <label className="block text-xs font-body font-medium text-muted mb-1">
               {t('auth.email')}
             </label>
             <input
@@ -88,7 +88,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+            <label className="block text-xs font-body font-medium text-muted mb-1">
               {t('auth.password')}
             </label>
             <input
@@ -123,7 +123,7 @@ export default function RegisterPage() {
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-px bg-navy/10 flex-1" />
-            <span className="text-xs font-body text-navy/40">
+            <span className="text-xs font-body text-muted">
               {t('nostrAuth.or')}
             </span>
             <div className="h-px bg-navy/10 flex-1" />
@@ -140,13 +140,13 @@ export default function RegisterPage() {
           </div>
         </div>
         <div className="flex items-center justify-between mt-4">
-          <p className="text-xs font-body text-navy/50">
+          <p className="text-xs font-body text-muted">
             {t('auth.hasAccount')}{' '}
-            <Link to="/login" className="text-cyan hover:underline">
+            <Link to="/login" className="text-link hover:underline">
               {t('auth.signIn')}
             </Link>
           </p>
-          <span className="font-mono text-xs text-navy/20">v{APP_VERSION}</span>
+          <span className="font-mono text-xs text-muted">v{APP_VERSION}</span>
         </div>
       </div>
     </div>

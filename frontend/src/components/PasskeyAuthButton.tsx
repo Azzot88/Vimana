@@ -92,7 +92,7 @@ export default function PasskeyAuthButton({ mode, displayName, email }: Props) {
 
   if (!supported) {
     return (
-      <p className="text-xs font-body text-navy/50">
+      <p className="text-xs font-body text-muted">
         {t('passkey.unsupported')}
       </p>
     )

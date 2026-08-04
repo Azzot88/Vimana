@@ -81,13 +81,13 @@ export default function AdminUsersPage() {
         <h1 className="font-display font-bold text-2xl text-navy">
           {t('admin.usersTitle')}
         </h1>
-        <MonoText className="text-xs text-navy/50">
+        <MonoText className="text-xs text-muted">
           {users.length} total {testCount > 0 && `· ${testCount} test`}
         </MonoText>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-xs font-body text-navy/70 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs font-body text-muted cursor-pointer">
           <input
             type="checkbox"
             checked={showTestOnly}
@@ -117,14 +117,14 @@ export default function AdminUsersPage() {
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
       {loading ? (
-        <p className="text-sm font-body text-navy/40 text-center py-8">
+        <p className="text-sm font-body text-muted text-center py-8">
           {t('common.loading')}
         </p>
       ) : (
         <div className="bg-white rounded-card border border-navy/10 overflow-hidden">
           <table className="w-full text-sm font-body">
             <thead className="bg-ivory">
-              <tr className="text-left text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">
+              <tr className="text-left text-xs font-display font-semibold text-muted uppercase tracking-wide">
                 <th className="px-4 py-3">{t('admin.userCol.name')}</th>
                 <th className="px-4 py-3 hidden sm:table-cell">
                   {t('admin.userCol.email')}
@@ -142,12 +142,12 @@ export default function AdminUsersPage() {
                   <tr key={u.id} className="border-t border-navy/5">
                     <td className="px-4 py-3">
                       <p className="text-navy font-medium">{u.display_name}</p>
-                      <MonoText className="text-xs text-navy/40 sm:hidden">
+                      <MonoText className="text-xs text-muted sm:hidden">
                         {u.email ?? u.phone ?? '—'}
                       </MonoText>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <MonoText className="text-xs text-navy/60">
+                      <MonoText className="text-xs text-muted">
                         {u.email ?? u.phone ?? '—'}
                       </MonoText>
                     </td>

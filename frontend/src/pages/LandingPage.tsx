@@ -92,7 +92,7 @@ export default function LandingPage() {
   }
 
   const Label = ({ children }: { children: React.ReactNode }) => (
-    <MonoText className="text-[11px] uppercase tracking-[0.16em] text-navy/40">
+    <MonoText className="text-[11px] uppercase tracking-[0.16em] text-muted">
       {children}
     </MonoText>
   )
@@ -111,7 +111,7 @@ export default function LandingPage() {
           {/* The version is read, never typed: the old header advertised
               v0.01.17 long after the build had moved on, which is the smallest
               possible version of the problem this whole page is about. */}
-          <MonoText className="hidden text-[11px] tracking-[0.14em] text-navy/40 sm:block">
+          <MonoText className="hidden text-[11px] tracking-[0.14em] text-muted sm:block">
             {t('landing.navTag', { version: APP_VERSION })}
           </MonoText>
           <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export default function LandingPage() {
             <h1 className="mt-4 font-display text-[clamp(2.25rem,5.5vw,3.75rem)] font-bold leading-[1.03] tracking-[-0.03em] text-balance">
               {t('landing.heroTitle')}
             </h1>
-            <p className="mt-5 max-w-[46ch] font-body text-[15px] leading-relaxed text-navy/70">
+            <p className="mt-5 max-w-[46ch] font-body text-[15px] leading-relaxed text-muted">
               {t('landing.heroSub')}
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -175,20 +175,20 @@ export default function LandingPage() {
           <div>
             <div className="rounded-card border border-navy/12 bg-white shadow-card">
               <div className="flex items-center justify-between border-b border-dashed border-navy/15 px-5 py-3">
-                <MonoText className="text-[10px] uppercase tracking-[0.2em] text-navy/45">
+                <MonoText className="text-[10px] uppercase tracking-[0.2em] text-muted">
                   {t('landing.boardingBrand')}
                 </MonoText>
-                <MonoText className="text-[10px] text-navy/35">VMN-2026-07841</MonoText>
+                <MonoText className="text-[10px] text-muted">VMN-2026-07841</MonoText>
               </div>
               <div className="flex items-end justify-between gap-4 px-5 py-5">
                 <div>
                   <div className="font-display text-3xl font-bold leading-none tracking-tight">DXB</div>
-                  <MonoText className="mt-1 text-[10px] text-navy/40">Dubai Intl</MonoText>
+                  <MonoText className="mt-1 text-[10px] text-muted">Dubai Intl</MonoText>
                 </div>
                 <div className="pb-2 text-amber" aria-hidden="true">✈</div>
                 <div className="text-right">
                   <div className="font-display text-3xl font-bold leading-none tracking-tight">JFK</div>
-                  <MonoText className="mt-1 text-[10px] text-navy/40">New York Kennedy</MonoText>
+                  <MonoText className="mt-1 text-[10px] text-muted">New York Kennedy</MonoText>
                 </div>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-navy/10 px-5 py-4">
@@ -199,7 +199,7 @@ export default function LandingPage() {
                   ['boardingCapacity', '2.5 kg free'],
                 ].map(([key, value]) => (
                   <div key={key}>
-                    <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-navy/35">
+                    <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
                       {t(`landing.${key}`)}
                     </dt>
                     <dd className="mt-0.5 font-mono text-[13px] text-navy">{value}</dd>
@@ -208,7 +208,7 @@ export default function LandingPage() {
               </dl>
               <div className="flex items-center gap-2 border-t border-dashed border-navy/15 px-5 py-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan" aria-hidden="true" />
-                <MonoText className="text-[11px] text-navy/55">
+                <MonoText className="text-[11px] text-muted">
                   {t('landing.boardingConfirmed')}
                 </MonoText>
               </div>
@@ -226,7 +226,7 @@ export default function LandingPage() {
                   <dt className="font-display text-2xl font-bold tracking-tight">
                     {t(`landing.fact.${key}.value`)}
                   </dt>
-                  <dd className="mt-1 font-body text-[13px] leading-snug text-navy/60">
+                  <dd className="mt-1 font-body text-[13px] leading-snug text-muted">
                     {t(`landing.fact.${key}.label`)}
                   </dd>
                 </div>
@@ -243,7 +243,7 @@ export default function LandingPage() {
               {t('landing.problemTitle')}
             </h2>
           </Reveal>
-          <Reveal delay={0.08} className="space-y-4 font-body text-[15px] leading-relaxed text-navy/70">
+          <Reveal delay={0.08} className="space-y-4 font-body text-[15px] leading-relaxed text-muted">
             <p>{t('landing.problemBody1')}</p>
             <p>{t('landing.problemBody2')}</p>
           </Reveal>
@@ -267,7 +267,7 @@ export default function LandingPage() {
                   <h3 className="mt-3 font-display text-lg font-semibold tracking-tight">
                     {t(`landing.gate.${gate}.title`)}
                   </h3>
-                  <p className="mt-2 font-body text-[13.5px] leading-relaxed text-navy/65">
+                  <p className="mt-2 font-body text-[13.5px] leading-relaxed text-muted">
                     {t(`landing.gate.${gate}.body`)}
                   </p>
                 </li>
@@ -292,14 +292,14 @@ export default function LandingPage() {
                     {t(`landing.evidence.${item}.title`)}
                   </h3>
                   <div className="space-y-2">
-                    <p className="font-body text-[14px] leading-relaxed text-navy/70">
+                    <p className="font-body text-[14px] leading-relaxed text-muted">
                       {t(`landing.evidence.${item}.body`)}
                     </p>
                     {/* The limit of the claim, printed next to the claim. This
                         is the §9.1 rule made visible rather than obeyed
                         quietly: a reader who only skims the bold line still
                         cannot come away with more than the mechanism gives. */}
-                    <MonoText className="block text-[11.5px] leading-relaxed text-navy/45">
+                    <MonoText className="block text-[11.5px] leading-relaxed text-muted">
                       {t(`landing.evidence.${item}.limit`)}
                     </MonoText>
                   </div>
@@ -316,7 +316,7 @@ export default function LandingPage() {
             <h2 className="mt-4 max-w-[20ch] font-display text-[clamp(1.6rem,3.2vw,2.25rem)] font-bold leading-tight tracking-[-0.02em] text-balance">
               {t('landing.pendingTitle')}
             </h2>
-            <p className="mt-4 max-w-[54ch] font-body text-[15px] leading-relaxed text-navy/70">
+            <p className="mt-4 max-w-[54ch] font-body text-[15px] leading-relaxed text-muted">
               {t('landing.pendingBody')}
             </p>
           </Reveal>
@@ -324,13 +324,13 @@ export default function LandingPage() {
             {PENDING.map((item, i) => (
               <Reveal key={item} delay={i * 0.06}>
                 <li className="h-full rounded-card border border-dashed border-navy/20 p-5">
-                  <MonoText className="text-[11px] uppercase tracking-[0.14em] text-navy/35">
+                  <MonoText className="text-[11px] uppercase tracking-[0.14em] text-muted">
                     {t('landing.pendingTag')}
                   </MonoText>
                   <h3 className="mt-2.5 font-display text-base font-semibold tracking-tight text-navy/80">
                     {t(`landing.pending.${item}.title`)}
                   </h3>
-                  <p className="mt-1.5 font-body text-[13px] leading-relaxed text-navy/55">
+                  <p className="mt-1.5 font-body text-[13px] leading-relaxed text-muted">
                     {t(`landing.pending.${item}.body`)}
                   </p>
                 </li>
@@ -342,7 +342,7 @@ export default function LandingPage() {
         {/* ── Closing ──────────────────────────────────────────────────── */}
         <section className="py-16">
           <Reveal className="rounded-card border border-navy/12 bg-navy px-7 py-10 text-ivory md:px-12 md:py-14">
-            <MonoText className="text-[11px] uppercase tracking-[0.16em] text-ivory/45">
+            <MonoText className="text-[11px] uppercase tracking-[0.16em] text-ivory/70">
               {t('landing.closingLabel')}
             </MonoText>
             <h2 className="mt-4 max-w-[20ch] font-display text-[clamp(1.6rem,3.4vw,2.5rem)] font-bold leading-tight tracking-[-0.02em] text-balance">
@@ -381,10 +381,10 @@ export default function LandingPage() {
 
       <footer className="border-t border-navy/10">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-6">
-          <MonoText className="text-[11px] uppercase tracking-[0.14em] text-navy/40">
+          <MonoText className="text-[11px] uppercase tracking-[0.14em] text-muted">
             Vimana · {t('landing.footerTagline')}
           </MonoText>
-          <MonoText className="text-[11px] text-navy/35">
+          <MonoText className="text-[11px] text-muted">
             {t('landing.navTag', { version: APP_VERSION })}
           </MonoText>
         </div>
@@ -408,7 +408,7 @@ export default function LandingPage() {
                 <h2 id="waitlist-title" className="font-display text-xl font-bold tracking-tight">
                   {t('landing.modalSuccessTitle')}
                 </h2>
-                <p className="font-body text-sm leading-relaxed text-navy/70">
+                <p className="font-body text-sm leading-relaxed text-muted">
                   {t('landing.modalSuccessText', { email: successEmail })}
                 </p>
                 <button
@@ -429,19 +429,19 @@ export default function LandingPage() {
                     type="button"
                     onClick={closeModal}
                     aria-label={t('common.close') as string}
-                    className="-mr-1 -mt-1 rounded-field px-2 py-1 text-navy/40 transition-colors hover:bg-navy/5 hover:text-navy"
+                    className="-mr-1 -mt-1 rounded-field px-2 py-1 text-muted transition-colors hover:bg-navy/5 hover:text-navy"
                   >
                     ×
                   </button>
                 </div>
-                <p className="mt-2 font-body text-sm leading-relaxed text-navy/65">
+                <p className="mt-2 font-body text-sm leading-relaxed text-muted">
                   {t('landing.modalSub')}
                 </p>
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3">
                   <div>
                     <label
                       htmlFor="waitlist-name"
-                      className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-navy/45"
+                      className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-muted"
                     >
                       {t('landing.modalName')}
                     </label>
@@ -457,7 +457,7 @@ export default function LandingPage() {
                   <div>
                     <label
                       htmlFor="waitlist-email"
-                      className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-navy/45"
+                      className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-muted"
                     >
                       {t('landing.modalEmail')}
                     </label>
@@ -481,7 +481,7 @@ export default function LandingPage() {
                     {submitting ? t('common.sending') : t('landing.modalSubmit')}
                   </button>
                 </form>
-                <p className="mt-3 font-body text-[11.5px] leading-relaxed text-navy/45">
+                <p className="mt-3 font-body text-[11.5px] leading-relaxed text-muted">
                   {t('landing.modalFine')}
                 </p>
               </>

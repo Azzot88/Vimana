@@ -61,7 +61,7 @@ export default function EmailVerifyBanner() {
             localStorage.setItem(DISMISS_KEY, '1')
             setDismissed(true)
           }}
-          className="text-sm font-body text-navy/50"
+          className="text-sm font-body text-muted"
         >
           {t('common.cancel')}
         </button>

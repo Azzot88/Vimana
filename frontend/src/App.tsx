@@ -48,7 +48,7 @@ function ProtectedRoute() {
 function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center">
-      <MonoText className="text-sm text-navy/30">·</MonoText>
+      <MonoText className="text-sm text-muted">·</MonoText>
     </div>
   )
 }

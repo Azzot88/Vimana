@@ -29,7 +29,7 @@ export default function NostrBadge({ eventId, publishedAt }: Props) {
       type="button"
       onClick={copy}
       title={publishedAt ? new Date(publishedAt).toLocaleString() : ''}
-      className="inline-flex items-center gap-1 text-xs font-mono bg-cyan/10 text-cyan px-1.5 py-0.5 rounded hover:bg-cyan/20 transition-colors"
+      className="inline-flex items-center gap-1 text-xs font-mono bg-cyan/10 text-link px-1.5 py-0.5 rounded hover:bg-cyan/20 transition-colors"
     >
       <span>📡</span>
       <span>{copied ? t('common.copied') : t('trips.alsoOnNostr')}</span>
