@@ -31,22 +31,33 @@ export default function Reveal({
   children,
   delay = 0,
   className,
+  // T_TEST.8 — which element this becomes. A wrapper div between `<ol>` and
+  // `<li>` breaks the list for a screen reader twice over: the list stops
+  // announcing its length, and each item stops being an item. Motion is
+  // decoration and must not decide the document's structure, so the caller
+  // says what the element is.
+  as = 'div',
 }: {
   children: ReactNode
   delay?: number
   className?: string
+  as?: 'div' | 'li'
 }) {
   const reduced = useReducedMotion()
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => setHydrated(true), [])
 
+  const Static = as
+
   if (reduced || !hydrated || typeof window === 'undefined') {
-    return <div className={className}>{children}</div>
+    return <Static className={className}>{children}</Static>
   }
 
+  const Animated = as === 'li' ? motion.li : motion.div
+
   return (
-    <motion.div
+    <Animated
       className={className}
       initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -54,6 +65,6 @@ export default function Reveal({
       transition={{ duration: 0.4, delay, ease: [0.22, 0.61, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </Animated>
   )
 }

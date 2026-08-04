@@ -142,7 +142,7 @@ export default function RegisterPage() {
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-muted">
             {t('auth.hasAccount')}{' '}
-            <Link to="/login" className="text-link hover:underline">
+            <Link to="/login" className="text-link underline underline-offset-2">
               {t('auth.signIn')}
             </Link>
           </p>

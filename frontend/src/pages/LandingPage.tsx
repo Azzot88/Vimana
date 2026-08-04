@@ -259,8 +259,8 @@ export default function LandingPage() {
           </Reveal>
           <ol className="mt-9 grid gap-px overflow-hidden rounded-card border border-navy/10 bg-navy/10 sm:grid-cols-2 lg:grid-cols-4">
             {GATES.map((gate, i) => (
-              <Reveal key={gate} delay={i * 0.06} className="bg-ivory">
-                <li className="h-full p-6">
+              <Reveal key={gate} as="li" delay={i * 0.06} className="bg-ivory h-full p-6">
+                <div>
                   <MonoText className="text-[13px] font-medium text-amber">
                     {String(i + 1).padStart(2, '0')}
                   </MonoText>
@@ -270,7 +270,7 @@ export default function LandingPage() {
                   <p className="mt-2 font-body text-[13.5px] leading-relaxed text-muted">
                     {t(`landing.gate.${gate}.body`)}
                   </p>
-                </li>
+                </div>
               </Reveal>
             ))}
           </ol>
@@ -322,8 +322,13 @@ export default function LandingPage() {
           </Reveal>
           <ul className="mt-8 grid gap-4 sm:grid-cols-3">
             {PENDING.map((item, i) => (
-              <Reveal key={item} delay={i * 0.06}>
-                <li className="h-full rounded-card border border-dashed border-navy/20 p-5">
+              <Reveal
+                key={item}
+                as="li"
+                delay={i * 0.06}
+                className="h-full rounded-card border border-dashed border-navy/20 p-5"
+              >
+                <div>
                   <MonoText className="text-[11px] uppercase tracking-[0.14em] text-muted">
                     {t('landing.pendingTag')}
                   </MonoText>
@@ -333,7 +338,7 @@ export default function LandingPage() {
                   <p className="mt-1.5 font-body text-[13px] leading-relaxed text-muted">
                     {t(`landing.pending.${item}.body`)}
                   </p>
-                </li>
+                </div>
               </Reveal>
             ))}
           </ul>

@@ -225,7 +225,7 @@ export default function LoginPage() {
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs font-body text-muted">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="text-link hover:underline">
+            <Link to="/register" className="text-link underline underline-offset-2">
               {t('auth.signUp')}
             </Link>
           </p>
