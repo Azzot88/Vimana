@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeerFlew — Investor Offer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A1626;
+    --ink-2:#0F2138;
+    --ink-3:#16304F;
+    --paper:#FBF9F4;
+    --card:#FFFFFF;
+    --accent:#FF7A2F;
+    --accent-deep:#E8631B;
+    --sky:#58B0D9;
+    --text:#11202F;
+    --muted:#5A6B7B;
+    --line:#E4DFD4;
+    --line-dark:rgba(255,255,255,.12);
+    --maxw:1080px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em;line-height:1.05}
+  .mono{font-family:'IBM Plex Mono',monospace;letter-spacing:.02em}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  section{padding:92px 0}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;text-transform:uppercase;letter-spacing:.22em;
+    color:var(--accent-deep);display:flex;align-items:center;gap:10px;margin-bottom:22px;
+  }
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent)}
+  .sec-title{font-size:clamp(28px,4.4vw,46px);font-weight:700;max-width:18ch}
+  .lead{font-size:clamp(17px,2vw,20px);color:var(--muted);max-width:60ch;margin-top:18px}
+
+  /* ---------- nav ---------- */
+  .nav{position:sticky;top:0;z-index:50;background:rgba(10,22,38,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line-dark)}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .brand{font-family:'Space Grotesk';font-weight:700;font-size:19px;color:#fff;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+  .brand .tag{font-family:'IBM Plex Mono';font-size:9.5px;font-weight:500;letter-spacing:.18em;color:var(--sky);border:1px solid var(--line-dark);padding:3px 7px;border-radius:4px}
+  .nav-cta{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--accent);text-decoration:none;border:1px solid rgba(255,122,47,.4);padding:8px 16px;border-radius:6px;transition:.2s}
+  .nav-cta:hover{background:var(--accent);color:var(--ink)}
+
+  /* ---------- hero ---------- */
+  .hero{background:var(--ink);color:#fff;padding:84px 0 96px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:0;background:
+    radial-gradient(900px 500px at 78% -10%,rgba(88,176,217,.16),transparent 60%),
+    radial-gradient(700px 500px at 10% 110%,rgba(255,122,47,.12),transparent 60%);pointer-events:none}
+  .hero .wrap{position:relative;z-index:2;display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center}
+  .hero h1{font-size:clamp(34px,5.6vw,62px);font-weight:700;color:#fff}
+  .hero h1 .hl{color:var(--accent)}
+  .hero p.sub{font-size:clamp(16px,2vw,19px);color:#AFC0D2;margin-top:24px;max-width:46ch}
+  .corridor{margin-top:30px;display:inline-flex;align-items:center;gap:14px;font-family:'IBM Plex Mono';font-size:13px;color:#cdd9e6;border:1px solid var(--line-dark);border-radius:8px;padding:10px 16px}
+  .corridor b{color:#fff;font-weight:600}
+  .corridor .arc{color:var(--accent)}
+
+  /* boarding pass */
+  .pass{background:#fff;color:var(--ink);border-radius:16px;box-shadow:0 30px 60px -25px rgba(0,0,0,.6);position:relative;overflow:hidden}
+  .pass-top{padding:22px 24px 18px;border-bottom:2px dashed #d8d8d8;position:relative}
+  .pass-top::before,.pass-top::after{content:"";position:absolute;bottom:-11px;width:22px;height:22px;background:var(--ink);border-radius:50%}
+  .pass-top::before{left:-11px}
+  .pass-top::after{right:-11px}
+  .pass-head{display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+  .pass-head .logo{font-family:'Space Grotesk';font-weight:700;letter-spacing:-.02em;font-size:15px;color:var(--ink);text-transform:none}
+  .route{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:18px;gap:6px}
+  .route .code{font-family:'Space Grotesk';font-weight:700;font-size:38px;color:var(--ink)}
+  .route .city{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+  .route .right{text-align:right}
+  .arc-svg{width:100%;height:46px;display:block}
+  .pass-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;padding:18px 24px 6px}
+  .pass-grid .k{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .pass-grid .v{font-family:'Space Grotesk';font-weight:600;font-size:15px;color:var(--ink);margin-top:3px}
+  .barcode{height:46px;margin:14px 24px 22px;border-radius:4px;
+    background:repeating-linear-gradient(90deg,var(--ink) 0,var(--ink) 2px,transparent 2px,transparent 4px,var(--ink) 4px,var(--ink) 5px,transparent 5px,transparent 9px,var(--ink) 9px,var(--ink) 12px,transparent 12px,transparent 14px)}
+
+  /* ---------- proof bar (departure board) ---------- */
+  .board{background:var(--ink-2);color:#fff;padding:0}
+  .board .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0}
+  .board .cell{padding:34px 28px;border-left:1px solid var(--line-dark)}
+  .board .cell:first-child{border-left:0}
+  .board .num{font-family:'Space Grotesk';font-weight:700;font-size:clamp(28px,4vw,40px);color:var(--accent)}
+  .board .lab{font-family:'IBM Plex Mono';font-size:12px;color:#9fb1c4;margin-top:8px;letter-spacing:.04em}
+
+  /* ---------- generic cards ---------- */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .grid-4{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .card-b{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px}
+  .card-b h3{font-size:19px;font-weight:600;margin-bottom:10px}
+  .card-b p{color:var(--muted);font-size:15px}
+  .tagn{font-family:'IBM Plex Mono';font-size:11px;color:var(--accent-deep);letter-spacing:.1em;display:block;margin-bottom:12px}
+
+  /* problem on dark */
+  .dark{background:var(--ink);color:#fff}
+  .dark .sec-title{color:#fff}
+  .dark .lead{color:#9fb1c4}
+  .dark .eyebrow{color:var(--accent)}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:14px}
+  .step{position:relative;padding-top:26px}
+  .step .gate{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.16em;color:var(--accent-deep);text-transform:uppercase}
+  .step .gnum{font-family:'Space Grotesk';font-weight:700;font-size:30px;color:var(--text);line-height:1;margin:6px 0 10px}
+  .step h3{font-size:16px;font-weight:600;margin-bottom:6px}
+  .step p{font-size:14px;color:var(--muted)}
+  .step::before{content:"";position:absolute;top:0;left:0;width:46px;height:3px;background:var(--accent)}
+
+  /* trust */
+  .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-bottom:28px}
+  .pill{background:var(--ink-3);border-radius:14px;padding:26px;color:#fff}
+  .pill .icon{width:38px;height:38px;border-radius:9px;background:rgba(255,122,47,.16);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+  .pill .icon svg{width:20px;height:20px;stroke:var(--accent)}
+  .pill h3{font-size:17px;font-weight:600;margin-bottom:8px;color:#fff}
+  .pill p{font-size:14px;color:#9fb1c4}
+  .trust-detail{background:rgba(255,255,255,.04);border:1px solid var(--line-dark);border-radius:14px;padding:26px 28px}
+  .trust-detail ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+  .trust-detail li{font-size:14px;color:#cdd9e6;display:flex;gap:11px;align-items:flex-start}
+  .trust-detail li::before{content:"✓";color:var(--accent);font-family:'IBM Plex Mono';font-weight:600;flex-shrink:0}
+
+  /* model / streams */
+  .stream{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px;position:relative}
+  .stream .rank{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;color:var(--accent-deep);text-transform:uppercase}
+  .stream h3{font-size:18px;font-weight:600;margin:8px 0 8px}
+  .stream p{font-size:14px;color:var(--muted)}
+  .stream.primary{border-color:var(--accent);box-shadow:0 14px 30px -18px rgba(255,122,47,.5)}
+
+  /* econ table */
+  .econ{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .econ .row{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--line);font-size:15px}
+  .econ .row:last-child{border-bottom:0;background:#FFF6EF}
+  .econ .row .lbl{color:var(--muted)}
+  .econ .row .val{font-family:'IBM Plex Mono';font-weight:600;color:var(--text)}
+  .econ .row.total .lbl{color:var(--text);font-weight:600;font-family:'Space Grotesk'}
+  .econ .row.total .val{color:var(--accent-deep);font-size:17px}
+  .note{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--muted);margin-top:14px;letter-spacing:.02em}
+
+  /* market rings */
+  .market{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center}
+  .rings{display:flex;flex-direction:column;gap:14px}
+  .ring{border-radius:12px;padding:20px 24px;color:#fff}
+  .ring .t{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+  .ring .n{font-family:'Space Grotesk';font-weight:700;font-size:26px;margin-top:4px}
+  .ring.tam{background:var(--ink);margin-right:0}
+  .ring.sam{background:var(--ink-3);margin-right:14%}
+  .ring.som{background:var(--accent);color:var(--ink);margin-right:30%}
+
+  /* compare */
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .vs .col{padding:28px}
+  .vs .col:first-child{background:#F3EFE6;border-right:1px solid var(--line)}
+  .vs .col h3{font-size:15px;font-family:'IBM Plex Mono';text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;font-weight:600}
+  .vs .col:first-child h3{color:var(--muted)}
+  .vs .col:last-child h3{color:var(--accent-deep)}
+  .vs li{list-style:none;font-size:14.5px;margin-bottom:11px;color:var(--text);display:flex;gap:10px}
+  .vs .col:first-child li{color:var(--muted)}
+  .vs li::before{content:"—";flex-shrink:0;color:var(--muted)}
+  .vs .col:last-child li::before{content:"→";color:var(--accent)}
+
+  /* compliance */
+  .comp{background:var(--ink);color:#fff}
+  .comp .box{background:rgba(255,255,255,.04);border:1px solid var(--line-dark);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:22px 26px;margin-top:18px}
+  .comp .box h3{font-size:16px;font-weight:600;margin-bottom:7px;color:#fff}
+  .comp .box p{font-size:14.5px;color:#9fb1c4}
+
+  /* roadmap */
+  .road{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid var(--line);margin-top:10px}
+  .road .ph{padding:26px 24px 0;border-left:1px solid var(--line);position:relative}
+  .road .ph:first-child{border-left:0}
+  .road .ph::before{content:"";position:absolute;top:-8px;left:24px;width:13px;height:13px;border-radius:50%;background:var(--accent)}
+  .road .ph:first-child::before{left:0}
+  .road .when{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;color:var(--accent-deep);text-transform:uppercase}
+  .road .ph h3{font-size:17px;font-weight:600;margin:8px 0 8px}
+  .road .ph p{font-size:14px;color:var(--muted)}
+
+  /* ask */
+  .ask{background:var(--ink);color:#fff;text-align:center}
+  .ask .big{font-family:'Space Grotesk';font-weight:700;font-size:clamp(48px,9vw,96px);color:var(--accent);line-height:1}
+  .ask .sub{font-family:'IBM Plex Mono';font-size:14px;letter-spacing:.1em;color:#9fb1c4;margin-top:10px}
+  .use{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:760px;margin:48px auto 0}
+  .use .u{background:rgba(255,255,255,.04);border:1px solid var(--line-dark);border-radius:12px;padding:24px}
+  .use .pct{font-family:'Space Grotesk';font-weight:700;font-size:34px;color:#fff}
+  .use .ul{font-family:'IBM Plex Mono';font-size:12px;color:var(--accent);margin-top:6px;letter-spacing:.08em;text-transform:uppercase}
+  .use .ud{font-size:13px;color:#9fb1c4;margin-top:8px}
+  .bar{display:flex;height:10px;border-radius:6px;overflow:hidden;max-width:760px;margin:26px auto 0}
+  .bar i{display:block}
+  .bar .b1{width:20%;background:var(--sky)}
+  .bar .b2{width:30%;background:#7d8aa0}
+  .bar .b3{width:50%;background:var(--accent)}
+
+  footer{background:var(--ink-2);color:#7d8ea0;padding:34px 0;font-family:'IBM Plex Mono';font-size:12px}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  footer b{color:#fff;font-family:'Space Grotesk'}
+
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* responsive */
+  @media(max-width:860px){
+    .hero .wrap{grid-template-columns:1fr;gap:40px}
+    .board .wrap{grid-template-columns:1fr}
+    .board .cell{border-left:0;border-top:1px solid var(--line-dark)}
+    .board .cell:first-child{border-top:0}
+    .grid-2,.grid-3,.grid-4,.market,.vs{grid-template-columns:1fr}
+    .steps{grid-template-columns:1fr 1fr}
+    .trust-grid{grid-template-columns:1fr}
+    .trust-detail ul{grid-template-columns:1fr}
+    .use{grid-template-columns:1fr}
+    .road{grid-template-columns:1fr}
+    .road .ph{border-left:0;border-top:1px solid var(--line);padding-top:30px}
+    .road .ph::before{left:0;top:-8px}
+    .vs .col:first-child{border-right:0;border-bottom:1px solid var(--line)}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .reveal{opacity:1;transform:none;transition:none}
+    *{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <div class="brand">PeerFlew <span class="tag">P2P · IN-FLIGHT DELIVERY</span></div>
+    <a class="nav-cta" href="#ask">The Ask →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Pre-seed offer · 2026</div>
+      <h1>Your parcel flies in someone's <span class="hl">spare suitcase.</span></h1>
+      <p class="sub">Secure peer-to-peer delivery of documents, medicine, spare parts and gifts — hand-carried by travelers already in the air. We add the three things the informal market is missing: <b style="color:#fff">trust, payment, and a record.</b></p>
+      <div class="corridor">
+        <span><b>DXB</b><span class="city" style="display:block;font-size:10px;color:#8da0b4;font-family:'IBM Plex Mono'">DUBAI</span></span>
+        <span class="arc">✈ — — — →</span>
+        <span style="text-align:right"><b>JFK</b><span class="city" style="display:block;font-size:10px;color:#8da0b4;font-family:'IBM Plex Mono'">NEW YORK</span></span>
+        <span style="border-left:1px solid rgba(255,255,255,.12);padding-left:14px;color:#8da0b4">launch corridor</span>
+      </div>
+    </div>
+
+    <!-- boarding pass signature -->
+    <div class="pass">
+      <div class="pass-top">
+        <div class="pass-head"><span class="logo">PeerFlew</span><span>BOARDING PASS · PARCEL</span></div>
+        <div class="route">
+          <div><div class="code">DXB</div><div class="city">Dubai</div></div>
+          <svg class="arc-svg" id="arc" viewBox="0 0 120 46" fill="none">
+            <path id="arcPath" d="M6 38 Q60 -6 114 38" stroke="#FF7A2F" stroke-width="1.6" stroke-dasharray="3 4"/>
+            <circle cx="6" cy="38" r="3.2" fill="#0A1626"/>
+            <circle cx="114" cy="38" r="3.2" fill="#FF7A2F"/>
+            <g id="plane"><path d="M-5 0 L6 0 L2 -3 L8 0 L2 3 Z" fill="#0A1626"/></g>
+          </svg>
+          <div class="right"><div class="code">JFK</div><div class="city">New York</div></div>
+        </div>
+      </div>
+      <div class="pass-grid">
+        <div><div class="k">Carrier</div><div class="v">Verified traveler</div></div>
+        <div><div class="k">Cargo</div><div class="v">Documents · gifts</div></div>
+        <div><div class="k">Escrow</div><div class="v">BTC / USDT held</div></div>
+        <div><div class="k">Status</div><div class="v" style="color:#E8631B">Confirmed ✓</div></div>
+      </div>
+      <div class="barcode"></div>
+    </div>
+  </div>
+</header>
+
+<!-- PROOF BOARD -->
+<section class="board" style="padding:0">
+  <div class="wrap">
+    <div class="cell reveal"><div class="num">15,000+</div><div class="lab">members in a single existing courier chat</div></div>
+    <div class="cell reveal"><div class="num">Today</div><div class="lab">money already changes hands — every day</div></div>
+    <div class="cell reveal"><div class="num">Days</div><div class="lab">not weeks — faster than standard freight</div></div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="dark">
+  <div class="wrap">
+    <div class="eyebrow reveal">The problem</div>
+    <h2 class="sec-title reveal">Urgent, fragile and important things can't wait for cargo.</h2>
+    <p class="lead reveal">Documents, medicine, spare parts and gifts for family left behind need to move in days — intact and tracked. People already solve this informally: they hand parcels to travelers in chat groups. But there is no verified trust, no payment rail, and no record if something goes wrong. Running an office of operators to coordinate it is uneconomical, so the coordination problem stays unsolved.</p>
+  </div>
+</section>
+
+<!-- MARKET EXISTS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow reveal">Validation</div>
+    <h2 class="sec-title reveal">The demand is proven — not hypothetical.</h2>
+    <p class="lead reveal">The market is already moving large volumes through chat groups. PeerFlew doesn't create the behavior; it makes it safe and accountable.</p>
+    <div class="grid-3" style="margin-top:40px">
+      <div class="card-b reveal"><span class="tagn">EXISTING MARKET</span><h3>Thousands already paying</h3><p>Travel-courier chats run tens of thousands of members. Senders and carriers transact informally every day, at a price they accept.</p></div>
+      <div class="card-b reveal"><span class="tagn">FOUNDER PROOF</span><h3>Lived the use case</h3><p>The founder imported ~30 boxes of premium headphones every two weeks from China this way to stock an e-commerce store — and captured real market share with it.</p></div>
+      <div class="card-b reveal"><span class="tagn">EARLY TRACTION</span><h3>First deliveries done</h3><p>PeerFlew has already run its first deliveries by hand, validating the flow before a line of product code was written.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="background:#F3EFE6">
+  <div class="wrap">
+    <div class="eyebrow reveal">How it works</div>
+    <h2 class="sec-title reveal">Senders and carriers run the whole trip themselves.</h2>
+    <p class="lead reveal">Carriers publish their own flight schedule and accept permitted goods. PeerFlew sits underneath as the trust and payment layer.</p>
+    <div class="steps">
+      <div class="step reveal"><div class="gate">Gate 01</div><div class="gnum">01</div><h3>Post</h3><p>Sender lists a parcel, route and value. A carrier with spare suitcase space sees it.</p></div>
+      <div class="step reveal"><div class="gate">Gate 02</div><div class="gnum">02</div><h3>Match</h3><p>A verified traveler on that route accepts. Escrow / collateral is set for high-value cargo.</p></div>
+      <div class="step reveal"><div class="gate">Gate 03</div><div class="gnum">03</div><h3>Hand-off</h3><p>Pickup is documented with photos of both parties and the contents in a private, undeletable chat.</p></div>
+      <div class="step reveal"><div class="gate">Gate 04</div><div class="gnum">04</div><h3>Release</h3><p>Receipt is photographed; escrow releases. Payment happens on-platform or in person.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST LAYER -->
+<section class="dark">
+  <div class="wrap">
+    <div class="eyebrow reveal">The trust layer</div>
+    <h2 class="sec-title reveal">Three pillars that a chat group can't offer.</h2>
+    <p class="lead reveal" style="margin-bottom:40px">This is the product. Everything else is a marketplace; this is why people switch to PeerFlew.</p>
+    <div class="trust-grid">
+      <div class="pill reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg></div>
+        <h3>Peer-verified carriers</h3><p>Travelers are verified by other users, building a reputation that follows them from trip to trip.</p>
+      </div>
+      <div class="pill reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M8 8h8M8 16h5"/></svg></div>
+        <h3>Tamper-proof record</h3><p>Document photos live in a private chat that cannot be deleted. Hand-off and receipt photos capture both sender and carrier.</p>
+      </div>
+      <div class="pill reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2v20M5 7h9a3 3 0 010 6H7"/></svg></div>
+        <h3>Escrow-linked collateral</h3><p>For valuable cargo, a carrier deposit and escrow in BTC / USDT are logically tied to the transaction and released on confirmed receipt.</p>
+      </div>
+    </div>
+    <div class="trust-detail reveal">
+      <ul>
+        <li>Carriers verified by other users</li>
+        <li>Document photos kept in a private chat</li>
+        <li>Chat cannot be deleted by either party</li>
+        <li>Hand-off photo with sender + carrier</li>
+        <li>Receipt photo on delivery</li>
+        <li>Escrow transaction linked to high-value cargo</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- WHY NOW + CATEGORIES -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow reveal">Why now</div>
+    <h2 class="sec-title reveal">Borders moved. Families didn't move with them.</h2>
+    <p class="lead reveal">Recent world events relocated millions and split families across countries. The need to move documents, essentials and gifts between a new home and the one left behind has never been higher — and the UAE↔US corridor sits right on that flow.</p>
+    <div class="grid-4" style="margin-top:40px">
+      <div class="card-b reveal"><span class="tagn">CATEGORY 01</span><h3>Documents</h3><p>Originals, certificates and paperwork that can't be emailed and can't wait.</p></div>
+      <div class="card-b reveal"><span class="tagn">CATEGORY 02</span><h3>Electronics &amp; spare parts</h3><p>High-value, time-sensitive items that travel safer in hand luggage.</p></div>
+      <div class="card-b reveal"><span class="tagn">CATEGORY 03</span><h3>Medicine</h3><p>Urgent, fragile, and often impossible to source locally.</p></div>
+      <div class="card-b reveal"><span class="tagn">CATEGORY 04</span><h3>Care packages home</h3><p>Gifts and essentials for the children and loved ones who stayed behind.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- BUSINESS MODEL -->
+<section style="background:#F3EFE6">
+  <div class="wrap">
+    <div class="eyebrow reveal">Business model</div>
+    <h2 class="sec-title reveal">Three revenue streams, one secure transaction.</h2>
+    <div class="grid-3" style="margin-top:40px">
+      <div class="stream primary reveal"><div class="rank">Primary · at launch</div><h3>Escrow fee</h3><p>A fee on every secure (escrowed) transaction. This is the core revenue stream from day one — people pay for safety.</p></div>
+      <div class="stream reveal"><div class="rank">Secondary</div><h3>Card payment processing</h3><p>A percentage on funds moved through the platform via integrated card systems.</p></div>
+      <div class="stream reveal"><div class="rank">Premium</div><h3>Storage &amp; records</h3><p>Subscription for document storage and accounting — built on the founder's payment-integrated product experience.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- UNIT ECONOMICS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow reveal">Unit economics</div>
+    <h2 class="sec-title reveal">A simple, illustrative take per delivery.</h2>
+    <div class="grid-2" style="margin-top:36px;align-items:start">
+      <div class="econ reveal">
+        <div class="row"><span class="lbl">Avg. declared parcel value</span><span class="val">$600</span></div>
+        <div class="row"><span class="lbl">Sender service fee (≈8%)</span><span class="val">$48</span></div>
+        <div class="row"><span class="lbl">Escrow / collateral fee</span><span class="val">$9</span></div>
+        <div class="row"><span class="lbl">Payment processing margin</span><span class="val">$6</span></div>
+        <div class="row total"><span class="lbl">Net take per delivery</span><span class="val">≈ $63</span></div>
+      </div>
+      <div class="reveal">
+        <p class="lead" style="margin-top:0">The model scales on transaction volume, not headcount. Because carriers self-coordinate, PeerFlew avoids the operator overhead that makes traditional courier offices uneconomical — that structural margin is the wedge.</p>
+        <p class="note">Figures are illustrative assumptions for modeling, not reported results. Final take rates depend on corridor, parcel value and category.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARKET SIZE -->
+<section style="background:#F3EFE6">
+  <div class="wrap">
+    <div class="eyebrow reveal">Market size</div>
+    <h2 class="sec-title reveal">Built bottom-up from a market that already transacts.</h2>
+    <div class="market" style="margin-top:40px">
+      <div class="rings reveal">
+        <div class="ring tam"><div class="t">TAM — global P2P hand-carry &amp; informal courier</div><div class="n">$ multi-billion</div></div>
+        <div class="ring sam"><div class="t">SAM — diaspora corridors (UAE · US · key routes)</div><div class="n">$ hundreds of M</div></div>
+        <div class="ring som"><div class="t">SOM — UAE↔US launch corridor, year 1–2</div><div class="n">$ low millions GMV</div></div>
+      </div>
+      <div class="reveal">
+        <p class="lead" style="margin-top:0">The serpentine "grey" nature of the current market makes a precise top-down figure impossible — and we won't pretend otherwise. Instead, sizing is anchored bottom-up on observable chat volumes and average ticket, then expanded corridor by corridor as PeerFlew lights them up.</p>
+        <p class="note">Ranges are directional estimates for a pre-seed thesis, to be tightened with first-corridor data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPETITION -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow reveal">Why us</div>
+    <h2 class="sec-title reveal">The model is proven. The trust mechanics are not — yet.</h2>
+    <p class="lead reveal">Platforms like Grabr and Airmule showed travelers will carry goods for others. PeerFlew is built for higher-value, higher-trust cargo on focused diaspora corridors.</p>
+    <div class="vs reveal" style="margin-top:36px">
+      <div class="col">
+        <h3>Existing players</h3>
+        <ul>
+          <li>Mostly shopping/concierge, broad &amp; shallow routes</li>
+          <li>Trust handled informally or with light review</li>
+          <li>Standard fiat rails only</li>
+          <li>Little collateral on high-value items</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>PeerFlew</h3>
+        <ul>
+          <li>High-value, high-urgency cargo on focused corridors</li>
+          <li>Peer verification + undeletable photo record</li>
+          <li>BTC / USDT escrow and carrier collateral</li>
+          <li>Escrow logically linked to the transaction</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPLIANCE -->
+<section class="comp">
+  <div class="wrap">
+    <div class="eyebrow reveal">Addressing the elephant in the room</div>
+    <h2 class="sec-title reveal">Legal &amp; compliance, met head-on.</h2>
+    <p class="lead reveal">We don't carry anything ourselves. PeerFlew operates purely as an information and financial-escrow platform — and a meaningful share of the raise is dedicated to making that position defensible.</p>
+    <div class="box reveal"><h3>We are a platform, not a carrier</h3><p>PeerFlew operates purely as an information and financial escrow platform. Carriers transport permitted goods at their own discretion; we consult, monitor regulations, and help them stay safe.</p></div>
+    <div class="box reveal"><h3>Funded for a robust legal framework</h3><p>Significant initial funding is dedicated to legal frameworks, user KYC, and strict Terms of Service to mitigate platform liability — with counsel mapping the sanctions and structuring perimeter first.</p></div>
+    <div class="box reveal"><h3>Corridor chosen deliberately</h3><p>We launch on the UAE↔US corridor and expand outward from a clean, well-understood base rather than starting on the hardest route.</p></div>
+  </div>
+</section>
+
+<!-- GTM + TEAM -->
+<section>
+  <div class="wrap">
+    <div class="grid-2" style="align-items:start;gap:48px">
+      <div class="reveal">
+        <div class="eyebrow">Go-to-market</div>
+        <h2 class="sec-title" style="font-size:clamp(24px,3.4vw,34px)">Enter through the communities that already do this.</h2>
+        <p class="lead" style="margin-top:18px">We launch from New York on the UAE↔US corridor. The cold-start problem is solved by entering existing courier communities where supply and demand already coexist — we give them a safer place to transact, then expand corridor by corridor.</p>
+      </div>
+      <div class="reveal">
+        <div class="eyebrow">Team</div>
+        <h2 class="sec-title" style="font-size:clamp(24px,3.4vw,34px)">A technical founder who has shipped this stack.</h2>
+        <p class="lead" style="margin-top:18px">Solo technical founder with business experience. Previously built an AI-generation service on Replicate (Workbench) with API-integrated payment systems — the exact escrow-and-payments muscle PeerFlew needs. Legal counsel will be hired to map and close regulatory risk.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section style="background:#F3EFE6">
+  <div class="wrap">
+    <div class="eyebrow reveal">Roadmap</div>
+    <h2 class="sec-title reveal">From hand-run deliveries to live MVP in six months.</h2>
+    <div class="road reveal">
+      <div class="ph"><div class="when">Now</div><h3>Validated by hand</h3><p>Concept proven, first deliveries completed manually, corridor and categories chosen.</p></div>
+      <div class="ph"><div class="when">Months 1–3</div><h3>Build &amp; legal</h3><p>MVP development, KYC, escrow and Terms of Service stood up with counsel.</p></div>
+      <div class="ph"><div class="when">Months 4–6</div><h3>Launch corridor</h3><p>Live UAE↔US marketplace, first on-platform transactions, GMV data to tighten the model.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ASK -->
+<section class="ask" id="ask">
+  <div class="wrap">
+    <div class="eyebrow reveal" style="justify-content:center;color:var(--accent)">The ask</div>
+    <div class="big reveal">$210K</div>
+    <div class="sub reveal">PRE-SEED · 6-MONTH RUNWAY · $35K / MONTH</div>
+    <div class="use">
+      <div class="u reveal"><div class="pct">50%</div><div class="ul">Marketing</div><div class="ud">Acquire both sides and ignite the launch corridor.</div></div>
+      <div class="u reveal"><div class="pct">30%</div><div class="ul">Legal</div><div class="ud">Frameworks, KYC, ToS and sanctions perimeter.</div></div>
+      <div class="u reveal"><div class="pct">20%</div><div class="ul">Development</div><div class="ud">Ship the MVP: matching, escrow, photo record.</div></div>
+    </div>
+    <div class="bar reveal"><i class="b3"></i><i class="b2"></i><i class="b1"></i></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span><b>PeerFlew</b> — your parcel flies in someone's spare suitcase.</span>
+    <span>Pre-seed offer · confidential · 2026</span>
+  </div>
+</footer>
+
+<script>
+  // scroll reveal
+  const io=new IntersectionObserver((es)=>{
+    es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.14});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // animate boarding-pass plane along the arc on load
+  (function(){
+    if(window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+    const path=document.getElementById('arcPath');
+    const plane=document.getElementById('plane');
+    if(!path||!plane)return;
+    const len=path.getTotalLength();
+    let t=0,dir=1;
+    function step(){
+      t+=0.0045*dir;
+      if(t>=1){t=1;dir=-1;} if(t<=0){t=0;dir=1;}
+      const p=path.getPointAtLength(t*len);
+      const p2=path.getPointAtLength(Math.min(1,t+0.01)*len);
+      const ang=Math.atan2(p2.y-p.y,p2.x-p.x)*180/Math.PI;
+      plane.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${ang})`);
+      requestAnimationFrame(step);
+    }
+    step();
+  })();
+</script>
+</body>
+</html>

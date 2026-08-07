@@ -67,10 +67,20 @@ cp load/results/browse_trips.json load/baseline.json     # first scenario
 ```
 
 Every later run prints its numbers next to the recorded ones and flags anything
-more than **±10%** away. There is no baseline file in the repository on
-purpose: numbers copied from somebody else's machine are not a baseline, they
-are a rumour. Record one, and record the k6 version alongside it (`K6_IMAGE`)
-if you want it to survive a k6 upgrade.
+more than **±10%** away.
+
+`baseline.json` **is** in the repository now (recorded 2026-08-06 from the
+2026-08-03 run), and it holds `browse_trips` only. Read it for what it is: the
+state the product was in, not the state it should reach — its p95 is over the
+threshold, and the threshold is the thing that says pass or fail. The baseline
+answers the other question, the one a single run cannot: *did anything get
+slower than last time.*
+
+Conditions are part of the number and do not survive being changed: that run
+went against **production** over TLS (no staging existed), 100 VUs, 5 minutes,
+from the same host. Comparing a staging run against it says nothing. When you
+record a new one, record the k6 version alongside (`K6_IMAGE`) if you want it to
+outlive a k6 upgrade.
 
 ## Reading the results honestly
 
