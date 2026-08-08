@@ -98,15 +98,20 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
-      {/* T_UX.10 — the switcher lives in `Navbar`, and `Navbar` lives in
-          `Layout`, which only wraps the protected routes. Sign-in and sign-up
-          are outside it, so a visitor arriving at a page in the wrong language
-          had no way to change it — on the two screens where an unfamiliar
-          language costs the most. */}
-      <div className="fixed top-3 right-3 z-nav">
-        <LanguageSwitcher />
-      </div>
       <div className="w-full max-w-sm">
+        {/* T_UX.10 — the switcher lives in `Navbar`, and `Navbar` lives in
+            `Layout`, which only wraps the protected routes. Sign-in and sign-up
+            are outside it, so a visitor arriving at a page in the wrong language
+            had no way to change it — on the two screens where an unfamiliar
+            language costs the most.
+
+            In the flow of the column rather than pinned to the viewport: aligned
+            to the card's right edge, it reads as belonging to this form. A fixed
+            corner button belongs to the window instead, drifts away from the
+            content on a wide screen, and on a short one overlaps it. */}
+        <div className="flex justify-end mb-3">
+          <LanguageSwitcher />
+        </div>
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
           {t('auth.title')}
         </h1>
