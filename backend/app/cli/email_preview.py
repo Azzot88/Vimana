@@ -19,43 +19,20 @@ an em dash) rather than "Test User": placeholder data that is too tidy is how
 layouts that break on real content get signed off.
 
 Functions (PROJECT §6.2a):
-- `sample_context(kind)` — plausible values for one letter's placeholders.
-  Called by: `main`, `tests/test_email_templates.py`.
 - `main(argv)` — CLI entry. Called by: `python -m app.cli.email_preview`.
+  Sample values live in `core.email_templates.sample_context`, shared with the
+  admin preview page — one set of examples, not two that drift.
 """
 from __future__ import annotations
 
 import argparse
 import html
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
-from app.core.email_templates import LOCALES, _LETTERS, render
+from app.core.email_templates import LOCALES, _LETTERS, render, sample_context
 
 DEFAULT_OUT = Path("/tmp/vimana-email-preview")
-
-
-def sample_context(kind: str) -> dict:
-    when = datetime(2026, 8, 8, 20, 28, 52, tzinfo=timezone.utc)
-    samples: dict[str, dict] = {
-        "verification_code": {"code": "418305"},
-        "recovery_code_used": {"remaining": 7},
-        "platform_copy_deleted": {},
-        "archive_window_opened": {"deadline": "2026-11-06"},
-        "waitlist_confirmation": {},
-        "waitlist_admin": {
-            "email": "alan.cherkasov+waitlist@example.com",
-            "name": "Alan Cherkasov — Дубай",
-            "source": "landing",
-            "when": when,
-            "total": 3,
-            "confirmation": "—",
-        },
-        "deal_status": {"status": "in_transit"},
-        "deadline_reminder": {},
-    }
-    return samples[kind]
 
 
 def main(argv: list[str] | None = None) -> int:

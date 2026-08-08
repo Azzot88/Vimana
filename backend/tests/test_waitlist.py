@@ -142,3 +142,92 @@ async def test_new_entry_starts_unanswered(client, session_maker):
     async with session_maker() as db:
         entry = await db.get(WaitlistEntry, resp.json()["id"])
         assert entry.confirmation_sent_at is None
+
+
+# ── T_UX.9 pt.2 · mail console ───────────────────────────────────────────────
+
+
+async def test_mail_console_is_superuser_only(client):
+    from tests.conftest import unique_email
+
+    assert (await client.get("/api/admin/email/status")).status_code == 401
+    hdr = await _register(client, unique_email("mail-plain"))
+    assert (await client.get("/api/admin/email/status", headers=hdr)).status_code == 403
+
+
+async def test_mail_status_never_returns_a_password(client, session_maker):
+    from tests.conftest import unique_email
+
+    admin_email = unique_email("mail-adm")
+    hdr = await _register(client, admin_email)
+    await _promote_to_superuser(session_maker, admin_email)
+
+    resp = await client.get("/api/admin/email/status", headers=hdr)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "live" in body and "preview" in body
+    assert "password" not in str(body).lower(), (
+        "a read-only console has no use for the credential"
+    )
+
+
+async def test_templates_render_without_touching_smtp(client, session_maker, monkeypatch):
+    """The page must work with mail completely broken — that is the separation."""
+    from tests.conftest import unique_email
+
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_HOST", "")
+
+    admin_email = unique_email("mail-tpl")
+    hdr = await _register(client, admin_email)
+    await _promote_to_superuser(session_maker, admin_email)
+
+    resp = await client.get(
+        "/api/admin/email/templates", headers=hdr, params={"locale": "fr"}
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["locale"] == "fr"
+    assert len(body["letters"]) == 8
+    assert all(letter["subject"] and letter["html"] for letter in body["letters"])
+
+
+async def test_templates_unknown_locale_degrades_like_a_real_delivery(
+    client, session_maker
+):
+    from tests.conftest import unique_email
+
+    admin_email = unique_email("mail-loc")
+    hdr = await _register(client, admin_email)
+    await _promote_to_superuser(session_maker, admin_email)
+
+    resp = await client.get(
+        "/api/admin/email/templates", headers=hdr, params={"locale": "kl"}
+    )
+    assert resp.status_code == 200
+    english = await client.get(
+        "/api/admin/email/templates", headers=hdr, params={"locale": "en"}
+    )
+    assert resp.json()["letters"][0]["subject"] == english.json()["letters"][0]["subject"]
+
+
+async def test_test_send_refuses_when_preview_circuit_is_off(
+    client, session_maker, monkeypatch
+):
+    """Silence would be the failure mode this whole area was fixed to stop."""
+    from tests.conftest import unique_email
+
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_HOST", "")
+
+    admin_email = unique_email("mail-test")
+    hdr = await _register(client, admin_email)
+    await _promote_to_superuser(session_maker, admin_email)
+
+    resp = await client.post(
+        "/api/admin/email/test", headers=hdr, json={"to": "x@y.test"}
+    )
+    assert resp.status_code == 503

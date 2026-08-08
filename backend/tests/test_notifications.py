@@ -99,6 +99,15 @@ class _FakeSMTP:
     def __exit__(self, *exc):
         return False
 
+    def ehlo(self):
+        self.ehlo_count = getattr(self, "ehlo_count", 0) + 1
+
+    def has_extn(self, name):
+        # T_UX.9 pt.2 — the real client advertises both on the live path; the
+        # catcher advertises neither, and that difference is what the circuit
+        # tests below exercise.
+        return name in ("starttls", "auth")
+
     def starttls(self, context=None):
         self.started_tls = True
 

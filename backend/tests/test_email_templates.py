@@ -162,6 +162,12 @@ def test_send_email_builds_multipart(monkeypatch):
         def __exit__(self, *a):
             return False
 
+        def ehlo(self):
+            pass
+
+        def has_extn(self, name):
+            return True
+
         def login(self, *a):
             pass
 
@@ -201,6 +207,12 @@ def test_send_email_stays_plain_without_html(monkeypatch):
         def __exit__(self, *a):
             return False
 
+        def ehlo(self):
+            pass
+
+        def has_extn(self, name):
+            return True
+
         def login(self, *a):
             pass
 
@@ -226,3 +238,101 @@ def test_layout_has_no_external_requests():
     layout = (Path(_LOCALES_DIR).parent / "layout.html").read_text(encoding="utf-8")
     assert "http://" not in layout
     assert "https://" not in layout
+
+
+# ── T_UX.9 pt.2 · two circuits ───────────────────────────────────────────────
+
+
+def test_circuits_read_different_settings(monkeypatch):
+    """The whole design in one assertion: they cannot be the same object."""
+    from app.core.config import settings
+    from app.core.email import live, preview
+
+    monkeypatch.setattr(settings, "SMTP_HOST", "mail.dealvault.club")
+    monkeypatch.setattr(settings, "SMTP_PORT", 465)
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_HOST", "mailpit")
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_PORT", 1025)
+
+    assert live().host != preview().host
+    assert live().port != preview().port
+
+
+def test_unconfigured_circuit_is_not_configured(monkeypatch):
+    from app.core.config import settings
+    from app.core.email import preview
+
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_HOST", "")
+    assert preview().configured is False
+
+
+def test_send_email_uses_the_circuit_it_is_given(monkeypatch):
+    """A letter aimed at the catcher must not open the production connection."""
+    import smtplib
+
+    from app.core.config import settings
+    from app.core.email import Circuit, send_email
+
+    opened: list[tuple[str, int]] = []
+
+    class _Fake:
+        def __init__(self, host, port, context=None):
+            opened.append((host, port))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def ehlo(self):
+            pass
+
+        def has_extn(self, name):
+            return False
+
+        def sendmail(self, *a):
+            pass
+
+    monkeypatch.setattr(smtplib, "SMTP", _Fake)
+    monkeypatch.setattr(settings, "SMTP_HOST", "mail.dealvault.club")
+    monkeypatch.setattr(settings, "SMTP_USER", "vimana@dealvault.club")
+
+    catcher = Circuit(host="mailpit", port=1025, user="dev@vimana.test", password="")
+    assert send_email("who@example.test", "s", "b", circuit=catcher) is True
+    assert opened == [("mailpit", 1025)], "the live host must not be contacted"
+
+
+def test_catcher_without_auth_is_not_logged_into(monkeypatch):
+    """Mailpit offers no AUTH; calling login there fails on protocol, not credentials."""
+    import smtplib
+
+    from app.core.email import Circuit, send_email
+
+    logged: list[str] = []
+
+    class _Fake:
+        def __init__(self, host, port, context=None):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def ehlo(self):
+            pass
+
+        def has_extn(self, name):
+            return False
+
+        def login(self, user, password):
+            logged.append(user)
+
+        def sendmail(self, *a):
+            pass
+
+    monkeypatch.setattr(smtplib, "SMTP", _Fake)
+    catcher = Circuit(host="mailpit", port=1025, user="dev@vimana.test", password="")
+    send_email("who@example.test", "s", "b", circuit=catcher)
+    assert logged == []

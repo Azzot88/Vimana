@@ -592,3 +592,145 @@ async def scan_queue(
         clean=counts.get("clean", 0),
         scanner_configured=_clamav_target() is not None,
     )
+
+
+# ── T_UX.9 pt.2 · mail console ───────────────────────────────────────────────
+#
+# Two circuits, never one with a switch. Rendering a preview touches neither:
+# it is pure string work, so the page cannot be the reason a real letter fails
+# and a broken SMTP cannot be the reason the page is blank.
+
+
+class MailCircuitOut(BaseModel):
+    configured: bool
+    host: str
+    port: int
+    user: str
+    # Never the password, in any form — not masked, not a length. A read-only
+    # console has no use for it and a screenshot of this page should not be a
+    # credential leak.
+    tls: str
+
+
+class MailStatusOut(BaseModel):
+    live: MailCircuitOut
+    preview: MailCircuitOut
+    from_name: str
+    locales: list[str]
+    kinds: list[str]
+    default_locale: str
+
+
+class EmailTemplateOut(BaseModel):
+    kind: str
+    subject: str
+    html: str
+    text: str
+
+
+class EmailTemplatesOut(BaseModel):
+    locale: str
+    letters: list[EmailTemplateOut]
+
+
+class MailTestBody(BaseModel):
+    to: str
+    kind: str = "verification_code"
+    locale: str = "en"
+
+
+def _circuit_out(circuit) -> MailCircuitOut:
+    return MailCircuitOut(
+        configured=circuit.configured,
+        host=circuit.host,
+        port=circuit.port,
+        user=circuit.user,
+        tls="implicit (465)" if circuit.port == 465 else "starttls if offered",
+    )
+
+
+@router.get("/admin/email/status", response_model=MailStatusOut)
+async def email_status(
+    _: User = Depends(require_perm(Permission.EMAIL_MANAGE)),
+):
+    """What the two circuits are pointed at. Called by: AdminEmailPage."""
+    from app.core.email import FROM_DISPLAY_NAME, live, preview
+    from app.core.email_templates import DEFAULT_LOCALE, LOCALES, _LETTERS
+
+    return MailStatusOut(
+        live=_circuit_out(live()),
+        preview=_circuit_out(preview()),
+        from_name=FROM_DISPLAY_NAME,
+        locales=list(LOCALES),
+        kinds=list(_LETTERS),
+        default_locale=DEFAULT_LOCALE,
+    )
+
+
+@router.get("/admin/email/templates", response_model=EmailTemplatesOut)
+async def email_templates(
+    locale: str = Query(default="en"),
+    _: User = Depends(require_perm(Permission.EMAIL_MANAGE)),
+):
+    """Every letter rendered in one language, in a fixed order.
+
+    Rendering only — no SMTP is contacted and no circuit is read. That is the
+    separation the console is built around: looking at a letter must be
+    impossible to confuse with sending one.
+
+    An unknown `locale` is not rejected; `render` narrows it and falls back to
+    English, exactly as a real delivery would. The page then shows what a
+    recipient with that tag would actually receive.
+
+    Called by: AdminEmailPage.
+    """
+    from app.core.email_templates import _LETTERS, render, sample_context
+
+    letters = []
+    for kind in _LETTERS:
+        rendered = render(kind, locale, **sample_context(kind))
+        letters.append(
+            EmailTemplateOut(
+                kind=kind,
+                subject=rendered.subject,
+                html=rendered.html,
+                text=rendered.text,
+            )
+        )
+    return EmailTemplatesOut(locale=locale, letters=letters)
+
+
+@router.post("/admin/email/test")
+async def email_test(
+    body: MailTestBody,
+    _: User = Depends(require_perm(Permission.EMAIL_MANAGE)),
+):
+    """Send one letter through the **preview** circuit.
+
+    Hard-wired to `preview()`; there is no parameter that could point it at the
+    live one. The console can therefore be used freely — the worst outcome of
+    a wrong click is a message in the catcher.
+
+    Preview circuit unset → 503 with the reason, rather than a silent success:
+    `send_email` returning False is precisely the shape of failure this whole
+    area was fixed to stop hiding.
+
+    Called by: AdminEmailPage.
+    """
+    from app.core.email import preview, send_email
+    from app.core.email_templates import _LETTERS, render, sample_context
+
+    circuit = preview()
+    if not circuit.configured:
+        raise HTTPException(
+            status_code=503,
+            detail="Preview circuit is not configured (PREVIEW_SMTP_HOST / _USER)",
+        )
+    if body.kind not in _LETTERS:
+        raise HTTPException(status_code=422, detail="Unknown letter")
+
+    letter = render(body.kind, body.locale, **sample_context(body.kind))
+    delivered = send_email(
+        body.to, letter.subject, letter.text, letter.html, circuit=circuit
+    )
+    return {"delivered": delivered, "to": body.to, "subject": letter.subject}

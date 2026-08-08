@@ -66,7 +66,9 @@
       "email": "Email / phone",
       "roles": "Roles",
       "actions": "Actions"
-    }
+    },
+    "email": "Mail",
+    "emailDesc": "Circuits and letter previews"
   },
   "auth": {
     "title": "Vimana",
@@ -268,7 +270,11 @@
     "errorFailed": "That did not check out. Try again.",
     "errorLoad": "Could not start confirmation. Try again.",
     "errorNoExtension": "No Nostr extension responded.",
-    "method": { "password": "Password", "passkey": "Passkey", "nostr": "Nostr key" }
+    "method": {
+      "password": "Password",
+      "passkey": "Passkey",
+      "nostr": "Nostr key"
+    }
   },
   "nostrAuth": {
     "or": "or",
@@ -603,20 +609,20 @@
       "title": "Business Activity Level",
       "hint": "A rolling 90-day score based on your closed deals, delivered value, deposit, and verification level.",
       "levels": {
-        "newbie":   "Newbie",
+        "newbie": "Newbie",
         "verified": "Verified",
         "reliable": "Reliable",
-        "trusted":  "Trusted",
-        "elite":    "Elite"
+        "trusted": "Trusted",
+        "elite": "Elite"
       },
       "components": {
-        "f":     "Frequency",
+        "f": "Frequency",
         "fHint": "Closed deals as carrier",
-        "q":     "Quality",
+        "q": "Quality",
         "qHint": "Deals with both handoff + receipt photos",
-        "v":     "Volume",
+        "v": "Volume",
         "vHint": "Sum of declared value",
-        "d":     "Deposit",
+        "d": "Deposit",
         "dHint": "Peak active collateral"
       }
     },
@@ -771,10 +777,22 @@
     "boardingConfirmed": "Receipt confirmed by both sides",
     "factsLabel": "What works today",
     "fact": {
-      "chain": { "value": "Chain", "label": "Every event sealed by the hash of the one before it" },
-      "anchors": { "value": "4 relays", "label": "Chain heads published on servers we do not own" },
-      "key": { "value": "4 rungs", "label": "From \"the platform holds your key\" to \"only you do\"" },
-      "corridor": { "value": "DXB ↔ JFK", "label": "The first corridor. Others follow it" }
+      "chain": {
+        "value": "Chain",
+        "label": "Every event sealed by the hash of the one before it"
+      },
+      "anchors": {
+        "value": "4 relays",
+        "label": "Chain heads published on servers we do not own"
+      },
+      "key": {
+        "value": "4 rungs",
+        "label": "From \"the platform holds your key\" to \"only you do\""
+      },
+      "corridor": {
+        "value": "DXB ↔ JFK",
+        "label": "The first corridor. Others follow it"
+      }
     },
     "problemLabel": "The problem",
     "problemTitle": "Urgent, fragile and important things do not wait for cargo",
@@ -783,10 +801,22 @@
     "gatesLabel": "How it works",
     "gatesTitle": "Four steps, each one leaving a record",
     "gate": {
-      "post": { "title": "Trip", "body": "The carrier posts a route, a date and the kilograms they have spare. They are flying anyway; the luggage simply is not empty." },
-      "match": { "title": "Deal", "body": "The sender finds the trip and offers a parcel. Both sides see each other first: verifications, vouches, past deals. Before agreeing, not after." },
-      "handoff": { "title": "Hand-off", "body": "A photo and a confirmation at the moment of handing over. The record goes into the chain there and then, not from memory that evening." },
-      "release": { "title": "Receipt", "body": "The recipient confirms, the deal closes and is sealed. From then on it can only be read." }
+      "post": {
+        "title": "Trip",
+        "body": "The carrier posts a route, a date and the kilograms they have spare. They are flying anyway; the luggage simply is not empty."
+      },
+      "match": {
+        "title": "Deal",
+        "body": "The sender finds the trip and offers a parcel. Both sides see each other first: verifications, vouches, past deals. Before agreeing, not after."
+      },
+      "handoff": {
+        "title": "Hand-off",
+        "body": "A photo and a confirmation at the moment of handing over. The record goes into the chain there and then, not from memory that evening."
+      },
+      "release": {
+        "title": "Receipt",
+        "body": "The recipient confirms, the deal closes and is sealed. From then on it can only be read."
+      }
     },
     "evidenceLabel": "What holds it together",
     "evidenceTitle": "Three mechanisms instead of three promises",
@@ -812,9 +842,18 @@
     "pendingBody": "Payment today happens between you directly, in cash or by transfer. Below is what is planned. We name no dates, because we do not have them.",
     "pendingTag": "Planned",
     "pending": {
-      "payments": { "title": "Payment on the platform", "body": "A single payment inside the deal, by card." },
-      "escrow": { "title": "Protected cell", "body": "The money sits inside the deal: the carrier sees it is there and can take it once receipt is confirmed." },
-      "export": { "title": "Deal export", "body": "Download the whole deal and show it to anyone: a lawyer, an insurer. It opens without us." }
+      "payments": {
+        "title": "Payment on the platform",
+        "body": "A single payment inside the deal, by card."
+      },
+      "escrow": {
+        "title": "Protected cell",
+        "body": "The money sits inside the deal: the carrier sees it is there and can take it once receipt is confirmed."
+      },
+      "export": {
+        "title": "Deal export",
+        "body": "Download the whole deal and show it to anyone: a lawyer, an insurer. It opens without us."
+      }
     },
     "closingLabel": "Access",
     "closingTitle": "By invitation for now",
@@ -830,5 +869,40 @@
     "modalSuccessText": "We will write to {{email}} when the corridor opens.",
     "errorGeneric": "That did not go through. Please try again.",
     "errorNetwork": "No connection to the server. Please try again."
+  },
+  "adminEmail": {
+    "title": "Mail",
+    "subtitle": "What the letters look like, and where they are sent from. Two circuits that cannot become one.",
+    "back": "Back to profile",
+    "forbidden": "Superuser only.",
+    "circuitsTitle": "Circuits",
+    "circuitsHint": "Separate settings on purpose. Pointing the live host at a catcher would silence every real letter while everything still reported success.",
+    "liveTitle": "Live",
+    "liveHint": "Real people are written from here. Read-only on this page.",
+    "previewTitle": "Preview",
+    "previewHint": "A catcher. The test below can only reach this one.",
+    "on": "configured",
+    "off": "not configured",
+    "host": "host",
+    "user": "mailbox",
+    "tls": "tls",
+    "testTitle": "Test send",
+    "testHint": "Goes through the preview circuit. There is no setting here that could reach a real inbox.",
+    "testTo": "Address",
+    "testSend": "Send",
+    "testSending": "Sending…",
+    "testSent": "Delivered to the catcher.",
+    "testNotSent": "Not delivered — the circuit accepted nothing.",
+    "testNoCircuit": "Preview circuit is not configured.",
+    "testError": "Send failed.",
+    "lettersTitle": "Letters",
+    "lettersHint": "Every letter the platform sends, rendered with sample values. Rendering only — no mail is sent and no circuit is touched.",
+    "localeHint": "Language of the letters below. This does not change the site — the interface stays as it is.",
+    "localeGroup": "Preview language",
+    "showText": "Show text part",
+    "showHtml": "Show HTML",
+    "loading": "Rendering…",
+    "errorStatus": "Could not read the circuits.",
+    "errorTemplates": "Could not render the letters."
   }
 }

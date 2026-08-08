@@ -57,7 +57,9 @@
       "email": "Email / telefon",
       "roles": "Role",
       "actions": "Akcje"
-    }
+    },
+    "email": "Poczta",
+    "emailDesc": "Obwody i podgląd listów"
   },
   "auth": {
     "title": "Vimana",
@@ -254,7 +256,11 @@
     "errorFailed": "Nie zgadza się. Spróbuj ponownie.",
     "errorLoad": "Nie udało się rozpocząć potwierdzenia. Spróbuj ponownie.",
     "errorNoExtension": "Rozszerzenie Nostr nie odpowiedziało.",
-    "method": { "password": "Hasło", "passkey": "Passkey", "nostr": "Klucz Nostr" }
+    "method": {
+      "password": "Hasło",
+      "passkey": "Passkey",
+      "nostr": "Klucz Nostr"
+    }
   },
   "nostrAuth": {
     "or": "lub",
@@ -553,20 +559,20 @@
       "title": "Poziom Aktywności Biznesowej",
       "hint": "Kroczący 90-dniowy wskaźnik oparty na zamkniętych transakcjach, wolumenie dostaw, zabezpieczeniu i poziomie weryfikacji.",
       "levels": {
-        "newbie":   "Nowicjusz",
+        "newbie": "Nowicjusz",
         "verified": "Zweryfikowany",
         "reliable": "Niezawodny",
-        "trusted":  "Zaufany",
-        "elite":    "Elita"
+        "trusted": "Zaufany",
+        "elite": "Elita"
       },
       "components": {
-        "f":     "Częstotliwość",
+        "f": "Częstotliwość",
         "fHint": "Zamknięte transakcje jako kurier",
-        "q":     "Jakość",
+        "q": "Jakość",
         "qHint": "Transakcje z fotografią przekazania + odbioru",
-        "v":     "Wolumen",
+        "v": "Wolumen",
         "vHint": "Suma zadeklarowanej wartości",
-        "d":     "Depozyt",
+        "d": "Depozyt",
         "dHint": "Szczytowe aktywne zabezpieczenie"
       }
     },
@@ -721,10 +727,22 @@
     "boardingConfirmed": "Odbiór potwierdzony przez obie strony",
     "factsLabel": "Co działa dzisiaj",
     "fact": {
-      "chain": { "value": "Łańcuch", "label": "Każde zdarzenie zapieczętowane hashem poprzedniego" },
-      "anchors": { "value": "4 przekaźniki", "label": "Głowy łańcuchów publikowane na cudzych serwerach" },
-      "key": { "value": "4 szczeble", "label": "Od „klucz u platformy” do „klucz tylko twój”" },
-      "corridor": { "value": "DXB ↔ JFK", "label": "Pierwszy korytarz. Reszta po nim" }
+      "chain": {
+        "value": "Łańcuch",
+        "label": "Każde zdarzenie zapieczętowane hashem poprzedniego"
+      },
+      "anchors": {
+        "value": "4 przekaźniki",
+        "label": "Głowy łańcuchów publikowane na cudzych serwerach"
+      },
+      "key": {
+        "value": "4 szczeble",
+        "label": "Od „klucz u platformy” do „klucz tylko twój”"
+      },
+      "corridor": {
+        "value": "DXB ↔ JFK",
+        "label": "Pierwszy korytarz. Reszta po nim"
+      }
     },
     "problemLabel": "Problem",
     "problemTitle": "Pilne, kruche i ważne nie czeka na cargo",
@@ -733,10 +751,22 @@
     "gatesLabel": "Jak to działa",
     "gatesTitle": "Cztery kroki, a po każdym zostaje zapis",
     "gate": {
-      "post": { "title": "Podróż", "body": "Przewoźnik publikuje trasę, datę i wolne kilogramy. I tak leci; bagaż po prostu nie jedzie pusty." },
-      "match": { "title": "Transakcja", "body": "Nadawca znajduje podróż i proponuje paczkę. Obie strony najpierw się widzą: weryfikacje, poręczenia, wcześniejsze transakcje. Przed zgodą, nie po." },
-      "handoff": { "title": "Przekazanie", "body": "Zdjęcie i potwierdzenie w chwili przekazania. Zapis trafia do łańcucha od razu, a nie z pamięci wieczorem." },
-      "release": { "title": "Odbiór", "body": "Odbiorca potwierdza, transakcja zamyka się i zostaje zapieczętowana. Dalej można ją już tylko czytać." }
+      "post": {
+        "title": "Podróż",
+        "body": "Przewoźnik publikuje trasę, datę i wolne kilogramy. I tak leci; bagaż po prostu nie jedzie pusty."
+      },
+      "match": {
+        "title": "Transakcja",
+        "body": "Nadawca znajduje podróż i proponuje paczkę. Obie strony najpierw się widzą: weryfikacje, poręczenia, wcześniejsze transakcje. Przed zgodą, nie po."
+      },
+      "handoff": {
+        "title": "Przekazanie",
+        "body": "Zdjęcie i potwierdzenie w chwili przekazania. Zapis trafia do łańcucha od razu, a nie z pamięci wieczorem."
+      },
+      "release": {
+        "title": "Odbiór",
+        "body": "Odbiorca potwierdza, transakcja zamyka się i zostaje zapieczętowana. Dalej można ją już tylko czytać."
+      }
     },
     "evidenceLabel": "Co to trzyma",
     "evidenceTitle": "Trzy mechanizmy zamiast trzech obietnic",
@@ -762,9 +792,18 @@
     "pendingBody": "Dziś płatność idzie bezpośrednio między wami, gotówką albo przelewem. Poniżej to, co zaplanowane. Terminów nie podajemy, bo ich nie znamy.",
     "pendingTag": "W planach",
     "pending": {
-      "payments": { "title": "Płatność na platformie", "body": "Jedna płatność wewnątrz transakcji, kartą." },
-      "escrow": { "title": "Chroniona skrytka", "body": "Pieniądze leżą wewnątrz transakcji: przewoźnik widzi, że są, a pobierze je po potwierdzeniu." },
-      "export": { "title": "Eksport transakcji", "body": "Pobrać całą transakcję i pokazać komukolwiek: prawnikowi, ubezpieczycielowi. Otwiera się bez nas." }
+      "payments": {
+        "title": "Płatność na platformie",
+        "body": "Jedna płatność wewnątrz transakcji, kartą."
+      },
+      "escrow": {
+        "title": "Chroniona skrytka",
+        "body": "Pieniądze leżą wewnątrz transakcji: przewoźnik widzi, że są, a pobierze je po potwierdzeniu."
+      },
+      "export": {
+        "title": "Eksport transakcji",
+        "body": "Pobrać całą transakcję i pokazać komukolwiek: prawnikowi, ubezpieczycielowi. Otwiera się bez nas."
+      }
     },
     "closingLabel": "Dostęp",
     "closingTitle": "Na razie z zaproszenia",
@@ -780,5 +819,40 @@
     "modalSuccessText": "Napiszemy na {{email}}, gdy korytarz się otworzy.",
     "errorGeneric": "Nie udało się wysłać. Spróbuj ponownie.",
     "errorNetwork": "Brak połączenia z serwerem. Spróbuj ponownie."
+  },
+  "adminEmail": {
+    "title": "Poczta",
+    "subtitle": "Jak wyglądają listy i skąd są wysyłane. Dwa obwody, których nie da się pomylić.",
+    "back": "Do profilu",
+    "forbidden": "Tylko dla superużytkownika.",
+    "circuitsTitle": "Obwody",
+    "circuitsHint": "Ustawienia są rozdzielne celowo. Skierowanie hosta produkcyjnego do pułapki wyciszyłoby wszystkie prawdziwe listy, podczas gdy wszystko nadal raportowałoby sukces.",
+    "liveTitle": "Produkcyjny",
+    "liveHint": "Stąd pisze się do żywych ludzi. Na tej stronie tylko do odczytu.",
+    "previewTitle": "Podgląd",
+    "previewHint": "Pułapka na listy. Test poniżej trafi wyłącznie tutaj.",
+    "on": "skonfigurowany",
+    "off": "nieskonfigurowany",
+    "host": "host",
+    "user": "skrzynka",
+    "tls": "tls",
+    "testTitle": "Wysyłka testowa",
+    "testHint": "Idzie przez obwód podglądu. Nie ma tu ustawienia, którym można trafić do prawdziwej skrzynki.",
+    "testTo": "Adres",
+    "testSend": "Wyślij",
+    "testSending": "Wysyłanie…",
+    "testSent": "Dostarczono do pułapki.",
+    "testNotSent": "Niedostarczone — obwód nic nie przyjął.",
+    "testNoCircuit": "Obwód podglądu nie jest skonfigurowany.",
+    "testError": "Wysyłka nie powiodła się.",
+    "lettersTitle": "Listy",
+    "lettersHint": "Wszystkie listy platformy z przykładowymi danymi. Tylko renderowanie — nic nie jest wysyłane i żaden obwód nie jest używany.",
+    "localeHint": "Język listów poniżej. Strona się przez to nie zmienia — interfejs pozostaje bez zmian.",
+    "localeGroup": "Język podglądu",
+    "showText": "Pokaż część tekstową",
+    "showHtml": "Pokaż HTML",
+    "loading": "Renderowanie…",
+    "errorStatus": "Nie udało się odczytać obwodów.",
+    "errorTemplates": "Nie udało się wyrenderować listów."
   }
 }

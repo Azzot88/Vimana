@@ -50,6 +50,10 @@ class Permission(str, enum.Enum):
     # `USERS_MANAGE`: these are people who are *not* users yet, and a permission
     # that reads "manage users" would quietly grant a second, different thing.
     WAITLIST_READ = "waitlist:read"
+    # T_UX.9 pt.2 — the mail console: read the circuits' state and preview the
+    # letters. Read-only by nature; the one action behind it (a test send) is
+    # wired to the preview circuit and cannot reach a real inbox.
+    EMAIL_MANAGE = "email:manage"
 
 
 class Role(str, enum.Enum):

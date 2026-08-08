@@ -57,7 +57,9 @@
       "email": "Email / teléfono",
       "roles": "Roles",
       "actions": "Acciones"
-    }
+    },
+    "email": "Correo",
+    "emailDesc": "Circuitos y vista previa de los mensajes"
   },
   "auth": {
     "title": "Vimana",
@@ -254,7 +256,11 @@
     "errorFailed": "No cuadró. Inténtalo de nuevo.",
     "errorLoad": "No se pudo iniciar la confirmación. Inténtalo de nuevo.",
     "errorNoExtension": "Ninguna extensión de Nostr respondió.",
-    "method": { "password": "Contraseña", "passkey": "Passkey", "nostr": "Clave Nostr" }
+    "method": {
+      "password": "Contraseña",
+      "passkey": "Passkey",
+      "nostr": "Clave Nostr"
+    }
   },
   "nostrAuth": {
     "or": "o",
@@ -552,20 +558,20 @@
       "title": "Nivel de Actividad Empresarial",
       "hint": "Puntuación móvil de 90 días basada en transacciones cerradas, volumen entregado, depósito y nivel de verificación.",
       "levels": {
-        "newbie":   "Novato",
+        "newbie": "Novato",
         "verified": "Verificado",
         "reliable": "Confiable",
-        "trusted":  "De confianza",
-        "elite":    "Élite"
+        "trusted": "De confianza",
+        "elite": "Élite"
       },
       "components": {
-        "f":     "Frecuencia",
+        "f": "Frecuencia",
         "fHint": "Transacciones cerradas como transportista",
-        "q":     "Calidad",
+        "q": "Calidad",
         "qHint": "Transacciones con fotos de entrega + recepción",
-        "v":     "Volumen",
+        "v": "Volumen",
         "vHint": "Suma del valor declarado",
-        "d":     "Depósito",
+        "d": "Depósito",
         "dHint": "Garantía activa máxima"
       }
     },
@@ -720,10 +726,22 @@
     "boardingConfirmed": "Recepción confirmada por ambas partes",
     "factsLabel": "Lo que funciona hoy",
     "fact": {
-      "chain": { "value": "Cadena", "label": "Cada evento sellado con el hash del anterior" },
-      "anchors": { "value": "4 relays", "label": "Las cabeceras se publican en servidores que no controlamos" },
-      "key": { "value": "4 niveles", "label": "De «la plataforma guarda tu clave» a «solo tú la tienes»" },
-      "corridor": { "value": "DXB ↔ JFK", "label": "El primer corredor. Los demás vienen después" }
+      "chain": {
+        "value": "Cadena",
+        "label": "Cada evento sellado con el hash del anterior"
+      },
+      "anchors": {
+        "value": "4 relays",
+        "label": "Las cabeceras se publican en servidores que no controlamos"
+      },
+      "key": {
+        "value": "4 niveles",
+        "label": "De «la plataforma guarda tu clave» a «solo tú la tienes»"
+      },
+      "corridor": {
+        "value": "DXB ↔ JFK",
+        "label": "El primer corredor. Los demás vienen después"
+      }
     },
     "problemLabel": "El problema",
     "problemTitle": "Lo urgente, lo frágil y lo importante no esperan a la carga",
@@ -732,10 +750,22 @@
     "gatesLabel": "Cómo funciona",
     "gatesTitle": "Cuatro pasos, y cada uno deja registro",
     "gate": {
-      "post": { "title": "Viaje", "body": "El transportista publica ruta, fecha y los kilos que le sobran. Va a volar de todos modos; el equipaje simplemente no va vacío." },
-      "match": { "title": "Acuerdo", "body": "El remitente encuentra el viaje y ofrece un paquete. Ambas partes se ven antes: verificaciones, avales, acuerdos pasados. Antes de aceptar, no después." },
-      "handoff": { "title": "Entrega", "body": "Foto y confirmación en el momento de entregar. El registro entra en la cadena ahí mismo, no de memoria esa noche." },
-      "release": { "title": "Recepción", "body": "El destinatario confirma, el acuerdo se cierra y se sella. A partir de ahí solo se puede leer." }
+      "post": {
+        "title": "Viaje",
+        "body": "El transportista publica ruta, fecha y los kilos que le sobran. Va a volar de todos modos; el equipaje simplemente no va vacío."
+      },
+      "match": {
+        "title": "Acuerdo",
+        "body": "El remitente encuentra el viaje y ofrece un paquete. Ambas partes se ven antes: verificaciones, avales, acuerdos pasados. Antes de aceptar, no después."
+      },
+      "handoff": {
+        "title": "Entrega",
+        "body": "Foto y confirmación en el momento de entregar. El registro entra en la cadena ahí mismo, no de memoria esa noche."
+      },
+      "release": {
+        "title": "Recepción",
+        "body": "El destinatario confirma, el acuerdo se cierra y se sella. A partir de ahí solo se puede leer."
+      }
     },
     "evidenceLabel": "Qué lo sostiene",
     "evidenceTitle": "Tres mecanismos en lugar de tres promesas",
@@ -761,9 +791,18 @@
     "pendingBody": "Hoy el pago va directamente entre vosotros, en efectivo o por transferencia. Abajo está lo previsto. No damos fechas porque no las tenemos.",
     "pendingTag": "Previsto",
     "pending": {
-      "payments": { "title": "Pago en la plataforma", "body": "Un pago único dentro del acuerdo, con tarjeta." },
-      "escrow": { "title": "Celda protegida", "body": "El dinero queda dentro del acuerdo: el transportista ve que está y puede cobrarlo tras la confirmación." },
-      "export": { "title": "Exportar el acuerdo", "body": "Descargar el acuerdo entero y enseñarlo a quien sea: abogado, aseguradora. Se abre sin nosotros." }
+      "payments": {
+        "title": "Pago en la plataforma",
+        "body": "Un pago único dentro del acuerdo, con tarjeta."
+      },
+      "escrow": {
+        "title": "Celda protegida",
+        "body": "El dinero queda dentro del acuerdo: el transportista ve que está y puede cobrarlo tras la confirmación."
+      },
+      "export": {
+        "title": "Exportar el acuerdo",
+        "body": "Descargar el acuerdo entero y enseñarlo a quien sea: abogado, aseguradora. Se abre sin nosotros."
+      }
     },
     "closingLabel": "Acceso",
     "closingTitle": "Por invitación, de momento",
@@ -779,5 +818,40 @@
     "modalSuccessText": "Escribiremos a {{email}} cuando abra el corredor.",
     "errorGeneric": "No se pudo enviar. Inténtalo de nuevo.",
     "errorNetwork": "Sin conexión con el servidor. Inténtalo de nuevo."
+  },
+  "adminEmail": {
+    "title": "Correo",
+    "subtitle": "Qué aspecto tienen los mensajes y desde dónde salen. Dos circuitos que no pueden confundirse.",
+    "back": "Volver al perfil",
+    "forbidden": "Solo para el superusuario.",
+    "circuitsTitle": "Circuitos",
+    "circuitsHint": "Ajustes separados a propósito. Apuntar el host de producción a un colector silenciaría todos los mensajes reales mientras todo sigue informando de éxito.",
+    "liveTitle": "Producción",
+    "liveHint": "Desde aquí se escribe a personas reales. Solo lectura en esta página.",
+    "previewTitle": "Vista previa",
+    "previewHint": "Un colector. La prueba de abajo solo puede llegar aquí.",
+    "on": "configurado",
+    "off": "sin configurar",
+    "host": "host",
+    "user": "buzón",
+    "tls": "tls",
+    "testTitle": "Envío de prueba",
+    "testHint": "Va por el circuito de vista previa. Aquí no hay ningún ajuste que pueda llegar a un buzón real.",
+    "testTo": "Dirección",
+    "testSend": "Enviar",
+    "testSending": "Enviando…",
+    "testSent": "Entregado al colector.",
+    "testNotSent": "No entregado — el circuito no aceptó nada.",
+    "testNoCircuit": "El circuito de vista previa no está configurado.",
+    "testError": "El envío ha fallado.",
+    "lettersTitle": "Mensajes",
+    "lettersHint": "Todos los mensajes de la plataforma con datos de ejemplo. Solo renderizado — no se envía nada y no se usa ningún circuito.",
+    "localeHint": "Idioma de los mensajes de abajo. Esto no cambia el sitio — la interfaz permanece igual.",
+    "localeGroup": "Idioma de la vista previa",
+    "showText": "Mostrar la parte de texto",
+    "showHtml": "Mostrar HTML",
+    "loading": "Renderizando…",
+    "errorStatus": "No se han podido leer los circuitos.",
+    "errorTemplates": "No se han podido renderizar los mensajes."
   }
 }

@@ -67,3 +67,47 @@ export interface ScanQueue {
 }
 
 export const getScanQueue = () => api.get<ScanQueue>('/api/admin/scan-queue')
+
+// ── T_UX.9 pt.2 · mail console ───────────────────────────────────────────────
+
+export interface MailCircuit {
+  configured: boolean
+  host: string
+  port: number
+  user: string
+  tls: string
+}
+
+export interface MailStatus {
+  live: MailCircuit
+  preview: MailCircuit
+  from_name: string
+  locales: string[]
+  kinds: string[]
+  default_locale: string
+}
+
+export interface EmailTemplate {
+  kind: string
+  subject: string
+  html: string
+  text: string
+}
+
+export interface EmailTemplates {
+  locale: string
+  letters: EmailTemplate[]
+}
+
+export const getMailStatus = () => api.get<MailStatus>('/api/admin/email/status')
+
+/** Renders only — no SMTP is contacted, so the page works with mail broken. */
+export const getEmailTemplates = (locale: string) =>
+  api.get<EmailTemplates>('/api/admin/email/templates', { params: { locale } })
+
+/** Always the preview circuit. There is no parameter that could reach a real inbox. */
+export const sendTestEmail = (to: string, kind: string, locale: string) =>
+  api.post<{ delivered: boolean; to: string; subject: string }>(
+    '/api/admin/email/test',
+    { to, kind, locale },
+  )

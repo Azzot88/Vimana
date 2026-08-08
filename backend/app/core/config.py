@@ -14,10 +14,25 @@ class Settings(BaseSettings):
     R2_BUCKET: str = ""
     R2_ENDPOINT: str = ""
 
+    # The live circuit: the mailbox real people are written from.
     SMTP_HOST: str = ""
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_PORT: int = 587
+
+    # T_UX.9 pt.2 — the preview circuit, deliberately a *separate* set of
+    # settings rather than a flag on the ones above. Pointing the live host at
+    # a catcher would silence every real letter while `send_email` kept
+    # returning True and rows kept being marked sent — the exact failure this
+    # project spent a week tracing. Two circuits cannot be confused into each
+    # other by editing one value.
+    #
+    # Unset → the admin page says the preview circuit is off and refuses to
+    # send anything. Rendering a preview never touches either circuit.
+    PREVIEW_SMTP_HOST: str = ""
+    PREVIEW_SMTP_USER: str = ""
+    PREVIEW_SMTP_PASSWORD: str = ""
+    PREVIEW_SMTP_PORT: int = 1025
 
     # T3.11 — comma-separated email domains whose registrations are marked
     # verified immediately, so the e2e suites stop minting confirmation codes

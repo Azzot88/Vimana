@@ -1,5 +1,6 @@
 import smtplib
 import ssl
+from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, formatdate, make_msgid
@@ -12,7 +13,42 @@ from app.core.config import settings
 FROM_DISPLAY_NAME = "Vimana — Sacred Logistics"
 
 
-def _connect() -> smtplib.SMTP:
+@dataclass(frozen=True)
+class Circuit:
+    """One SMTP destination. Two exist and they never share a value.
+
+    `live()` is the mailbox real people are written from. `preview()` is a
+    catcher (Mailpit) used by the admin page's test send. Keeping them as two
+    objects rather than one set of settings with a toggle is the whole point:
+    a toggle is one edit away from swallowing production mail silently.
+    """
+
+    host: str
+    port: int
+    user: str
+    password: str
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.host and self.user)
+
+
+def live() -> Circuit:
+    return Circuit(
+        settings.SMTP_HOST, settings.SMTP_PORT, settings.SMTP_USER, settings.SMTP_PASSWORD
+    )
+
+
+def preview() -> Circuit:
+    return Circuit(
+        settings.PREVIEW_SMTP_HOST,
+        settings.PREVIEW_SMTP_PORT,
+        settings.PREVIEW_SMTP_USER,
+        settings.PREVIEW_SMTP_PASSWORD,
+    )
+
+
+def _connect(circuit: Circuit) -> smtplib.SMTP:
     """Open a connection, letting the port decide how TLS starts.
 
     465 speaks TLS from the first byte; 587 opens in clear text and upgrades
@@ -27,15 +63,29 @@ def _connect() -> smtplib.SMTP:
     accident. Consequence to keep in mind: `SMTP_HOST` must be the name on the
     certificate, so a bare IP address will now be rejected.
     """
-    context = ssl.create_default_context()
-    if settings.SMTP_PORT == 465:
-        return smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=context)
-    smtp = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
-    smtp.starttls(context=context)
+    if circuit.port == 465:
+        context = ssl.create_default_context()
+        return smtplib.SMTP_SSL(circuit.host, circuit.port, context=context)
+    smtp = smtplib.SMTP(circuit.host, circuit.port)
+    # EHLO first: `has_extn` reads the feature list the greeting fills in, and
+    # without it the check below is always False.
+    smtp.ehlo()
+    # A local catcher speaks plain SMTP and has no certificate to verify.
+    # STARTTLS is attempted only where the server offers it, so the live path
+    # (587) still upgrades and the preview path (1025) does not fail trying.
+    if smtp.has_extn("starttls"):
+        smtp.starttls(context=ssl.create_default_context())
+        smtp.ehlo()
     return smtp
 
 
-def send_email(to: str, subject: str, body: str, html: str | None = None) -> bool:
+def send_email(
+    to: str,
+    subject: str,
+    body: str,
+    html: str | None = None,
+    circuit: Circuit | None = None,
+) -> bool:
     """Send a message. Returns True only if it was handed to the SMTP server.
 
     The boolean exists because the silent `return` below is otherwise
@@ -47,7 +97,8 @@ def send_email(to: str, subject: str, body: str, html: str | None = None) -> boo
     Callers that only fire and forget may ignore the result. Callers that
     persist a "sent" mark must not.
     """
-    if not settings.SMTP_HOST or not settings.SMTP_USER or not to:
+    wire = circuit or live()
+    if not wire.configured or not to:
         return False
     if html:
         # `multipart/alternative`, plain part first: the order is the standard's
@@ -69,7 +120,7 @@ def send_email(to: str, subject: str, body: str, html: str | None = None) -> boo
     # UTF-8 in a header gets messages dropped by some receivers. The envelope
     # sender below stays the bare address: the display name is decoration for
     # the recipient, not part of the address mail is routed by.
-    msg["From"] = formataddr((FROM_DISPLAY_NAME, settings.SMTP_USER))
+    msg["From"] = formataddr((FROM_DISPLAY_NAME, wire.user))
     msg["To"] = to
     # `Date` and `Message-ID` are required by RFC 5322 and nobody else adds
     # them: Python does not, and Postfix leaves submitted mail alone by
@@ -78,9 +129,13 @@ def send_email(to: str, subject: str, body: str, html: str | None = None) -> boo
     # reaching a recipient's. No DNS record can compensate for a malformed
     # message.
     msg["Date"] = formatdate(localtime=True)
-    _, at, domain = settings.SMTP_USER.rpartition("@")
+    _, at, domain = wire.user.rpartition("@")
     msg["Message-ID"] = make_msgid(domain=domain if at else None)
-    with _connect() as smtp:
-        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        smtp.sendmail(settings.SMTP_USER, [to], msg.as_string())
+    with _connect(wire) as smtp:
+        smtp.ehlo()
+        # A catcher accepts anything and offers no AUTH; logging in there fails
+        # with a protocol error rather than a credentials one.
+        if smtp.has_extn("auth"):
+            smtp.login(wire.user, wire.password)
+        smtp.sendmail(wire.user, [to], msg.as_string())
     return True

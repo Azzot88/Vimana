@@ -68,6 +68,38 @@ _env = Environment(
 )
 
 
+def sample_context(kind: str) -> dict[str, Any]:
+    """Plausible values for one letter's placeholders.
+
+    Deliberately awkward rather than "Test User": a long name with an em dash,
+    a timezone-aware date, a plus-addressed mailbox. Placeholder data that is
+    too tidy is how layouts that break on real content get signed off.
+
+    Called by: `cli/email_preview.main`, `api/admin.email_templates`, tests.
+    """
+    from datetime import datetime, timezone
+
+    when = datetime(2026, 8, 8, 20, 28, 52, tzinfo=timezone.utc)
+    samples: dict[str, dict[str, Any]] = {
+        "verification_code": {"code": "418305"},
+        "recovery_code_used": {"remaining": 7},
+        "platform_copy_deleted": {},
+        "archive_window_opened": {"deadline": "2026-11-06"},
+        "waitlist_confirmation": {},
+        "waitlist_admin": {
+            "email": "alan.cherkasov+waitlist@example.com",
+            "name": "Alan Cherkasov — Дубай",
+            "source": "landing",
+            "when": when,
+            "total": 3,
+            "confirmation": "—",
+        },
+        "deal_status": {"status": "in_transit"},
+        "deadline_reminder": {},
+    }
+    return samples[kind]
+
+
 @dataclass(frozen=True)
 class Rendered:
     subject: str
