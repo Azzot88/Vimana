@@ -2,6 +2,7 @@
 CLAUDE.md
 .claude/
 graphify-out/
+skills/
 
 # Environment
 .env
