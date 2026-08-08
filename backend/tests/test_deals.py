@@ -91,26 +91,43 @@ async def test_confirm_closes_deal(client, carrier_headers, sender_headers):
     assert resp.json()["status"] == "closed"
 
 
-async def test_list_deals_includes_seed(client, sender_headers, seed_deal):
-    # Seed deal is old; walk through all pages via cursor until found
-    seed_id = str(seed_deal.id)
-    cursor: str | None = None
-    seen: set[str] = set()
-    for _ in range(50):  # safety cap
-        params: dict[str, str | int] = {"limit": 100}
-        if cursor:
-            params["after"] = cursor
-        resp = await client.get("/api/deals", headers=sender_headers, params=params)
-        assert resp.status_code == 200
-        body = resp.json()
-        assert "next_cursor" in body
-        seen.update(d["id"] for d in body["items"])
-        if seed_id in seen:
-            break
-        cursor = body["next_cursor"]
-        if not cursor:
-            break
-    assert seed_id in seen
+async def test_list_deals_returns_my_own_deal(
+    client, sender_headers, carrier_headers
+):
+    """A deal I am party to appears in my list, newest first.
+
+    Rewritten 2026-08-08. It used to look for the *seed* deal by walking the
+    cursor forward with a 50-page safety cap — and the cap had itself been
+    added on 2026-07-06 for this same failure. Both were treatments of the
+    symptom: the seed deal is the oldest row in a newest-first list, and every
+    suite run pushes it one page further away. A test that needs a larger
+    constant every month is measuring the size of the test database, not the
+    endpoint.
+
+    A freshly created deal is on the first page by construction, and stays
+    there no matter how much history accumulates.
+    """
+    trip_id = await _create_open_trip(client, carrier_headers)
+    deal_id = await _match_deal(client, sender_headers, trip_id)
+
+    resp = await client.get("/api/deals", headers=sender_headers, params={"limit": 100})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "next_cursor" in body
+    assert deal_id in {d["id"] for d in body["items"]}
+
+
+async def test_seed_deal_is_still_readable_by_its_sender(
+    client, sender_headers, seed_deal
+):
+    """The other half of what the old test covered: the seed deal is mine.
+
+    Asked by id rather than found by paging, so it answers the question the
+    name promises instead of the question "how many rows exist".
+    """
+    resp = await client.get(f"/api/deals/{seed_deal.id}", headers=sender_headers)
+    assert resp.status_code == 200
+    assert resp.json()["id"] == str(seed_deal.id)
 
 
 async def test_get_deal_forbidden_for_outsider(client, carrier_headers, sender_headers):

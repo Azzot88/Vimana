@@ -446,7 +446,9 @@ def test_admin_fallback_logs_instead_of_raising(monkeypatch, caplog):
     with caplog.at_level(logging.WARNING):
         notify_admins_scanner_down("clamd not answering")
 
-    assert any("clamav down" in r.message % r.args for r in caplog.records)
+    # `getMessage()` interpolates once. `record.message` is already the formatted
+    # string by the time caplog hands it over, so `% record.args` formats twice.
+    assert any("clamav down" in r.getMessage() for r in caplog.records)
 
 
 # ── T_UX.9 · language per recipient ──────────────────────────────────────────
