@@ -206,3 +206,200 @@ def test_no_connection_without_configuration(smtp_spy, monkeypatch):
     send_email("someone@example.test", "subject", "body")
 
     assert opened == [], "an unconfigured host must not reach the network"
+
+
+# ── T_UX.8 · waitlist letters ────────────────────────────────────────────────
+
+
+def test_send_email_reports_delivery(smtp_spy):
+    """The boolean is the whole point: a caller writes a `sent` mark from it."""
+    from app.core.email import send_email
+
+    smtp_spy(465)
+    assert send_email("someone@example.test", "subject", "body") is True
+
+
+def test_send_email_reports_silence_when_unconfigured(smtp_spy, monkeypatch):
+    from app.core.config import settings
+    from app.core.email import send_email
+
+    smtp_spy(465)
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    assert send_email("someone@example.test", "subject", "body") is False, (
+        "an unconfigured transport must not look like a delivered message"
+    )
+
+
+@pytest.fixture
+def mail_spy(monkeypatch):
+    """Record `send_email` calls; let the test decide whether they land.
+
+    The `channel_calls` fixture above returns None from its lambda, which reads
+    as "not delivered" — correct for the fire-and-forget notifications it was
+    written for, useless here, where the return value decides whether a row is
+    marked.
+    """
+    sent: list[tuple[str, str, str]] = []
+    state = {"delivers": True}
+    from app.tasks import notifications as notif
+
+    def _send(to, subject, body):
+        sent.append((to, subject, body))
+        return state["delivers"]
+
+    monkeypatch.setattr(notif, "send_email", _send)
+    return sent, state
+
+
+def _new_waitlist_entry(maker, *, sent_at=None):
+    from app.models.waitlist import WaitlistEntry
+
+    email = f"wl-{uuidlib.uuid4().hex[:10]}@vimana.test"
+    with maker() as db:
+        entry = WaitlistEntry(
+            email=email, name="Tester", source="landing", confirmation_sent_at=sent_at
+        )
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return str(entry.id), email
+
+
+def _confirmation_sent_at(maker, entry_id):
+    from app.models.waitlist import WaitlistEntry
+
+    with maker() as db:
+        return db.get(WaitlistEntry, entry_id).confirmation_sent_at
+
+
+def test_waitlist_letters_reach_visitor_and_owner(sync_test_session, mail_spy):
+    from app.core.superuser import USER_ZERO_EMAIL
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+
+    recipients = [c[0] for c in sent]
+    assert email in recipients, "the person who signed up must be answered"
+    assert USER_ZERO_EMAIL in recipients, "the owner must learn about the signup"
+
+
+def test_waitlist_confirmation_promises_an_invite(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+
+    body = next(c[2] for c in sent if c[0] == email)
+    assert "приглашение" in body and "invite" in body, (
+        "the letter must say what happens next, in both languages it is written in"
+    )
+
+
+def test_waitlist_marks_the_row_once_the_letter_lands(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    entry_id, _ = _new_waitlist_entry(sync_test_session)
+    send_waitlist_emails(entry_id)
+
+    assert _confirmation_sent_at(sync_test_session, entry_id) is not None
+
+
+def test_waitlist_does_not_mark_a_letter_that_never_left(sync_test_session, mail_spy):
+    """The bug this guards against is the one that started the whole task."""
+    from app.tasks.notifications import send_waitlist_emails
+
+    _, state = mail_spy
+    state["delivers"] = False
+    entry_id, _ = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+
+    assert _confirmation_sent_at(sync_test_session, entry_id) is None, (
+        "an unsent letter must leave the row pending, not marked done"
+    )
+
+
+def test_waitlist_letter_is_not_sent_twice(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+    first = len([c for c in sent if c[0] == email])
+    send_waitlist_emails(entry_id)
+
+    assert len([c for c in sent if c[0] == email]) == first == 1
+
+
+def test_waitlist_missing_entry_is_a_no_op(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    send_waitlist_emails(str(uuidlib.uuid4()))
+
+    assert sent == []
+
+
+def test_backfill_dry_run_sends_nothing(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_pending_waitlist_confirmations
+
+    sent, _ = mail_spy
+    _, email = _new_waitlist_entry(sync_test_session)
+
+    result = send_pending_waitlist_confirmations(dry_run=True)
+
+    assert sent == [], "a dry run that sends mail is not a dry run"
+    assert email in result["addresses"]
+    assert result["sent"] == 0
+
+
+def test_backfill_writes_to_pending_and_skips_the_answered(sync_test_session, mail_spy):
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
+
+    from app.tasks.notifications import send_pending_waitlist_confirmations
+
+    sent, _ = mail_spy
+    pending_id, pending_email = _new_waitlist_entry(sync_test_session)
+    _, answered_email = _new_waitlist_entry(
+        sync_test_session, sent_at=_dt.now(_tz.utc)
+    )
+
+    send_pending_waitlist_confirmations()
+
+    recipients = [c[0] for c in sent]
+    assert pending_email in recipients
+    assert answered_email not in recipients, "nobody gets the same letter twice"
+    assert _confirmation_sent_at(sync_test_session, pending_id) is not None
+
+
+def test_backfill_is_safe_to_run_twice(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_pending_waitlist_confirmations
+
+    sent, _ = mail_spy
+    _, email = _new_waitlist_entry(sync_test_session)
+
+    send_pending_waitlist_confirmations()
+    after_first = len([c for c in sent if c[0] == email])
+    send_pending_waitlist_confirmations()
+
+    assert len([c for c in sent if c[0] == email]) == after_first == 1
+
+
+def test_admin_fallback_logs_instead_of_raising(monkeypatch, caplog):
+    """`logger` was undefined here — the fallback raised NameError instead."""
+    import logging
+
+    from app.tasks.notifications import notify_admins_scanner_down
+
+    monkeypatch.setenv("ADMIN_TELEGRAM_CHAT_IDS", "")
+    with caplog.at_level(logging.WARNING):
+        notify_admins_scanner_down("clamd not answering")
+
+    assert any("clamav down" in r.message % r.args for r in caplog.records)

@@ -19,6 +19,10 @@ from app.worker import celery_app
 DISPATCHED_BY_CODE = [
     "app.tasks.notifications.send_verification_code",
     "app.tasks.notifications.notify_deal_status",
+    "app.tasks.notifications.send_waitlist_emails",
+    # Run by hand after deploy, not from the beat schedule — but it is still
+    # dispatched by name, and an unregistered name fails the same way.
+    "app.tasks.notifications.send_pending_waitlist_confirmations",
     "app.tasks.nostr_publish.publish_trip_to_nostr",
     "app.tasks.nostr_publish.delete_trip_from_nostr",
 ]

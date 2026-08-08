@@ -39,11 +39,6 @@ class WaitlistOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-def _admin_emails() -> set[str]:
-    raw = os.getenv("ADMIN_EMAILS", "")
-    return {e.strip().lower() for e in raw.split(",") if e.strip()}
-
-
 def _admin_chat_ids() -> list[str]:
     raw = os.getenv("ADMIN_TELEGRAM_CHAT_IDS", "")
     return [c.strip() for c in raw.split(",") if c.strip()]
@@ -79,11 +74,30 @@ async def join_waitlist(request: Request, body: WaitlistCreate, db: AsyncSession
         msg += f"\n{name}"
     if source:
         msg += f"\nsource: {source}"
-    for chat_id in _admin_chat_ids():
+    chat_ids = _admin_chat_ids()
+    for chat_id in chat_ids:
         try:
             send_telegram(chat_id, msg)
         except Exception:
             logger.exception("Failed to send Telegram notification to %s", chat_id)
+    if not chat_ids:
+        # Until a bot exists this is the only trace a signup leaves in the logs.
+        # The loop above says nothing when the list is empty, and `send_telegram`
+        # says nothing when the token is missing — between them a new entry
+        # could arrive in total silence, which is how three of them did.
+        logger.info("waitlist signup %s (no ADMIN_TELEGRAM_CHAT_IDS configured)", email)
+
+    # T_UX.8 — the letters go to a worker: `send_email` is synchronous smtplib,
+    # and holding this async endpoint for two SMTP round-trips would make a
+    # stranger wait on a form for our mail server.
+    from app.tasks.notifications import send_waitlist_emails
+
+    try:
+        send_waitlist_emails.delay(str(entry.id))
+    except Exception:
+        # Broker unreachable — the row is saved and `confirmation_sent_at` is
+        # still NULL, so the backfill task will pick this person up later.
+        logger.exception("Failed to queue waitlist emails for %s", email)
 
     return entry
 

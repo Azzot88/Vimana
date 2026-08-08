@@ -17,3 +17,10 @@ class WaitlistEntry(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # T_UX.8 — when the confirmation letter actually reached the SMTP server.
+    # NULL means nobody has written to this person yet, and that is what the
+    # backfill looks for. It is set only on a truthy `send_email`: marking it
+    # on an unconfigured transport would record a letter that was never sent.
+    confirmation_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

@@ -34,9 +34,20 @@ def _connect() -> smtplib.SMTP:
     return smtp
 
 
-def send_email(to: str, subject: str, body: str) -> None:
+def send_email(to: str, subject: str, body: str) -> bool:
+    """Send a message. Returns True only if it was handed to the SMTP server.
+
+    The boolean exists because the silent `return` below is otherwise
+    indistinguishable from success at the call site — and a caller that records
+    "notified" on the strength of that is writing down something that did not
+    happen. Telegram and WhatsApp went a whole release doing exactly this
+    (TECHSTATE §1, T1.7): unconfigured transport, silent exit, green status.
+
+    Callers that only fire and forget may ignore the result. Callers that
+    persist a "sent" mark must not.
+    """
     if not settings.SMTP_HOST or not settings.SMTP_USER or not to:
-        return
+        return False
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     # `formataddr` RFC 2047-encodes the name — it contains an em dash, and raw
@@ -57,3 +68,4 @@ def send_email(to: str, subject: str, body: str) -> None:
     with _connect() as smtp:
         smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         smtp.sendmail(settings.SMTP_USER, [to], msg.as_string())
+    return True

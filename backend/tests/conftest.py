@@ -1004,6 +1004,18 @@ async def _ensure_vault_completeness(engine) -> None:
         )
 
 
+async def _ensure_waitlist_confirmation_column(engine) -> None:
+    """T_UX.8: waitlist.confirmation_sent_at. Mirrors migration 0042.
+    Idempotent — `create_all` builds it, this covers a pre-existing test DB."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS "
+                "confirmation_sent_at TIMESTAMPTZ NULL"
+            )
+        )
+
+
 async def _ensure_deal_event_chain(engine) -> None:
     """T3.6: seq/entry_hash/prev_hash on deal_events + deal_chain_anchors.
 
@@ -1132,6 +1144,7 @@ async def test_engine():
     await _ensure_trust_tables(engine)
     await _ensure_recovery_codes(engine)
     await _ensure_hot_path_indexes(engine)
+    await _ensure_waitlist_confirmation_column(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

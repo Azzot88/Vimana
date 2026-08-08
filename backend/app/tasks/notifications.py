@@ -1,10 +1,20 @@
+import logging
 from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import func, select
 
 from app.worker import celery_app
 from app.core.database import SyncSessionLocal
 from app.core.email import send_email
 from app.core.telegram import send_telegram
 from app.core.whatsapp import send_whatsapp
+
+# The three admin tasks below call this in their "nobody to tell" fallback, and
+# it was never defined: the branch raised `NameError` instead of logging. That
+# branch only runs when `ADMIN_TELEGRAM_CHAT_IDS` is empty — the exact case it
+# exists to cover — so the last line of defence was broken precisely when it
+# was needed. Found 2026-08-08 while adding the waitlist letters.
+logger = logging.getLogger(__name__)
 
 # Human-readable status labels (soft language per DESIGNGUIDELINES §9)
 _STATUS_LABELS = {
@@ -226,6 +236,160 @@ def send_archive_window_opened(user_id: str, ends_at_iso: str) -> None:
             "Если вы потеряете и доступ к аккаунту, выбирать будет некому и "
             "сработает то же самое: страница останется.",
         )
+
+
+_WAITLIST_CONFIRMATION_SUBJECT = "Vimana · Заявка принята / You're on the list"
+
+# Deliberately bilingual, and deliberately not localised properly. The landing
+# speaks six languages, the waitlist row records none of them — the request
+# body is frozen at `{email, name, source}` (T_UX.7) and widening it to carry a
+# locale is a bigger decision than this letter. Russian and English cover
+# everyone who has signed up so far and the corridor the product launches on.
+# Proper per-user localisation arrives with `users.locale` in T3.33.
+_WAITLIST_CONFIRMATION_BODY = """Спасибо — вы в списке.
+
+Vimana — платформа ручной авиадоставки: срочные и ценные грузы везут те, кто \
+уже летит нужным маршрутом.
+
+Сейчас мы в закрытой бете. Когда откроем доступ, пришлём на этот адрес \
+приглашение или ссылку на регистрацию. Больше от вас ничего не требуется — \
+ждать и следить за почтой.
+
+Если заявку оставляли не вы — просто не отвечайте на это письмо, без вашего \
+участия ничего не произойдёт.
+
+—
+
+Thanks — you're on the list.
+
+Vimana is a peer-to-peer air delivery platform: urgent and valuable parcels \
+travel with people already flying the route.
+
+We're in closed beta right now. When we open access, we'll send an invite or a \
+registration link to this address. Nothing else is needed from you.
+
+If you didn't sign up, simply ignore this message — nothing happens without \
+you.
+
+— Vimana · Sacred Logistics
+"""
+
+
+def _send_waitlist_pair(db, entry) -> bool:
+    """Write to the visitor, then to the owner. Returns True if the visitor got mail.
+
+    Order matters: the confirmation is the promise we made on the landing page,
+    the owner's copy is bookkeeping. If SMTP is down we would rather fail on
+    the one that matters and retry it than mark the row done because our own
+    notification went through.
+
+    The owner's letter is sent regardless of the confirmation's outcome — if
+    the visitor's address bounces, that is precisely the thing worth knowing.
+    """
+    from app.core.superuser import USER_ZERO_EMAIL
+    from app.models.waitlist import WaitlistEntry
+
+    delivered = False
+    try:
+        delivered = send_email(
+            entry.email,
+            _WAITLIST_CONFIRMATION_SUBJECT,
+            _WAITLIST_CONFIRMATION_BODY,
+        )
+    except Exception:
+        logger.exception("waitlist confirmation failed for %s", entry.email)
+
+    if delivered:
+        entry.confirmation_sent_at = datetime.now(timezone.utc)
+        db.commit()
+
+    owner_body = (
+        "Новая заявка на доступ.\n\n"
+        f"Почта: {entry.email}\n"
+        f"Имя: {entry.name or '—'}\n"
+        f"Источник: {entry.source or '—'}\n"
+        f"Оставлена: {entry.created_at}\n"
+        f"\nВсего заявок в списке: {db.execute(select(func.count(WaitlistEntry.id))).scalar()}\n"
+    )
+    owner_body += (
+        "\nПисьмо-подтверждение "
+        + ("отправлено." if delivered else "НЕ отправлено — проверить SMTP.")
+        + "\n"
+    )
+    try:
+        send_email(USER_ZERO_EMAIL, "Vimana · Новая заявка в waitlist", owner_body)
+    except Exception:
+        logger.exception("waitlist owner notification failed for %s", entry.email)
+
+    return delivered
+
+
+@celery_app.task(name="app.tasks.notifications.send_waitlist_emails")
+def send_waitlist_emails(entry_id: str) -> None:
+    """T_UX.8 — confirm to the person who signed up, and tell the owner.
+
+    Runs as a task rather than inline for the reason `send_verification_code`
+    does: `core.email.send_email` is synchronous `smtplib`, and the endpoint it
+    is dispatched from is async — called in the request path it would hold the
+    event loop for two SMTP round-trips while a stranger waits on a form.
+
+    Idempotent by `confirmation_sent_at`: a redelivered task does not write to
+    the same person twice.
+    """
+    from app.models.waitlist import WaitlistEntry
+
+    with SyncSessionLocal() as db:
+        entry = db.get(WaitlistEntry, entry_id)
+        if not entry or entry.confirmation_sent_at:
+            return
+        _send_waitlist_pair(db, entry)
+
+
+@celery_app.task(name="app.tasks.notifications.send_pending_waitlist_confirmations")
+def send_pending_waitlist_confirmations(dry_run: bool = False) -> dict:
+    """T_UX.8 — write to everyone who signed up before the letters existed.
+
+    Run by hand, once, after deploy. There is no schedule behind it: it exists
+    to close a backlog, and a recurring job that mails strangers is not
+    something to leave ticking unattended.
+
+    `dry_run=True` returns the addresses without sending. Mail cannot be
+    unsent, and the list is small enough to read before committing to it.
+
+    Safe to run twice: `confirmation_sent_at` is set per row as each letter
+    lands, so a second run finds only what the first one failed to deliver.
+    """
+    from app.models.waitlist import WaitlistEntry
+
+    with SyncSessionLocal() as db:
+        pending = (
+            db.execute(
+                select(WaitlistEntry)
+                .where(WaitlistEntry.confirmation_sent_at.is_(None))
+                .order_by(WaitlistEntry.created_at)
+            )
+            .scalars()
+            .all()
+        )
+        addresses = [e.email for e in pending]
+
+        if dry_run:
+            logger.info("waitlist backfill dry run: %s pending %s", len(pending), addresses)
+            return {"pending": len(pending), "sent": 0, "failed": 0, "addresses": addresses}
+
+        sent = 0
+        for entry in pending:
+            if _send_waitlist_pair(db, entry):
+                sent += 1
+
+        result = {
+            "pending": len(pending),
+            "sent": sent,
+            "failed": len(pending) - sent,
+            "addresses": addresses,
+        }
+        logger.info("waitlist backfill: %s", result)
+        return result
 
 
 @celery_app.task(name="app.tasks.notifications.notify_admins_scanner_down")
