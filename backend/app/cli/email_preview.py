@@ -1,0 +1,97 @@
+"""T_UX.9 — render every letter to a file, so it can be looked at before anyone gets it.
+
+    docker compose exec -T backend python -m app.cli.email_preview
+    docker compose exec -T backend python -m app.cli.email_preview --locale ru
+    docker compose exec -T backend python -m app.cli.email_preview --kind verification_code
+
+Writes `<out>/<kind>.<locale>.html` plus an `index.html` linking them all, and
+prints the paths. Nothing is sent and no SMTP is contacted — this is the
+cheapest loop for working on wording and layout.
+
+It is not a substitute for Mailpit, and the two answer different questions. A
+browser shows the ideal case: it renders the HTML as written. Mailpit shows
+what actually left over SMTP — headers, both MIME parts, encoding — which is
+where the interesting failures live. Use this while writing, Mailpit before
+believing.
+
+Sample values are deliberately awkward (a long name, a date with a timezone,
+an em dash) rather than "Test User": placeholder data that is too tidy is how
+layouts that break on real content get signed off.
+
+Functions (PROJECT §6.2a):
+- `sample_context(kind)` — plausible values for one letter's placeholders.
+  Called by: `main`, `tests/test_email_templates.py`.
+- `main(argv)` — CLI entry. Called by: `python -m app.cli.email_preview`.
+"""
+from __future__ import annotations
+
+import argparse
+import html
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+from app.core.email_templates import LOCALES, _LETTERS, render
+
+DEFAULT_OUT = Path("/tmp/vimana-email-preview")
+
+
+def sample_context(kind: str) -> dict:
+    when = datetime(2026, 8, 8, 20, 28, 52, tzinfo=timezone.utc)
+    samples: dict[str, dict] = {
+        "verification_code": {"code": "418305"},
+        "recovery_code_used": {"remaining": 7},
+        "platform_copy_deleted": {},
+        "archive_window_opened": {"deadline": "2026-11-06"},
+        "waitlist_confirmation": {},
+        "waitlist_admin": {
+            "email": "alan.cherkasov+waitlist@example.com",
+            "name": "Alan Cherkasov — Дубай",
+            "source": "landing",
+            "when": when,
+            "total": 3,
+            "confirmation": "—",
+        },
+        "deal_status": {"status": "in_transit"},
+        "deadline_reminder": {},
+    }
+    return samples[kind]
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Render Vimana emails to HTML files")
+    parser.add_argument("--out", default=str(DEFAULT_OUT))
+    parser.add_argument("--locale", action="append", choices=list(LOCALES))
+    parser.add_argument("--kind", action="append", choices=list(_LETTERS))
+    args = parser.parse_args(argv)
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    locales = args.locale or list(LOCALES)
+    kinds = args.kind or list(_LETTERS)
+
+    rows: list[str] = []
+    for kind in kinds:
+        for locale in locales:
+            letter = render(kind, locale, **sample_context(kind))
+            name = f"{kind}.{locale}.html"
+            (out / name).write_text(letter.html, encoding="utf-8")
+            (out / f"{kind}.{locale}.txt").write_text(letter.text, encoding="utf-8")
+            rows.append(
+                f'<li><code>{locale}</code> · <a href="{name}">{html.escape(letter.subject)}</a>'
+                f' · <a href="{kind}.{locale}.txt">text</a></li>'
+            )
+            print(out / name)
+
+    (out / "index.html").write_text(
+        "<meta charset='utf-8'><title>Vimana · email preview</title>"
+        "<body style='font-family:system-ui;padding:24px;line-height:1.7'>"
+        f"<h1>Vimana · email preview</h1><ul>{''.join(rows)}</ul></body>",
+        encoding="utf-8",
+    )
+    print(out / "index.html")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

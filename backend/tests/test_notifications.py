@@ -26,7 +26,13 @@ def channel_calls(monkeypatch):
     calls = {"email": [], "telegram": [], "whatsapp": []}
     from app.tasks import notifications as notif
 
-    monkeypatch.setattr(notif, "send_email", lambda to, subj, body: calls["email"].append((to, subj, body)))
+    # T_UX.9 — `send_email` grew an optional `html` part; the spy takes it too,
+    # otherwise every templated letter fails on arity instead of on content.
+    monkeypatch.setattr(
+        notif,
+        "send_email",
+        lambda to, subj, body, html=None: calls["email"].append((to, subj, body, html)),
+    )
     monkeypatch.setattr(notif, "send_telegram", lambda chat, msg: calls["telegram"].append((chat, msg)))
     monkeypatch.setattr(notif, "send_whatsapp", lambda number, msg: calls["whatsapp"].append((number, msg)))
     return calls
@@ -62,8 +68,9 @@ def test_notify_deal_status_uses_soft_status_label(
     notify_deal_status(str(seed_deal.id), "in_transit")
 
     assert channel_calls["email"], "expected at least one email sent"
-    body = channel_calls["email"][0][2]
+    subject, body = channel_calls["email"][0][1], channel_calls["email"][0][2]
     assert "in_transit" not in body, "raw status must be translated to soft label"
+    assert "in_transit" not in subject
 
 
 # ── the sender's TLS handshake ────────────────────────────────────────────────
@@ -243,21 +250,25 @@ def mail_spy(monkeypatch):
     state = {"delivers": True}
     from app.tasks import notifications as notif
 
-    def _send(to, subject, body):
-        sent.append((to, subject, body))
+    def _send(to, subject, body, html=None):
+        sent.append((to, subject, body, html))
         return state["delivers"]
 
     monkeypatch.setattr(notif, "send_email", _send)
     return sent, state
 
 
-def _new_waitlist_entry(maker, *, sent_at=None):
+def _new_waitlist_entry(maker, *, sent_at=None, locale="en"):
     from app.models.waitlist import WaitlistEntry
 
     email = f"wl-{uuidlib.uuid4().hex[:10]}@vimana.test"
     with maker() as db:
         entry = WaitlistEntry(
-            email=email, name="Tester", source="landing", confirmation_sent_at=sent_at
+            email=email,
+            name="Tester",
+            source="landing",
+            locale=locale,
+            confirmation_sent_at=sent_at,
         )
         db.add(entry)
         db.commit()
@@ -287,17 +298,41 @@ def test_waitlist_letters_reach_visitor_and_owner(sync_test_session, mail_spy):
 
 
 def test_waitlist_confirmation_promises_an_invite(sync_test_session, mail_spy):
+    """T_UX.9 — one language per recipient now, chosen by `entry.locale`."""
     from app.tasks.notifications import send_waitlist_emails
 
     sent, _ = mail_spy
-    entry_id, email = _new_waitlist_entry(sync_test_session)
+    entry_id, email = _new_waitlist_entry(sync_test_session, locale="ru")
 
     send_waitlist_emails(entry_id)
 
     body = next(c[2] for c in sent if c[0] == email)
-    assert "приглашение" in body and "invite" in body, (
-        "the letter must say what happens next, in both languages it is written in"
-    )
+    assert "приглашение" in body, "the letter must say what happens next"
+
+
+def test_waitlist_confirmation_uses_the_landing_language(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session, locale="fr")
+
+    send_waitlist_emails(entry_id)
+
+    subject = next(c[1] for c in sent if c[0] == email)
+    assert "liste" in subject.lower()
+
+
+def test_waitlist_confirmation_without_locale_is_english(sync_test_session, mail_spy):
+    """Rows older than T_UX.9 carry NULL — English rather than a guess."""
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session, locale=None)
+
+    send_waitlist_emails(entry_id)
+
+    subject = next(c[1] for c in sent if c[0] == email)
+    assert "list" in subject.lower()
 
 
 def test_waitlist_marks_the_row_once_the_letter_lands(sync_test_session, mail_spy):
@@ -403,3 +438,73 @@ def test_admin_fallback_logs_instead_of_raising(monkeypatch, caplog):
         notify_admins_scanner_down("clamd not answering")
 
     assert any("clamav down" in r.message % r.args for r in caplog.records)
+
+
+# ── T_UX.9 · language per recipient ──────────────────────────────────────────
+
+
+def _new_user(maker, locale: str):
+    from app.models.user import User
+
+    email = f"loc-{uuidlib.uuid4().hex[:10]}@vimana.test"
+    with maker() as db:
+        user = User(
+            email=email,
+            display_name="Locale Tester",
+            locale=locale,
+            notify_email=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return str(user.id), email
+
+
+def test_verification_code_is_written_in_the_account_language(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_verification_code
+
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "es")
+
+    send_verification_code(user_id, "418305")
+
+    subject, body = next((c[1], c[2]) for c in sent if c[0] == email)
+    assert "Código" in subject
+    assert "418305" in body
+
+
+def test_verification_code_carries_an_html_part(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_verification_code
+
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "en")
+
+    send_verification_code(user_id, "418305")
+
+    html = next(c[3] for c in sent if c[0] == email)
+    assert html and "<table" in html and "418305" in html
+
+
+def test_recovery_letter_follows_the_account_language(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_recovery_code_used
+
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "pl")
+
+    send_recovery_code_used(user_id, 7)
+
+    subject = next(c[1] for c in sent if c[0] == email)
+    assert "odzyskiwania" in subject.lower()
+
+
+def test_unknown_account_locale_does_not_break_delivery(sync_test_session, mail_spy):
+    """A stray tag in the column must not cost somebody their code."""
+    from app.tasks.notifications import send_verification_code
+
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "kl")
+
+    send_verification_code(user_id, "111222")
+
+    body = next(c[2] for c in sent if c[0] == email)
+    assert "111222" in body

@@ -1,0 +1,101 @@
+{
+  "footer": "Vimana · Sacred Logistics. Ten list wysłano automatycznie — ale można na niego odpowiedzieć, tę skrzynkę czyta człowiek.",
+  "verification_code": {
+    "subject": "Vimana · Kod potwierdzenia",
+    "preheader": "Kod jest ważny 15 minut",
+    "heading": "Kod potwierdzenia",
+    "body": [
+      "Wpisz ten kod, aby potwierdzić, że adres należy do Ciebie."
+    ],
+    "code_label": "ważny 15 minut",
+    "note": "Jeśli nie prosiłeś o kod — po prostu zignoruj ten list, bez niego nic się nie stanie."
+  },
+  "recovery_code_used": {
+    "subject": "Vimana · Użyto kodu odzyskiwania",
+    "preheader": "Ktoś zalogował się kodem odzyskiwania",
+    "heading": "Użyto kodu odzyskiwania",
+    "body": [
+      "Ktoś zalogował się na Twoje konto kodem odzyskiwania.",
+      "Jeśli to byłeś Ty — nic nie trzeba robić. Jeśli nie — zaloguj się i utwórz nowy zestaw kodów: poprzednie przestaną działać w tej samej chwili."
+    ],
+    "facts_remaining": "pozostało kodów",
+    "note": "Ten list nie jest subskrypcją: tylko on mówi, że kod został zużyty, i nie da się go wyłączyć."
+  },
+  "platform_copy_deleted": {
+    "subject": "Vimana · Klucz jest teraz tylko Twój",
+    "preheader": "Usunęliśmy naszą kopię Twojego klucza",
+    "heading": "Klucz jest teraz tylko Twój",
+    "body": [
+      "Usunęliśmy naszą kopię klucza Twojego konta.",
+      "Od teraz tylko Ty możesz podpisywać zapisy i otwierać sejfy swoich transakcji. Nie zrobimy tego za Ciebie.",
+      "Jeśli to nie byłeś Ty — zaloguj się i przywróć naszą kopię ze swojego pliku Identity Vault: strona «Dostęp i klucze» w profilu."
+    ],
+    "note": "Nieodwracalna zmiana jest tu odnotowywana, a nie ogłaszana: jeśli to nie Ty ją wykonałeś, dowiesz się o tym tylko stąd."
+  },
+  "archive_window_opened": {
+    "subject": "Vimana · Tożsamość zakończona. Co dalej",
+    "preheader": "Została jedna decyzja i ma ona datę",
+    "heading": "Tożsamość zakończona",
+    "body": [
+      "Klucz Twojej tożsamości uznano za utracony. Nie możesz już podpisywać nowych zapisów, ale logowanie działa, a wszystko podpisane wcześniej pozostaje ważne i weryfikowalne.",
+      "Została jedna decyzja: czy zachować Twoją stronę publiczną.",
+      "Jeśli nic nie zrobisz, po podanej niżej dacie pozostanie otwarta i wybór się utrwali. Aby ją zamknąć — zaloguj się i wybierz to przed tą datą; zamknięcia nie da się później cofnąć.",
+      "W żadnym przypadku nic nie jest usuwane: łańcuch, podpisy i zdarzenia transakcji pozostają, bo należą w połowie do Twoich kontrahentów. Zamyka się tylko witryna."
+    ],
+    "facts_deadline": "wybór utrwala się",
+    "note": "Jeśli stracisz także dostęp do konta, nie będzie komu wybierać i stanie się to samo: strona pozostanie."
+  },
+  "waitlist_confirmation": {
+    "subject": "Vimana · Jesteś na liście",
+    "preheader": "Gdy otworzymy dostęp, wyślemy zaproszenie",
+    "heading": "Jesteś na liście",
+    "body": [
+      "Vimana to platforma dostaw lotniczych z rąk do rąk: pilne i wartościowe przesyłki wiozą ci, którzy już lecą daną trasą.",
+      "Jesteśmy teraz w zamkniętej becie. Gdy otworzymy dostęp, wyślemy na ten adres zaproszenie lub link do rejestracji. Nic więcej nie jest potrzebne."
+    ],
+    "note": "Jeśli to nie Ty się zapisałeś — po prostu zignoruj tę wiadomość, bez Ciebie nic się nie stanie."
+  },
+  "waitlist_admin": {
+    "subject": "Vimana · Nowe zgłoszenie na listę",
+    "preheader": "Ktoś poprosił o dostęp",
+    "heading": "Nowe zgłoszenie na listę",
+    "body": [
+      "Ktoś zostawił adres na stronie."
+    ],
+    "facts_email": "e-mail",
+    "facts_name": "imię",
+    "facts_source": "źródło",
+    "facts_when": "zgłoszono",
+    "facts_total": "łącznie na liście",
+    "facts_confirmation": "list potwierdzający",
+    "confirmation_sent": "wysłany",
+    "confirmation_failed": "NIE wysłany — sprawdź SMTP",
+    "note": "Ten list widzisz tylko Ty."
+  },
+  "deal_status": {
+    "subject": "Vimana · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "Status Twojej transakcji się zmienił."
+    ],
+    "labels": {
+      "matched": "Transakcja uzgodniona",
+      "accepted": "Przewoźnik przyjął warunki",
+      "in_transit": "Przesyłka w drodze",
+      "delivered": "Przesyłka dostarczona — czeka na potwierdzenie",
+      "confirmed": "Dostawa potwierdzona",
+      "closed": "Transakcja zakończona"
+    },
+    "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
+  },
+  "deadline_reminder": {
+    "subject": "Vimana · Termin dostawy się zbliża",
+    "preheader": "Zostało mniej niż 24 godziny",
+    "heading": "Termin dostawy się zbliża",
+    "body": [
+      "Termin dostawy w Twojej transakcji upływa w ciągu najbliższych 24 godzin."
+    ],
+    "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
+  }
+}

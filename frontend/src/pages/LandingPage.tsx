@@ -119,7 +119,7 @@ const FlightArc = () => {
 }
 
 export default function LandingPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const token = useAuthStore((s) => s.token)
   const nameRef = useRef<HTMLInputElement>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -154,7 +154,9 @@ export default function LandingPage() {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, source: 'landing' }),
+        // T_UX.9 — the language the visitor is reading right now, so the
+        // confirmation letter arrives in it instead of guessing English.
+        body: JSON.stringify({ email, name, source: 'landing', locale: i18n.language }),
       })
       // 409 means the address is already on the list, which is success from the
       // visitor's side — they asked to be on it and they are.

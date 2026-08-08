@@ -152,6 +152,21 @@ services:
       - celery-worker
     command: celery -A app.worker.celery_app beat -l info
 
+  # T_UX.9 — a fake SMTP server with a web inbox, so a letter can be looked at
+  # without sending it to a person. Point SMTP_HOST at `mailpit` and SMTP_PORT
+  # at 1025 in a dev `.env`; everything the app sends lands at :8025 instead of
+  # the internet. Bound to loopback — reach it with `ssh -L 8025:127.0.0.1:8025`.
+  # Not started in production: `docker compose up` brings it up only if asked,
+  # and prod `.env` keeps SMTP_HOST on the real Mailu host.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    logging: *default-logging
+    profiles: ["mail"]
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

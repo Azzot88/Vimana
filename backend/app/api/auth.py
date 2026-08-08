@@ -81,6 +81,7 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
         can_carry=body.can_carry,
         can_send=body.can_send,
         active_mode=body.active_mode,
+        locale=body.locale,
         nostr_pubkey=npub_hex,
         nsec_encrypted=nsec_ct,
         nsec_nonce=nsec_nonce,

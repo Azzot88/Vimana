@@ -10,7 +10,7 @@ import { APP_VERSION } from '../version'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [displayName, setDisplayName] = usePersistedState<string>('register:displayName', '')
   const [email, setEmail] = usePersistedState<string>('register:email', '')
@@ -30,6 +30,8 @@ export default function RegisterPage() {
         password,
         can_carry: isCarrier,
         active_mode: isCarrier ? 'carrier' : 'sender',
+        // T_UX.9 — every letter to this account is written in this language.
+        locale: i18n.language,
       })
       const { data: tokenData } = await login({ login: email, password })
       localStorage.setItem('token', tokenData.access_token)

@@ -28,6 +28,10 @@ class WaitlistCreate(BaseModel):
     email: str
     name: str | None = None
     source: str | None = None
+    # T_UX.9 — the landing's language, so the confirmation is written in it.
+    # The T_UX.7 note about a frozen body covers the three fields above; this
+    # one is additive and no reader of the older shape breaks.
+    locale: str | None = None
 
 
 class WaitlistOut(BaseModel):
@@ -54,7 +58,8 @@ async def join_waitlist(request: Request, body: WaitlistCreate, db: AsyncSession
     if not EMAIL_RE.match(email):
         raise HTTPException(status_code=422, detail="Invalid email")
 
-    entry = WaitlistEntry(email=email, name=name, source=source)
+    locale = (body.locale or "").strip().lower()[:5] or None
+    entry = WaitlistEntry(email=email, name=name, source=source, locale=locale)
     db.add(entry)
     try:
         await db.commit()

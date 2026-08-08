@@ -1,0 +1,101 @@
+{
+  "footer": "Vimana · Sacred Logistics. Este mensaje se envió automáticamente — pero puedes responderlo, un humano lee este buzón.",
+  "verification_code": {
+    "subject": "Vimana · Código de confirmación",
+    "preheader": "Tu código es válido durante 15 minutos",
+    "heading": "Código de confirmación",
+    "body": [
+      "Introduce este código para confirmar que esta dirección es tuya."
+    ],
+    "code_label": "válido 15 minutos",
+    "note": "Si no pediste este código, ignora este mensaje — sin él no ocurre nada."
+  },
+  "recovery_code_used": {
+    "subject": "Vimana · Se usó un código de recuperación",
+    "preheader": "Alguien inició sesión con un código de recuperación",
+    "heading": "Se usó un código de recuperación",
+    "body": [
+      "Alguien ha iniciado sesión en tu cuenta con un código de recuperación.",
+      "Si fuiste tú, no hay nada que hacer. Si no, inicia sesión y crea un nuevo juego de códigos: los anteriores dejarán de funcionar en ese mismo momento."
+    ],
+    "facts_remaining": "códigos restantes",
+    "note": "Este mensaje no es una suscripción: es la única señal de que se ha gastado un código, y no se puede desactivar."
+  },
+  "platform_copy_deleted": {
+    "subject": "Vimana · La llave ya es solo tuya",
+    "preheader": "Hemos borrado nuestra copia de tu llave",
+    "heading": "La llave ya es solo tuya",
+    "body": [
+      "Hemos borrado nuestra copia de la llave de tu cuenta.",
+      "A partir de ahora solo tú puedes firmar registros y abrir las cajas fuertes de tus acuerdos. No podremos hacerlo por ti.",
+      "Si no fuiste tú, inicia sesión y restaura nuestra copia desde tu archivo Identity Vault: página «Acceso y llaves» en tu perfil."
+    ],
+    "note": "Un cambio irreversible se deja registrado aquí, no anunciado: si no fuiste tú quien lo hizo, este mensaje es la única forma de enterarte."
+  },
+  "archive_window_opened": {
+    "subject": "Vimana · Tu identidad ha terminado. Qué sigue",
+    "preheader": "Queda una decisión, y tiene fecha",
+    "heading": "Tu identidad ha terminado",
+    "body": [
+      "La llave de tu identidad se ha declarado perdida. Ya no puedes firmar nuevos registros, pero el acceso a la cuenta sigue funcionando y todo lo firmado antes sigue siendo válido y verificable.",
+      "Queda una decisión: si conservar tu página pública.",
+      "Si no haces nada, después de la fecha indicada abajo permanecerá abierta y la elección quedará fijada. Para cerrarla, inicia sesión y elígelo antes de esa fecha; después el cierre no se podrá deshacer.",
+      "En ningún caso se borra nada: la cadena, las firmas y los eventos de los acuerdos permanecen, porque pertenecen a medias a tus contrapartes. Solo se cierra el escaparate."
+    ],
+    "facts_deadline": "la elección se fija el",
+    "note": "Si además pierdes el acceso a la cuenta, no habrá quien elija y ocurrirá lo mismo: la página se queda."
+  },
+  "waitlist_confirmation": {
+    "subject": "Vimana · Estás en la lista",
+    "preheader": "Cuando abramos el acceso te enviaremos una invitación",
+    "heading": "Estás en la lista",
+    "body": [
+      "Vimana es una plataforma de entrega aérea entre personas: los envíos urgentes y valiosos viajan con quienes ya vuelan esa ruta.",
+      "Ahora mismo estamos en beta cerrada. Cuando abramos el acceso, enviaremos a esta dirección una invitación o un enlace de registro. No necesitamos nada más de ti."
+    ],
+    "note": "Si no te apuntaste tú, simplemente ignora este mensaje — sin ti no ocurre nada."
+  },
+  "waitlist_admin": {
+    "subject": "Vimana · Nueva solicitud en la lista",
+    "preheader": "Alguien ha pedido acceso",
+    "heading": "Nueva solicitud en la lista",
+    "body": [
+      "Alguien dejó su dirección en la página de inicio."
+    ],
+    "facts_email": "correo",
+    "facts_name": "nombre",
+    "facts_source": "origen",
+    "facts_when": "solicitado el",
+    "facts_total": "total en la lista",
+    "facts_confirmation": "mensaje de confirmación",
+    "confirmation_sent": "enviado",
+    "confirmation_failed": "NO enviado — revisar SMTP",
+    "note": "Este mensaje solo lo ves tú."
+  },
+  "deal_status": {
+    "subject": "Vimana · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "El estado de tu acuerdo ha cambiado."
+    ],
+    "labels": {
+      "matched": "Tu acuerdo está pactado",
+      "accepted": "El transportista aceptó las condiciones",
+      "in_transit": "El envío está en camino",
+      "delivered": "Envío entregado — pendiente de confirmación",
+      "confirmed": "Entrega confirmada",
+      "closed": "Acuerdo completado"
+    },
+    "note": "Puedes desactivar las notificaciones de acuerdos en tu perfil."
+  },
+  "deadline_reminder": {
+    "subject": "Vimana · Se acerca el plazo de entrega",
+    "preheader": "Quedan menos de 24 horas",
+    "heading": "Se acerca el plazo de entrega",
+    "body": [
+      "El plazo de entrega de tu acuerdo vence en las próximas 24 horas."
+    ],
+    "note": "Puedes desactivar las notificaciones de acuerdos en tu perfil."
+  }
+}

@@ -1,0 +1,140 @@
+{#
+  T_UX.9 — the one layout every letter is rendered through.
+
+  Tables and inline styles, not flexbox and not a <style> block: Outlook renders
+  through Word, Gmail strips most of <head>, and a stylesheet that survives one
+  client is dropped by the next. This is the 2003-looking HTML that email
+  actually is, and deviating from it does not fail loudly — it fails in one
+  client, silently, for a subset of readers.
+
+  Fonts are system stacks. A webfont cannot be loaded here (no external
+  requests survive most clients, and the ones that do leak a read receipt), so
+  the brand faces are named first and degrade to whatever is present.
+
+  Colours follow DESIGNGUIDELINES: navy #0A1626, cyan #58B0D9, amber #FF7A2F,
+  surface #F8F7F4. Dark mode is deliberately not fought — `color-scheme` lets a
+  client invert, and pinning light colours only makes some inboxes render dark
+  text on dark ground.
+#}
+<div style="margin:0;padding:0;background-color:#F8F7F4;color-scheme:light dark;supported-color-schemes:light dark;">
+  {# Preheader: the grey line a client shows after the subject. Hidden in the
+     body itself, otherwise it reads as a stray sentence at the top. #}
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;visibility:hidden;mso-hide:all;">
+    {{ preheader }}&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:#F8F7F4;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:560px;width:100%;background-color:#FFFFFF;border-radius:16px;border:1px solid rgba(10,22,38,0.10);">
+
+          <tr>
+            <td style="padding:28px 32px 8px 32px;">
+              <div style="font-family:'Space Grotesk','Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;letter-spacing:0.02em;color:#0A1626;">
+                Vimana
+              </div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#58B0D9;padding-top:2px;">
+                Sacred Logistics
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 0 32px;">
+              <h1 style="margin:0;font-family:'Space Grotesk','Segoe UI',Helvetica,Arial,sans-serif;font-size:22px;line-height:1.3;font-weight:700;color:#0A1626;">
+                {{ heading }}
+              </h1>
+            </td>
+          </tr>
+
+          {% for paragraph in body %}
+          <tr>
+            <td style="padding:14px 32px 0 32px;">
+              <p style="margin:0;font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#111827;">
+                {{ paragraph }}
+              </p>
+            </td>
+          </tr>
+          {% endfor %}
+
+          {% if code %}
+          <tr>
+            <td style="padding:22px 32px 0 32px;">
+              {# The code is the whole point of the letter it appears in, so it
+                 gets the departure-board treatment: mono, spaced, large enough
+                 to read off a phone held at arm's length. #}
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#0A1626;border-radius:12px;">
+                <tr>
+                  <td align="center" style="padding:18px 12px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:30px;font-weight:700;letter-spacing:0.24em;color:#FFFFFF;">
+                      {{ code }}
+                    </div>
+                    {% if code_label %}
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#58B0D9;padding-top:8px;">
+                      {{ code_label }}
+                    </div>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if facts %}
+          <tr>
+            <td style="padding:20px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#F8F7F4;border-radius:12px;">
+                {% for label, value in facts %}
+                <tr>
+                  <td style="padding:{% if loop.first %}14px{% else %}6px{% endif %} 16px {% if loop.last %}14px{% else %}0{% endif %} 16px;">
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#545C67;">{{ label }}</span><br>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:#0A1626;">{{ value }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if cta_url and cta_label %}
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              {# Padded anchor, not a <button>: clients drop form elements. The
+                 background is amber — runway lights, "look here", never alarm. #}
+              <a href="{{ cta_url }}"
+                 style="display:inline-block;background-color:#FF7A2F;color:#FFFFFF;text-decoration:none;font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;">
+                {{ cta_label }}
+              </a>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if note %}
+          <tr>
+            <td style="padding:22px 32px 0 32px;">
+              <p style="margin:0;font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#545C67;">
+                {{ note }}
+              </p>
+            </td>
+          </tr>
+          {% endif %}
+
+          <tr>
+            <td style="padding:26px 32px 28px 32px;">
+              <div style="border-top:1px solid rgba(10,22,38,0.10);padding-top:16px;font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#545C67;">
+                {{ footer }}
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>

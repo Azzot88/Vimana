@@ -14,6 +14,10 @@ class WaitlistEntry(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # T_UX.9 — the landing's interface language at the moment of signing up.
+    # Nullable on purpose: rows from before this column have no known language,
+    # and NULL says so where `'en'` would claim we asked.
+    locale: Mapped[str | None] = mapped_column(String(5), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

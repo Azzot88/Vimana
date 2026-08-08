@@ -1,0 +1,101 @@
+{
+  "footer": "Vimana · Sacred Logistics. This letter was sent automatically — you can reply to it, a person reads this mailbox.",
+  "verification_code": {
+    "subject": "Vimana · Confirmation code",
+    "preheader": "Your code is valid for 15 minutes",
+    "heading": "Confirmation code",
+    "body": [
+      "Enter this code to confirm that this address is yours."
+    ],
+    "code_label": "valid for 15 minutes",
+    "note": "If you didn't ask for this code, ignore this letter — nothing happens without it."
+  },
+  "recovery_code_used": {
+    "subject": "Vimana · A recovery code was used",
+    "preheader": "Someone signed in with a recovery code",
+    "heading": "A recovery code was used",
+    "body": [
+      "Someone has signed in to your account using a recovery code.",
+      "If it was you, there is nothing to do. If it wasn't, sign in and create a new set — the old codes stop working the moment you do."
+    ],
+    "facts_remaining": "codes left",
+    "note": "This letter is not a subscription: it is the one signal that says a code was spent, and you cannot turn it off."
+  },
+  "platform_copy_deleted": {
+    "subject": "Vimana · The key is yours alone now",
+    "preheader": "We deleted our copy of your key",
+    "heading": "The key is yours alone now",
+    "body": [
+      "We have deleted our copy of your account's key.",
+      "From now on only you can sign records and open the vaults of your deals. We cannot do it on your behalf.",
+      "If this wasn't you, sign in and restore our copy from your Identity Vault file — the «Access and keys» page in your profile."
+    ],
+    "note": "An irreversible change is recorded here rather than announced: if it wasn't you who made it, this letter is how you find out."
+  },
+  "archive_window_opened": {
+    "subject": "Vimana · Your identity has ended. What now",
+    "preheader": "One decision is left, and it has a date",
+    "heading": "Your identity has ended",
+    "body": [
+      "The key to your identity has been declared lost. You can no longer sign new records, but signing in still works, and everything signed earlier remains valid and verifiable.",
+      "One decision is left: whether to keep your public page.",
+      "If you do nothing, it stays open after the date below and the choice is fixed. To close it, sign in and choose that before the date — closing cannot be undone afterwards.",
+      "Nothing is deleted either way: the chain, the signatures and the deal events remain, because they belong half to your counterparties. Only the shop window closes."
+    ],
+    "facts_deadline": "choice fixes on",
+    "note": "If you also lose access to the account, there will be nobody to choose and the same thing happens: the page stays."
+  },
+  "waitlist_confirmation": {
+    "subject": "Vimana · You're on the list",
+    "preheader": "We'll send an invite when access opens",
+    "heading": "You're on the list",
+    "body": [
+      "Vimana is a peer-to-peer air delivery platform: urgent and valuable parcels travel with people already flying the route.",
+      "We're in closed beta right now. When we open access, we'll send an invite or a registration link to this address. Nothing else is needed from you."
+    ],
+    "note": "If you didn't sign up, simply ignore this message — nothing happens without you."
+  },
+  "waitlist_admin": {
+    "subject": "Vimana · New waitlist signup",
+    "preheader": "Someone asked for access",
+    "heading": "New waitlist signup",
+    "body": [
+      "Someone left their address on the landing page."
+    ],
+    "facts_email": "email",
+    "facts_name": "name",
+    "facts_source": "source",
+    "facts_when": "signed up",
+    "facts_total": "total on the list",
+    "facts_confirmation": "confirmation letter",
+    "confirmation_sent": "delivered",
+    "confirmation_failed": "NOT delivered — check SMTP",
+    "note": "Nobody sees this but you."
+  },
+  "deal_status": {
+    "subject": "Vimana · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "The status of your deal has changed."
+    ],
+    "labels": {
+      "matched": "Your deal is agreed",
+      "accepted": "The carrier accepted the terms",
+      "in_transit": "The parcel is on its way",
+      "delivered": "The parcel is delivered — awaiting confirmation",
+      "confirmed": "Delivery confirmed",
+      "closed": "The deal is complete"
+    },
+    "note": "You can turn deal notifications off in your profile."
+  },
+  "deadline_reminder": {
+    "subject": "Vimana · Delivery deadline is close",
+    "preheader": "Less than 24 hours left",
+    "heading": "The delivery deadline is close",
+    "body": [
+      "The delivery deadline for your deal falls within the next 24 hours."
+    ],
+    "note": "You can turn deal notifications off in your profile."
+  }
+}

@@ -1,5 +1,6 @@
 import smtplib
 import ssl
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, formatdate, make_msgid
 
@@ -34,7 +35,7 @@ def _connect() -> smtplib.SMTP:
     return smtp
 
 
-def send_email(to: str, subject: str, body: str) -> bool:
+def send_email(to: str, subject: str, body: str, html: str | None = None) -> bool:
     """Send a message. Returns True only if it was handed to the SMTP server.
 
     The boolean exists because the silent `return` below is otherwise
@@ -48,7 +49,21 @@ def send_email(to: str, subject: str, body: str) -> bool:
     """
     if not settings.SMTP_HOST or not settings.SMTP_USER or not to:
         return False
-    msg = MIMEText(body, "plain", "utf-8")
+    if html:
+        # `multipart/alternative`, plain part first: the order is the standard's
+        # way of saying "last is richest", and a client picks the last part it
+        # can render. Reversing it is how a modern inbox ends up showing raw
+        # markup.
+        #
+        # The text part is never dropped, even though every mainstream client
+        # renders HTML. Filters read it, some clients are configured to prefer
+        # it, and an HTML-only message loses reputation points before it is
+        # read by anyone (T_UX.9; the same lesson as the missing `Date` header).
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        msg.attach(MIMEText(html, "html", "utf-8"))
+    else:
+        msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     # `formataddr` RFC 2047-encodes the name — it contains an em dash, and raw
     # UTF-8 in a header gets messages dropped by some receivers. The envelope

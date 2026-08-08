@@ -16,6 +16,11 @@ class UserCreate(BaseModel):
     can_carry: bool = True
     can_send: bool = True
     active_mode: str = "sender"
+    # T_UX.9 — the interface language at the moment of signing up, so the first
+    # letter is already in the right one. An unknown tag falls back to `en` at
+    # render time rather than being rejected here: a stray locale must not cost
+    # somebody their registration.
+    locale: str = "en"
 
     @field_validator("email")
     @classmethod
@@ -92,6 +97,7 @@ class PasswordChangeBody(BaseModel):
 class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
+    locale: str | None = None
     # T3.18 — how much of this identity a stranger may see. Validated here
     # rather than trusted from the client: an unknown value would fall back to
     # `full` in `visible_to`, i.e. a typo in the UI would silently un-hide an

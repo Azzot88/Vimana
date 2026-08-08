@@ -9,6 +9,8 @@ export interface RegisterPayload {
   can_carry?: boolean
   can_send?: boolean
   active_mode?: 'sender' | 'carrier'
+  /** T_UX.9 — interface language at sign-up; every letter is written in it. */
+  locale?: string
 }
 
 export interface LoginPayload {

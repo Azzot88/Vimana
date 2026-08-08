@@ -80,7 +80,7 @@
 - `SECRET_KEY` (подпись JWT)
 - `MESSAGE_ENCRYPTION_KEY` (T1.21 at-rest AES-256-GCM для DealVault; **если пусто в prod — падение при первом encrypt/decrypt**)
 - `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_ENDPOINT` (вложения DealVault)
-- `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_HOST` / `SMTP_PORT` (email-уведомления)
+- `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_HOST` / `SMTP_PORT` (email-уведомления). На проде — Mailu, `mail.dealvault.club:465` (`D-MAIL-VIA-MAILU`). **В dev можно направить в Mailpit** (T_UX.9): `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, логин и пароль любые — тогда всё, что шлёт приложение, оседает в веб-ящике на `:8025` вместо настоящей почты. Поднимается профилем: `docker compose -f docker-compose.dev.yml --profile mail up -d mailpit`; обычный `up` его не трогает.
 - `REDIS_PASSWORD` (T_SEC.3; compose стартует Redis с `--requirepass`, без переменной `up` падает с явной ошибкой) + `REDIS_URL` (Celery и приложение; пароль вписывается в URL руками — `env_file` не раскрывает подстановки)
 - `CORS_ORIGINS` (T1.19 whitelist доменов)
 - `RATE_LIMIT_ENABLED` (T1.19 slowapi; в тестах = `false`)

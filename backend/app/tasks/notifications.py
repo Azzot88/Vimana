@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from app.worker import celery_app
 from app.core.database import SyncSessionLocal
 from app.core.email import send_email
+from app.core.email_templates import DEFAULT_LOCALE
 from app.core.telegram import send_telegram
 from app.core.whatsapp import send_whatsapp
 
@@ -16,32 +17,45 @@ from app.core.whatsapp import send_whatsapp
 # was needed. Found 2026-08-08 while adding the waitlist letters.
 logger = logging.getLogger(__name__)
 
-# Human-readable status labels (soft language per DESIGNGUIDELINES §9)
-_STATUS_LABELS = {
-    "matched":    "Ваша сделка согласована",
-    "accepted":   "Перевозчик принял условия",
-    "in_transit": "Груз в пути",
-    "delivered":  "Груз доставлен — ожидает подтверждения",
-    "confirmed":  "Доставка подтверждена",
-    "closed":     "Сделка завершена",
-}
+def _send(user_or_locale, to: str, kind: str, **ctx) -> bool:
+    """Render one letter in the recipient's language and hand it to SMTP.
+
+    Takes either a `User` (reads `.locale`) or a bare locale string, because
+    half these letters go to an account and half to an address that has none.
+
+    Called by: every task in this module that sends mail.
+    """
+    from app.core.email_templates import render
+
+    locale = getattr(user_or_locale, "locale", user_or_locale)
+    letter = render(kind, locale, **ctx)
+    return send_email(to, letter.subject, letter.text, letter.html)
 
 
-def _notify_user(user, text: str) -> None:
+def _notify_user(user, kind: str, **ctx) -> None:
+    """Fan one event out to whichever channels this user has turned on.
+
+    Only email is templated: Telegram and WhatsApp are plain-text transports,
+    and they take the text part of the same letter rather than a second string
+    that would drift away from it.
+
+    Called by: `notify_deal_status`, `check_upcoming_deadlines`.
+    """
+    from app.core.email_templates import render
+
+    letter = render(kind, getattr(user, "locale", None), **ctx)
     if user.notify_email and user.email:
-        send_email(user.email, "Vimana · Sacred Logistics", text)
+        send_email(user.email, letter.subject, letter.text, letter.html)
     if user.notify_telegram and user.telegram_chat_id:
-        send_telegram(user.telegram_chat_id, text)
+        send_telegram(user.telegram_chat_id, letter.text)
     if user.notify_whatsapp and user.whatsapp_number:
-        send_whatsapp(user.whatsapp_number, text)
+        send_whatsapp(user.whatsapp_number, letter.text)
 
 
 @celery_app.task(name="app.tasks.notifications.notify_deal_status")
 def notify_deal_status(deal_id: str, status: str) -> None:
     from app.models.deal import Deal
     from app.models.user import User
-
-    label = _STATUS_LABELS.get(status, status)
 
     with SyncSessionLocal() as db:
         deal = db.get(Deal, deal_id)
@@ -50,11 +64,10 @@ def notify_deal_status(deal_id: str, status: str) -> None:
         sender = db.get(User, str(deal.sender_id))
         carrier = db.get(User, str(deal.carrier_id))
 
-        msg = f"Vimana · {label}"
         if sender:
-            _notify_user(sender, msg)
+            _notify_user(sender, "deal_status", status=status)
         if carrier and carrier.id != (sender.id if sender else None):
-            _notify_user(carrier, msg)
+            _notify_user(carrier, "deal_status", status=status)
 
 
 @celery_app.task(name="app.tasks.notifications.check_upcoming_deadlines")
@@ -95,12 +108,11 @@ def check_upcoming_deadlines() -> None:
 
             sender = db.get(User, str(deal.sender_id))
             carrier = db.get(User, str(deal.carrier_id))
-            msg = "Vimana · Напоминаем — срок доставки истекает в ближайшие 24 часа."
 
             if sender:
-                _notify_user(sender, msg)
+                _notify_user(sender, "deadline_reminder")
             if carrier:
-                _notify_user(carrier, msg)
+                _notify_user(carrier, "deadline_reminder")
 
 
 @celery_app.task(name="app.tasks.notifications.send_verification_code")
@@ -128,13 +140,7 @@ def send_verification_code(user_id: str, code: str) -> None:
         recipient = target_email(user)
         if not recipient:
             return
-        send_email(
-            recipient,
-            "Vimana · Код подтверждения",
-            f"Ваш код подтверждения: {code}\n\n"
-            "Код действителен 15 минут. Если вы его не запрашивали — "
-            "просто проигнорируйте это письмо.",
-        )
+        _send(user, recipient, "verification_code", code=code)
 
 
 @celery_app.task(name="app.tasks.notifications.send_recovery_code_used")
@@ -156,14 +162,7 @@ def send_recovery_code_used(user_id: str, remaining: int) -> None:
         user = db.get(User, user_id)
         if not user or not user.email:
             return
-        send_email(
-            user.email,
-            "Vimana · Использован код восстановления",
-            "В аккаунт вошли по коду восстановления.\n\n"
-            f"Осталось неиспользованных кодов: {remaining}.\n\n"
-            "Если это были вы — ничего делать не нужно. Если нет — войдите "
-            "и создайте новый набор кодов: прежние перестанут работать.",
-        )
+        _send(user, user.email, "recovery_code_used", remaining=remaining)
 
 
 @celery_app.task(name="app.tasks.notifications.send_platform_copy_deleted")
@@ -182,16 +181,7 @@ def send_platform_copy_deleted(user_id: str) -> None:
         user = db.get(User, user_id)
         if not user or not user.email:
             return
-        send_email(
-            user.email,
-            "Vimana · Ключ теперь только у вас",
-            "Мы удалили свою копию ключа вашего аккаунта.\n\n"
-            "С этого момента подписывать записи и открывать сейфы ваших сделок "
-            "можете только вы — из файла Identity Vault или через расширение "
-            "Nostr. Мы не сможем сделать это за вас.\n\n"
-            "Если это были не вы — войдите и верните нашу копию из своего "
-            "файла Identity Vault: страница «Доступ и ключи» в профиле.",
-        )
+        _send(user, user.email, "platform_copy_deleted")
 
 
 @celery_app.task(name="app.tasks.notifications.send_archive_window_opened")
@@ -220,59 +210,7 @@ def send_archive_window_opened(user_id: str, ends_at_iso: str) -> None:
         user = db.get(User, user_id)
         if not user or not user.email:
             return
-        send_email(
-            user.email,
-            "Vimana · Личность завершена. Что теперь",
-            "Ключ вашей личности объявлен утраченным. Подписывать новые записи "
-            "вы больше не можете, но вход в аккаунт работает, а всё "
-            "подписанное раньше остаётся в силе и проверяется.\n\n"
-            "Осталось одно решение: сохранять ли вашу публичную страницу.\n\n"
-            f"Если ничего не делать, {ends_at_iso} она останется открытой, и "
-            "выбор зафиксируется. Если хотите её закрыть — войдите и выберите "
-            "это до указанной даты; отменить закрытие потом будет нельзя.\n\n"
-            "Ничего не удаляется ни в одном случае: цепь, подписи и события "
-            "сделок остаются, потому что они наполовину принадлежат вашим "
-            "контрагентам. Закрывается только витрина.\n\n"
-            "Если вы потеряете и доступ к аккаунту, выбирать будет некому и "
-            "сработает то же самое: страница останется.",
-        )
-
-
-_WAITLIST_CONFIRMATION_SUBJECT = "Vimana · Заявка принята / You're on the list"
-
-# Deliberately bilingual, and deliberately not localised properly. The landing
-# speaks six languages, the waitlist row records none of them — the request
-# body is frozen at `{email, name, source}` (T_UX.7) and widening it to carry a
-# locale is a bigger decision than this letter. Russian and English cover
-# everyone who has signed up so far and the corridor the product launches on.
-# Proper per-user localisation arrives with `users.locale` in T3.33.
-_WAITLIST_CONFIRMATION_BODY = """Спасибо — вы в списке.
-
-Vimana — платформа ручной авиадоставки: срочные и ценные грузы везут те, кто \
-уже летит нужным маршрутом.
-
-Сейчас мы в закрытой бете. Когда откроем доступ, пришлём на этот адрес \
-приглашение или ссылку на регистрацию. Больше от вас ничего не требуется — \
-ждать и следить за почтой.
-
-Если заявку оставляли не вы — просто не отвечайте на это письмо, без вашего \
-участия ничего не произойдёт.
-
-—
-
-Thanks — you're on the list.
-
-Vimana is a peer-to-peer air delivery platform: urgent and valuable parcels \
-travel with people already flying the route.
-
-We're in closed beta right now. When we open access, we'll send an invite or a \
-registration link to this address. Nothing else is needed from you.
-
-If you didn't sign up, simply ignore this message — nothing happens without \
-you.
-
-— Vimana · Sacred Logistics
-"""
+        _send(user, user.email, "archive_window_opened", deadline=ends_at_iso)
 
 
 def _send_waitlist_pair(db, entry) -> bool:
@@ -285,17 +223,20 @@ def _send_waitlist_pair(db, entry) -> bool:
 
     The owner's letter is sent regardless of the confirmation's outcome — if
     the visitor's address bounces, that is precisely the thing worth knowing.
+
+    Languages differ by recipient on purpose: the visitor is written to in the
+    language the landing was in when they signed up (`entry.locale`, NULL for
+    rows older than T_UX.9 → English), the owner in their own account language.
+
+    Called by: `send_waitlist_emails`, `send_pending_waitlist_confirmations`.
     """
     from app.core.superuser import USER_ZERO_EMAIL
+    from app.models.user import User
     from app.models.waitlist import WaitlistEntry
 
     delivered = False
     try:
-        delivered = send_email(
-            entry.email,
-            _WAITLIST_CONFIRMATION_SUBJECT,
-            _WAITLIST_CONFIRMATION_BODY,
-        )
+        delivered = _send(entry.locale, entry.email, "waitlist_confirmation")
     except Exception:
         logger.exception("waitlist confirmation failed for %s", entry.email)
 
@@ -303,25 +244,47 @@ def _send_waitlist_pair(db, entry) -> bool:
         entry.confirmation_sent_at = datetime.now(timezone.utc)
         db.commit()
 
-    owner_body = (
-        "Новая заявка на доступ.\n\n"
-        f"Почта: {entry.email}\n"
-        f"Имя: {entry.name or '—'}\n"
-        f"Источник: {entry.source or '—'}\n"
-        f"Оставлена: {entry.created_at}\n"
-        f"\nВсего заявок в списке: {db.execute(select(func.count(WaitlistEntry.id))).scalar()}\n"
-    )
-    owner_body += (
-        "\nПисьмо-подтверждение "
-        + ("отправлено." if delivered else "НЕ отправлено — проверить SMTP.")
-        + "\n"
-    )
+    owner = db.execute(
+        select(User).where(User.email == USER_ZERO_EMAIL)
+    ).scalar_one_or_none()
+    strings = _catalogue_for(owner)
     try:
-        send_email(USER_ZERO_EMAIL, "Vimana · Новая заявка в waitlist", owner_body)
+        _send(
+            owner or DEFAULT_LOCALE,
+            USER_ZERO_EMAIL,
+            "waitlist_admin",
+            email=entry.email,
+            name=entry.name or "—",
+            source=entry.source or "—",
+            when=entry.created_at,
+            total=db.execute(select(func.count(WaitlistEntry.id))).scalar(),
+            confirmation=(
+                strings["confirmation_sent"] if delivered
+                else strings["confirmation_failed"]
+            ),
+        )
     except Exception:
         logger.exception("waitlist owner notification failed for %s", entry.email)
 
     return delivered
+
+
+def _catalogue_for(user) -> dict:
+    """The `waitlist_admin` strings in the owner's language.
+
+    The delivered/failed verdict is a value inside a fact row, not a template
+    branch, so it has to be looked up before rendering rather than chosen by
+    the layout.
+
+    Called by: `_send_waitlist_pair`.
+    """
+    from app.core.email_templates import DEFAULT_LOCALE as _d
+    from app.core.email_templates import _catalogue
+
+    tag = (getattr(user, "locale", None) or _d).split("-")[0].lower()
+    cat = _catalogue(tag).get("waitlist_admin", {})
+    fallback = _catalogue(_d)["waitlist_admin"]
+    return {**fallback, **cat}
 
 
 @celery_app.task(name="app.tasks.notifications.send_waitlist_emails")

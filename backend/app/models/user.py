@@ -94,6 +94,12 @@ class User(Base):
     )
 
     # Notifications
+    # T_UX.9 — which of the six interface languages this person is written to
+    # in. Captured at registration from the UI language; editable in the
+    # profile. Default `en` rather than `ru`: it applies to accounts that
+    # predate the column and to any path that forgets to pass one, and English
+    # is the safer guess for the corridor the product launches on.
+    locale: Mapped[str] = mapped_column(String(5), default="en", server_default="en")
     notify_email: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     notify_telegram: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     notify_whatsapp: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

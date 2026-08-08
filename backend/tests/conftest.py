@@ -1004,6 +1004,21 @@ async def _ensure_vault_completeness(engine) -> None:
         )
 
 
+async def _ensure_locale_columns(engine) -> None:
+    """T_UX.9: users.locale + waitlist.locale. Mirrors migration 0043.
+    Idempotent — `create_all` builds them, this covers a pre-existing test DB."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "locale VARCHAR(5) NOT NULL DEFAULT 'en'"
+            )
+        )
+        await conn.execute(
+            text("ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS locale VARCHAR(5)")
+        )
+
+
 async def _ensure_waitlist_confirmation_column(engine) -> None:
     """T_UX.8: waitlist.confirmation_sent_at. Mirrors migration 0042.
     Idempotent — `create_all` builds it, this covers a pre-existing test DB."""
@@ -1145,6 +1160,7 @@ async def test_engine():
     await _ensure_recovery_codes(engine)
     await _ensure_hot_path_indexes(engine)
     await _ensure_waitlist_confirmation_column(engine)
+    await _ensure_locale_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

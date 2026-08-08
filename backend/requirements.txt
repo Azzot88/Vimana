@@ -59,6 +59,12 @@ Pillow==12.3.0
 # signature verification; we keep the ceremony state and the credential rows.
 webauthn==2.5.2
 
+# T_UX.9 — HTML email templates. One layout, six locales, strings in JSON;
+# Jinja2 renders both the layout and the individual catalogue strings (so a
+# translation can carry `{{ code }}` without `str.format` choking on a stray
+# brace). Already a transitive dependency of nothing here — added explicitly.
+Jinja2==3.1.4
+
 # Tests
 pytest==8.3.4
 pytest-asyncio==0.24.0
