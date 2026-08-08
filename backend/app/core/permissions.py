@@ -46,6 +46,10 @@ class Permission(str, enum.Enum):
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"
     ARBITER_ASSIGN = "arbiter:assign"
+    # T_UX.8 pt.2 — reading the waitlist. Its own name rather than a reuse of
+    # `USERS_MANAGE`: these are people who are *not* users yet, and a permission
+    # that reads "manage users" would quietly grant a second, different thing.
+    WAITLIST_READ = "waitlist:read"
 
 
 class Role(str, enum.Enum):

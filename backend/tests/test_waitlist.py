@@ -35,29 +35,65 @@ async def test_join_waitlist_invalid_email_returns_422(client):
     assert resp.status_code == 422
 
 
-async def test_list_waitlist_without_token_forbidden(client):
+async def _register(client, email: str) -> dict[str, str]:
+    from tests.conftest import SEED_PASSWORD
+
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": email[:8]},
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+async def _promote_to_superuser(session_maker, email: str):
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        user.role = "superuser"
+        await db.commit()
+
+
+async def test_list_waitlist_anonymous_is_unauthorized(client):
+    """T_UX.8 pt.2 — the shared `X-Admin-Token` is gone; this is a normal session now."""
     resp = await client.get("/api/waitlist")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
-async def test_list_waitlist_with_wrong_token_forbidden(client):
-    resp = await client.get("/api/waitlist", headers={"X-Admin-Token": "wrong-token"})
-    assert resp.status_code == 403
+async def test_list_waitlist_ordinary_user_forbidden(client):
+    from tests.conftest import unique_email
+
+    hdr = await _register(client, unique_email("wl-plain"))
+    resp = await client.get("/api/waitlist", headers=hdr)
+    assert resp.status_code == 403, "signing in must not be enough to read the list"
 
 
-async def test_list_waitlist_with_correct_token(client, monkeypatch):
-    monkeypatch.setenv("ADMIN_API_TOKEN", "test-admin-secret")
+async def test_list_waitlist_superuser_reads_it(client, session_maker):
+    from tests.conftest import unique_email
+
+    admin_email = unique_email("wl-adm")
+    hdr = await _register(client, admin_email)
+    await _promote_to_superuser(session_maker, admin_email)
+
     email = f"list-{uuidlib.uuid4().hex[:8]}@vimana.test"
     await client.post("/api/waitlist", json={"email": email})
 
-    resp = await client.get(
-        "/api/waitlist", headers={"X-Admin-Token": "test-admin-secret"}
-    )
+    resp = await client.get("/api/waitlist", headers=hdr)
     assert resp.status_code == 200
     body = resp.json()
-    emails = {e["email"] for e in body["items"]}
-    assert email in emails
+    assert email in {e["email"] for e in body["items"]}
     assert "next_cursor" in body
+
+
+async def test_list_waitlist_ignores_the_retired_admin_token(client):
+    """A leftover header must not be a second way in — that was the whole point."""
+    resp = await client.get("/api/waitlist", headers={"X-Admin-Token": "anything"})
+    assert resp.status_code == 401
 
 
 async def test_join_waitlist_queues_the_letters(client, monkeypatch):

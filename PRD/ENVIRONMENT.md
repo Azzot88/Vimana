@@ -90,7 +90,7 @@
 - `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` (T1.7 WhatsApp)
 
 **Admin (Фаза 1, T1.18):**
-- `ADMIN_API_TOKEN` (защита waitlist read endpoint)
+- ~~`ADMIN_API_TOKEN`~~ — **удалена в T_UX.8 pt.2 (2026-08-08).** Была единственным местом, где авторизация шла статическим заголовком мимо ролевой модели; `GET /api/waitlist` переведён на `require_perm(Permission.WAITLIST_READ)`, то есть на обычную сессию суперюзера. Переменную можно убрать из `.env`.
 - `ADMIN_TELEGRAM_CHAT_IDS` (comma-separated chat_ids для уведомлений о новом waitlist)
 
 **Фаза 2:**

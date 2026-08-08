@@ -1,11 +1,10 @@
 import logging
 import os
 import re
-import secrets
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -13,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.pagination import Page, clamp_limit, paginate_desc
+from app.core.permissions import Permission, require_perm
 from app.core.rate_limit import limiter
 from app.core.telegram import send_telegram
 from app.models.waitlist import WaitlistEntry
@@ -42,12 +42,6 @@ class WaitlistOut(BaseModel):
 def _admin_chat_ids() -> list[str]:
     raw = os.getenv("ADMIN_TELEGRAM_CHAT_IDS", "")
     return [c.strip() for c in raw.split(",") if c.strip()]
-
-
-async def require_admin_token(x_admin_token: str = Header(default="")):
-    expected = os.getenv("ADMIN_API_TOKEN", "")
-    if not expected or not secrets.compare_digest(x_admin_token, expected):
-        raise HTTPException(status_code=403, detail="Admin token required")
 
 
 @router.post("", response_model=WaitlistOut, status_code=201)
@@ -102,7 +96,11 @@ async def join_waitlist(request: Request, body: WaitlistCreate, db: AsyncSession
     return entry
 
 
-@router.get("", response_model=Page[WaitlistOut], dependencies=[Depends(require_admin_token)])
+@router.get(
+    "",
+    response_model=Page[WaitlistOut],
+    dependencies=[Depends(require_perm(Permission.WAITLIST_READ))],
+)
 async def list_waitlist(
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
