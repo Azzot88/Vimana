@@ -175,14 +175,29 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="pt-2 border-t border-navy/10 space-y-2">
-              {user?.email && (
-                <div>
-                  <p className="text-xs font-body font-medium text-navy/40 mb-0.5">
-                    {t('profile.email')}
-                  </p>
+              {/* T_UX.10 — shown even when there is none. It used to render
+                  only for accounts that had an address, so an account created
+                  by passkey or Nostr key — which by design has no email — saw
+                  no mention of email anywhere on this screen and no way to
+                  reach the place that adds one. The row is where someone looks
+                  for it; the link is where it is actually done, because adding
+                  an address needs step-up re-auth (T3.15) and that does not
+                  belong in a profile modal. */}
+              <div>
+                <p className="text-xs font-body font-medium text-navy/40 mb-0.5">
+                  {t('profile.email')}
+                </p>
+                {user?.email ? (
                   <MonoText className="text-sm text-navy break-all">{user.email}</MonoText>
-                </div>
-              )}
+                ) : (
+                  <Link
+                    to="/profile/keys"
+                    className="text-sm font-body text-link underline underline-offset-2"
+                  >
+                    {t('profile.emailAdd')}
+                  </Link>
+                )}
+              </div>
               {user?.phone && (
                 <div>
                   <p className="text-xs font-body font-medium text-navy/40 mb-0.5">

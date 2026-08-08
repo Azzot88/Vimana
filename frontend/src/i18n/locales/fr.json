@@ -402,7 +402,7 @@
     "shareAddress": {
       "button": "Partager mon adresse",
       "confirm": "Partager votre adresse enregistrée ? L'autre partie la verra.",
-      "notSet": "Renseignez d'abord votre adresse dans le profil.",
+      "notSet": "Ajoutez d'abord une adresse postale dans votre profil.",
       "error": "Impossible de partager l'adresse."
     },
     "addressCard": {
@@ -669,7 +669,7 @@
       "claimError": "Échec du passage."
     },
     "address": {
-      "title": "Adresse de réception",
+      "title": "Adresse postale",
       "privacyHint": "Privée — visible uniquement par vous jusqu'à ce que vous la partagiez dans un chat",
       "country": "Pays",
       "city": "Ville",
@@ -703,7 +703,9 @@
       "pending": "Active",
       "accepted": "Acceptée",
       "expired": "Expirée"
-    }
+    },
+    "editHint": "Les adresses se gèrent dans la section « Adresses postales ».",
+    "emailAdd": "non renseignée — ajouter"
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
@@ -853,5 +855,9 @@
     "loading": "Rendu…",
     "errorStatus": "Impossible de lire les circuits.",
     "errorTemplates": "Impossible de rendre les messages."
+  },
+  "address": {
+    "sectionTitle": "Adresses postales",
+    "empty": "Aucune adresse pour l'instant. Ajoutez-en une pour indiquer où livrer."
   }
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { changePassword, consumeRecoveryCode, login, me } from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
 import PasskeyAuthButton from '../components/PasskeyAuthButton'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { APP_VERSION } from '../version'
@@ -97,6 +98,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
+      {/* T_UX.10 — the switcher lives in `Navbar`, and `Navbar` lives in
+          `Layout`, which only wraps the protected routes. Sign-in and sign-up
+          are outside it, so a visitor arriving at a page in the wrong language
+          had no way to change it — on the two screens where an unfamiliar
+          language costs the most. */}
+      <div className="fixed top-3 right-3 z-nav">
+        <LanguageSwitcher />
+      </div>
       <div className="w-full max-w-sm">
         <h1 className="font-display font-bold text-4xl text-navy text-center mb-2">
           {t('auth.title')}

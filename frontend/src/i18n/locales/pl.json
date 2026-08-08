@@ -403,7 +403,7 @@
     "shareAddress": {
       "button": "Udostępnij adres",
       "confirm": "Udostępnić zapisany adres? Druga strona go zobaczy.",
-      "notSet": "Najpierw uzupełnij adres w profilu.",
+      "notSet": "Najpierw dodaj adres pocztowy w profilu.",
       "error": "Nie udało się udostępnić adresu."
     },
     "addressCard": {
@@ -670,7 +670,7 @@
       "claimError": "Nie udało się przejść."
     },
     "address": {
-      "title": "Adres odbioru",
+      "title": "Adres pocztowy",
       "privacyHint": "Prywatny — widoczny tylko dla Ciebie do momentu udostępnienia w czacie",
       "country": "Kraj",
       "city": "Miasto",
@@ -704,7 +704,9 @@
       "pending": "Aktywne",
       "accepted": "Zaakceptowane",
       "expired": "Wygasło"
-    }
+    },
+    "editHint": "Adresami zarządza się w sekcji „Adresy pocztowe”.",
+    "emailAdd": "brak — dodaj"
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FAZA 1",
@@ -854,5 +856,9 @@
     "loading": "Renderowanie…",
     "errorStatus": "Nie udało się odczytać obwodów.",
     "errorTemplates": "Nie udało się wyrenderować listów."
+  },
+  "address": {
+    "sectionTitle": "Adresy pocztowe",
+    "empty": "Brak adresów. Dodaj jeden, by było wiadomo, gdzie dostarczyć."
   }
 }

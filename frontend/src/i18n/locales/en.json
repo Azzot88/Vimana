@@ -324,7 +324,7 @@
     "delete": "Delete"
   },
   "address": {
-    "sectionTitle": "Receiving addresses",
+    "sectionTitle": "Mailing addresses",
     "add": "Add address",
     "empty": "No addresses yet. Add one so people know where to deliver.",
     "label": "Label",
@@ -448,7 +448,7 @@
     "shareAddress": {
       "button": "Share my address",
       "confirm": "Share your saved address? The other party will see it.",
-      "notSet": "Set your receiving address in Profile first.",
+      "notSet": "Add a mailing address in your profile first.",
       "error": "Failed to share address."
     },
     "addressCard": {
@@ -599,7 +599,7 @@
       "open": "Open access and keys"
     },
     "editTitle": "Edit profile",
-    "editHint": "Manage saved addresses in the Receiving addresses section.",
+    "editHint": "Addresses are managed in the Mailing addresses section.",
     "avatarUpload": "Upload photo",
     "avatarRemove": "Remove photo",
     "level": "Business Activity Level",
@@ -720,7 +720,7 @@
       "importError": "Import failed."
     },
     "address": {
-      "title": "Receiving address",
+      "title": "Mailing address",
       "privacyHint": "Private — visible only to you until you share it in a chat",
       "country": "Country",
       "city": "City",
@@ -754,7 +754,8 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "expired": "Expired"
-    }
+    },
+    "emailAdd": "not set — add"
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
