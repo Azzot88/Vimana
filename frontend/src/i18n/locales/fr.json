@@ -859,5 +859,14 @@
   "address": {
     "sectionTitle": "Adresses postales",
     "empty": "Aucune adresse pour l'instant. Ajoutez-en une pour indiquer où livrer."
+  },
+  "error": {
+    "title": "Quelque chose a cassé sur cet écran",
+    "body": "La page n'a pas pu s'afficher. Ce n'est pas de votre fait et rien n'est perdu — recharger suffit généralement. Si cela persiste, envoyez-nous le texte ci-dessous.",
+    "staleTitle": "Le site a été mis à jour",
+    "staleBody": "Cet onglet a été ouvert avant la mise à jour et demande des fichiers qui n'existent plus. Recharger récupère la nouvelle version.",
+    "reload": "Recharger",
+    "home": "Aller à l'accueil",
+    "details": "Détails techniques"
   }
 }

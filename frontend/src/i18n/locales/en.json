@@ -905,5 +905,14 @@
     "loading": "Rendering…",
     "errorStatus": "Could not read the circuits.",
     "errorTemplates": "Could not render the letters."
+  },
+  "error": {
+    "title": "Something broke on this screen",
+    "body": "The page failed to render. Nothing you did caused it and nothing was lost — reloading usually clears it. If it keeps happening, send us the text below.",
+    "staleTitle": "The site has been updated",
+    "staleBody": "This tab was opened before the update and is asking for files that no longer exist. A reload picks up the new version.",
+    "reload": "Reload",
+    "home": "To the home page",
+    "details": "Technical details"
   }
 }

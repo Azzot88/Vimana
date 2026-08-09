@@ -860,5 +860,14 @@
   "address": {
     "sectionTitle": "Adresy pocztowe",
     "empty": "Brak adresów. Dodaj jeden, by było wiadomo, gdzie dostarczyć."
+  },
+  "error": {
+    "title": "Coś się zepsuło na tym ekranie",
+    "body": "Strona się nie wyrenderowała. To nie Twoja wina i nic nie przepadło — zwykle pomaga przeładowanie. Jeśli się powtarza, prześlij nam poniższy tekst.",
+    "staleTitle": "Serwis został zaktualizowany",
+    "staleBody": "Ta karta była otwarta przed aktualizacją i prosi o pliki, których już nie ma. Przeładowanie pobierze nową wersję.",
+    "reload": "Przeładuj",
+    "home": "Na stronę główną",
+    "details": "Szczegóły techniczne"
   }
 }

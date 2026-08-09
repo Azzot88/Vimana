@@ -859,5 +859,14 @@
   "address": {
     "sectionTitle": "Direcciones postales",
     "empty": "Aún no hay direcciones. Añade una para indicar dónde entregar."
+  },
+  "error": {
+    "title": "Algo se ha roto en esta pantalla",
+    "body": "La página no se ha podido mostrar. No es cosa tuya y no se ha perdido nada — recargar suele bastar. Si se repite, envíanos el texto de abajo.",
+    "staleTitle": "El sitio se ha actualizado",
+    "staleBody": "Esta pestaña se abrió antes de la actualización y pide archivos que ya no existen. Al recargar se obtiene la nueva versión.",
+    "reload": "Recargar",
+    "home": "Ir al inicio",
+    "details": "Detalles técnicos"
   }
 }

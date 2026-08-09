@@ -4,6 +4,7 @@ import { useAuthStore } from './stores/auth'
 import AuthBootstrap from './components/AuthBootstrap'
 import Layout from './components/Layout'
 import MonoText from './components/MonoText'
+import RouteErrorBoundary from './components/ErrorBoundary'
 
 /**
  * T_UX.7 pt.2 — the three pages a stranger can reach are bundled eagerly; every
@@ -58,6 +59,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthBootstrap>
+        {/* T_UX.11 — inside the router (it keys off the path) and outside
+            `Suspense` (a chunk that fails to load rejects the suspended
+            promise, and only a boundary above it ever sees that). */}
+        <RouteErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -97,6 +102,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
+        </RouteErrorBoundary>
       </AuthBootstrap>
     </BrowserRouter>
   )
