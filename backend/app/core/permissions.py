@@ -54,6 +54,10 @@ class Permission(str, enum.Enum):
     # letters. Read-only by nature; the one action behind it (a test send) is
     # wired to the preview circuit and cannot reach a real inbox.
     EMAIL_MANAGE = "email:manage"
+    # T_UX.12 — re-pointing the bot's webhook. Its own name because it is not
+    # "manage users" by any reading, and because the action is infrastructural:
+    # whoever holds it decides where Telegram delivers every update.
+    TELEGRAM_MANAGE = "telegram:manage"
 
 
 class Role(str, enum.Enum):

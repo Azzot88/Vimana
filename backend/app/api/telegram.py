@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.config import settings
+from app.core.permissions import Permission, require_perm
 from app.core.database import get_db
 from app.core.telegram import set_webhook
 from app.models.user import User
@@ -70,8 +71,17 @@ async def telegram_webhook(
 @router.post("/set_webhook")
 async def register_webhook(
     webhook_url: str,
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(require_perm(Permission.TELEGRAM_MANAGE)),
 ) -> dict[str, Any]:
+    """Register the webhook. Superuser only.
+
+    It used to require nothing but a session. Any signed-in account could
+    re-point the bot at a server of their choosing — Telegram would then
+    deliver every update, including the `/start` tokens that link accounts, to
+    a stranger, and linking here would simply stop working. Tightened
+    2026-08-09 alongside the `secret_token` fix; the two together are what
+    makes the webhook trustworthy in either direction.
+    """
     if not settings.TELEGRAM_BOT_TOKEN:
         raise HTTPException(status_code=503, detail="Telegram bot not configured")
     result = set_webhook(webhook_url)

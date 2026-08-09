@@ -56,3 +56,71 @@ async def test_webhook_unknown_token_ignored(client):
 async def test_connect_returns_503_when_bot_not_configured(client, carrier_headers):
     resp = await client.get("/api/telegram/connect", headers=carrier_headers)
     assert resp.status_code == 503
+
+
+# ── T_UX.12 · the webhook must be trustworthy in both directions ─────────────
+
+
+def test_set_webhook_carries_the_secret(monkeypatch):
+    """Without it Telegram sends no header and every real update gets 403."""
+    import app.core.telegram as tg
+
+    sent = {}
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    monkeypatch.setattr(tg.settings, "TELEGRAM_BOT_TOKEN", "token")
+    monkeypatch.setattr(
+        tg.httpx,
+        "post",
+        lambda url, json, timeout: sent.update(url=url, json=json)
+        or type("R", (), {"json": lambda self: {"ok": True}})(),
+    )
+
+    tg.set_webhook("https://example.test/api/telegram/webhook")
+
+    assert sent["json"]["secret_token"] == "s3cret"
+    assert sent["json"]["allowed_updates"] == ["message"]
+
+
+def test_set_webhook_omits_the_secret_when_unset(monkeypatch):
+    import app.core.telegram as tg
+
+    sent = {}
+    monkeypatch.delenv("TELEGRAM_WEBHOOK_SECRET", raising=False)
+    monkeypatch.setattr(tg.settings, "TELEGRAM_BOT_TOKEN", "token")
+    monkeypatch.setattr(
+        tg.httpx,
+        "post",
+        lambda url, json, timeout: sent.update(json=json)
+        or type("R", (), {"json": lambda self: {"ok": True}})(),
+    )
+
+    tg.set_webhook("https://example.test/api/telegram/webhook")
+
+    assert "secret_token" not in sent["json"]
+
+
+async def test_set_webhook_endpoint_is_superuser_only(client, session_maker):
+    """An ordinary session could re-point the bot at a stranger's server."""
+    from tests.conftest import SEED_PASSWORD, unique_email
+
+    email = unique_email("tg-plain")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "tg"},
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    anon = await client.post(
+        "/api/telegram/set_webhook", params={"webhook_url": "https://evil.test/hook"}
+    )
+    assert anon.status_code == 401
+
+    resp = await client.post(
+        "/api/telegram/set_webhook",
+        params={"webhook_url": "https://evil.test/hook"},
+        headers=hdr,
+    )
+    assert resp.status_code == 403
