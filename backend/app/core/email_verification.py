@@ -64,8 +64,30 @@ def normalize_email(raw: str) -> str:
 
 
 def is_valid_email(raw: str) -> bool:
+    """Shape check for every address this system accepts.
+
+    ASCII is part of the shape, not a nicety. The regex below is happy with
+    `\x80@x.test` — nothing there is whitespace or `@` — and such an address
+    passed registration, email change, passkey and Nostr signup alike. It then
+    reached `smtplib.sendmail`, which encodes the envelope as ASCII and raises
+    `UnicodeEncodeError`: a 500 in the request that sent it, or a Celery task
+    dying every time anyone wrote to that account.
+
+    Internationalised addresses are real and this refusal is a limitation, not
+    a judgement — sending to one needs SMTPUTF8, which this stack does not
+    negotiate. Accepting an address we provably cannot write to is worse than
+    saying no at the door.
+
+    Found by the contract fuzzer through `POST /admin/email/test` (2026-08-09);
+    the first fix validated only that endpoint and missed the five other doors
+    into the same column.
+    """
     value = normalize_email(raw)
-    return bool(value) and len(value) <= 255 and _EMAIL_RE.match(value) is not None
+    if not value or len(value) > 255:
+        return False
+    if not value.isascii():
+        return False
+    return _EMAIL_RE.match(value) is not None
 
 
 def _aware(value: datetime | None) -> datetime | None:

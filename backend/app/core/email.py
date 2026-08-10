@@ -100,6 +100,13 @@ def send_email(
     wire = circuit or live()
     if not wire.configured or not to:
         return False
+    # Belt and braces behind `is_valid_email`. Addresses predating that check
+    # are already in the database, and one of them would otherwise take down
+    # whichever task tried to write to it — `sendmail` encodes the envelope as
+    # ASCII and raises. Returning False keeps the failure in the shape every
+    # caller already handles, instead of an exception from the transport.
+    if not to.isascii():
+        return False
     if html:
         # `multipart/alternative`, plain part first: the order is the standard's
         # way of saying "last is richest", and a client picks the last part it

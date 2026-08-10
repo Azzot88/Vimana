@@ -519,3 +519,23 @@ def test_unknown_account_locale_does_not_break_delivery(sync_test_session, mail_
 
     body = next(c[2] for c in sent if c[0] == email)
     assert "111222" in body
+
+
+def test_send_email_refuses_a_non_ascii_address(smtp_spy):
+    """`sendmail` encodes the envelope as ASCII and raises; False is the answer
+    every caller already knows how to handle."""
+    from app.core.email import send_email
+
+    opened = smtp_spy(465)
+    assert send_email("\x80@x.test", "s", "b") is False
+    assert opened == [], "nothing should reach the network"
+
+
+def test_is_valid_email_rejects_non_ascii():
+    """One door, six callers: registration, email change, passkey and Nostr
+    signup, and the mail console all went through this."""
+    from app.core.email_verification import is_valid_email
+
+    assert is_valid_email("someone@example.test") is True
+    assert is_valid_email("\x80@x.test") is False
+    assert is_valid_email("почта@пример.рф") is False

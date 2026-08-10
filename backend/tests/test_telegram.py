@@ -281,7 +281,10 @@ async def test_non_ascii_secret_header_is_refused_not_crashed(client, monkeypatc
     resp = await client.post(
         "/api/telegram/webhook",
         json={"update_id": 1},
-        headers={"X-Telegram-Bot-Api-Secret-Token": "ключ"},
+        # `\x80`, not Cyrillic: header values travel as latin-1, so a word the
+        # client cannot even encode never reaches the server and would test
+        # httpx rather than us. This is the exact byte the fuzzer produced.
+        headers={"X-Telegram-Bot-Api-Secret-Token": "\x80\x81"},
     )
     assert resp.status_code == 403
 
