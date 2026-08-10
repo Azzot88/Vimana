@@ -210,23 +210,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const { data: tokenData } = await login({ login: loginVal, password })
-      localStorage.setItem('token', tokenData.access_token)
-      const { data: user } = await me()
-      setAuth(user, tokenData.access_token)
-      navigate(returnUrl)
-    } catch {
-      setError(t('auth.errorCredentials'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-[100dvh] bg-ivory flex items-center justify-center px-4">
       <div className="w-full max-w-sm">

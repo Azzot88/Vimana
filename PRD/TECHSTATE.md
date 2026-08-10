@@ -369,6 +369,8 @@
 
 **Мёртвые i18n-ключи (в шести локалях каждый):** `profile.keypair.{claimTitle,claimWarn,claimHint,claimConfirm,importTitle,importError,exportTitle,exportHint,exportWarn,exportBadPassword,exportError,selfCustody,custodialHint,nip07Detected}` — остатки T3.12, где `claim`/`import`/`export` были удалены. Плюс `chat.shareAddress.notSet`, `trips.{departureDate,allowedCategories}`, `profile.{levelPhase,levelNote}`, `profile.identity.{declareLostConfirm,errorPassword}`.
 
+**`auth.errorCredentials` осиротел (T3.28 pt.4, 2026-08-10).** Его показывал `handleSubmit`, который заменён на `handleOneDoor`: 401 больше не трактуется как «неверный пароль», потому что сервер отвечает так же на незарегистрированный адрес. Ключ оставлен в шести локалях, а не удалён — если появится экран, честно различающий эти случаи (его сегодня нет и по соображениям перебора не должно быть), текст пригодится. Если через фазу он всё ещё здесь — удалять.
+
 **`auth.emailOrPhone` — отдельный случай, не удалять.** Ключ осиротел в T3.11, когда телефон убрали из auth. **ЭТАП 3.8 возвращает ровно это поле** (`T3.28`, форма из одного поля «почта или телефон»), поэтому ключ оставлен сознательно и должен быть дописан до полноценного набора при реализации T3.28 — там же проверить, что текст во всех шести локалях описывает новое поведение, а не старое.
 
 **Мелочь конфигурации:** `CORS_ORIGINS` объявлен в `Settings` (`backend/app/core/config.py`), но читается через `os.getenv` в `main.py` — поле в `Settings` не используется. При следующей правке CORS привести к одному способу.
