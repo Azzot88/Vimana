@@ -281,3 +281,51 @@ async def test_non_ascii_secret_header_is_refused_not_crashed(client, monkeypatc
         headers={"X-Telegram-Bot-Api-Secret-Token": "ключ"},
     )
     assert resp.status_code == 403
+
+
+# ── T_UX.13 · the switch is the connection ───────────────────────────────────
+
+
+async def test_disconnect_forgets_the_chat(client, session_maker):
+    """Off means unlinked, not muted — there is no "linked but silent" state."""
+    from sqlalchemy import select
+
+    from tests.conftest import SEED_PASSWORD, unique_email
+
+    email = unique_email("tg-off")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "off"},
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        user.telegram_chat_id = "424242"
+        user.notify_telegram = True
+        user.telegram_link_token = "leftover"
+        await db.commit()
+
+    resp = await client.post("/api/telegram/disconnect", headers=hdr)
+    assert resp.status_code == 200
+    assert resp.json() == {"connected": False}
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        assert user.telegram_chat_id is None
+        assert user.telegram_link_token is None
+        assert user.notify_telegram is False
+
+
+async def test_disconnect_is_idempotent(client, carrier_headers):
+    """«Make sure this is not connected» is the same request either way."""
+    first = await client.post("/api/telegram/disconnect", headers=carrier_headers)
+    second = await client.post("/api/telegram/disconnect", headers=carrier_headers)
+    assert first.status_code == second.status_code == 200
+
+
+async def test_disconnect_requires_a_session(client):
+    assert (await client.post("/api/telegram/disconnect")).status_code == 401

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
-import { me, updateMe, getTelegramLink } from '../api/auth'
+import { me, updateMe, getTelegramLink, disconnectTelegram } from '../api/auth'
 import { createInvite, listConnections, listMyInvites, type Connection, type MyInvite } from '../api/social'
 import { getIdentity, type ArchiveRecord } from '../api/trust'
+import AddEmailModal from '../components/AddEmailModal'
 import AdminPanelSection from '../components/AdminPanelSection'
 import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
@@ -33,6 +34,8 @@ export default function ProfilePage() {
   const [invites, setInvites] = useState<MyInvite[]>([])
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [creatingInvite, setCreatingInvite] = useState(false)
+  const [busyChannel, setBusyChannel] = useState<string | null>(null)
+  const [emailModal, setEmailModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   // T3.19 — the owner's own copy of their record. Read from the public endpoint
@@ -145,11 +148,48 @@ export default function ProfilePage() {
     } catch { /* silent — the radio snaps back on the next read */ }
   }
 
-  const handleConnectTelegram = async () => {
-    try {
-      const { data } = await getTelegramLink()
-      window.open(data.link, '_blank')
-    } catch { /* silent */ }
+  /**
+   * T_UX.13 — the switch *is* the connection (owner's decision 2026-08-09).
+   *
+   * Before this, a switch could be turned on for a channel that did not exist:
+   * "Telegram — on — not connected" was reachable and looked broken, and the
+   * connect button only appeared *after* enabling notifications to a chat that
+   * was not there. The order was backwards.
+   *
+   * Now there is no "linked but muted" state to be in. On starts connecting,
+   * off forgets the connection. `notify_telegram` is never written from here
+   * for the connect path — the webhook sets it when the link actually lands,
+   * so the switch tells the truth rather than an intention.
+   */
+  const handleChannelToggle = async (key: 'notify_email' | 'notify_telegram' | 'notify_whatsapp') => {
+    if (key === 'notify_telegram') {
+      if (user?.telegram_chat_id) {
+        setBusyChannel(key)
+        try {
+          await disconnectTelegram()
+          await refreshUser()
+        } catch { /* silent */ } finally { setBusyChannel(null) }
+        return
+      }
+      try {
+        const { data } = await getTelegramLink()
+        window.open(data.link, '_blank')
+      } catch { /* silent */ }
+      return
+    }
+
+    if (key === 'notify_email' && !user?.email) {
+      setEmailModal(true)
+      return
+    }
+
+    await handleToggle(key)
+  }
+
+  const refreshUser = async () => {
+    if (!token) return
+    const { data } = await me()
+    setAuth(data, token)
   }
 
   return (
@@ -433,13 +473,17 @@ export default function ProfilePage() {
               {t('profile.notifications')}
             </h2>
             {([
-              { key: 'notify_email' as const, label: t('profile.email'), sub: user?.email ?? '—' },
+              {
+                key: 'notify_email' as const,
+                label: t('profile.email'),
+                sub: user?.email ?? t('profile.emailWillAdd'),
+              },
               {
                 key: 'notify_telegram' as const,
                 label: t('profile.telegram'),
                 sub: user?.telegram_chat_id
                   ? t('profile.telegramConnected')
-                  : t('profile.telegramNotConnected'),
+                  : t('profile.telegramWillConnect'),
               },
               {
                 key: 'notify_whatsapp' as const,
@@ -453,8 +497,11 @@ export default function ProfilePage() {
                   <p className="text-xs font-mono text-navy/40">{sub}</p>
                 </div>
                 <button
-                  onClick={() => handleToggle(key)}
-                  className={`w-10 h-6 rounded-full transition-colors ${user?.[key] ? 'bg-cyan' : 'bg-navy/20'}`}
+                  onClick={() => handleChannelToggle(key)}
+                  disabled={busyChannel === key}
+                  aria-pressed={Boolean(user?.[key])}
+                  aria-label={label}
+                  className={`w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${user?.[key] ? 'bg-cyan' : 'bg-navy/20'}`}
                 >
                   <span
                     className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${user?.[key] ? 'translate-x-2' : '-translate-x-2'}`}
@@ -462,17 +509,19 @@ export default function ProfilePage() {
                 </button>
               </div>
             ))}
-            {user?.notify_telegram && !user?.telegram_chat_id && (
-              <button
-                onClick={handleConnectTelegram}
-                className="w-full text-sm font-body text-cyan border border-cyan/30 rounded-field py-2 hover:bg-cyan/5 transition-colors"
-              >
-                {t('profile.connectTelegram')}
-              </button>
-            )}
           </div>
         </div>
       </div>
+
+      {emailModal && (
+        <AddEmailModal
+          onClose={() => setEmailModal(false)}
+          onDone={async () => {
+            setEmailModal(false)
+            await refreshUser()
+          }}
+        />
+      )}
 
       {/* Admin panel full-width if user has access (arbiter/superuser) */}
       <AdminPanelSection />

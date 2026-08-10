@@ -739,9 +739,7 @@
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
     "telegramConnected": "connected",
-    "telegramNotConnected": "not connected",
     "whatsappNotSet": "not set",
-    "connectTelegram": "Connect Telegram →",
     "logout": "Sign out",
     "phoneSelectCountry": "Select…",
     "phoneSearchCountry": "Search country…",
@@ -755,7 +753,17 @@
       "accepted": "Accepted",
       "expired": "Expired"
     },
-    "emailAdd": "not set — add"
+    "emailAdd": "not set — add",
+    "telegramWillConnect": "off — turn on to connect",
+    "emailWillAdd": "off — turn on to add an address",
+    "addEmail": {
+      "title": "Add an email address",
+      "body": "Notifications about your deals will go here, and this is how access comes back if you lose your key.",
+      "label": "Address",
+      "submit": "Continue",
+      "stepUpBody": "Confirm it is you — the code then goes to the new address.",
+      "failed": "Could not add the address."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",

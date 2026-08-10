@@ -96,6 +96,10 @@ export const consumeRecoveryCode = (identifier: string, code: string) =>
 /** T3.15 — moving to a new address. Two steps on purpose: the change is only
  *  requested here, and lands when a code sent to the new mailbox comes back
  *  through `verifyEmail`. Until then the old address keeps working. */
+/** T_UX.13 — the Telegram switch turned off: forget the chat entirely. */
+export const disconnectTelegram = () =>
+  api.post<{ connected: boolean }>('/api/telegram/disconnect')
+
 export const changeEmail = (email: string, stepUpToken: string) =>
   api.post<{ status: string; pending_email: string }>(
     '/api/auth/email/change',

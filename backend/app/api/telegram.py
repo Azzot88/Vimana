@@ -100,6 +100,30 @@ async def telegram_webhook(
     return {"ok": "processed"}
 
 
+@router.post("/disconnect")
+async def disconnect(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    """T_UX.13 — turning the switch off unlinks, it does not just mute.
+
+    Owner's decision 2026-08-09: there is no "linked but silent" state. The
+    switch *is* the connection, so off means the chat is forgotten — otherwise
+    the profile keeps a chat id nobody can see and nobody asked to keep, and the
+    only way to get rid of it is a database query.
+
+    Idempotent: an account that was never linked gets the same answer, because
+    "make sure this is not connected" is the request either way.
+
+    Called by: ProfilePage's Telegram switch.
+    """
+    current_user.telegram_chat_id = None
+    current_user.telegram_link_token = None
+    current_user.notify_telegram = False
+    await db.commit()
+    return {"connected": False}
+
+
 @router.post("/set_webhook")
 async def register_webhook(
     webhook_url: str,

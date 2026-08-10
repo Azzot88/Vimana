@@ -688,9 +688,7 @@
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
     "telegramConnected": "connecté",
-    "telegramNotConnected": "non connecté",
     "whatsappNotSet": "non défini",
-    "connectTelegram": "Connecter Telegram →",
     "logout": "Déconnexion",
     "phoneSelectCountry": "Choisir…",
     "phoneSearchCountry": "Rechercher un pays…",
@@ -705,7 +703,17 @@
       "expired": "Expirée"
     },
     "editHint": "Les adresses se gèrent dans la section « Adresses postales ».",
-    "emailAdd": "non renseignée — ajouter"
+    "emailAdd": "non renseignée — ajouter",
+    "telegramWillConnect": "désactivé — activez pour connecter",
+    "emailWillAdd": "désactivé — activez pour ajouter une adresse",
+    "addEmail": {
+      "title": "Ajouter une adresse e-mail",
+      "body": "Les notifications de vos transactions arriveront ici, et c'est par cette adresse que l'accès revient si vous perdez votre clé.",
+      "label": "Adresse",
+      "submit": "Continuer",
+      "stepUpBody": "Confirmez que c'est bien vous — le code partira ensuite vers la nouvelle adresse.",
+      "failed": "Impossible d'ajouter l'adresse."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",

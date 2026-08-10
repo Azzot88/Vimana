@@ -740,9 +740,7 @@
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
     "telegramConnected": "подключён",
-    "telegramNotConnected": "не подключён",
     "whatsappNotSet": "не указан",
-    "connectTelegram": "Подключить Telegram →",
     "logout": "Выйти из аккаунта",
     "phoneSelectCountry": "Выбрать…",
     "phoneSearchCountry": "Поиск страны…",
@@ -756,7 +754,17 @@
       "accepted": "Принят",
       "expired": "Истёк"
     },
-    "emailAdd": "не указана — добавить"
+    "emailAdd": "не указана — добавить",
+    "telegramWillConnect": "выключен — включите, чтобы подключить",
+    "emailWillAdd": "выключен — включите, чтобы добавить адрес",
+    "addEmail": {
+      "title": "Добавить адрес почты",
+      "body": "Сюда будут приходить уведомления по сделкам, и через этот адрес возвращается доступ, если вы потеряете ключ.",
+      "label": "Адрес",
+      "submit": "Продолжить",
+      "stepUpBody": "Подтвердите, что это вы, — и код уйдёт на новый адрес.",
+      "failed": "Не удалось добавить адрес."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · ФАЗА 1",

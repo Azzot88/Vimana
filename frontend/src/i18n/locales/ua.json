@@ -702,9 +702,7 @@
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
     "telegramConnected": "підключено",
-    "telegramNotConnected": "не підключено",
     "whatsappNotSet": "не вказано",
-    "connectTelegram": "Підключити Telegram →",
     "logout": "Вийти з акаунту",
     "phoneSelectCountry": "Обрати…",
     "phoneSearchCountry": "Пошук країни…",
@@ -719,7 +717,17 @@
       "expired": "Закінчився"
     },
     "editHint": "Адреси керуються в розділі «Поштові адреси».",
-    "emailAdd": "не вказана — додати"
+    "emailAdd": "не вказана — додати",
+    "telegramWillConnect": "вимкнено — увімкніть, щоб підключити",
+    "emailWillAdd": "вимкнено — увімкніть, щоб додати адресу",
+    "addEmail": {
+      "title": "Додати адресу пошти",
+      "body": "Сюди надходитимуть сповіщення щодо угод, і через цю адресу повертається доступ, якщо ви втратите ключ.",
+      "label": "Адреса",
+      "submit": "Продовжити",
+      "stepUpBody": "Підтвердьте, що це ви, — і код піде на нову адресу.",
+      "failed": "Не вдалося додати адресу."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · ФАЗА 1",
