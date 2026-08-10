@@ -108,7 +108,8 @@
     },
     "noAccountHint": "¿Aún no tienes cuenta? Basta con escribir una dirección — se crea cuando el código coincide.",
     "enter": "Entrar / Crear cuenta",
-    "passwordLater": "Déjala vacía y te enviaremos un código. La contraseña se puede poner más tarde."
+    "passwordLater": "Déjala vacía y te enviaremos un código. La contraseña se puede poner más tarde.",
+    "phoneNotALogin": "Se entra por correo. El teléfono se puede añadir en el perfil como contacto: no tenemos con qué confirmar un número, así que no sirve para entrar."
   },
   "passkey": {
     "loginCta": "Entrar con una passkey",

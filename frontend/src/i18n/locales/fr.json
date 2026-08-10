@@ -108,7 +108,8 @@
     },
     "noAccountHint": "Pas encore de compte ? Il suffit d'entrer une adresse — il est créé quand le code est validé.",
     "enter": "Se connecter / Créer un compte",
-    "passwordLater": "Laissez vide et nous enverrons un code. Le mot de passe peut être défini plus tard."
+    "passwordLater": "Laissez vide et nous enverrons un code. Le mot de passe peut être défini plus tard.",
+    "phoneNotALogin": "La connexion se fait par e-mail. Le téléphone s'ajoute au profil comme contact : rien chez nous ne peut confirmer un numéro, il ne sert donc pas à se connecter."
   },
   "passkey": {
     "loginCta": "Se connecter avec une passkey",

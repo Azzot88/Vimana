@@ -108,7 +108,8 @@
     },
     "noAccountHint": "Nie masz konta? Wystarczy podać adres — powstanie, gdy kod się zgodzi.",
     "enter": "Zaloguj / Załóż konto",
-    "passwordLater": "Zostaw puste — wyślemy kod. Hasło można ustawić później."
+    "passwordLater": "Zostaw puste — wyślemy kod. Hasło można ustawić później.",
+    "phoneNotALogin": "Logowanie działa przez e-mail. Telefon można dodać w profilu jako kontakt — nie mamy czym potwierdzić numeru, więc nie jest sposobem logowania."
   },
   "passkey": {
     "loginCta": "Zaloguj się kluczem passkey",

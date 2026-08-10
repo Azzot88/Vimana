@@ -19,19 +19,19 @@ def test_email_identifier_offers_email_only():
     assert available_for("someone@example.test") == ["email"]
 
 
-def test_phone_never_offers_plain_telegram(monkeypatch):
-    """The correction this task is built around.
+def test_a_phone_can_be_proved_by_nothing(monkeypatch):
+    """Two rules meeting, and the result is deliberate.
 
-    Pressing Start proves control of a Telegram account, not of the number the
-    visitor typed a minute earlier. Offering it would let anyone type somebody
-    else's number and have the platform record it as proven.
+    Pressing Start proves control of a Telegram account, not of the number
+    typed a minute earlier — so `telegram` was never offered for a phone. And
+    since 2026-08-10 the channels that *did* reach a number are out of the plan
+    (`T3.30`). Nothing is left that can prove a phone, so nothing is offered.
     """
     monkeypatch.setenv("CHANNEL_TELEGRAM_ENABLED", "true")
     monkeypatch.setenv("CHANNEL_SMS_ENABLED", "true")
     from app.core.channels import available_for
 
-    assert "telegram" not in available_for(_number())
-    assert "sms" in available_for(_number())
+    assert available_for(_number()) == []
 
 
 def test_nothing_is_offered_for_nonsense():
@@ -42,12 +42,10 @@ def test_nothing_is_offered_for_nonsense():
 
 
 def test_a_disabled_channel_is_not_offered(monkeypatch):
-    monkeypatch.setenv("CHANNEL_SMS_ENABLED", "false")
-    monkeypatch.setenv("CHANNEL_WHATSAPP_ENABLED", "false")
-    monkeypatch.setenv("CHANNEL_TELEGRAM_GATEWAY_ENABLED", "false")
+    monkeypatch.setenv("CHANNEL_EMAIL_ENABLED", "false")
     from app.core.channels import available_for
 
-    assert available_for(_number()) == []
+    assert available_for("someone@example.test") == []
 
 
 def test_paid_channels_are_off_unless_asked_for(monkeypatch):

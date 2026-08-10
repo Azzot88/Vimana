@@ -79,6 +79,10 @@ export default function LoginPage() {
   const [stage, setStage] = useState<'identify' | 'code'>('identify')
   const [code, setCode] = useState('')
   const [sentVia, setSentVia] = useState('')
+  // Shape only, and deliberately loose: this decides whether to explain
+  // something, not whether to accept anything. The server owns validity.
+  const looksLikePhone =
+    !loginVal.includes('@') && /^[+\d][\d\s()-]{6,}$/.test(loginVal.trim())
 
   const handleRecovery = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -387,6 +391,19 @@ export default function LoginPage() {
             that works for everybody: an account that has never chosen a
             password still has an address, and a visitor with no account at all
             gets one from the same two steps. */}
+        {/* T3.30 (2026-08-10) — a phone can be proved by nothing now, so it
+            gets an explanation rather than a button that quietly does nothing.
+            The screen knowing this is the whole reason `/contact/channels`
+            answers about the identifier instead of the account. */}
+        {!recovering && stage === 'identify' && looksLikePhone && (
+          <p
+            data-testid="phone-not-a-login"
+            className="text-xs font-body text-muted border-t border-navy/10 pt-4"
+          >
+            {t('auth.phoneNotALogin')}
+          </p>
+        )}
+
         {/* Only when there is a real choice. An email address has exactly one
             channel, so a picker there would be a button that asks a question
             with one answer — the single submit above already sends it. */}

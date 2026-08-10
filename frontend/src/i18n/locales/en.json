@@ -122,7 +122,8 @@
     },
     "noAccountHint": "No account yet? Entering an address is all it takes — one is created when the code checks out.",
     "enter": "Sign in / Create account",
-    "passwordLater": "Leave it empty and we will send a code. A password can be set later."
+    "passwordLater": "Leave it empty and we will send a code. A password can be set later.",
+    "phoneNotALogin": "Signing in works by email. A phone can be added in your profile as a contact — nothing we run can confirm a number, so it is not a way in."
   },
   "passkey": {
     "loginCta": "Sign in with a passkey",
