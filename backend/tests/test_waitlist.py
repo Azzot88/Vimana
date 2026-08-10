@@ -166,9 +166,14 @@ async def test_mail_status_never_returns_a_password(client, session_maker):
     assert resp.status_code == 200
     body = resp.json()
     assert "live" in body and "preview" in body
-    assert "password" not in str(body).lower(), (
-        "a read-only console has no use for the credential"
-    )
+    # Checked per circuit rather than by scanning the whole payload for the
+    # word: the letter kinds now include `password_reset` and
+    # `password_changed`, and a substring test that fails on those is testing
+    # the vocabulary, not the secret.
+    for circuit in (body["live"], body["preview"]):
+        assert "password" not in circuit, (
+            "a read-only console has no use for the credential"
+        )
 
 
 async def test_templates_render_without_touching_smtp(client, session_maker, monkeypatch):
@@ -190,7 +195,12 @@ async def test_templates_render_without_touching_smtp(client, session_maker, mon
     assert resp.status_code == 200
     body = resp.json()
     assert body["locale"] == "fr"
-    assert len(body["letters"]) == 8
+    # Counted from the source of truth, not written down: the number grows
+    # every time a letter is added, and a literal here would make each new
+    # letter look like a bug in this test.
+    from app.core.email_templates import _LETTERS
+
+    assert len(body["letters"]) == len(_LETTERS)
     assert all(letter["subject"] and letter["html"] for letter in body["letters"])
 
 

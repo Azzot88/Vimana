@@ -112,7 +112,14 @@ async def test_patch_me_updates_display_name(client, sender_headers):
 
 
 async def test_patch_me_updates_phone(client, sender_headers):
-    new_phone = f"+1555{uuid.uuid4().hex[:7]}"
+    """T3.25 — the number must now be a real one.
+
+    The old value was `+1555` plus random hex, which parsed as nothing. That it
+    used to pass is the point: the column took any text, so two spellings of
+    one number were two numbers and `UNIQUE` could not tell.
+    """
+    suffix = f"{uuid.uuid4().int % 10**7:07d}"
+    new_phone = f"+1202{suffix}"
     resp = await client.patch(
         "/api/auth/me", headers=sender_headers, json={"phone": new_phone}
     )

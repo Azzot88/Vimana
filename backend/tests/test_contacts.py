@@ -223,15 +223,20 @@ async def test_running_out_of_attempts_burns_the_code(session_maker):
         code = await issue(db, "sms", value)
         await db.commit()
 
+    # The counter lives on the session, so a caller that lets the exception
+    # escape without committing throws the increment away — and the limit stops
+    # being a limit. The endpoints commit in their `except` branch (T3.11); the
+    # test has to do the same, and that this was easy to get wrong is now said
+    # out loud in `verify`'s docstring.
     for _ in range(MAX_ATTEMPTS - 1):
-        with pytest.raises(CodeInvalid):
-            async with session_maker() as db:
-                await verify(db, "sms", value, "000000")
-                await db.commit()
-    with pytest.raises(TooManyAttempts):
         async with session_maker() as db:
-            await verify(db, "sms", value, "000000")
+            with pytest.raises(CodeInvalid):
+                await verify(db, "sms", value, "000000")
             await db.commit()
+    async with session_maker() as db:
+        with pytest.raises(TooManyAttempts):
+            await verify(db, "sms", value, "000000")
+        await db.commit()
 
     with pytest.raises(NoCodeIssued):
         async with session_maker() as db:

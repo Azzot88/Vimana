@@ -26,6 +26,17 @@ os.environ.setdefault(
 os.environ.setdefault(
     "E2E_AUTO_VERIFY_EMAIL_DOMAINS", "vimana.test,e2e.vimana.local"
 )
+# T3.25 pt.2 — the suite must not be able to reach a real channel. Set with
+# `environ[...] =`, not `setdefault`: pytest runs inside the backend container
+# with the production `.env` loaded, so a default would lose to it. Without
+# this, a test that exercises the "scanner is down" path sends a genuine
+# Telegram alert to the owner — which it did, the day the bot was configured.
+# Same lesson as the fuzzer unsetting the production webhook: a suite that can
+# touch production is the code's problem, not the suite's.
+os.environ["ADMIN_TELEGRAM_CHAT_IDS"] = ""
+os.environ["TELEGRAM_BOT_TOKEN"] = ""
+os.environ["TELEGRAM_WEBHOOK_SECRET"] = ""
+
 # T3.12 pt.3 — the platform's trip-publishing key. Deterministic and valid
 # (below the secp256k1 order); tests that need it absent clear it themselves.
 os.environ.setdefault("PLATFORM_PUBLISH_NSEC", "1" * 64)

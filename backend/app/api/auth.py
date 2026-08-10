@@ -191,13 +191,15 @@ async def verify_email(
         await db.commit()  # persist the incremented attempt counter
         raise HTTPException(status_code=400, detail="Invalid code")
 
-    # T3.25 — a confirmation is exactly the event `user_contacts` records.
-    # Written before the commit so the row and the flag land together: a
-    # confirmed address whose contact row failed to save would be a quiet
-    # disagreement between two places that must always agree.
-    await upsert_contact(db, current_user, "email", current_user.email, verified=True)
-
     try:
+        # T3.25 — a confirmation is exactly the event `user_contacts` records.
+        # Inside the `try`, not before it: this SELECT autoflushes the pending
+        # address change, so when the address was claimed by someone else mid
+        # flight the IntegrityError now surfaces here rather than at the commit
+        # below — and it must be caught by the same handler either way.
+        await upsert_contact(
+            db, current_user, "email", current_user.email, verified=True
+        )
         await db.commit()
     except IntegrityError:
         # The pending address was claimed by someone else while this change was

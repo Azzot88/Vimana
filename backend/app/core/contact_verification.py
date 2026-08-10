@@ -166,6 +166,13 @@ async def verify(
     Returns the challenge so the caller can read `user_id`: at sign-in that is
     the only link between a code and an account, and looking it up separately
     would let the two disagree.
+
+    **The caller must commit after a `CodeInvalid`.** The attempt counter is
+    written to the session and then the exception is raised; a caller that lets
+    it escape without committing discards the increment, and the attempt limit
+    silently stops limiting anything. The T3.11 endpoints already commit in
+    their `except` branch — this note exists because the first test written
+    against this function got it wrong and passed five wrong codes in a row.
     """
     moment = now or datetime.now(timezone.utc)
     challenge = await _active(db, channel, value, purpose)
