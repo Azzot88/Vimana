@@ -12,10 +12,19 @@ describe('LoginPage', () => {
     expect(screen.getByPlaceholderText(/••••••••/)).toBeInTheDocument()
   })
 
-  it('shows Sign up link to /register', () => {
+  it('offers no separate sign-up — there is nothing to link to', () => {
+    // T3.28 pt.3 — one door. A link to a page that no longer exists was the
+    // last trace of the two-path shape.
     renderWithProviders(<LoginPage />)
-    const link = screen.getByRole('link', { name: /sign up/i })
-    expect(link).toHaveAttribute('href', '/register')
+    expect(screen.queryByRole('link', { name: /sign up/i })).not.toBeInTheDocument()
+  })
+
+  it('does not force a password — the label says it is optional', () => {
+    // The browser used to block submit with "Please fill out this field" on a
+    // field captioned «необязательно». A required attribute that contradicts
+    // its own label is worse than either alone.
+    renderWithProviders(<LoginPage />)
+    expect(screen.getByPlaceholderText(/••••••••/)).not.toBeRequired()
   })
 
   it('renders version badge', () => {
