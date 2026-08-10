@@ -21,6 +21,7 @@ DISPATCHED_BY_CODE = [
     "app.tasks.notifications.notify_deal_status",
     "app.tasks.notifications.send_waitlist_emails",
     "app.tasks.notifications.send_telegram_chat",
+    "app.tasks.notifications.send_channel_code",
     "app.tasks.notifications.send_password_reset",
     "app.tasks.notifications.send_password_changed",
     # Run by hand after deploy, not from the beat schedule — but it is still

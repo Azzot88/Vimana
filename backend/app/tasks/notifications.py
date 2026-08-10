@@ -420,6 +420,29 @@ def send_password_changed(user_id: str) -> None:
         _send(user, user.email, "password_changed")
 
 
+@celery_app.task(name="app.tasks.notifications.send_channel_code")
+def send_channel_code(channel: str, value: str, code: str, locale: str | None) -> None:
+    """T3.26 — deliver a confirmation code over whichever channel was chosen.
+
+    A task rather than an inline call for the reason every letter here is one:
+    the transports are synchronous, and the endpoint dispatching this is async.
+
+    The plaintext code travels as an argument. It exists nowhere else — the row
+    holds a bcrypt hash — and recomputing it here would let the message and the
+    database disagree about what was sent.
+
+    Called by: `api/auth.request_contact_code`.
+    """
+    from app.core.channels import deliver
+
+    result = deliver(channel, value, code, locale)
+    if not result.sent:
+        # Not an exception: a switched-off channel is an ordinary state. But
+        # not silence either — a code nobody received and nobody recorded is
+        # exactly the shape of failure this project spent a week removing.
+        logger.warning("channel %s did not deliver a code to %s", channel, value)
+
+
 @celery_app.task(name="app.tasks.notifications.send_telegram_chat")
 def send_telegram_chat(chat_id: str, kind: str, locale: str | None = None) -> None:
     """T_UX.12 pt.2 — answer someone who just talked to the bot.

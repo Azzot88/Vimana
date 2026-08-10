@@ -347,6 +347,141 @@ def _announce_password_change(user_id) -> None:
         logger.exception("could not queue password-changed notice for %s", user_id)
 
 
+class ChannelsBody(BaseModel):
+    identifier: str
+
+
+class ContactCodeBody(BaseModel):
+    identifier: str
+    channel: str
+
+
+class ContactConfirmBody(BaseModel):
+    identifier: str
+    code: str
+
+
+@router.post("/contact/channels", status_code=200)
+@limiter.limit("30/hour")
+async def contact_channels(request: Request, body: ChannelsBody):
+    """T3.26 — which channels can confirm this identifier, right now.
+
+    Answers about the *identifier*, not about any account: whether somebody
+    already registered with it is none of this endpoint's business, and saying
+    so would make a public form into a directory.
+
+    An email address gets `email`; a phone gets the channels that reach the
+    number itself. `telegram` is deliberately absent for a phone — pressing
+    Start proves control of a Telegram account, never of the number typed a
+    minute earlier (see `core/channels`).
+    """
+    from app.core.channels import available_for
+
+    return {"channels": available_for(body.identifier)}
+
+
+@router.post("/contact/request-code", status_code=202)
+@limiter.limit("10/hour")
+async def request_contact_code(
+    request: Request, body: ContactCodeBody, db: AsyncSession = Depends(get_db)
+):
+    """T3.26/T3.27 — send a code to a contact. 202 whatever happens.
+
+    The same answer for an unusable identifier, a channel that is switched off
+    and a transport that failed. A caller cannot learn from this endpoint which
+    numbers exist, which channels we pay for, or whether our SMS provider is
+    down — and none of those are things a stranger should be able to enumerate.
+
+    The cooldown is the one exception that answers differently (429), because
+    it is about the caller's own last request and telling them to wait is the
+    entire point of it.
+    """
+    from app.core.channels import available_for, deliver
+    from app.core.contact_verification import CooldownActive, issue
+    from app.core.contacts import normalize
+
+    channel = body.channel
+    if channel not in available_for(body.identifier):
+        return {"status": "accepted"}
+
+    value = normalize("email" if channel == "email" else "sms", body.identifier)
+    if value is None:
+        return {"status": "accepted"}
+
+    try:
+        code = await issue(db, channel, value)
+    except CooldownActive:
+        raise HTTPException(status_code=429, detail="A code was sent moments ago")
+    await db.commit()
+
+    from app.tasks.notifications import send_channel_code
+
+    try:
+        send_channel_code.delay(channel, value, code, None)
+    except Exception:
+        logger.exception("could not queue %s code for %s", channel, value)
+
+    return {"status": "accepted"}
+
+
+@router.post("/contact/confirm", status_code=200)
+@limiter.limit("20/hour")
+async def confirm_contact_code(
+    request: Request,
+    body: ContactConfirmBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.26 — a confirmed code turns the identifier into a confirmed contact.
+
+    Requires a session for now. Signing *in* with a code is `T3.28`; this is
+    the smaller half — an account proving it owns a second way to be reached —
+    and shipping it first keeps the code machinery exercised by something real
+    instead of by tests alone.
+
+    The attempt counter is committed on a wrong code. `contact_verification`
+    increments it on the session and raises; a handler that let the exception
+    escape without committing would throw the increment away and the limit
+    would stop limiting.
+    """
+    from app.core.channels import proves
+    from app.core.contact_verification import (
+        CodeExpired,
+        CodeInvalid,
+        NoCodeIssued,
+        TooManyAttempts,
+        verify,
+    )
+    from app.core.contacts import normalize, upsert_contact
+
+    for channel in ("email", "sms", "whatsapp", "telegram_gateway"):
+        value = normalize("email" if channel == "email" else "sms", body.identifier)
+        if value is None:
+            continue
+        try:
+            await verify(db, channel, value, body.code)
+        except NoCodeIssued:
+            continue
+        except CodeExpired:
+            await db.commit()
+            raise HTTPException(status_code=400, detail="Code expired")
+        except TooManyAttempts:
+            await db.commit()
+            raise HTTPException(
+                status_code=429, detail="Too many attempts — request a new code"
+            )
+        except CodeInvalid:
+            await db.commit()
+            raise HTTPException(status_code=400, detail="Invalid code")
+
+        contact_channel = proves(channel)
+        await upsert_contact(db, current_user, contact_channel, value, verified=True)
+        await db.commit()
+        return {"status": "confirmed", "channel": contact_channel}
+
+    raise HTTPException(status_code=400, detail="No code issued")
+
+
 class ForgotBody(BaseModel):
     identifier: str
 
