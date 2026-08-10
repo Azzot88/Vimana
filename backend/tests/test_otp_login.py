@@ -206,3 +206,93 @@ async def test_the_login_contact_is_marked_as_such(client, queued_codes, session
             )
         ).scalar_one()
         assert row.is_login is True and row.verified_at is not None
+
+
+# ── T3.28 pt.4 · one button: the password travels with the code ──────────────
+
+
+async def test_a_password_typed_at_the_door_lands_on_the_new_account(
+    client, queued_codes, session_maker
+):
+    """Nothing is stored before the code proves the address.
+
+    Creating the account on submit would let a stranger squat on somebody
+    else's address, and a typo would produce a second account instead of an
+    error. So the browser holds the password and it lands here.
+    """
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    email = unique_email("otp-pw")
+    await _request(client, email)
+    resp = await client.post(
+        "/api/auth/otp/verify",
+        json={
+            "identifier": email,
+            "code": queued_codes[-1][2],
+            "password": "chosen-at-the-door-1",
+        },
+    )
+    assert resp.status_code == 200
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        assert user.password_hash is not None
+
+    signed_in = await client.post(
+        "/api/auth/login", json={"login": email, "password": "chosen-at-the-door-1"}
+    )
+    assert signed_in.status_code == 200
+
+
+async def test_a_password_is_ignored_for_an_account_that_exists(
+    client, queued_codes
+):
+    """Otherwise whoever holds the mailbox performs a silent password reset,
+    with no screen saying that is what happened."""
+    email = unique_email("otp-pw-existing")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "existing"},
+    )
+
+    await _request(client, email)
+    await client.post(
+        "/api/auth/otp/verify",
+        json={
+            "identifier": email,
+            "code": queued_codes[-1][2],
+            "password": "not-my-password-1",
+        },
+    )
+
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+        )
+    ).status_code == 200, "the original password still works"
+    assert (
+        await client.post(
+            "/api/auth/login", json={"login": email, "password": "not-my-password-1"}
+        )
+    ).status_code == 401, "and the typed one never took effect"
+
+
+async def test_no_password_still_creates_a_passwordless_account(
+    client, queued_codes, session_maker
+):
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    email = unique_email("otp-nopw")
+    await _request(client, email)
+    await client.post(
+        "/api/auth/otp/verify",
+        json={"identifier": email, "code": queued_codes[-1][2]},
+    )
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        assert user.password_hash is None

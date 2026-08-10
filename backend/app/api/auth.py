@@ -362,6 +362,10 @@ class OtpRequestBody(BaseModel):
 class OtpVerifyBody(BaseModel):
     identifier: str
     code: str
+    # T3.28 pt.4 — a password typed on the sign-in screen, carried by the
+    # browser until the code proves the address. Applied **only** when the code
+    # creates the account; see `otp_verify`.
+    password: str | None = None
 
 
 @router.post("/otp/request", status_code=202)
@@ -475,6 +479,13 @@ async def otp_verify(
 
         if owner_id:
             user = await db.get(User, owner_id)
+            # A password typed alongside the code is **ignored** for an account
+            # that already exists. The code proves the address, and the address
+            # is the recovery channel — so honouring it here would be a silent
+            # password reset performed by whoever holds the mailbox, with no
+            # screen saying so. Resetting a password has its own flow that says
+            # what it is doing (`T_SEC.5`).
+            pass
         else:
             nsec_hex, npub_hex = generate_keypair()
             nsec_nonce, nsec_ct = encrypt_nsec(nsec_hex)
@@ -493,6 +504,13 @@ async def otp_verify(
             )
             if contact_channel == "email":
                 user.email_verified_at = datetime.now(timezone.utc)
+            # The account is born with the password the visitor typed a moment
+            # ago on the same screen, if they typed one. Nothing was stored
+            # before this point: an account created on an unproven address is
+            # how a stranger squats on somebody else's, and a typo would have
+            # produced a second account instead of an error.
+            if body.password:
+                user.password_hash = hash_password(body.password)
             db.add(user)
             await db.flush()
             contact = await upsert_contact(

@@ -93,10 +93,11 @@ export const otpRequest = (identifier: string, channel: string, locale: string) 
     locale,
   })
 
-export const otpVerify = (identifier: string, code: string) =>
+export const otpVerify = (identifier: string, code: string, password?: string) =>
   api.post<{ access_token: string; token_type: string }>('/api/auth/otp/verify', {
     identifier,
     code,
+    password: password || undefined,
   })
 
 /** T3.26 — which channels can honestly confirm this identifier. */

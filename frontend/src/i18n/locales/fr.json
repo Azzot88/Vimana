@@ -92,13 +92,13 @@
     "forgotPassword": "Mot de passe oublié ?",
     "resetSent": "Si cette adresse est enregistrée et confirmée, un lien de réinitialisation est en route. Il est valable une heure.",
     "codeHint": "Ou recevez un code à usage unique — sans mot de passe.",
-    "codeSent": "Code envoyé par {{channel}}. Valable 15 minutes.",
+    "codeSent": "Code envoyé par {{channel}}. Valable 15 minutes — si vous n'avez pas encore de compte, il sera créé.",
     "code": "Code",
     "codeSubmit": "Se connecter",
     "codeBack": "Autre méthode",
     "codeFailed": "Ce code est incorrect ou a expiré. Demandez-en un nouveau.",
     "codeCooldown": "Un code vient d'être envoyé. Patientez avant d'en redemander un.",
-    "passwordOptional": "Mot de passe",
+    "passwordOptional": "Mot de passe — facultatif",
     "channel": {
       "email": "E-mail",
       "sms": "SMS",
@@ -106,7 +106,9 @@
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
     },
-    "noAccountHint": "Pas encore de compte ? Il suffit d'entrer une adresse — il est créé quand le code est validé."
+    "noAccountHint": "Pas encore de compte ? Il suffit d'entrer une adresse — il est créé quand le code est validé.",
+    "enter": "Se connecter / Créer un compte",
+    "passwordLater": "Laissez vide et nous enverrons un code. Le mot de passe peut être défini plus tard."
   },
   "passkey": {
     "loginCta": "Se connecter avec une passkey",

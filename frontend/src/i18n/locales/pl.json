@@ -92,13 +92,13 @@
     "forgotPassword": "Nie pamiętasz hasła?",
     "resetSent": "Jeśli ten adres jest zarejestrowany i potwierdzony, link do resetu jest już w drodze. Jest ważny godzinę.",
     "codeHint": "Albo odbierz kod jednorazowy — hasło nie jest potrzebne.",
-    "codeSent": "Kod wysłany: {{channel}}. Ważny 15 minut.",
+    "codeSent": "Kod wysłany: {{channel}}. Ważny 15 minut — jeśli nie masz jeszcze konta, powstanie.",
     "code": "Kod",
     "codeSubmit": "Zaloguj",
     "codeBack": "Inny sposób",
     "codeFailed": "Kod jest błędny lub wygasł. Poproś o nowy.",
     "codeCooldown": "Kod właśnie wysłano. Poczekaj chwilę przed kolejną prośbą.",
-    "passwordOptional": "Hasło",
+    "passwordOptional": "Hasło — opcjonalnie",
     "channel": {
       "email": "E-mail",
       "sms": "SMS",
@@ -106,7 +106,9 @@
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
     },
-    "noAccountHint": "Nie masz konta? Wystarczy podać adres — powstanie, gdy kod się zgodzi."
+    "noAccountHint": "Nie masz konta? Wystarczy podać adres — powstanie, gdy kod się zgodzi.",
+    "enter": "Zaloguj / Załóż konto",
+    "passwordLater": "Zostaw puste — wyślemy kod. Hasło można ustawić później."
   },
   "passkey": {
     "loginCta": "Zaloguj się kluczem passkey",

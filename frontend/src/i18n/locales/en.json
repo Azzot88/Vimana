@@ -106,13 +106,13 @@
     "forgotPassword": "Forgot your password?",
     "resetSent": "If that address is registered and confirmed, a reset link is on its way. It is valid for one hour.",
     "codeHint": "Or get a one-time code — no password needed.",
-    "codeSent": "Code sent via {{channel}}. It is valid for 15 minutes.",
+    "codeSent": "Code sent to {{channel}}. Valid for 15 minutes — if you have no account yet, it will be created.",
     "code": "Code",
     "codeSubmit": "Sign in",
     "codeBack": "Use another way",
     "codeFailed": "That code is wrong or has expired. Ask for a new one.",
     "codeCooldown": "A code was just sent. Give it a moment before asking again.",
-    "passwordOptional": "Password",
+    "passwordOptional": "Password — optional",
     "channel": {
       "email": "Email",
       "sms": "SMS",
@@ -120,7 +120,9 @@
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
     },
-    "noAccountHint": "No account yet? Entering an address is all it takes — one is created when the code checks out."
+    "noAccountHint": "No account yet? Entering an address is all it takes — one is created when the code checks out.",
+    "enter": "Sign in / Create account",
+    "passwordLater": "Leave it empty and we will send a code. A password can be set later."
   },
   "passkey": {
     "loginCta": "Sign in with a passkey",

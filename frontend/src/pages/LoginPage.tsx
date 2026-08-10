@@ -159,7 +159,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await otpVerify(loginVal.trim(), code.trim())
+      const { data } = await otpVerify(loginVal.trim(), code.trim(), password)
       localStorage.setItem('token', data.access_token)
       const { data: user } = await me()
       setAuth(user, data.access_token)
@@ -172,6 +172,41 @@ export default function LoginPage() {
       setError(t('auth.codeFailed'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  /**
+   * T3.28 pt.4 — one button, two possible lives.
+   *
+   * With a password typed, this tries to sign in. A 401 does **not** mean
+   * "wrong password": the server answers the same for a wrong password and for
+   * an address nobody has registered, on purpose, and asking it to tell them
+   * apart would hand a stranger a way to enumerate accounts. So the fallback
+   * covers both readings at once — a code goes to the address, and whichever
+   * of the two situations it was, the code resolves it: it lets a forgetful
+   * owner in, or it creates the account and applies the password they just
+   * typed.
+   *
+   * With no password, it goes straight to the code. Same button, same two
+   * steps, and the screen never has to know which kind of person is using it.
+   */
+  const handleOneDoor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!password) {
+      await sendCode(channels[0] ?? 'email')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const { data: tokenData } = await login({ login: loginVal.trim(), password })
+      localStorage.setItem('token', tokenData.access_token)
+      const { data: user } = await me()
+      setAuth(user, tokenData.access_token)
+      navigate(returnUrl)
+    } catch {
+      setLoading(false)
+      await sendCode(channels[0] ?? 'email')
     }
   }
 
@@ -227,12 +262,13 @@ export default function LoginPage() {
             container and reuses the same field and the same button. */}
         <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
         <form
-          onSubmit={recovering ? handleRecovery : handleSubmit}
+          onSubmit={recovering ? handleRecovery : handleOneDoor}
           className="space-y-4"
         >
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
               {recovering ? t('auth.recoveryIdentifier') : t('auth.email')}
+              {!recovering && <span className="text-amber"> *</span>}
             </label>
             <input
               /* Not `type="email"` in recovery: the identifier may be an npub,
@@ -298,6 +334,9 @@ export default function LoginPage() {
                 className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan transition-colors"
                 placeholder="••••••••"
               />
+              <p className="text-[11px] font-body text-muted mt-1">
+                {t('auth.passwordLater')}
+              </p>
             </div>
           )}
           {error && (
@@ -312,7 +351,7 @@ export default function LoginPage() {
               ? t('auth.logging')
               : recovering
                 ? t('auth.recoverySubmit')
-                : t('auth.login')}
+                : t('auth.enter')}
           </button>
           <button
             type="button"
@@ -365,7 +404,10 @@ export default function LoginPage() {
             that works for everybody: an account that has never chosen a
             password still has an address, and a visitor with no account at all
             gets one from the same two steps. */}
-        {!recovering && stage === 'identify' && channels.length > 0 && (
+        {/* Only when there is a real choice. An email address has exactly one
+            channel, so a picker there would be a button that asks a question
+            with one answer — the single submit above already sends it. */}
+        {!recovering && stage === 'identify' && channels.length > 1 && (
           <div className="space-y-2 border-t border-navy/10 pt-4" data-testid="code-channels">
             <p className="text-xs font-body text-muted">{t('auth.codeHint')}</p>
             <div className="flex flex-wrap gap-2">
