@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -637,6 +637,24 @@ class MailTestBody(BaseModel):
     to: str
     kind: str = "verification_code"
     locale: str = "en"
+
+    @field_validator("to")
+    @classmethod
+    def address_shape(cls, v: str) -> str:
+        """Reject at the boundary rather than at the socket.
+
+        Without this an address with a non-ASCII character travelled all the
+        way into `smtplib.sendmail`, which encodes the envelope as ASCII and
+        raised `UnicodeEncodeError` — a 500 from a console whose whole promise
+        is that it cannot break anything. Found by the contract fuzzer
+        (T_TEST.4). Same validator the rest of the app uses, so "what counts as
+        an address" has one answer.
+        """
+        from app.core.email_verification import is_valid_email, normalize_email
+
+        if not is_valid_email(v):
+            raise ValueError("Invalid email address")
+        return normalize_email(v)
 
 
 def _circuit_out(circuit) -> MailCircuitOut:

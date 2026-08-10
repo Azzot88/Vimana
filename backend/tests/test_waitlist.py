@@ -231,3 +231,24 @@ async def test_test_send_refuses_when_preview_circuit_is_off(
         "/api/admin/email/test", headers=hdr, json={"to": "x@y.test"}
     )
     assert resp.status_code == 503
+
+
+async def test_mail_test_rejects_a_malformed_address(client, session_maker, monkeypatch):
+    """It reached `smtplib.sendmail` and died on ASCII encoding — a 500 from a
+    console whose whole promise is that it cannot break anything."""
+    from tests.conftest import unique_email
+
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_HOST", "mailpit")
+    monkeypatch.setattr(settings, "PREVIEW_SMTP_USER", "dev@vimana.test")
+
+    admin_email = unique_email("mail-bad")
+    hdr = await _register(client, admin_email)
+    await _promote_to_superuser(session_maker, admin_email)
+
+    for bad in ("не-адрес", "\u0080@x.test", "nope"):
+        resp = await client.post(
+            "/api/admin/email/test", headers=hdr, json={"to": bad}
+        )
+        assert resp.status_code == 422, bad

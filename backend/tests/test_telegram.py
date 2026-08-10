@@ -1,6 +1,21 @@
 import uuid as uuidlib
 
+import pytest
+
 from app.models.user import User
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_webhook_secret(monkeypatch):
+    """Pin the webhook secret instead of inheriting whatever the host has.
+
+    These tests passed for a month and broke the hour the bot was actually
+    configured: the handler skips the check when `TELEGRAM_WEBHOOK_SECRET` is
+    empty, and on a server where it is set every request without the header is
+    a 403. A test whose result depends on the machine's `.env` is not testing
+    the endpoint. The secret path gets its own two tests below.
+    """
+    monkeypatch.delenv("TELEGRAM_WEBHOOK_SECRET", raising=False)
 
 
 async def test_webhook_no_message_returns_ok(client):
@@ -53,9 +68,25 @@ async def test_webhook_unknown_token_ignored(client):
     assert resp.json() == {"ok": "processed"}
 
 
-async def test_connect_returns_503_when_bot_not_configured(client, carrier_headers):
+async def test_connect_returns_503_when_bot_not_configured(
+    client, carrier_headers, monkeypatch
+):
+    """Same lesson as the fixture above: state the precondition, do not inherit it."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_USERNAME", "")
     resp = await client.get("/api/telegram/connect", headers=carrier_headers)
     assert resp.status_code == 503
+
+
+async def test_connect_returns_a_link_when_configured(client, carrier_headers):
+    from app.core.config import settings
+
+    resp = await client.get("/api/telegram/connect", headers=carrier_headers)
+    if not settings.TELEGRAM_BOT_USERNAME:
+        pytest.skip("bot username not configured in this environment")
+    assert resp.status_code == 200
+    assert resp.json()["link"].startswith("https://t.me/")
 
 
 # ── T_UX.12 · the webhook must be trustworthy in both directions ─────────────
@@ -210,3 +241,43 @@ def test_chat_message_falls_back_like_a_letter():
 
     assert chat_message("hello", "kl") == chat_message("hello", "en")
     assert chat_message("hello", None) == chat_message("hello", "en")
+
+
+# ── T_UX.12 · the shared secret, both directions ─────────────────────────────
+
+
+async def test_webhook_accepts_the_matching_secret(client, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    resp = await client.post(
+        "/api/telegram/webhook",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "s3cret"},
+    )
+    assert resp.status_code == 200
+
+
+async def test_webhook_rejects_a_wrong_secret(client, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    resp = await client.post(
+        "/api/telegram/webhook",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "wrong"},
+    )
+    assert resp.status_code == 403
+
+
+async def test_webhook_rejects_a_missing_secret(client, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    resp = await client.post("/api/telegram/webhook", json={"update_id": 1})
+    assert resp.status_code == 403
+
+
+async def test_non_ascii_secret_header_is_refused_not_crashed(client, monkeypatch):
+    """It used to raise TypeError inside `compare_digest` and answer 500."""
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    resp = await client.post(
+        "/api/telegram/webhook",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "ключ"},
+    )
+    assert resp.status_code == 403

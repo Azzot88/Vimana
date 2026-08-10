@@ -47,7 +47,14 @@ async def telegram_webhook(
 ) -> dict[str, str]:
     expected = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
     if expected and not secrets.compare_digest(
-        x_telegram_bot_api_secret_token, expected
+        # Bytes, not str: `compare_digest` refuses non-ASCII `str` with a
+        # TypeError, so a header containing any such character produced a 500
+        # instead of a 403 — an unauthenticated caller could make the endpoint
+        # error at will. Found by the contract fuzzer (T_TEST.4) the first time
+        # the secret was actually set in an environment. Encoding makes the
+        # comparison total, and the timing property is unchanged.
+        x_telegram_bot_api_secret_token.encode("utf-8", "surrogatepass"),
+        expected.encode("utf-8", "surrogatepass"),
     ):
         raise HTTPException(status_code=403, detail="Invalid webhook secret")
 
