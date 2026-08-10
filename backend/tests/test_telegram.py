@@ -281,10 +281,12 @@ async def test_non_ascii_secret_header_is_refused_not_crashed(client, monkeypatc
     resp = await client.post(
         "/api/telegram/webhook",
         json={"update_id": 1},
-        # `\x80`, not Cyrillic: header values travel as latin-1, so a word the
-        # client cannot even encode never reaches the server and would test
-        # httpx rather than us. This is the exact byte the fuzzer produced.
-        headers={"X-Telegram-Bot-Api-Secret-Token": "\x80\x81"},
+        # Bytes, not str. httpx encodes str header values as ASCII and refuses
+        # anything else, so no non-ASCII value can be sent through it at all —
+        # the first two attempts here tested httpx, not us. ASGI carries header
+        # bytes and Starlette decodes them as latin-1, so the endpoint sees the
+        # same `"\x80\x81"` the fuzzer produced.
+        headers={b"X-Telegram-Bot-Api-Secret-Token": b"\x80\x81"},
     )
     assert resp.status_code == 403
 
