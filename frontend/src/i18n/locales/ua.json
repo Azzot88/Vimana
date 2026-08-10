@@ -247,7 +247,11 @@
     "recoveryFailed": "Не вдалося створити коди.",
     "recoveryFileHeader": "Коди відновлення Vimana. Кожен працює один раз. Зберігайте їх не на тому пристрої, з якого входите.",
     "passwordChangedSessions": "Пароль змінено. Інші пристрої вийшли з акаунта.",
-    "passwordFailed": "Не вдалося змінити пароль. Спробуйте ще раз."
+    "passwordFailed": "Не вдалося змінити пароль.",
+    "currentPasswordPlaceholder": "Поточний пароль",
+    "repeatPasswordPlaceholder": "Повторіть новий пароль",
+    "passwordsDiffer": "Паролі не збігаються.",
+    "currentPasswordWrong": "Це не поточний пароль."
   },
   "stepUp": {
     "confirm": "Підтвердити",

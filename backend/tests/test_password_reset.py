@@ -3,6 +3,8 @@ import uuid as uuidlib
 
 import pytest
 
+from tests.test_notifications import sync_test_session  # noqa: F401
+
 from tests.conftest import SEED_PASSWORD, unique_email
 
 
@@ -191,3 +193,84 @@ def test_reset_token_is_stored_hashed():
     token = issue_token(user)
     assert token not in (user.password_reset_hash or "")
     assert len(token) > 20
+
+
+# ── T_SEC.5 pt.2 · the owner is told ─────────────────────────────────────────
+
+
+@pytest.fixture
+def queued_changed(monkeypatch):
+    from app.tasks import notifications as notif
+
+    sent = []
+    monkeypatch.setattr(
+        notif.send_password_changed, "delay", lambda uid: sent.append(uid)
+    )
+    return sent
+
+
+async def test_reset_announces_the_change(client, queued_reset, queued_changed):
+    """Both doors are one event to the mailbox: the account now opens with
+    something else."""
+    email = unique_email("reset-notice")
+    await _register(client, email)
+    await client.post("/api/auth/password/forgot", json={"identifier": email})
+    _, token = queued_reset[0]
+
+    await client.post(
+        "/api/auth/password/reset",
+        json={"token": token, "new_password": "notice-pw-12345"},
+    )
+    assert len(queued_changed) == 1
+
+
+async def test_change_password_announces_the_change(client, queued_changed):
+    email = unique_email("change-notice")
+    await _register(client, email)
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    grant = await client.post(
+        "/api/auth/step-up/verify",
+        headers=hdr,
+        json={"scope": "change_password", "password": SEED_PASSWORD},
+    )
+    assert grant.status_code == 200
+
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**hdr, "X-Step-Up-Token": grant.json()["step_up_token"]},
+        json={"new_password": "changed-pw-12345"},
+    )
+    assert resp.status_code == 200
+    assert len(queued_changed) == 1
+
+
+async def test_password_changed_letter_reaches_an_unverified_address(
+    sync_test_session, monkeypatch
+):
+    """Unlike the reset link. That one grants access and needs a proven
+    mailbox; this only reports, and withholding it would tell the least
+    protected accounts the least."""
+    from app.models.user import User
+    from app.tasks.notifications import send_password_changed
+
+    sent = []
+    from app.tasks import notifications as notif
+
+    monkeypatch.setattr(
+        notif, "send_email", lambda to, s, b, html=None: sent.append(to) or True
+    )
+
+    email = f"unver-notice-{uuidlib.uuid4().hex[:8]}@notverified.test"
+    with sync_test_session() as db:
+        user = User(email=email, display_name="U", locale="en")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        user_id = str(user.id)
+
+    send_password_changed(user_id)
+    assert sent == [email]

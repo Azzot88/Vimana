@@ -113,5 +113,15 @@
     ],
     "cta": "Ustaw nowe hasło",
     "note": "Link jest ważny godzinę i działa raz. Zalogowanie się nowym hasłem kończy wszystkie inne sesje."
+  },
+  "password_changed": {
+    "subject": "Vimana · Hasło zostało zmienione",
+    "preheader": "Jeśli to nie Ty — działaj teraz",
+    "heading": "Hasło zostało zmienione",
+    "body": [
+      "Hasło do tego konta właśnie zmieniono, a wszystkie inne sesje zostały zakończone.",
+      "Jeśli to byłeś Ty — nic więcej nie trzeba. Jeśli nie — natychmiast zresetuj hasło: ten, kto to zrobił, ma jedyną aktywną sesję."
+    ],
+    "note": "Ten list nie jest subskrypcją i nie da się go wyłączyć: tylko on mówi, że konto zmieniło właściciela."
   }
 }

@@ -298,6 +298,8 @@ async def change_password(
     current_user.sessions_valid_from = datetime.now(timezone.utc)
     await db.commit()
 
+    _announce_password_change(current_user.id)
+
     # Minted *after* the cutoff is stored, so its `iat` is strictly later and it
     # survives the retirement it is part of. Reordering these two lines would
     # log the user out of the device that just secured the account.
@@ -307,6 +309,23 @@ async def change_password(
         "access_token": replacement,
         "token_type": "bearer",
     }
+
+
+def _announce_password_change(user_id) -> None:
+    """T_SEC.5 pt.2 — one announcement, both doors.
+
+    The profile and the reset link are one event to the mailbox: the account
+    now opens with something else. Dispatched from a helper rather than copied
+    into both handlers so a third door cannot be added silently.
+
+    Called by: `change_password`, `reset_password`.
+    """
+    from app.tasks.notifications import send_password_changed
+
+    try:
+        send_password_changed.delay(str(user_id))
+    except Exception:
+        logger.exception("could not queue password-changed notice for %s", user_id)
 
 
 class ForgotBody(BaseModel):
@@ -399,6 +418,8 @@ async def reset_password(
         candidate.password_hash = hash_password(body.new_password)
         candidate.sessions_valid_from = datetime.now(timezone.utc)
         await db.commit()
+
+        _announce_password_change(candidate.id)
         return {
             "status": "reset",
             "access_token": create_access_token(str(candidate.id)),

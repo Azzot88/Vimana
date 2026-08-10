@@ -391,6 +391,35 @@ def send_password_reset(user_id: str, token: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_password_changed")
+def send_password_changed(user_id: str) -> None:
+    """T_SEC.5 pt.2 — tell the owner their password just changed.
+
+    Sent from both paths that can change it — the profile and the reset link —
+    because from the mailbox's point of view they are the same event: the
+    account now opens with something else.
+
+    Not subject to `notify_email`, like the recovery-code letter: nobody
+    subscribes to being told their account changed hands, and if it was not
+    the owner who did it, this letter is the only thing that reaches them —
+    every session they held was just signed out.
+
+    Unverified addresses are written to here, unlike the reset link. The
+    difference is direction: the link *grants* access and so demands a proven
+    mailbox, while this only reports. Withholding it would mean the accounts
+    least protected are also the ones told least.
+
+    Called by: `api/auth.change_password`, `api/auth.reset_password`.
+    """
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        _send(user, user.email, "password_changed")
+
+
 @celery_app.task(name="app.tasks.notifications.send_telegram_chat")
 def send_telegram_chat(chat_id: str, kind: str, locale: str | None = None) -> None:
     """T_UX.12 pt.2 — answer someone who just talked to the bot.

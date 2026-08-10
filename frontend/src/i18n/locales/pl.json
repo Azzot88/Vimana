@@ -247,7 +247,11 @@
     "recoveryFailed": "Nie udało się wygenerować kodów.",
     "recoveryFileHeader": "Kody odzyskiwania Vimana. Każdy działa raz. Trzymaj je poza urządzeniem, z którego się logujesz.",
     "passwordChangedSessions": "Hasło zmienione. Inne urządzenia zostały wylogowane.",
-    "passwordFailed": "Nie udało się zmienić hasła. Spróbuj ponownie."
+    "passwordFailed": "Nie udało się zmienić hasła.",
+    "currentPasswordPlaceholder": "Obecne hasło",
+    "repeatPasswordPlaceholder": "Powtórz nowe hasło",
+    "passwordsDiffer": "Hasła nie są takie same.",
+    "currentPasswordWrong": "To nie jest obecne hasło."
   },
   "stepUp": {
     "confirm": "Potwierdź",

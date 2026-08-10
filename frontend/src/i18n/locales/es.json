@@ -247,7 +247,11 @@
     "recoveryFailed": "No se pudieron generar los códigos.",
     "recoveryFileHeader": "Códigos de recuperación de Vimana. Cada uno sirve una vez. Guárdalos fuera del dispositivo desde el que inicias sesión.",
     "passwordChangedSessions": "Contraseña cambiada. Se cerró la sesión en los demás dispositivos.",
-    "passwordFailed": "No se pudo cambiar la contraseña. Inténtalo de nuevo."
+    "passwordFailed": "No se ha podido cambiar la contraseña.",
+    "currentPasswordPlaceholder": "Contraseña actual",
+    "repeatPasswordPlaceholder": "Repite la nueva contraseña",
+    "passwordsDiffer": "Las contraseñas no coinciden.",
+    "currentPasswordWrong": "Esa no es la contraseña actual."
   },
   "stepUp": {
     "confirm": "Confirmar",

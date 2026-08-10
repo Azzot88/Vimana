@@ -247,7 +247,11 @@
     "recoveryFailed": "Impossible de générer les codes.",
     "recoveryFileHeader": "Codes de récupération Vimana. Chacun ne sert qu'une fois. Conservez-les ailleurs que sur l'appareil depuis lequel vous vous connectez.",
     "passwordChangedSessions": "Mot de passe modifié. Les autres appareils ont été déconnectés.",
-    "passwordFailed": "Impossible de changer le mot de passe. Réessayez."
+    "passwordFailed": "Impossible de changer le mot de passe.",
+    "currentPasswordPlaceholder": "Mot de passe actuel",
+    "repeatPasswordPlaceholder": "Répétez le nouveau mot de passe",
+    "passwordsDiffer": "Les deux mots de passe ne correspondent pas.",
+    "currentPasswordWrong": "Ce n'est pas le mot de passe actuel."
   },
   "stepUp": {
     "confirm": "Confirmer",

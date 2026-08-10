@@ -57,6 +57,7 @@ _LETTERS: dict[str, dict[str, Any]] = {
         "facts": ["email", "name", "source", "when", "total", "confirmation"]
     },
     "password_reset": {"cta": True},
+    "password_changed": {},
     "deal_status": {},
     "deadline_reminder": {},
 }
@@ -121,6 +122,7 @@ def sample_context(kind: str) -> dict[str, Any]:
         "password_reset": {
             "cta_url": "https://vimana.dealvault.club/reset-password?token=sample-token",
         },
+        "password_changed": {},
         "deal_status": {"status": "in_transit"},
         "deadline_reminder": {},
     }

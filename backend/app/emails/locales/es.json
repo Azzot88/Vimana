@@ -113,5 +113,15 @@
     ],
     "cta": "Elegir una contraseña nueva",
     "note": "El enlace es válido una hora y funciona una sola vez. Iniciar sesión con la nueva contraseña cierra todas las demás sesiones."
+  },
+  "password_changed": {
+    "subject": "Vimana · Tu contraseña ha cambiado",
+    "preheader": "Si no has sido tú, actúa ahora",
+    "heading": "Tu contraseña ha cambiado",
+    "body": [
+      "La contraseña de esta cuenta acaba de cambiar y se han cerrado todas las demás sesiones.",
+      "Si has sido tú, no hace falta nada más. Si no, restablece la contraseña de inmediato: quien lo hizo tiene la única sesión activa."
+    ],
+    "note": "Este mensaje no es una suscripción y no se puede desactivar: es la única señal de que la cuenta ha cambiado de manos."
   }
 }

@@ -10,6 +10,7 @@ import {
   type User,
 } from '../api/auth'
 import MonoText from './MonoText'
+import { stepUpVerify } from '../api/stepUp'
 import StepUpDialog from './StepUpDialog'
 
 /** T3.15 — the account's email address and password.
@@ -44,6 +45,11 @@ export default function SecuritySection({ user, onChanged }: Props) {
   const [confirming, setConfirming] = useState<Pending>(null)
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  // T_SEC.5 pt.2 — the two extra fields of a normal password form. Absent for
+  // an account that has no password to replace: there is no «current» to ask
+  // for, and the proof comes from a passkey or the key instead.
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [repeatPassword, setRepeatPassword] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -61,6 +67,8 @@ export default function SecuritySection({ user, onChanged }: Props) {
     setConfirming(null)
     setNewEmail('')
     setNewPassword('')
+    setCurrentPassword('')
+    setRepeatPassword('')
     setError('')
   }
 
@@ -84,6 +92,39 @@ export default function SecuritySection({ user, onChanged }: Props) {
     } catch (err: unknown) {
       setError(describe(err, t('security.emailFailed') as string))
     } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * T_SEC.5 pt.2 — one form instead of two screens.
+   *
+   * The ceremony has not changed: step-up still proves the current password
+   * before anything is written, and it is still the same endpoint. What
+   * changed is that the proof is collected in the form that needs it, next to
+   * the new password, the way every password form on earth asks. Splitting it
+   * across a second dialog made a routine change feel like an incident.
+   *
+   * Only for accounts that have a password. Without one there is nothing to
+   * type in «current», and the dialog — which offers a passkey or the key — is
+   * the right and only way to prove anything.
+   */
+  const submitPasswordWithCurrent = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const { data: grant } = await stepUpVerify({
+        scope: 'change_password',
+        password: currentPassword,
+      })
+      await submitPassword(grant.step_up_token)
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      setError(
+        status === 401
+          ? (t('security.currentPasswordWrong') as string)
+          : (t('security.passwordFailed') as string),
+      )
       setBusy(false)
     }
   }
@@ -299,15 +340,42 @@ export default function SecuritySection({ user, onChanged }: Props) {
 
         {pending === 'password' ? (
           <div className="space-y-2">
+            {user.has_password && (
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder={t('security.currentPasswordPlaceholder') as string}
+                autoFocus
+                autoComplete="current-password"
+                data-testid="security-current-password"
+                className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+              />
+            )}
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder={t('security.newPasswordPlaceholder') as string}
-              autoFocus
+              autoFocus={!user.has_password}
+              autoComplete="new-password"
               data-testid="security-new-password"
               className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
+            <input
+              type="password"
+              value={repeatPassword}
+              onChange={(e) => setRepeatPassword(e.target.value)}
+              placeholder={t('security.repeatPasswordPlaceholder') as string}
+              autoComplete="new-password"
+              data-testid="security-repeat-password"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            />
+            {repeatPassword && repeatPassword !== newPassword && (
+              <p className="text-xs font-body text-danger" data-testid="security-password-mismatch">
+                {t('security.passwordsDiffer')}
+              </p>
+            )}
             <p className="text-xs font-body text-navy/50">
               {t('security.passwordNotice')}
             </p>
@@ -320,8 +388,15 @@ export default function SecuritySection({ user, onChanged }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => setConfirming('password')}
-              disabled={busy || newPassword.length < 8}
+              onClick={() =>
+                user.has_password ? submitPasswordWithCurrent() : setConfirming('password')
+              }
+              disabled={
+                busy ||
+                newPassword.length < 8 ||
+                repeatPassword !== newPassword ||
+                (Boolean(user.has_password) && !currentPassword)
+              }
               data-testid="security-password-continue"
               className="w-full bg-navy text-ivory rounded-field py-2 text-sm font-body font-medium disabled:opacity-40"
             >

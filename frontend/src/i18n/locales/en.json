@@ -261,7 +261,11 @@
     "recoveryFailed": "Could not generate the codes.",
     "recoveryFileHeader": "Vimana recovery codes. Each works once. Keep them off the device you sign in from.",
     "passwordChangedSessions": "Password changed. Other devices have been signed out.",
-    "passwordFailed": "Could not change the password. Try again."
+    "passwordFailed": "Could not change the password.",
+    "currentPasswordPlaceholder": "Current password",
+    "repeatPasswordPlaceholder": "Repeat new password",
+    "passwordsDiffer": "The two passwords do not match.",
+    "currentPasswordWrong": "That is not the current password."
   },
   "stepUp": {
     "confirm": "Confirm",
