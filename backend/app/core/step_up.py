@@ -96,12 +96,23 @@ async def consume(user_id: str, scope: StepUpScope, presented: str | None) -> No
         raise HTTPException(status_code=401, detail="Confirmation is invalid or expired")
 
 
-def available_methods(user, credential_count: int) -> list[str]:
+def available_methods(
+    user, credential_count: int, *, has_login_contact: bool = False
+) -> list[str]:
     """Which proofs this account can actually produce.
 
     The UI needs this to avoid offering a password prompt to an account that
     has no password. Mirrors `core.webauthn.remaining_ways_in`, but returns the
     names rather than the count.
+
+    **`contact_code` exists because of T3.28.** An account created by a code
+    has no password, no passkey and no key of its own — so before this it
+    produced an empty list, step-up answered 409 "no way to confirm", and the
+    account could never set a password, change its address, or do anything
+    step-up guards. It could sign in forever and never gain a second way in.
+    Proving control of the confirmed contact again is the same kind of evidence
+    a recovery code already provides, and it is the only kind such an account
+    has.
     """
     methods: list[str] = []
     if user.password_hash:
@@ -110,4 +121,6 @@ def available_methods(user, credential_count: int) -> list[str]:
         methods.append("passkey")
     if user.key_self_custody and user.key_lost_at is None:
         methods.append("nostr")
+    if has_login_contact:
+        methods.append("contact_code")
     return methods

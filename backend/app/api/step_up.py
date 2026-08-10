@@ -18,6 +18,8 @@ import json
 import secrets
 import time
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import func, select
@@ -50,6 +52,8 @@ from app.core.webauthn import (
 from app.models.user import User
 from app.models.webauthn import WebAuthnCredential
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 _SCOPE = "step-up"
@@ -74,10 +78,11 @@ class OptionsOut(BaseModel):
 
 class VerifyIn(BaseModel):
     scope: StepUpScope
-    # Exactly one of the three.
+    # Exactly one of the four.
     password: str | None = None
     nostr: dict | None = None
     webauthn: dict | None = None
+    contact_code: str | None = None
 
     @field_validator("password")
     @classmethod
@@ -113,8 +118,13 @@ async def step_up_options(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.core.contacts import login_contact
+
     count = await _credential_count(db, current_user.id)
-    methods = available_methods(current_user, count)
+    contact = await login_contact(db, current_user.id)
+    methods = available_methods(
+        current_user, count, has_login_contact=contact is not None
+    )
     if not methods:
         # Every way in is gone — a retired identity with no password and no
         # device. Nothing to confirm with, and no point pretending otherwise.
@@ -122,6 +132,31 @@ async def step_up_options(
             status_code=409,
             detail="This account has no way to confirm an action",
         )
+
+    # A proof the account can give only if we actually send it something. The
+    # code goes out here, when the options are asked for, because that is the
+    # moment the person is looking at the dialog — issuing it lazily on the
+    # first wrong guess would mean the first guess is always wrong.
+    if "contact_code" in methods and contact is not None:
+        from app.core.contact_verification import CooldownActive, issue
+        from app.tasks.notifications import send_channel_code
+
+        try:
+            code = await issue(
+                db,
+                contact.channel,
+                contact.value,
+                purpose="stepup",
+                user_id=current_user.id,
+            )
+            await db.commit()
+            send_channel_code.delay(contact.channel, contact.value, code, current_user.locale)
+        except CooldownActive:
+            # A code from moments ago is still live and still valid. Sending a
+            # second would invalidate the one already in their hand.
+            pass
+        except Exception:
+            logger.exception("could not send step-up code to %s", contact.value)
 
     subject = _challenge_subject(current_user.id, body.scope)
     challenge = None
@@ -148,6 +183,41 @@ async def step_up_options(
     )
 
 
+async def _verify_contact_code(db, user, code: str) -> None:
+    """T3.28 pt.3 — the proof an account created by a code can actually give.
+
+    Deliberately its own `purpose`. A code that signs somebody in must not also
+    authorise deleting their key, and a code issued to confirm a second address
+    must not authorise anything at all — the three exist for different
+    questions and `contact_verification` scopes every lookup by purpose.
+
+    The attempt counter is committed before the refusal is raised. Letting the
+    exception escape uncommitted would discard the increment and the limit
+    would stop limiting.
+    """
+    from app.core.contact_verification import (
+        CodeExpired,
+        CodeInvalid,
+        NoCodeIssued,
+        TooManyAttempts,
+        verify,
+    )
+    from app.core.contacts import login_contact
+
+    contact = await login_contact(db, user.id)
+    if contact is None:
+        raise HTTPException(status_code=401, detail="Confirmation failed")
+    try:
+        await verify(db, contact.channel, contact.value, code, purpose="stepup")
+    except (NoCodeIssued, CodeExpired, CodeInvalid):
+        await db.commit()
+        raise HTTPException(status_code=401, detail="Confirmation failed")
+    except TooManyAttempts:
+        await db.commit()
+        raise HTTPException(status_code=429, detail="Too many attempts")
+    await db.commit()
+
+
 @router.post("/verify", response_model=VerifyOut)
 @limiter.limit("30/hour")
 async def step_up_verify(
@@ -156,7 +226,9 @@ async def step_up_verify(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    supplied = [p for p in (body.password, body.nostr, body.webauthn) if p]
+    supplied = [
+        p for p in (body.password, body.nostr, body.webauthn, body.contact_code) if p
+    ]
     if len(supplied) != 1:
         raise HTTPException(
             status_code=422, detail="Provide exactly one proof"
@@ -170,6 +242,9 @@ async def step_up_verify(
 
     elif body.nostr is not None:
         await _verify_nostr(current_user, body)
+
+    elif body.contact_code is not None:
+        await _verify_contact_code(db, current_user, body.contact_code)
 
     else:
         await _verify_webauthn(db, current_user, body)

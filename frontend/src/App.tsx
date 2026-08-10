@@ -17,7 +17,6 @@ import RouteErrorBoundary from './components/ErrorBoundary'
  */
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -69,7 +68,13 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          {/* T3.28 pt.3 — `/register` now goes to the same door. The
+              password form is gone from the product: one field, a code, and an
+              account either exists or comes into being. The route is kept
+              rather than deleted because links to it are three years of chat
+              history and two emails, and a dead link is a worse answer than a
+              redirect. */}
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/invite/:token" element={<AcceptInvitePage />} />
           <Route path="/join/deal/:token" element={<JoinDealPage />} />

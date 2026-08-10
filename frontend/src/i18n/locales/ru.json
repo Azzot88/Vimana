@@ -119,7 +119,8 @@
       "whatsapp": "WhatsApp",
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
-    }
+    },
+    "noAccountHint": "Нет аккаунта? Достаточно ввести адрес — он создастся, когда код сойдётся."
   },
   "passkey": {
     "loginCta": "Войти по passkey",

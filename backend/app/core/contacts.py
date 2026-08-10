@@ -89,6 +89,32 @@ async def contacts_of(db: AsyncSession, user_id: uuid.UUID) -> list[UserContact]
     return list(result.scalars().all())
 
 
+async def login_contact(db: AsyncSession, user_id: uuid.UUID) -> UserContact | None:
+    """The confirmed contact this account signs in with, if it has one.
+
+    Email first, then anything else: an address is the channel this product can
+    actually reach today, and picking deterministically matters because a code
+    is sent to whatever this returns — a function that answered differently on
+    two calls would send the code one place and check it against another.
+
+    Called by: `api/step_up.step_up_options`, `api/step_up._verify_contact_code`.
+    """
+    result = await db.execute(
+        select(UserContact)
+        .where(
+            UserContact.user_id == user_id,
+            UserContact.verified_at.isnot(None),
+            UserContact.is_login.is_(True),
+        )
+        .order_by(UserContact.channel)
+    )
+    contacts = list(result.scalars().all())
+    for contact in contacts:
+        if contact.channel == "email":
+            return contact
+    return contacts[0] if contacts else None
+
+
 async def _release_elsewhere(db: AsyncSession, user, channel: str, value: str) -> None:
     """Take a confirmed value away from any other account.
 

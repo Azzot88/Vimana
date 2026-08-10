@@ -105,7 +105,8 @@
       "whatsapp": "WhatsApp",
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
-    }
+    },
+    "noAccountHint": "Немає акаунта? Достатньо ввести адресу — він створиться, коли код зійдеться."
   },
   "passkey": {
     "loginCta": "Увійти за passkey",

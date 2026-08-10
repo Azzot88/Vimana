@@ -119,7 +119,8 @@
       "whatsapp": "WhatsApp",
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
-    }
+    },
+    "noAccountHint": "No account yet? Entering an address is all it takes — one is created when the code checks out."
   },
   "passkey": {
     "loginCta": "Sign in with a passkey",

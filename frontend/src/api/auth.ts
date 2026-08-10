@@ -1,18 +1,5 @@
 import api from './client'
 
-export interface RegisterPayload {
-  display_name: string
-  // T3.11 — email is the only identifier. `phone` left the auth path entirely;
-  // it stays a profile contact field (see `UserUpdate`).
-  email: string
-  password: string
-  can_carry?: boolean
-  can_send?: boolean
-  active_mode?: 'sender' | 'carrier'
-  /** T_UX.9 — interface language at sign-up; every letter is written in it. */
-  locale?: string
-}
-
 export interface LoginPayload {
   /** An email address. Field name kept for wire compatibility. */
   login: string
@@ -229,9 +216,6 @@ export interface UserUpdate {
   can_send?: boolean
   whatsapp_number?: string
 }
-
-export const register = (payload: RegisterPayload) =>
-  api.post<TokenResponse>('/api/auth/register', payload)
 
 export const login = (payload: LoginPayload) =>
   api.post<TokenResponse>('/api/auth/login', payload)

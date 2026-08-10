@@ -1000,3 +1000,100 @@ async def test_a_key_change_leaves_a_dated_trace(client):
     assert after.json()["npub"] == established["npub_hex"]
     assert after.json()["previous_npub"] == service_npub
     assert after.json()["identity_changed_at"] is not None
+
+
+# ── T3.28 pt.3 · the proof a code-made account can actually give ─────────────
+
+
+async def _otp_account(client, monkeypatch):
+    """An account with no password, no passkey and no key of its own — exactly
+    what the one-field door produces."""
+    from tests.conftest import unique_email
+
+    from app.tasks import notifications as notif
+
+    codes = []
+    monkeypatch.setattr(notif.send_channel_code, "delay", lambda *a: codes.append(a))
+
+    email = unique_email("stepup-otp")
+    await client.post(
+        "/api/auth/otp/request",
+        json={"identifier": email, "channel": "email", "locale": "en"},
+    )
+    resp = await client.post(
+        "/api/auth/otp/verify", json={"identifier": email, "code": codes[-1][2]}
+    )
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}, codes
+
+
+async def test_a_code_made_account_is_not_stranded(client, monkeypatch):
+    """Before this it produced an empty method list and a 409 — it could sign in
+    forever and never gain a second way in."""
+    hdr, _ = await _otp_account(client, monkeypatch)
+
+    resp = await client.post(
+        "/api/auth/step-up/options", headers=hdr, json={"scope": "change_password"}
+    )
+    assert resp.status_code == 200
+    assert "contact_code" in resp.json()["methods"]
+    assert "password" not in resp.json()["methods"], "it has none"
+
+
+async def test_asking_for_options_sends_the_code(client, monkeypatch):
+    hdr, codes = await _otp_account(client, monkeypatch)
+    before = len(codes)
+    await client.post(
+        "/api/auth/step-up/options", headers=hdr, json={"scope": "change_password"}
+    )
+    assert len(codes) == before + 1, "issued when the dialog opens, not on first guess"
+
+
+async def test_the_code_confirms_and_lets_a_first_password_be_set(
+    client, monkeypatch
+):
+    hdr, codes = await _otp_account(client, monkeypatch)
+    await client.post(
+        "/api/auth/step-up/options", headers=hdr, json={"scope": "change_password"}
+    )
+    code = codes[-1][2]
+
+    grant = await client.post(
+        "/api/auth/step-up/verify",
+        headers=hdr,
+        json={"scope": "change_password", "contact_code": code},
+    )
+    assert grant.status_code == 200
+
+    resp = await client.put(
+        "/api/auth/me/password",
+        headers={**hdr, "X-Step-Up-Token": grant.json()["step_up_token"]},
+        json={"new_password": "chosen-later-12345"},
+    )
+    assert resp.status_code == 200
+
+
+async def test_a_wrong_code_does_not_confirm(client, monkeypatch):
+    hdr, _ = await _otp_account(client, monkeypatch)
+    await client.post(
+        "/api/auth/step-up/options", headers=hdr, json={"scope": "change_password"}
+    )
+    resp = await client.post(
+        "/api/auth/step-up/verify",
+        headers=hdr,
+        json={"scope": "change_password", "contact_code": "000000"},
+    )
+    assert resp.status_code == 401
+
+
+async def test_a_login_code_cannot_be_spent_as_a_step_up_proof(client, monkeypatch):
+    """Three purposes, three questions. A code that signs somebody in must not
+    also authorise deleting their key."""
+    hdr, codes = await _otp_account(client, monkeypatch)
+    login_code = codes[-1][2]  # the one minted by `otp/request`
+
+    resp = await client.post(
+        "/api/auth/step-up/verify",
+        headers=hdr,
+        json={"scope": "change_password", "contact_code": login_code},
+    )
+    assert resp.status_code == 401

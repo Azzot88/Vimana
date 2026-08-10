@@ -434,11 +434,11 @@ export default function LoginPage() {
           </div>
         </div>
         <div className="flex items-center justify-between mt-4">
-          <p className="text-xs font-body text-navy/50">
-            {t('auth.noAccount')}{' '}
-            <Link to="/register" className="text-cyan hover:underline">
-              {t('auth.signUp')}
-            </Link>
+          <p className="text-xs font-body text-muted max-w-[16rem]">
+            {/* T3.28 pt.3 — there is no separate sign-up any more, so there is
+                nothing to link to. Saying so is better than a link that lands
+                on the page you are already reading. */}
+            {t('auth.noAccountHint')}
           </p>
           <span className="font-mono text-xs text-navy/20">v{APP_VERSION}</span>
         </div>

@@ -105,7 +105,8 @@
       "whatsapp": "WhatsApp",
       "telegram_gateway": "Telegram",
       "telegram": "Telegram"
-    }
+    },
+    "noAccountHint": "Nie masz konta? Wystarczy podać adres — powstanie, gdy kod się zgodzi."
   },
   "passkey": {
     "loginCta": "Zaloguj się kluczem passkey",
