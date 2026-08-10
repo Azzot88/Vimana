@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import CodeField from '../components/CodeField'
 import { me, requestEmailCode, verifyEmail } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
@@ -92,17 +93,11 @@ export default function VerifyEmailPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-              {t('verifyEmail.codeLabel')}
-            </label>
-            <input
+            <CodeField
+              id="verify-code"
+              label={t('verifyEmail.codeLabel') as string}
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              className="w-full border border-navy/20 rounded-field px-3 py-2 font-mono text-lg tracking-[0.4em] text-navy text-center focus:outline-none focus:border-cyan transition-colors"
-              placeholder="000000"
+              onChange={setCode}
             />
           </div>
 

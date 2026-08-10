@@ -14,6 +14,7 @@ import {
 } from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
 import PasskeyAuthButton from '../components/PasskeyAuthButton'
+import CodeField from '../components/CodeField'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
@@ -218,9 +219,16 @@ export default function LoginPage() {
             </p>
           </div>
         )}
+        {/* T3.28 pt.2 fix (2026-08-10) — one card, not three stacked blocks.
+            The code entry was rendered after this form and outside it: full
+            width, its own border, its own button, sitting on the page instead
+            of in the card. Next to the password field it read as a different
+            product. Everything that is "how you get in" now lives in one
+            container and reuses the same field and the same button. */}
+        <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
         <form
           onSubmit={recovering ? handleRecovery : handleSubmit}
-          className="bg-white rounded-card border border-navy/10 p-6 space-y-4"
+          className="space-y-4"
         >
           <div>
             <label className="block text-xs font-body font-medium text-navy/60 mb-1">
@@ -328,7 +336,7 @@ export default function LoginPage() {
             address — offering a reset to a passkey account is the same mistake
             in the other direction. */}
         {!recovering && canReset && (
-          <div className="mt-3">
+          <div>
             {resetSent ? (
               <p
                 data-testid="reset-sent"
@@ -358,7 +366,7 @@ export default function LoginPage() {
             password still has an address, and a visitor with no account at all
             gets one from the same two steps. */}
         {!recovering && stage === 'identify' && channels.length > 0 && (
-          <div className="mt-3 space-y-2" data-testid="code-channels">
+          <div className="space-y-2 border-t border-navy/10 pt-4" data-testid="code-channels">
             <p className="text-xs font-body text-muted">{t('auth.codeHint')}</p>
             <div className="flex flex-wrap gap-2">
               {channels.map((channel) => (
@@ -378,28 +386,21 @@ export default function LoginPage() {
         )}
 
         {!recovering && stage === 'code' && (
-          <form onSubmit={submitCode} className="mt-3 space-y-2" data-testid="code-form">
+          <form onSubmit={submitCode} className="space-y-3 border-t border-navy/10 pt-4" data-testid="code-form">
             <p className="text-xs font-body text-muted">
               {t('auth.codeSent', { channel: t(`auth.channel.${sentVia}`) })}
             </p>
-            <label className="sr-only" htmlFor="otp-code">
-              {t('auth.code')}
-            </label>
-            <input
+            <CodeField
               id="otp-code"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
+              onChange={setCode}
               autoFocus
               data-testid="otp-code-input"
-              className="w-full border border-navy/20 rounded-field px-3 py-2 text-center font-mono tracking-[0.3em] text-navy focus:outline-none focus:border-cyan"
             />
             <button
               type="submit"
               disabled={loading || code.trim().length < 6}
-              className="w-full bg-navy text-ivory font-display font-medium py-3 rounded-field text-sm disabled:opacity-50"
+              className="w-full bg-navy text-ivory font-display font-medium py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
             >
               {loading ? t('auth.logging') : t('auth.codeSubmit')}
             </button>
@@ -416,6 +417,8 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+
+        </div>
 
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">

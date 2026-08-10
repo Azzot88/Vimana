@@ -64,16 +64,22 @@
             <td style="padding:22px 32px 0 32px;">
               {# The code is the whole point of the letter it appears in, so it
                  gets the departure-board treatment: mono, spaced, large enough
-                 to read off a phone held at arm's length. #}
+                 to read off a phone held at arm's length — and deliberately
+                 shaped like the field the code is typed into
+                 (`components/CodeField.tsx`): same surface, same border, same
+                 mono face, same wide tracking. Someone copying six digits from
+                 here into the app should recognise the destination from the
+                 source — a dark plaque here and a white input there made them
+                 look for it twice. #}
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background-color:#0A1626;border-radius:12px;">
+                     style="background-color:#FFFFFF;border:1px solid rgba(10,22,38,0.20);border-radius:12px;">
                 <tr>
-                  <td align="center" style="padding:18px 12px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:30px;font-weight:700;letter-spacing:0.24em;color:#FFFFFF;">
+                  <td align="center" style="padding:16px 12px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:28px;font-weight:600;letter-spacing:0.4em;color:#0A1626;">
                       {{ code }}
                     </div>
                     {% if code_label %}
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#58B0D9;padding-top:8px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#545C67;padding-top:8px;">
                       {{ code_label }}
                     </div>
                     {% endif %}
