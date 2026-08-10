@@ -1,5 +1,11 @@
 """T3.11 — email confirmation by code.
 
+Since `T3.28 pt.3b` the account is created by `conftest.make_account` and the
+code is asked for explicitly: registration used to mint one on the way past,
+and that endpoint is gone. What is under test did not change — the exchange
+lives in `/auth/email/request-code` and `/auth/email/verify`, where it always
+did.
+
 Confirming gates nothing (owner's decision 2026-07-26) — the tests at the
 bottom pin that down, because a "verify your email" feature quietly growing
 back into a permission check is exactly the kind of drift nobody notices.
@@ -60,6 +66,16 @@ async def _register(client, email: str, **extra) -> dict:
         },
     )
     assert resp.status_code == 201, resp.text
+
+    # `POST /auth/register` minted and dispatched the confirmation code itself.
+    # `T3.28 pt.3b` removed the endpoint, and creation no longer does that —
+    # the code-based door proves the address before the account exists, so
+    # there is nothing left to confirm afterwards. Everything below this line
+    # still needs a code in flight, so it is asked for explicitly, from the
+    # endpoint that always owned the behaviour.
+    headers = await _headers(client, email)
+    asked = await client.post("/api/auth/email/request-code", headers=headers)
+    assert asked.status_code == 202, asked.text
     return resp.json()
 
 
@@ -80,7 +96,7 @@ async def _fetch(session_maker, email: str) -> User:
 # ── registration → code issued ───────────────────────────────────────────────
 
 
-async def test_register_leaves_email_unverified(client, fixed_code, captured_codes):
+async def test_a_new_account_starts_unverified(client, fixed_code, captured_codes):
     email = gated_email()
     await _register(client, email)
     headers = await _headers(client, email)
@@ -90,7 +106,10 @@ async def test_register_leaves_email_unverified(client, fixed_code, captured_cod
     assert me.json()["email_verified"] is False
 
 
-async def test_register_dispatches_code_to_celery(client, fixed_code, captured_codes):
+async def test_requesting_a_code_dispatches_it(client, fixed_code, captured_codes):
+    """Renamed in `T3.28 pt.3b`: registration used to do this and no longer
+    exists. The behaviour under test — asking for a code hands one to Celery —
+    is unchanged and still the product's."""
     email = gated_email()
     await _register(client, email)
     assert len(captured_codes) == 1
@@ -232,7 +251,7 @@ async def test_verify_is_idempotent(client, fixed_code, captured_codes):
 
 async def test_request_code_cooldown(client, fixed_code, captured_codes):
     email = gated_email()
-    await _register(client, email)  # registration already sent one
+    await _register(client, email)  # a code went out a moment ago
     headers = await _headers(client, email)
 
     resp = await client.post("/api/auth/email/request-code", headers=headers)
