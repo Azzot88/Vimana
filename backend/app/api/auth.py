@@ -76,6 +76,33 @@ router = APIRouter()
 # One constructor, one shape, and no door that skips the proof.
 
 
+def _dispatch_code(user: User) -> None:
+    """Mint a code and hand it to Celery. Caller commits.
+
+    The plaintext travels through the broker because it exists nowhere else —
+    the column holds only a bcrypt hash. It is single-use and expires in
+    `CODE_TTL`.
+
+    Survived the removal of `POST /register` in `T3.28 pt.3b` by accident: it
+    lived inside the same span of lines and went out with it, taking email
+    confirmation, Nostr signup and passkey signup down with it. Restored from
+    git. The lesson is in the CHANGELOG — a range cut by "from here to the next
+    route" does not know what is in the middle.
+
+    Called by: `request_email_code`, `change_email`, `api/nostr_auth.signup`,
+    `api/passkey.signup_verify`.
+    """
+    code = issue_code(user)
+    from app.tasks.notifications import send_verification_code
+
+    try:
+        send_verification_code.delay(str(user.id), code)
+    except Exception:
+        # Broker unreachable in dev — the code is still stamped on the user and
+        # can be re-requested once the cooldown passes.
+        pass
+
+
 @router.post("/email/request-code", status_code=202)
 @limiter.limit("5/hour")
 async def request_email_code(

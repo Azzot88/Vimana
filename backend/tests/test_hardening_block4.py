@@ -1,7 +1,6 @@
 """T1.19 block 4: global exception handler, logging, request_id."""
 import logging
 import uuid
-from tests.conftest import make_account
 
 
 def uuid_hex() -> str:
@@ -30,12 +29,17 @@ async def test_http_exception_response_includes_request_id(client):
 
 
 async def test_validation_error_response_includes_request_id(client):
-    # Password < 8 chars triggers Pydantic field_validator → 422 with list-shaped detail
-    resp = await make_account({
-            "email": f"val-{uuid_hex()}@vimana.test",
-            "password": "short",
-            "display_name": "V",
-        },
+    """A Pydantic field_validator → 422 with list-shaped detail and a request id.
+
+    Aimed at the password reset since `T3.28 pt.3b` removed registration. The
+    endpoint is incidental — what is under test is the shape of the error the
+    handler produces — but it has to be an endpoint that still exists, and one
+    whose 422 comes from a validator rather than a hand-raised `HTTPException`
+    (those carry a string detail, not a list).
+    """
+    resp = await client.post(
+        "/api/auth/password/reset",
+        json={"token": "irrelevant-the-validator-runs-first", "new_password": "short"},
     )
     assert resp.status_code == 422
     body = resp.json()

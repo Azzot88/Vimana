@@ -1309,6 +1309,7 @@ async def make_account(payload: dict) -> _MadeAccount:
             {
                 "id": str(user.id),
                 "email": user.email,
+                "phone": user.phone,
                 "display_name": user.display_name,
                 "role": user.role,
                 "active_mode": user.active_mode,
