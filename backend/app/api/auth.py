@@ -104,9 +104,15 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
     # address really is: at ordinary registration nobody has proved anything
     # yet, and writing `verified` here would put the first lie into the column
     # the whole table exists to make trustworthy.
-    await upsert_contact(
+    registered_contact = await upsert_contact(
         db, user, "email", user.email, verified=user.email_verified_at is not None
     )
+    # T3.28 — this address is how the account signs in. The 0045 backfill set
+    # the flag for every account that predates contacts; without setting it
+    # here, accounts created after the migration would be the only ones unable
+    # to use a code to get in.
+    if registered_contact is not None:
+        registered_contact.is_login = True
     await db.commit()
     await db.refresh(user)
 
@@ -345,6 +351,160 @@ def _announce_password_change(user_id) -> None:
         send_password_changed.delay(str(user_id))
     except Exception:
         logger.exception("could not queue password-changed notice for %s", user_id)
+
+
+class OtpRequestBody(BaseModel):
+    identifier: str
+    channel: str
+    locale: str = "en"
+
+
+class OtpVerifyBody(BaseModel):
+    identifier: str
+    code: str
+
+
+@router.post("/otp/request", status_code=202)
+@limiter.limit("10/hour")
+async def otp_request(
+    request: Request, body: OtpRequestBody, db: AsyncSession = Depends(get_db)
+):
+    """T3.28 — one door for signing in and signing up. Answers 202 always.
+
+    The same answer whether the identifier belongs to an account, belongs to
+    nobody, is unusable, or names a channel we do not run. Anything else makes
+    a public form into an oracle: type an address, read the status, learn
+    whether that person banks here. That is the single most valuable thing an
+    attacker can get from a login screen and it costs them nothing.
+
+    Deliberately separate from `/contact/request-code`: same machinery, but the
+    purposes must not be interchangeable. A code minted to add a second address
+    to an existing account must never be spendable to *become* that account —
+    so `purpose` differs, and `contact_verification` scopes every lookup by it.
+    """
+    from app.core.channels import available_for
+    from app.core.contact_verification import CooldownActive, issue
+    from app.core.contacts import normalize
+
+    if body.channel not in available_for(body.identifier):
+        return {"status": "accepted"}
+
+    value = normalize("email" if body.channel == "email" else "sms", body.identifier)
+    if value is None:
+        return {"status": "accepted"}
+
+    try:
+        code = await issue(db, body.channel, value, purpose="login")
+    except CooldownActive:
+        raise HTTPException(status_code=429, detail="A code was sent moments ago")
+    await db.commit()
+
+    from app.tasks.notifications import send_channel_code
+
+    try:
+        send_channel_code.delay(body.channel, value, code, body.locale)
+    except Exception:
+        logger.exception("could not queue login code for %s", value)
+
+    return {"status": "accepted"}
+
+
+@router.post("/otp/verify", response_model=Token)
+@limiter.limit("20/hour")
+async def otp_verify(
+    request: Request, body: OtpVerifyBody, db: AsyncSession = Depends(get_db)
+):
+    """T3.28 — spend the code: sign in, or become an account.
+
+    One endpoint for both because to the person it is one act — they proved
+    they can read this address, and what happens next is our bookkeeping, not
+    their decision. Splitting it would also mean a screen that has to know, and
+    therefore say, whether the address is already registered.
+
+    **A provisional display name is written, not asked for here.** Refusing to
+    finish without one would burn the code the visitor just spent, and a code
+    consumed for nothing is the worst possible answer to a correct one. The
+    onboarding screen renames the account immediately afterwards.
+
+    The account is created exactly as `register` creates one — service keypair
+    included (T3.12) — because an account that arrived through a different door
+    must not be a different kind of account.
+    """
+    from app.core.channels import proves
+    from app.core.contact_verification import (
+        CodeExpired,
+        CodeInvalid,
+        NoCodeIssued,
+        TooManyAttempts,
+        verify,
+    )
+    from app.core.contacts import normalize, upsert_contact
+    from app.models.contact import UserContact
+
+    for channel in ("email", "sms", "whatsapp", "telegram_gateway"):
+        value = normalize("email" if channel == "email" else "sms", body.identifier)
+        if value is None:
+            continue
+        try:
+            await verify(db, channel, value, body.code, purpose="login")
+        except NoCodeIssued:
+            continue
+        except CodeExpired:
+            await db.commit()
+            raise HTTPException(status_code=400, detail="Code expired")
+        except TooManyAttempts:
+            await db.commit()
+            raise HTTPException(
+                status_code=429, detail="Too many attempts — request a new code"
+            )
+        except CodeInvalid:
+            await db.commit()
+            raise HTTPException(status_code=400, detail="Invalid code")
+
+        contact_channel = proves(channel)
+        owner_id = (
+            await db.execute(
+                select(UserContact.user_id).where(
+                    UserContact.channel == contact_channel,
+                    UserContact.value == value,
+                    UserContact.verified_at.isnot(None),
+                    UserContact.is_login.is_(True),
+                )
+            )
+        ).scalar_one_or_none()
+
+        if owner_id:
+            user = await db.get(User, owner_id)
+        else:
+            nsec_hex, npub_hex = generate_keypair()
+            nsec_nonce, nsec_ct = encrypt_nsec(nsec_hex)
+            user = User(
+                email=value if contact_channel == "email" else None,
+                phone=value if contact_channel == "sms" else None,
+                password_hash=None,
+                # Provisional, and replaced on the next screen. The local part
+                # of an address is a better first guess than "User" and a worse
+                # one than what the person will type.
+                display_name=value.split("@")[0][:100],
+                nostr_pubkey=npub_hex,
+                nsec_encrypted=nsec_ct,
+                nsec_nonce=nsec_nonce,
+                key_self_custody=False,
+            )
+            if contact_channel == "email":
+                user.email_verified_at = datetime.now(timezone.utc)
+            db.add(user)
+            await db.flush()
+            contact = await upsert_contact(
+                db, user, contact_channel, value, verified=True
+            )
+            if contact is not None:
+                contact.is_login = True
+
+        await db.commit()
+        return {"access_token": create_access_token(str(user.id)), "token_type": "bearer"}
+
+    raise HTTPException(status_code=400, detail="Invalid or expired code")
 
 
 class ChannelsBody(BaseModel):
