@@ -82,6 +82,17 @@ async def test_registration_records_the_email_contact(client, session_maker):
     assert ("email", email) in rows
 
 
+def _fresh_number() -> str:
+    """A number no earlier run has used.
+
+    `vimana_test` is never emptied (ENVIRONMENT §8), so a literal here is a
+    value that belongs to whichever account claimed it the first time the suite
+    ever ran — and the second run fails on a constraint that is working
+    correctly. Same lesson as the deals list test, one table over.
+    """
+    return f"+9715{uuidlib.uuid4().int % 10**8:08d}"
+
+
 async def test_an_unconfirmed_claim_does_not_reserve_the_value(client, session_maker):
     """Two accounts may both *claim* a number; only a confirmed one owns it.
 
@@ -90,7 +101,7 @@ async def test_an_unconfirmed_claim_does_not_reserve_the_value(client, session_m
     """
     from app.models.contact import UserContact
 
-    number = "+971509998877"
+    number = _fresh_number()
     ids = []
     for i in range(2):
         resp = await _register(client, unique_email(f"claim{i}"))
@@ -112,7 +123,7 @@ async def test_a_confirmed_value_belongs_to_one_account(client, session_maker):
 
     from app.models.contact import UserContact
 
-    number = "+971507776655"
+    number = _fresh_number()
     ids = []
     for i in range(2):
         resp = await _register(client, unique_email(f"own{i}"))
@@ -153,14 +164,14 @@ async def test_phone_in_the_profile_is_normalised_and_recorded(
     )
     hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    saved = await client.patch(
-        "/api/auth/me", headers=hdr, json={"phone": "+971 50 111 22 33"}
-    )
+    number = _fresh_number()
+    spaced = f"{number[:4]} {number[4:6]} {number[6:9]} {number[9:]}"
+    saved = await client.patch("/api/auth/me", headers=hdr, json={"phone": spaced})
     assert saved.status_code == 200
-    assert saved.json()["phone"] == "+971501112233"
+    assert saved.json()["phone"] == number
 
     rows = await _contacts(session_maker, user_id)
-    assert rows[("sms", "+971501112233")] is None, "typed, not proven"
+    assert rows[("sms", number)] is None, "typed, not proven"
 
 
 async def test_an_unparseable_phone_is_refused(client):
@@ -322,3 +333,50 @@ def test_generated_codes_are_six_digits():
     for _ in range(50):
         code = generate_code()
         assert len(code) == 6 and code.isdigit()
+
+
+async def test_proving_control_takes_the_value_from_whoever_had_it(
+    client, session_maker
+):
+    """Carriers recycle numbers and phones change hands. An older confirmation
+    must yield to a newer proof, or a normal life event becomes a permanent
+    lockout — surfacing as a 500 in a webhook rather than anything actionable."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import select
+
+    from app.core.contacts import upsert_contact
+    from app.models.contact import UserContact
+    from app.models.user import User
+
+    number = _fresh_number()
+    old_owner = uuidlib.UUID((await _register(client, unique_email("old"))).json()["id"])
+    new_owner_id = uuidlib.UUID((await _register(client, unique_email("new"))).json()["id"])
+
+    async with session_maker() as db:
+        db.add(
+            UserContact(
+                user_id=old_owner,
+                channel="sms",
+                value=number,
+                verified_at=datetime.now(timezone.utc),
+            )
+        )
+        await db.commit()
+
+    async with session_maker() as db:
+        new_owner = await db.get(User, new_owner_id)
+        await upsert_contact(db, new_owner, "sms", number, verified=True)
+        await db.commit()  # must not raise
+
+    async with session_maker() as db:
+        holders = (
+            await db.execute(
+                select(UserContact.user_id).where(
+                    UserContact.channel == "sms",
+                    UserContact.value == number,
+                    UserContact.verified_at.isnot(None),
+                )
+            )
+        ).scalars().all()
+    assert holders == [new_owner_id]

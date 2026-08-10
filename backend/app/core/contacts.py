@@ -86,6 +86,40 @@ async def contacts_of(db: AsyncSession, user_id: uuid.UUID) -> list[UserContact]
     return list(result.scalars().all())
 
 
+async def _release_elsewhere(db: AsyncSession, user, channel: str, value: str) -> None:
+    """Take a confirmed value away from any other account.
+
+    Proof of control beats an older record, and this is the only rule that
+    survives contact with reality: carriers recycle phone numbers, a Telegram
+    chat belongs to whoever is holding the phone, and an email address can be
+    handed over with a job. Somebody just proved they control this value; the
+    account that proved it a year ago no longer does.
+
+    Without this the partial unique index turns a normal life event into a
+    permanent lockout — and it would surface as a 500 in a webhook, not as
+    anything a person could act on.
+
+    It removes a *contact*, never access: the other account keeps its session,
+    its password and every other way in. **`T3.28` makes contacts sign-in
+    identifiers, and at that point this needs a second look** — an account must
+    not be able to lose its only way in because someone else got its old
+    number. Recorded here rather than solved now, because the answer depends on
+    what `is_login` ends up meaning.
+
+    Called by: `upsert_contact`.
+    """
+    from sqlalchemy import delete
+
+    await db.execute(
+        delete(UserContact).where(
+            UserContact.channel == channel,
+            UserContact.value == value,
+            UserContact.user_id != user.id,
+            UserContact.verified_at.isnot(None),
+        )
+    )
+
+
 async def upsert_contact(
     db: AsyncSession,
     user,
@@ -121,8 +155,12 @@ async def upsert_contact(
 
     if existing:
         if verified and existing.verified_at is None:
+            await _release_elsewhere(db, user, channel, value)
             existing.verified_at = datetime.now(timezone.utc)
         return existing
+
+    if verified:
+        await _release_elsewhere(db, user, channel, value)
 
     contact = UserContact(
         user_id=user.id,

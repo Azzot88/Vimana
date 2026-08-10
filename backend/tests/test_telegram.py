@@ -186,6 +186,10 @@ async def test_start_with_valid_token_confirms_in_the_account_language(
               "locale": "fr"},
     )
     token = f"tok-{uuidlib.uuid4().hex}"
+    # A chat id nobody has linked before: `user_contacts` now holds a confirmed
+    # row per chat, and the test database is never emptied, so a literal would
+    # collide with the previous run's account.
+    chat_id = 900_000_000 + uuidlib.uuid4().int % 10_000_000
     async with session_maker() as db:
         user = (await db.execute(select(User).where(User.email == email))).scalar_one()
         user.telegram_link_token = token
@@ -193,10 +197,15 @@ async def test_start_with_valid_token_confirms_in_the_account_language(
 
     resp = await client.post(
         "/api/telegram/webhook",
-        json={"update_id": 1, "message": {"chat": {"id": 999}, "text": f"/start {token}"}},
+        json={
+            "update_id": 1,
+            "message": {"chat": {"id": chat_id}, "text": f"/start {token}"},
+        },
     )
     assert resp.status_code == 200
-    assert queued == [("999", "linked", "fr")], "the reply follows the account's language"
+    assert queued == [(str(chat_id), "linked", "fr")], (
+        "the reply follows the account's language"
+    )
 
 
 async def test_start_with_stale_token_says_so(client, monkeypatch):
