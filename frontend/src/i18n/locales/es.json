@@ -90,7 +90,22 @@
     "errorServer": "Error del servidor. Inténtalo de nuevo.",
     "errorCredentials": "Login o contraseña incorrectos",
     "forgotPassword": "¿Has olvidado la contraseña?",
-    "resetSent": "Si esa dirección está registrada y confirmada, el enlace de restablecimiento va en camino. Es válido una hora."
+    "resetSent": "Si esa dirección está registrada y confirmada, el enlace de restablecimiento va en camino. Es válido una hora.",
+    "codeHint": "O recibe un código de un solo uso — sin contraseña.",
+    "codeSent": "Código enviado por {{channel}}. Válido 15 minutos.",
+    "code": "Código",
+    "codeSubmit": "Entrar",
+    "codeBack": "Otro método",
+    "codeFailed": "El código es incorrecto o ha caducado. Pide uno nuevo.",
+    "codeCooldown": "Acabamos de enviar un código. Espera un momento antes de pedir otro.",
+    "passwordOptional": "Contraseña",
+    "channel": {
+      "email": "Correo",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "telegram_gateway": "Telegram",
+      "telegram": "Telegram"
+    }
   },
   "passkey": {
     "loginCta": "Entrar con una passkey",
@@ -892,5 +907,13 @@
     "failed": "Este enlace ha caducado o ya se ha usado. Pide uno nuevo en la pantalla de acceso.",
     "noToken": "El enlace está incompleto. Abre el del mensaje o pide uno nuevo.",
     "sessionsNotice": "Al cambiar la contraseña se cierran todas las demás sesiones."
+  },
+  "welcome": {
+    "title": "Casi listo",
+    "subtitle": "Una pregunta y ya estás dentro.",
+    "nameLabel": "¿Cómo te llamamos?",
+    "nameHint": "Tus contrapartes ven este nombre. Puedes cambiarlo luego en tu perfil.",
+    "save": "Continuar",
+    "skip": "Omitir"
   }
 }

@@ -104,7 +104,22 @@
     "stayLoggedIn": "Stay signed in",
     "logoutNow": "Log out now",
     "forgotPassword": "Forgot your password?",
-    "resetSent": "If that address is registered and confirmed, a reset link is on its way. It is valid for one hour."
+    "resetSent": "If that address is registered and confirmed, a reset link is on its way. It is valid for one hour.",
+    "codeHint": "Or get a one-time code — no password needed.",
+    "codeSent": "Code sent via {{channel}}. It is valid for 15 minutes.",
+    "code": "Code",
+    "codeSubmit": "Sign in",
+    "codeBack": "Use another way",
+    "codeFailed": "That code is wrong or has expired. Ask for a new one.",
+    "codeCooldown": "A code was just sent. Give it a moment before asking again.",
+    "passwordOptional": "Password",
+    "channel": {
+      "email": "Email",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "telegram_gateway": "Telegram",
+      "telegram": "Telegram"
+    }
   },
   "passkey": {
     "loginCta": "Sign in with a passkey",
@@ -938,5 +953,13 @@
     "failed": "This link is expired or has already been used. Ask for a new one from the sign-in screen.",
     "noToken": "This link is incomplete. Open the one from the letter, or ask for a new one.",
     "sessionsNotice": "Every other session ends when the password changes."
+  },
+  "welcome": {
+    "title": "Almost there",
+    "subtitle": "One question, then you are in.",
+    "nameLabel": "What should we call you?",
+    "nameHint": "Your counterparties see this name. You can change it later in your profile.",
+    "save": "Continue",
+    "skip": "Skip for now"
   }
 }

@@ -39,6 +39,7 @@ const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const JoinDealPage = lazy(() => import('./pages/JoinDealPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const WelcomePage = lazy(() => import('./pages/WelcomePage'))
 
 function ProtectedRoute() {
   const token = useAuthStore((s) => s.token)
@@ -77,6 +78,10 @@ export default function App() {
               nobody's question. */}
           <Route path="/i/:npub" element={<IdentityPage />} />
           <Route element={<ProtectedRoute />}>
+            {/* T3.28 pt.2 — protected but outside `Layout`: the account exists
+                and is signed in, but a navigation bar around a single question
+                invites wandering off before answering it. */}
+            <Route path="/welcome" element={<WelcomePage />} />
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />

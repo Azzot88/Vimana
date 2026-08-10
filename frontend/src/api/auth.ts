@@ -100,6 +100,25 @@ export const consumeRecoveryCode = (identifier: string, code: string) =>
 export const disconnectTelegram = () =>
   api.post<{ connected: boolean }>('/api/telegram/disconnect')
 
+/** T3.28 — one door. 202 whatever the identifier is, so the screen learns
+ *  nothing it could leak about who has an account here. */
+export const otpRequest = (identifier: string, channel: string, locale: string) =>
+  api.post<{ status: string }>('/api/auth/otp/request', {
+    identifier,
+    channel,
+    locale,
+  })
+
+export const otpVerify = (identifier: string, code: string) =>
+  api.post<{ access_token: string; token_type: string }>('/api/auth/otp/verify', {
+    identifier,
+    code,
+  })
+
+/** T3.26 — which channels can honestly confirm this identifier. */
+export const contactChannels = (identifier: string) =>
+  api.post<{ channels: string[] }>('/api/auth/contact/channels', { identifier })
+
 /** T_SEC.5 — 202 whatever the identifier is; the answer never says who exists. */
 export const forgotPassword = (identifier: string) =>
   api.post<{ status: string }>('/api/auth/password/forgot', { identifier })

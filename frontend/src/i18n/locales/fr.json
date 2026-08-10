@@ -90,7 +90,22 @@
     "errorServer": "Erreur serveur. Veuillez réessayer.",
     "errorCredentials": "Identifiant ou mot de passe incorrect",
     "forgotPassword": "Mot de passe oublié ?",
-    "resetSent": "Si cette adresse est enregistrée et confirmée, un lien de réinitialisation est en route. Il est valable une heure."
+    "resetSent": "Si cette adresse est enregistrée et confirmée, un lien de réinitialisation est en route. Il est valable une heure.",
+    "codeHint": "Ou recevez un code à usage unique — sans mot de passe.",
+    "codeSent": "Code envoyé par {{channel}}. Valable 15 minutes.",
+    "code": "Code",
+    "codeSubmit": "Se connecter",
+    "codeBack": "Autre méthode",
+    "codeFailed": "Ce code est incorrect ou a expiré. Demandez-en un nouveau.",
+    "codeCooldown": "Un code vient d'être envoyé. Patientez avant d'en redemander un.",
+    "passwordOptional": "Mot de passe",
+    "channel": {
+      "email": "E-mail",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "telegram_gateway": "Telegram",
+      "telegram": "Telegram"
+    }
   },
   "passkey": {
     "loginCta": "Se connecter avec une passkey",
@@ -892,5 +907,13 @@
     "failed": "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau depuis l'écran de connexion.",
     "noToken": "Ce lien est incomplet. Ouvrez celui du message, ou demandez-en un nouveau.",
     "sessionsNotice": "Changer le mot de passe met fin à toutes les autres sessions."
+  },
+  "welcome": {
+    "title": "Presque fini",
+    "subtitle": "Une question, et vous y êtes.",
+    "nameLabel": "Comment vous appeler ?",
+    "nameHint": "Vos interlocuteurs voient ce nom. Vous pourrez le changer plus tard dans votre profil.",
+    "save": "Continuer",
+    "skip": "Passer"
   }
 }

@@ -54,3 +54,21 @@ describe('safeReturnUrl', () => {
     expect(safeReturnUrl('')).toBe('/')
   })
 })
+
+// ── T3.28 pt.2 · the one-field door ──────────────────────────────────────────
+
+describe('LoginPage · code flow', () => {
+  it('offers no channels until the identifier looks like one', () => {
+    renderWithProviders(<LoginPage />)
+    expect(screen.queryByTestId('code-channels')).not.toBeInTheDocument()
+  })
+
+  it('keeps the password field — accounts made before this flow have one', () => {
+    renderWithProviders(<LoginPage />)
+    // A screen that quietly stops offering what somebody has used for months
+    // reads as a broken site, not as a new feature.
+    expect(
+      screen.getByPlaceholderText('••••••••'),
+    ).toBeInTheDocument()
+  })
+})

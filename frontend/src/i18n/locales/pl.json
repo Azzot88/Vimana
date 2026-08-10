@@ -90,7 +90,22 @@
     "errorServer": "Błąd serwera. Spróbuj ponownie.",
     "errorCredentials": "Nieprawidłowy login lub hasło",
     "forgotPassword": "Nie pamiętasz hasła?",
-    "resetSent": "Jeśli ten adres jest zarejestrowany i potwierdzony, link do resetu jest już w drodze. Jest ważny godzinę."
+    "resetSent": "Jeśli ten adres jest zarejestrowany i potwierdzony, link do resetu jest już w drodze. Jest ważny godzinę.",
+    "codeHint": "Albo odbierz kod jednorazowy — hasło nie jest potrzebne.",
+    "codeSent": "Kod wysłany: {{channel}}. Ważny 15 minut.",
+    "code": "Kod",
+    "codeSubmit": "Zaloguj",
+    "codeBack": "Inny sposób",
+    "codeFailed": "Kod jest błędny lub wygasł. Poproś o nowy.",
+    "codeCooldown": "Kod właśnie wysłano. Poczekaj chwilę przed kolejną prośbą.",
+    "passwordOptional": "Hasło",
+    "channel": {
+      "email": "E-mail",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "telegram_gateway": "Telegram",
+      "telegram": "Telegram"
+    }
   },
   "passkey": {
     "loginCta": "Zaloguj się kluczem passkey",
@@ -893,5 +908,13 @@
     "failed": "Link wygasł lub został już użyty. Poproś o nowy na ekranie logowania.",
     "noToken": "Link jest niepełny. Otwórz ten z wiadomości albo poproś o nowy.",
     "sessionsNotice": "Zmiana hasła kończy wszystkie inne sesje."
+  },
+  "welcome": {
+    "title": "Prawie gotowe",
+    "subtitle": "Jedno pytanie i jesteś w środku.",
+    "nameLabel": "Jak się do Ciebie zwracać?",
+    "nameHint": "Tę nazwę widzą Twoi kontrahenci. Możesz ją później zmienić w profilu.",
+    "save": "Dalej",
+    "skip": "Pomiń"
   }
 }

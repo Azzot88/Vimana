@@ -4,10 +4,13 @@ import { useTranslation } from 'react-i18next'
 import {
   changePassword,
   consumeRecoveryCode,
+  contactChannels,
   forgotPassword,
   login,
   loginMethods,
   me,
+  otpRequest,
+  otpVerify,
 } from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
 import PasskeyAuthButton from '../components/PasskeyAuthButton'
@@ -42,7 +45,7 @@ export function safeReturnUrl(raw: string | null): string {
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
   const inactivityLogout = searchParams.get('reason') === 'inactivity'
   const returnUrl = safeReturnUrl(searchParams.get('returnUrl'))
@@ -62,6 +65,19 @@ export default function LoginPage() {
   const [methods, setMethods] = useState<string[] | null>(null)
   const [canReset, setCanReset] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  /**
+   * T3.28 pt.2 — the one-field door.
+   *
+   * `channels` is what this identifier can be *proved* through; `stage` is
+   * where in the exchange we are. The password block below is not removed and
+   * not hidden behind a link: accounts created before this flow have one, and
+   * a screen that quietly stops offering the thing somebody has used for
+   * months reads as a broken site, not as a new feature.
+   */
+  const [channels, setChannels] = useState<string[]>([])
+  const [stage, setStage] = useState<'identify' | 'code'>('identify')
+  const [code, setCode] = useState('')
+  const [sentVia, setSentVia] = useState('')
 
   const handleRecovery = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,9 +125,54 @@ export default function LoginPage() {
           setCanReset(data.can_reset)
         })
         .catch(() => {})
+      // Asked about the identifier, never about the account — an email offers
+      // email, a phone offers whatever reaches the number. Both answers are
+      // the same for a stranger and for a member, by construction.
+      contactChannels(value)
+        .then(({ data }) => setChannels(data.channels))
+        .catch(() => setChannels([]))
     }, 500)
     return () => clearTimeout(timer)
   }, [loginVal])
+
+  const sendCode = async (channel: string) => {
+    setLoading(true)
+    setError('')
+    try {
+      await otpRequest(loginVal.trim(), channel, i18n.language)
+      setSentVia(channel)
+      setStage('code')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      // 429 is the only status this endpoint answers differently, and it is
+      // about the caller's own last request — so it is the only one worth
+      // repeating back.
+      setError(status === 429 ? t('auth.codeCooldown') : t('auth.errorServer'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await otpVerify(loginVal.trim(), code.trim())
+      localStorage.setItem('token', data.access_token)
+      const { data: user } = await me()
+      setAuth(user, data.access_token)
+      // A provisional name means the account was just created here. Sending
+      // them to name it is the one thing left before the product makes sense.
+      navigate(user.display_name === loginVal.trim().split('@')[0] ? '/welcome' : returnUrl)
+    } catch {
+      // One message for wrong, expired and already-spent: the server does not
+      // tell them apart either, and separating them helps whoever is guessing.
+      setError(t('auth.codeFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -219,7 +280,7 @@ export default function LoginPage() {
           ) : (
             <div>
               <label className="block text-xs font-body font-medium text-navy/60 mb-1">
-                {t('auth.password')}
+                {t('auth.passwordOptional')}
               </label>
               <input
                 type="password"
@@ -292,6 +353,70 @@ export default function LoginPage() {
             )}
           </div>
         )}
+        {/* T3.28 pt.2 — the code path, above the password because it is the one
+            that works for everybody: an account that has never chosen a
+            password still has an address, and a visitor with no account at all
+            gets one from the same two steps. */}
+        {!recovering && stage === 'identify' && channels.length > 0 && (
+          <div className="mt-3 space-y-2" data-testid="code-channels">
+            <p className="text-xs font-body text-muted">{t('auth.codeHint')}</p>
+            <div className="flex flex-wrap gap-2">
+              {channels.map((channel) => (
+                <button
+                  key={channel}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => sendCode(channel)}
+                  data-testid={`send-code-${channel}`}
+                  className="flex-1 min-w-[8rem] border border-cyan/40 bg-cyan/5 rounded-field py-2 text-sm font-body text-navy disabled:opacity-40"
+                >
+                  {t(`auth.channel.${channel}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!recovering && stage === 'code' && (
+          <form onSubmit={submitCode} className="mt-3 space-y-2" data-testid="code-form">
+            <p className="text-xs font-body text-muted">
+              {t('auth.codeSent', { channel: t(`auth.channel.${sentVia}`) })}
+            </p>
+            <label className="sr-only" htmlFor="otp-code">
+              {t('auth.code')}
+            </label>
+            <input
+              id="otp-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              autoFocus
+              data-testid="otp-code-input"
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-center font-mono tracking-[0.3em] text-navy focus:outline-none focus:border-cyan"
+            />
+            <button
+              type="submit"
+              disabled={loading || code.trim().length < 6}
+              className="w-full bg-navy text-ivory font-display font-medium py-3 rounded-field text-sm disabled:opacity-50"
+            >
+              {loading ? t('auth.logging') : t('auth.codeSubmit')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStage('identify')
+                setCode('')
+                setError('')
+              }}
+              className="w-full text-xs font-body text-muted"
+            >
+              {t('auth.codeBack')}
+            </button>
+          </form>
+        )}
+
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-px bg-navy/10 flex-1" />
