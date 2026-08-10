@@ -121,7 +121,8 @@
     "greeting": "{{ name }}, tu contraseña se ha cambiado correctamente.",
     "greeting_plain": "Tu contraseña se ha cambiado correctamente.",
     "body": [
-      "Se han cerrado todas las demás sesiones — a partir de ahora solo se entra con la nueva contraseña."
+      "Se han cerrado todas las demás sesiones — a partir de ahora solo se entra con la nueva contraseña.",
+      "Si no has sido tú: usa «¿Has olvidado la contraseña?» en la pantalla de acceso. El enlace llega a esta dirección — la que no tiene quien cambió la contraseña, o no le habría hecho falta saberla."
     ],
     "facts_account": "cuenta",
     "note": "Este mensaje no es una suscripción y no se puede desactivar: deja constancia de que la forma de entrar en esta cuenta ha cambiado."

@@ -121,7 +121,8 @@
     "greeting": "{{ name }}, votre mot de passe a bien été changé.",
     "greeting_plain": "Votre mot de passe a bien été changé.",
     "body": [
-      "Toutes les autres sessions ont été fermées — désormais, seul le nouveau mot de passe ouvre ce compte."
+      "Toutes les autres sessions ont été fermées — désormais, seul le nouveau mot de passe ouvre ce compte.",
+      "Si ce n'était pas vous : utilisez « Mot de passe oublié ? » sur l'écran de connexion. Le lien arrive à cette adresse — celle que la personne qui a changé le mot de passe n'a pas, sinon le mot de passe ne lui aurait pas servi."
     ],
     "facts_account": "compte",
     "note": "Ce message n'est pas un abonnement et ne peut pas être désactivé : il consigne que la façon d'accéder à ce compte a changé."
