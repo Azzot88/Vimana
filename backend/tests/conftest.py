@@ -53,6 +53,26 @@ from app.core.config import settings
 from app.core.database import Base, get_db
 from app.core.security import hash_password
 from app.main import app
+
+# ─────────────────────────────────────────────────────────────
+# T3.25 pt.3 — the suite must not feed the production worker.
+#
+# `.delay()` does not run anything; it puts a message on the broker, and the
+# broker is the real Redis. The `celery-worker` container then executes the
+# task **in another process, with the production environment** — real Telegram
+# token, real admin chat ids, real `DATABASE_URL`. Clearing env vars inside
+# pytest does nothing about that, which is why the owner kept receiving genuine
+# "scanner is down" alerts from test runs after the previous fix.
+#
+# An in-memory broker cuts the wire at the only place that works: dispatch
+# still succeeds, so no call site changes behaviour, and the message goes into
+# a queue nobody consumes. Third instance of one lesson this week — the fuzzer
+# unsetting the production webhook, tests mailing real people, and now this.
+# ─────────────────────────────────────────────────────────────
+from app.worker import celery_app as _celery_app  # noqa: E402
+
+_celery_app.conf.broker_url = "memory://"
+_celery_app.conf.result_backend = "cache+memory://"
 from app.models.deal import Deal, DealStatus
 from app.models.marketplace import Category, DEFAULT_CATEGORIES, Order, OrderStatus, Trip, TripStatus
 from app.models.user import User
@@ -1317,6 +1337,12 @@ def sync_sessions(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _mute_celery(monkeypatch):
+    """Kept alongside the in-memory broker above, not replaced by it.
+
+    The broker swap is the guarantee — nothing reaches the production worker.
+    This is the older, narrower measure: it stops `notify_deal_status` being
+    constructed at all, which a few tests depend on for their call counts.
+    """
     from app.api import deals as deals_module
 
     class _NoopTask:
