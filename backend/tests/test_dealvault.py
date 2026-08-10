@@ -1,5 +1,6 @@
-async def test_list_messages_empty_seed(client, sender_headers, seed_deal):
 from tests.conftest import make_account
+
+async def test_list_messages_empty_seed(client, sender_headers, seed_deal):
     resp = await client.get(f"/api/deals/{seed_deal.id}/dealvault", headers=sender_headers)
     assert resp.status_code == 200
     body = resp.json()
