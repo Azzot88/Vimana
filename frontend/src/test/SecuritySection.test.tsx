@@ -106,13 +106,55 @@ describe('SecuritySection', () => {
   })
 
   it('will not continue with a password under 8 characters', () => {
+    // T_SEC.5 pt.2 — three fields now, so the other two are filled first and
+    // the length is the only thing left to fail on. Before that change this
+    // test passed with one field; it kept passing for the wrong reason
+    // afterwards, which is why the repeat and the current are set explicitly
+    // rather than left empty.
     renderWithProviders(<SecuritySection user={base} onChanged={noop} />)
     fireEvent.click(screen.getByTestId('security-change-password'))
+    fireEvent.change(screen.getByTestId('security-current-password'), {
+      target: { value: 'whatever-the-old-one-is' },
+    })
     const field = screen.getByTestId('security-new-password')
+    const repeat = screen.getByTestId('security-repeat-password')
+
     fireEvent.change(field, { target: { value: 'short' } })
+    fireEvent.change(repeat, { target: { value: 'short' } })
     expect(screen.getByTestId('security-password-continue')).toBeDisabled()
+
     fireEvent.change(field, { target: { value: 'long-enough-1' } })
+    fireEvent.change(repeat, { target: { value: 'long-enough-1' } })
     expect(screen.getByTestId('security-password-continue')).not.toBeDisabled()
+  })
+
+  it('will not continue while the two passwords differ', () => {
+    renderWithProviders(<SecuritySection user={base} onChanged={noop} />)
+    fireEvent.click(screen.getByTestId('security-change-password'))
+    fireEvent.change(screen.getByTestId('security-current-password'), {
+      target: { value: 'old-password-1' },
+    })
+    fireEvent.change(screen.getByTestId('security-new-password'), {
+      target: { value: 'long-enough-1' },
+    })
+    fireEvent.change(screen.getByTestId('security-repeat-password'), {
+      target: { value: 'long-enough-2' },
+    })
+
+    expect(screen.getByTestId('security-password-mismatch')).toBeInTheDocument()
+    expect(screen.getByTestId('security-password-continue')).toBeDisabled()
+  })
+
+  it('asks for no current password when the account has none', () => {
+    // A passkey or Nostr account has nothing to type there, and the proof
+    // comes from the step-up dialog instead.
+    renderWithProviders(
+      <SecuritySection user={{ ...base, has_password: false }} onChanged={noop} />,
+    )
+    fireEvent.click(screen.getByTestId('security-change-password'))
+    expect(
+      screen.queryByTestId('security-current-password'),
+    ).not.toBeInTheDocument()
   })
 
   it('warns that other devices will be signed out, before the action', () => {
