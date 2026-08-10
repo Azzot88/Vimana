@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from tests.conftest import make_account
 
 
 @pytest.fixture
@@ -12,9 +13,7 @@ async def _open_dispute(client, session_maker):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     c_email = unique_email("g-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "GC",
@@ -28,9 +27,7 @@ async def _open_dispute(client, session_maker):
     c_headers = {"Authorization": f"Bearer {c_login.json()['access_token']}"}
 
     s_email = unique_email("g-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "GS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "GS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}
@@ -153,9 +150,7 @@ async def test_grant_endpoint_forbidden_for_third_party(client, _open_dispute):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("g-out")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "GOut"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "GOut"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

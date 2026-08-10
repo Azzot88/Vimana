@@ -15,14 +15,12 @@ from sqlalchemy import select
 
 from app.models.user import User
 from app.models.webauthn import WebAuthnCredential
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 async def _register(client, *, password=True, prefix="pk") -> dict[str, str]:
     email = unique_email(prefix)
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Passkey"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Passkey"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

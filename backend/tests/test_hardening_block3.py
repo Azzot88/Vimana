@@ -4,6 +4,7 @@ import uuid as uuidlib
 import pytest
 
 from app.core.rate_limit import limiter
+from tests.conftest import make_account
 
 
 @pytest.fixture
@@ -18,9 +19,7 @@ def enable_rate_limit():
 
 async def test_login_rate_limit_triggers_429(client, enable_rate_limit):
     email = f"rl-{uuidlib.uuid4().hex[:6]}@vimana.test"
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": "rl-pass-1", "display_name": "RL"},
+    await make_account({"email": email, "password": "rl-pass-1", "display_name": "RL"},
     )
     # slowapi limit is 60/minute (matches nginx guard). Fire 65 attempts to
     # ensure the limit trips; loop bails early once 429 is seen.

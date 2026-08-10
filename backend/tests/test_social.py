@@ -1,10 +1,8 @@
-from tests.conftest import unique_email
+from tests.conftest import make_account, unique_email
 
 
 async def _register_and_login(client, email: str, password: str = "invite-pass-1"):
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": password, "display_name": email.split("@")[0]},
+    reg = await make_account({"email": email, "password": password, "display_name": email.split("@")[0]},
     )
     assert reg.status_code == 201
     login = await client.post(

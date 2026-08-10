@@ -9,6 +9,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.core.threshold import nip44_encrypt
+from tests.conftest import make_account
 
 
 def _make_e2e_payload(
@@ -53,9 +54,7 @@ async def _e2e_deal(client, session_maker):
 
     # Sender
     s_email = unique_email("e2e-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "E2eS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "E2eS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}
@@ -73,9 +72,7 @@ async def _e2e_deal(client, session_maker):
 
     # Carrier
     c_email = unique_email("e2e-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "E2eC",
@@ -279,9 +276,7 @@ async def test_reveal_my_share_forbidden_for_third_party(client, _e2e_deal):
     msg_id = write.json()["id"]
 
     outsider_email = unique_email("outs")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": outsider_email,
             "password": SEED_PASSWORD,
             "display_name": "Out",

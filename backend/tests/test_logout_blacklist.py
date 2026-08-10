@@ -11,14 +11,12 @@ import uuid
 
 import pytest
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 async def _register_and_get_token(client) -> str:
     email = unique_email("logout")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "L"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "L"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -84,9 +82,7 @@ async def test_new_login_after_logout_gets_working_token(client):
     """User can log back in and the new token works — old jti is revoked but
     the new token gets a fresh jti."""
     email = unique_email("relogin")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "R"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "R"},
     )
     login1 = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

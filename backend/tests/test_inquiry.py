@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import text as sa_text
+from tests.conftest import make_account
 
 
 async def _make_open_trip(client, carrier_headers) -> str:
@@ -92,9 +93,7 @@ async def test_outsider_cannot_read_inquiry(
 
     from tests.conftest import SEED_PASSWORD, _login, unique_email
     email = unique_email("outsider")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "O"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "O"},
     )
     token = await _login(client, email)
     outsider = {"Authorization": f"Bearer {token}"}

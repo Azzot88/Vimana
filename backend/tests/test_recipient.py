@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from tests.conftest import make_account
 
 
 async def _register(client, prefix: str, *, carrier: bool = False):
@@ -13,7 +14,7 @@ async def _register(client, prefix: str, *, carrier: bool = False):
     payload = {"email": email, "password": SEED_PASSWORD, "display_name": prefix.upper()}
     if carrier:
         payload.update({"can_carry": True, "active_mode": "carrier"})
-    await client.post("/api/auth/register", json=payload)
+    await make_account(payload)
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
     )

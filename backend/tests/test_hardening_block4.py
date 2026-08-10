@@ -1,6 +1,7 @@
 """T1.19 block 4: global exception handler, logging, request_id."""
 import logging
 import uuid
+from tests.conftest import make_account
 
 
 def uuid_hex() -> str:
@@ -30,9 +31,7 @@ async def test_http_exception_response_includes_request_id(client):
 
 async def test_validation_error_response_includes_request_id(client):
     # Password < 8 chars triggers Pydantic field_validator → 422 with list-shaped detail
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": f"val-{uuid_hex()}@vimana.test",
             "password": "short",
             "display_name": "V",

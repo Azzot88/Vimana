@@ -2,6 +2,7 @@
 import uuid
 
 import pytest
+from tests.conftest import make_account
 
 
 async def test_invite_accept_creates_symmetric_invited_edges(client, seed_carrier):
@@ -10,17 +11,13 @@ async def test_invite_accept_creates_symmetric_invited_edges(client, seed_carrie
 
     # Register alice + bob
     alice_email = unique_email("alice")
-    await client.post(
-        "/api/auth/register",
-        json={"email": alice_email, "password": SEED_PASSWORD, "display_name": "Alice"},
+    await make_account({"email": alice_email, "password": SEED_PASSWORD, "display_name": "Alice"},
     )
     alice_token = await _login(client, alice_email)
     alice_headers = {"Authorization": f"Bearer {alice_token}"}
 
     bob_email = unique_email("bob")
-    await client.post(
-        "/api/auth/register",
-        json={"email": bob_email, "password": SEED_PASSWORD, "display_name": "Bob"},
+    await make_account({"email": bob_email, "password": SEED_PASSWORD, "display_name": "Bob"},
     )
     bob_token = await _login(client, bob_email)
     bob_headers = {"Authorization": f"Bearer {bob_token}"}

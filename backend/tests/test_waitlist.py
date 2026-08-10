@@ -1,4 +1,5 @@
 import uuid as uuidlib
+from tests.conftest import make_account
 
 
 async def test_join_waitlist_success(client):
@@ -38,9 +39,7 @@ async def test_join_waitlist_invalid_email_returns_422(client):
 async def _register(client, email: str) -> dict[str, str]:
     from tests.conftest import SEED_PASSWORD
 
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": email[:8]},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": email[:8]},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

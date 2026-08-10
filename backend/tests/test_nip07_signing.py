@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from tests.conftest import make_account
 
 
 @pytest.fixture
@@ -10,9 +11,7 @@ async def _matched_deal(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     c_email = unique_email("nc-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "NcC",
@@ -38,9 +37,7 @@ async def _matched_deal(client):
     trip_id = trip.json()["id"]
 
     s_email = unique_email("nc-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "NcS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "NcS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}
@@ -165,9 +162,7 @@ async def test_custodial_writes_nip01_event_id(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     c_email = unique_email("nip-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "NipC",
@@ -193,9 +188,7 @@ async def test_custodial_writes_nip01_event_id(client):
     trip_id = trip.json()["id"]
 
     s_email = unique_email("nip-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "NipS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "NipS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}
@@ -244,9 +237,7 @@ async def test_custodial_deal_event_signed_new_format(client, session_maker):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     c_email = unique_email("de-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "DeC",
@@ -272,9 +263,7 @@ async def test_custodial_deal_event_signed_new_format(client, session_maker):
     trip_id = trip.json()["id"]
 
     s_email = unique_email("de-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "DeS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "DeS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}

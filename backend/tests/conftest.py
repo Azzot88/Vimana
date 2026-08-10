@@ -1231,9 +1231,91 @@ async def test_engine():
     await engine.dispose()
 
 
+_MAKER = None
+
+
 @pytest_asyncio.fixture(scope="session")
 async def session_maker(test_engine):
-    return async_sessionmaker(test_engine, expire_on_commit=False)
+    # Stashed for `make_account`, which is a plain function and cannot ask for
+    # a fixture. `override_db` is autouse and depends on this, so by the time
+    # any test body runs the global is set.
+    global _MAKER
+    _MAKER = async_sessionmaker(test_engine, expire_on_commit=False)
+    return _MAKER
+
+
+class _MadeAccount:
+    """Shaped like the response `POST /auth/register` used to return.
+
+    T3.28 pt.3b removed that endpoint. Thirty-nine test files created accounts
+    through it, and most of them only ever wanted *an account* — the HTTP call
+    was incidental. Mimicking the response shape keeps the migration a textual
+    one and, more importantly, keeps each test asserting what it was written to
+    assert instead of being quietly rewritten around a new helper.
+    """
+
+    def __init__(self, status_code: int, payload: dict):
+        self.status_code = status_code
+        self._payload = payload
+
+    def json(self) -> dict:
+        return self._payload
+
+
+async def make_account(payload: dict) -> _MadeAccount:
+    """Create an account the way production does, answering like the old form.
+
+    Built on `core.accounts.create_user`, the same constructor `otp_verify`
+    uses — so the account a test asserts on has the shape production makes,
+    keypair and login contact included. A second constructor living in the
+    test suite is how the suite starts passing for accounts the product cannot
+    produce.
+    """
+    from sqlalchemy import select as _select
+
+    from app.core.accounts import create_user
+    from app.core.email_verification import (
+        is_auto_verify_domain,
+        is_valid_email,
+        normalize_email,
+    )
+
+    email = payload.get("email")
+    if not email or not is_valid_email(email):
+        return _MadeAccount(422, {"detail": "Invalid email address"})
+    email = normalize_email(email)
+
+    async with _MAKER() as db:
+        clash = (
+            await db.execute(_select(User).where(User.email == email))
+        ).scalar_one_or_none()
+        if clash is not None:
+            return _MadeAccount(409, {"detail": "email already registered"})
+
+        user = await create_user(
+            db,
+            email=email,
+            password=payload.get("password"),
+            display_name=payload.get("display_name"),
+            locale=payload.get("locale", "en"),
+            can_carry=payload.get("can_carry", True),
+            can_send=payload.get("can_send", True),
+            active_mode=payload.get("active_mode", "sender"),
+            verified=is_auto_verify_domain(email),
+        )
+        await db.commit()
+        return _MadeAccount(
+            201,
+            {
+                "id": str(user.id),
+                "email": user.email,
+                "display_name": user.display_name,
+                "role": user.role,
+                "active_mode": user.active_mode,
+                "can_carry": user.can_carry,
+                "can_send": user.can_send,
+            },
+        )
 
 
 @pytest_asyncio.fixture(autouse=True)

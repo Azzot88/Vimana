@@ -16,16 +16,14 @@ from sqlalchemy import select
 from app.core.identity_proof import PURPOSE_ESTABLISH, proof_event_id
 from app.core.keypair import generate_keypair, sign_event_id
 from app.models.user import User
-from tests.conftest import SEED_PASSWORD, step_up_token, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, step_up_token, unique_email
 
 PASSWORD = SEED_PASSWORD
 
 
 async def _fresh_user(client, prefix: str = "idn") -> tuple[str, dict[str, str]]:
     email = unique_email(prefix)
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": PASSWORD, "display_name": "Identity"},
+    reg = await make_account({"email": email, "password": PASSWORD, "display_name": "Identity"},
     )
     assert reg.status_code == 201, reg.text
     login = await client.post(
@@ -574,9 +572,7 @@ async def test_lost_key_cannot_publish_a_trip(client):
     from datetime import datetime, timedelta, timezone
 
     email = unique_email("idn-dead")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": email,
             "password": PASSWORD,
             "display_name": "Dead",

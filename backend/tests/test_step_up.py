@@ -16,14 +16,12 @@ from app.core.keypair import generate_keypair, sign_event_id
 from app.core.step_up import StepUpScope, available_methods
 from app.models.user import User
 from app.models.webauthn import WebAuthnCredential
-from tests.conftest import SEED_PASSWORD, establish_identity, unique_email
+from tests.conftest import SEED_PASSWORD, establish_identity, make_account, unique_email
 
 
 async def _account(client, prefix="su") -> tuple[str, dict[str, str]]:
     email = unique_email(prefix)
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "StepUp"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "StepUp"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

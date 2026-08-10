@@ -1,4 +1,5 @@
 async def test_list_messages_empty_seed(client, sender_headers, seed_deal):
+from tests.conftest import make_account
     resp = await client.get(f"/api/deals/{seed_deal.id}/dealvault", headers=sender_headers)
     assert resp.status_code == 200
     body = resp.json()
@@ -40,9 +41,7 @@ async def test_create_message_appends(client, sender_headers, seed_deal):
 
 
 async def test_dealvault_forbidden_for_outsider(client, seed_deal):
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": f"outsider-vault-{str(seed_deal.id)[:6]}@vimana.test",
             "password": "outsider-pass",
             "display_name": "Vault Outsider",

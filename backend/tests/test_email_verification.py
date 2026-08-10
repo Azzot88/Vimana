@@ -17,6 +17,7 @@ from sqlalchemy import select
 from app.core.email_verification import MAX_ATTEMPTS
 from app.core.security import create_access_token
 from app.models.user import User
+from tests.conftest import make_account
 
 PASSWORD = "verify-password-1"
 FIXED_CODE = "424242"
@@ -51,9 +52,7 @@ def captured_codes(monkeypatch):
 
 
 async def _register(client, email: str, **extra) -> dict:
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": email,
             "password": PASSWORD,
             "display_name": "Verify User",

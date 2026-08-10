@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from tests.conftest import make_account
 
 
 async def _add_route_note(session_maker, **overrides):
@@ -193,9 +194,7 @@ async def _register_and_promote_superuser(client, session_maker) -> dict:
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("adm")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Adm"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Adm"},
     )
     async with session_maker() as db:
         u = (await db.execute(select(User).where(User.email == email))).scalar_one()
@@ -231,9 +230,7 @@ async def test_create_route_note_forbidden_for_non_superuser(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("usr")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Usr"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Usr"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -325,9 +322,7 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
 
     carrier_email = unique_email("carrier")
     sender_email = unique_email("sender")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": carrier_email,
             "password": SEED_PASSWORD,
             "display_name": "Carrier",
@@ -353,9 +348,7 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
     assert trip_resp.status_code == 201, trip_resp.json()
     trip_id = trip_resp.json()["id"]
 
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": sender_email,
             "password": SEED_PASSWORD,
             "display_name": "Sender",
@@ -412,9 +405,7 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
 
     carrier_email = unique_email("cc")
     sender_email = unique_email("ss")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": carrier_email,
             "password": SEED_PASSWORD,
             "display_name": "C",
@@ -438,9 +429,7 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
     )
     trip_id = trip.json()["id"]
 
-    await client.post(
-        "/api/auth/register",
-        json={"email": sender_email, "password": SEED_PASSWORD, "display_name": "S"},
+    await make_account({"email": sender_email, "password": SEED_PASSWORD, "display_name": "S"},
     )
     login_s = await client.post(
         "/api/auth/login", json={"login": sender_email, "password": SEED_PASSWORD}

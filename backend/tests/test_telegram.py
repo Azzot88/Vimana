@@ -3,6 +3,7 @@ import uuid as uuidlib
 import pytest
 
 from app.models.user import User
+from tests.conftest import make_account
 
 
 @pytest.fixture(autouse=True)
@@ -26,9 +27,7 @@ async def test_webhook_no_message_returns_ok(client):
 
 async def test_webhook_start_command_links_chat_id(client, session_maker):
     email = f"tg-link-{uuidlib.uuid4().hex[:8]}@vimana.test"
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": "tg-pw-test-1", "display_name": "TG Link"},
+    reg = await make_account({"email": email, "password": "tg-pw-test-1", "display_name": "TG Link"},
     )
     assert reg.status_code == 201
     user_id = uuidlib.UUID(reg.json()["id"])
@@ -135,9 +134,7 @@ async def test_set_webhook_endpoint_is_superuser_only(client, session_maker):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("tg-plain")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "tg"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "tg"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -180,9 +177,7 @@ async def test_start_with_valid_token_confirms_in_the_account_language(
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("tg-link")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "tg",
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "tg",
               "locale": "fr"},
     )
     token = f"tok-{uuidlib.uuid4().hex}"
@@ -310,9 +305,7 @@ async def test_disconnect_forgets_the_chat(client, session_maker):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("tg-off")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "off"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "off"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

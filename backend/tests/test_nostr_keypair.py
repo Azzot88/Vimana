@@ -1,15 +1,14 @@
 """T2.2 — user Nostr keypair (custodial + self-custody + signing)."""
 import pytest
 from sqlalchemy import text as sa_text
+from tests.conftest import make_account
 
 
 async def test_registration_generates_custodial_keypair(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("kp")
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": email,
             "password": SEED_PASSWORD,
             "display_name": "KP user",
@@ -42,9 +41,7 @@ async def test_nsec_never_plaintext_in_db(client, session_maker):
     from sqlalchemy import select
 
     email = unique_email("kp-privacy")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "P"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "P"},
     )
 
     async with session_maker() as db:
@@ -73,9 +70,7 @@ async def test_export_and_claim_are_gone(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("kp-gone")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "E"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "E"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -96,9 +91,7 @@ async def test_establish_puts_the_account_in_self_custody(client):
     from tests.conftest import SEED_PASSWORD, establish_identity, unique_email
 
     email = unique_email("kp-claim")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "C"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "C"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -122,9 +115,7 @@ async def test_import_endpoint_is_gone(client):
     from app.core.keypair import generate_keypair
 
     email = unique_email("kp-imp")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "I"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "I"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -145,9 +136,7 @@ async def test_bad_hex_rejected(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("kp-hex")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "H"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "H"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -179,9 +168,7 @@ async def test_message_from_new_user_gets_server_signed(client):
 
     # Fresh carrier
     carrier_email = unique_email("sig-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": carrier_email,
             "password": SEED_PASSWORD,
             "display_name": "SigC",
@@ -196,9 +183,7 @@ async def test_message_from_new_user_gets_server_signed(client):
 
     # Fresh sender
     sender_email = unique_email("sig-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": sender_email, "password": SEED_PASSWORD, "display_name": "SigS"},
+    await make_account({"email": sender_email, "password": SEED_PASSWORD, "display_name": "SigS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": sender_email, "password": SEED_PASSWORD}
@@ -255,9 +240,7 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     c_email = unique_email("scc")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "SCC",
@@ -283,9 +266,7 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
     trip_id = trip.json()["id"]
 
     s_email = unique_email("selfs")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "SelfS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "SelfS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}

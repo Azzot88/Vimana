@@ -16,7 +16,7 @@ from sqlalchemy import select, text
 from app.core.deal_chain import content_hash_of, verify_chain, verify_content
 from app.models.deal import Deal, DealEvent, DealEventType, DealVaultMessage
 from app.models.user import User
-from tests.conftest import SEED_PASSWORD, _login, unique_email
+from tests.conftest import SEED_PASSWORD, _login, make_account, unique_email
 
 # Valid 1x1 PNG — built programmatically there (T3.8 decode validation).
 from tests.test_dealvault_attachments import PNG_1X1
@@ -91,9 +91,7 @@ async def _events_of(session_maker, deal_id, event_type: DealEventType) -> list[
 @pytest_asyncio.fixture
 async def arbiter_user(client, session_maker):
     email = unique_email("vault-arbiter")
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Vault Arbiter"},
+    reg = await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Vault Arbiter"},
     )
     assert reg.status_code == 201
     user_id = uuidlib.UUID(reg.json()["id"])

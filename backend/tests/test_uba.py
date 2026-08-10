@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.core.uba import LEVELS, UBAComponents, compute_uba, level_of
+from tests.conftest import make_account
 
 
 def _c(f=0, q=0, v=0.0, d=0.0, verify=None, verify_at=None) -> UBAComponents:
@@ -104,9 +105,7 @@ async def test_uba_endpoint_returns_zero_for_fresh_user(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("uba")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Uba"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Uba"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -129,9 +128,7 @@ async def test_public_uba_endpoint_404_for_unknown_user(client, seed_sender):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("ubaq")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "UbaQ"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "UbaQ"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
@@ -150,9 +147,7 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     c_email = unique_email("uba-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": c_email,
             "password": SEED_PASSWORD,
             "display_name": "UbaC",
@@ -166,9 +161,7 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
     c_headers = {"Authorization": f"Bearer {c_login.json()['access_token']}"}
 
     s_email = unique_email("uba-s")
-    await client.post(
-        "/api/auth/register",
-        json={"email": s_email, "password": SEED_PASSWORD, "display_name": "UbaS"},
+    await make_account({"email": s_email, "password": SEED_PASSWORD, "display_name": "UbaS"},
     )
     s_login = await client.post(
         "/api/auth/login", json={"login": s_email, "password": SEED_PASSWORD}

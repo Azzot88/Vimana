@@ -37,6 +37,7 @@ import pytest_asyncio
 from fastapi.routing import APIRoute
 
 from app.main import app
+from tests.conftest import make_account
 
 DENIED = "denied"
 PUBLIC = "public"
@@ -280,9 +281,7 @@ async def _register(client, prefix: str) -> dict:
     from tests.conftest import SEED_PASSWORD, _login, unique_email
 
     email = unique_email(prefix)
-    resp = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": prefix.title()},
+    resp = await make_account({"email": email, "password": SEED_PASSWORD, "display_name": prefix.title()},
     )
     assert resp.status_code == 201, resp.text
     token = await _login(client, email)

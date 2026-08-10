@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from tests.conftest import make_account
 
 
 async def _make_active_deal(client, carrier_headers, sender_headers) -> str:
@@ -88,9 +89,7 @@ async def test_outsider_cannot_request(client, carrier_headers, sender_headers):
     from tests.conftest import SEED_PASSWORD, _login, unique_email
 
     email = unique_email("out")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Out"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Out"},
     )
     token = await _login(client, email)
     outsider = {"Authorization": f"Bearer {token}"}
@@ -430,9 +429,7 @@ async def test_list_requests_outsider_forbidden(
     from tests.conftest import SEED_PASSWORD, _login, unique_email
 
     email = unique_email("nosy")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Nosy"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Nosy"},
     )
     token = await _login(client, email)
 

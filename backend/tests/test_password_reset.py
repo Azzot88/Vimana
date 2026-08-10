@@ -5,13 +5,11 @@ import pytest
 
 from tests.test_notifications import sync_test_session  # noqa: F401
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 async def _register(client, email: str, *, password: str = SEED_PASSWORD):
-    return await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": password, "display_name": email[:8]},
+    return await make_account({"email": email, "password": password, "display_name": email[:8]},
     )
 
 

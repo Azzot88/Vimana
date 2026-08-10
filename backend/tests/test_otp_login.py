@@ -3,7 +3,7 @@ import uuid as uuidlib
 
 import pytest
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 @pytest.fixture
@@ -30,9 +30,7 @@ async def test_request_answers_202_for_an_unknown_address(client, queued_codes):
 
 async def test_request_answers_202_for_a_known_address(client, queued_codes):
     email = unique_email("otp-known")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "known"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "known"},
     )
     resp = await _request(client, email)
     assert resp.status_code == 202, "identical to the unknown case"
@@ -76,9 +74,7 @@ async def test_a_code_creates_an_account_that_did_not_exist(
 
 async def test_a_code_signs_in_an_account_that_exists(client, queued_codes):
     email = unique_email("otp-existing")
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "existing"},
+    reg = await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "existing"},
     )
     user_id = reg.json()["id"]
 
@@ -99,9 +95,7 @@ async def test_a_code_signs_in_an_account_that_exists(client, queued_codes):
 async def test_the_password_still_works_afterwards(client, queued_codes):
     """Signing in by code must not quietly retire the other way in."""
     email = unique_email("otp-both")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "both"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "both"},
     )
     await _request(client, email)
     await client.post(
@@ -252,9 +246,7 @@ async def test_a_password_is_ignored_for_an_account_that_exists(
     """Otherwise whoever holds the mailbox performs a silent password reset,
     with no screen saying that is what happened."""
     email = unique_email("otp-pw-existing")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "existing"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "existing"},
     )
 
     await _request(client, email)
@@ -314,9 +306,7 @@ async def test_a_code_claims_an_account_whose_address_was_never_confirmed(
     # `@notverified.test` is outside the auto-verify list, so registration
     # leaves the address unproven — the state this branch exists for.
     email = f"claim-{uuidlib.uuid4().hex[:8]}@notverified.test"
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "claimed"},
+    reg = await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "claimed"},
     )
     user_id = reg.json()["id"]
 

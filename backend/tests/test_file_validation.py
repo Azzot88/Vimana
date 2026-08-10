@@ -16,6 +16,7 @@ from app.core.file_validation import (
     validate_upload,
 )
 from tests.test_dealvault_attachments import PNG_1X1
+from tests.conftest import make_account
 
 
 def _image_bytes(fmt: str) -> bytes:
@@ -188,9 +189,7 @@ async def test_avatar_exe_as_jpeg_rejected_422(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("fv")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "FV"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "FV"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

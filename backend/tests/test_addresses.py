@@ -3,14 +3,12 @@ from __future__ import annotations
 
 import uuid
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 async def _register_and_login(client) -> dict:
     email = unique_email("addr")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "A"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "A"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

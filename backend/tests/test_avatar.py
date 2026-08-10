@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 # T3.8 — uploads are content-validated now, so fixtures must be real images.
 from tests.test_dealvault_attachments import PNG_1X1
@@ -16,9 +16,7 @@ from tests.test_dealvault_attachments import PNG_1X1
 
 async def _register_and_login(client) -> dict:
     email = unique_email("av")
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": "Av"},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Av"},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

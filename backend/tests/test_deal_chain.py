@@ -36,7 +36,7 @@ from app.core.keypair import generate_keypair, npub_from_nsec, verify_event_id
 from app.core.signing import compute_event_id
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealEventType, DealStatus
 from app.models.marketplace import Order, OrderStatus
-from tests.conftest import TEST_DATABASE_URL, unique_email
+from tests.conftest import TEST_DATABASE_URL, make_account, unique_email
 
 # `asyncio_mode = auto` (pytest.ini) — async defs run as asyncio tests, sync defs
 # stay sync. The anchoring tests below rely on that: they must NOT run inside a
@@ -614,9 +614,7 @@ async def test_chain_endpoint_reports_status(
 
 async def test_chain_endpoint_rejects_outsider(client, chain_deal):
     email = unique_email("chain-outsider")
-    reg = await client.post(
-        "/api/auth/register",
-        json={
+    reg = await make_account({
             "email": email,
             "password": "outsider-pass-123",
             "display_name": "Outsider",

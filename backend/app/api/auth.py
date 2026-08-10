@@ -29,7 +29,6 @@ from app.core.email_verification import (
     target_email,
     verify_code,
 )
-from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
 from app.core.security import (
     RECOVERY_CODE_COUNT,
@@ -52,7 +51,6 @@ from app.schemas.user import (
     RecoveryConsumeBody,
     RecoverySessionOut,
     Token,
-    UserCreate,
     UserLogin,
     UserOut,
     UserUpdate,
@@ -65,80 +63,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserOut, status_code=201)
-@limiter.limit("60/minute")
-async def register(request: Request, body: UserCreate, db: AsyncSession = Depends(get_db)):
-    email = body.email  # normalized + shape-checked by the schema validator
-
-    existing = await db.execute(select(User).where(User.email == email))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="email already registered")
-
-    # T2.2 — custodial Nostr keypair generated at registration.
-    # `nsec_encrypted` is DELETE-ed later when user claims self-custody.
-    nsec_hex, npub_hex = generate_keypair()
-    nsec_nonce, nsec_ct = encrypt_nsec(nsec_hex)
-
-    user = User(
-        email=email,
-        password_hash=hash_password(body.password),
-        display_name=body.display_name,
-        can_carry=body.can_carry,
-        can_send=body.can_send,
-        active_mode=body.active_mode,
-        locale=body.locale,
-        nostr_pubkey=npub_hex,
-        nsec_encrypted=nsec_ct,
-        nsec_nonce=nsec_nonce,
-        key_self_custody=False,
-    )
-    # T3.11 — E2E domain bypasses the mailbox entirely (empty setting in prod).
-    if is_auto_verify_domain(email):
-        user.email_verified_at = datetime.now(timezone.utc)
-
-    db.add(user)
-    # Flushed before the contact row: `user.id` is assigned at flush, and
-    # `upsert_contact` writes a foreign key to it.
-    await db.flush()
-    # T3.25 — the same fact in the table that will own it. Verified only if the
-    # address really is: at ordinary registration nobody has proved anything
-    # yet, and writing `verified` here would put the first lie into the column
-    # the whole table exists to make trustworthy.
-    registered_contact = await upsert_contact(
-        db, user, "email", user.email, verified=user.email_verified_at is not None
-    )
-    # T3.28 — this address is how the account signs in. The 0045 backfill set
-    # the flag for every account that predates contacts; without setting it
-    # here, accounts created after the migration would be the only ones unable
-    # to use a code to get in.
-    if registered_contact is not None:
-        registered_contact.is_login = True
-    await db.commit()
-    await db.refresh(user)
-
-    if user.email_verified_at is None:
-        _dispatch_code(user)
-        await db.commit()
-
-    return user
-
-
-def _dispatch_code(user: User) -> None:
-    """Mint a code and hand it to Celery. Caller commits.
-
-    The plaintext travels through the broker because it exists nowhere else —
-    the column holds only a bcrypt hash. It is single-use and expires in
-    `CODE_TTL`.
-    """
-    code = issue_code(user)
-    from app.tasks.notifications import send_verification_code
-
-    try:
-        send_verification_code.delay(str(user.id), code)
-    except Exception:
-        # Broker unreachable in dev — the code is still stamped on the user and
-        # can be re-requested once the cooldown passes.
-        pass
+# T3.28 pt.3b — `POST /register` lived here.
+#
+# It was the last way to create an account on an address nobody had proved:
+# type somebody else's, choose a password, hold it. Worse, the account it made
+# carried an *unverified* contact, which the code-based door could not
+# recognise — it tried to create a second account on the same address and died
+# on the UNIQUE (fixed separately, `otp_verify` now claims such an account).
+#
+# Creation lives in `core/accounts.create_user`, called by `otp_verify` once a
+# code has proved the address, and by the suite through `conftest.make_account`.
+# One constructor, one shape, and no door that skips the proof.
 
 
 @router.post("/email/request-code", status_code=202)
@@ -512,37 +447,39 @@ async def otp_verify(
             # what it is doing (`T_SEC.5`).
             pass
         else:
-            nsec_hex, npub_hex = generate_keypair()
-            nsec_nonce, nsec_ct = encrypt_nsec(nsec_hex)
-            user = User(
+            from app.core.accounts import create_user
+            from app.models.contact import UserContact as _Contact
+
+            # `verified=True` — the code just proved the address, and that is
+            # the whole difference between this door and the form that used to
+            # stand beside it. The password, if one was typed on the sign-in
+            # screen, is applied here and nowhere earlier: nothing exists until
+            # the address is proven, so a stranger cannot squat on an address by
+            # typing it and a typo cannot become a second account.
+            user = await create_user(
+                db,
                 email=value if contact_channel == "email" else None,
                 phone=value if contact_channel == "sms" else None,
-                password_hash=None,
-                # Provisional, and replaced on the next screen. The local part
-                # of an address is a better first guess than "User" and a worse
-                # one than what the person will type.
-                display_name=value.split("@")[0][:100],
-                nostr_pubkey=npub_hex,
-                nsec_encrypted=nsec_ct,
-                nsec_nonce=nsec_nonce,
-                key_self_custody=False,
+                password=body.password,
+                verified=True,
             )
-            if contact_channel == "email":
-                user.email_verified_at = datetime.now(timezone.utc)
-            # The account is born with the password the visitor typed a moment
-            # ago on the same screen, if they typed one. Nothing was stored
-            # before this point: an account created on an unproven address is
-            # how a stranger squats on somebody else's, and a typo would have
-            # produced a second account instead of an error.
-            if body.password:
-                user.password_hash = hash_password(body.password)
-            db.add(user)
-            await db.flush()
-            contact = await upsert_contact(
-                db, user, contact_channel, value, verified=True
-            )
-            if contact is not None:
-                contact.is_login = True
+            if contact_channel == "sms":
+                # `create_user` records a phone unverified, because the ordinary
+                # way one arrives — typed into a profile — proves nothing. A
+                # code is the exception, so it is upgraded here rather than by
+                # loosening the constructor for everyone.
+                contact = (
+                    await db.execute(
+                        select(_Contact).where(
+                            _Contact.user_id == user.id,
+                            _Contact.channel == "sms",
+                            _Contact.value == value,
+                        )
+                    )
+                ).scalar_one_or_none()
+                if contact is not None:
+                    contact.verified_at = datetime.now(timezone.utc)
+                    contact.is_login = True
 
         await db.commit()
         return {"access_token": create_access_token(str(user.id)), "token_type": "bearer"}

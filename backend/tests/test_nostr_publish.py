@@ -15,15 +15,14 @@ from app.core.nostr_publish import (
     platform_publish_pubkey,
 )
 from app.core.signing import compute_event_id
+from tests.conftest import make_account
 
 
 async def _register_carrier(client):
     from tests.conftest import SEED_PASSWORD, unique_email
 
     email = unique_email("np-c")
-    await client.post(
-        "/api/auth/register",
-        json={
+    await make_account({
             "email": email,
             "password": SEED_PASSWORD,
             "display_name": "NPC",

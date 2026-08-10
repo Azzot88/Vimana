@@ -1,13 +1,11 @@
 """T1.24 — dual role, capabilities, and active_mode switching."""
 from datetime import datetime, timedelta, timezone
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 async def _register(client, email: str, *, can_carry=True, can_send=True, active_mode="sender"):
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": email,
             "password": SEED_PASSWORD,
             "display_name": "Dual",
@@ -38,9 +36,7 @@ async def test_user_out_exposes_capabilities_no_is_carrier(client):
 
 
 async def test_default_registration_makes_both_capabilities_true(client):
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": unique_email("dflt"),
             "password": SEED_PASSWORD,
             "display_name": "Default",

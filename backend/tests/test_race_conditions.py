@@ -2,6 +2,7 @@
 import asyncio
 import uuid as uuidlib
 from datetime import datetime, timedelta, timezone
+from tests.conftest import make_account
 
 
 async def _make_trip(client, carrier_headers) -> str:
@@ -67,9 +68,7 @@ async def test_invite_concurrent_accept_only_one_wins(client, carrier_headers):
     async def _register_and_accept(idx):
         email = f"race-inv-{idx}-{uuidlib.uuid4().hex[:6]}@vimana.test"
         pw = "race-pw-1"
-        reg = await client.post(
-            "/api/auth/register",
-            json={"email": email, "password": pw, "display_name": f"Race {idx}"},
+        reg = await make_account({"email": email, "password": pw, "display_name": f"Race {idx}"},
         )
         assert reg.status_code == 201
         login = await client.post(

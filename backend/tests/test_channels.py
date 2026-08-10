@@ -3,7 +3,7 @@ import uuid as uuidlib
 
 import pytest
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 def _number() -> str:
@@ -175,9 +175,7 @@ async def test_asking_twice_in_a_row_is_told_to_wait(client, monkeypatch):
 
 
 async def _session(client, email: str):
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": SEED_PASSWORD, "display_name": email[:8]},
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": email[:8]},
     )
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

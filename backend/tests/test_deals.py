@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from tests.conftest import make_account
 
 
 async def _create_open_trip(client, carrier_headers) -> str:
@@ -134,9 +135,7 @@ async def test_get_deal_forbidden_for_outsider(client, carrier_headers, sender_h
     trip_id = await _create_open_trip(client, carrier_headers)
     deal_id = await _match_deal(client, sender_headers, trip_id)
 
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": f"outsider-{deal_id[:8]}@vimana.test",
             "password": "outsider-pass",
             "display_name": "Outsider",

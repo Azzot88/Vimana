@@ -5,45 +5,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class UserCreate(BaseModel):
-    """T3.11 — email + password only. `phone` is gone from the auth path
-    entirely; it stays a profile contact field (see `UserUpdate`)."""
-
-    email: str
-    password: str
-    display_name: str
-    # T1.24: capability + initial mode. Everyone can both by default.
-    can_carry: bool = True
-    can_send: bool = True
-    active_mode: str = "sender"
-    # T_UX.9 — the interface language at the moment of signing up, so the first
-    # letter is already in the right one. An unknown tag falls back to `en` at
-    # render time rather than being rejected here: a stray locale must not cost
-    # somebody their registration.
-    locale: str = "en"
-
-    @field_validator("email")
-    @classmethod
-    def email_shape(cls, v: str) -> str:
-        from app.core.email_verification import is_valid_email, normalize_email
-
-        if not is_valid_email(v):
-            raise ValueError("Invalid email address")
-        return normalize_email(v)
-
-    @field_validator("password")
-    @classmethod
-    def password_min_length(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        return v
-
-    @field_validator("active_mode")
-    @classmethod
-    def active_mode_valid(cls, v: str) -> str:
-        if v not in ("sender", "carrier"):
-            raise ValueError("active_mode must be 'sender' or 'carrier'")
-        return v
+# T3.28 pt.3b — `UserCreate` lived here, the body of `POST /auth/register`.
+# The endpoint is gone; `core/accounts.create_user` takes arguments, not a
+# schema, because nothing accepts these fields from outside any more.
 
 
 class UserLogin(BaseModel):

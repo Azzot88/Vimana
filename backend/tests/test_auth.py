@@ -1,13 +1,11 @@
 import uuid
 
-from tests.conftest import SEED_PASSWORD, unique_email
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
 async def test_register_new_user(client):
     email = unique_email("reg")
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": email,
             "password": "test-password-1",
             "display_name": "Reg User",
@@ -24,9 +22,7 @@ async def test_register_new_user(client):
 
 
 async def test_register_duplicate_email(client, seed_carrier):
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": seed_carrier.email,
             "password": "test-password-1",
             "display_name": "Duplicate",
@@ -37,17 +33,13 @@ async def test_register_duplicate_email(client, seed_carrier):
 
 async def test_register_requires_email(client):
     """T3.11 — email is the only identifier; phone left the auth path."""
-    resp = await client.post(
-        "/api/auth/register",
-        json={"password": "test-password-1", "display_name": "No contact"},
+    resp = await make_account({"password": "test-password-1", "display_name": "No contact"},
     )
     assert resp.status_code == 422
 
 
 async def test_register_rejects_phone_only(client):
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "phone": "+15550001111",
             "password": "test-password-1",
             "display_name": "Phone Only",
@@ -131,9 +123,7 @@ async def test_patch_me_updates_phone(client, sender_headers):
 
 async def test_register_without_phone_succeeds(client):
     email = unique_email("nophone")
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": email,
             "password": "test-password-1",
             "display_name": "No Phone User",
@@ -145,9 +135,7 @@ async def test_register_without_phone_succeeds(client):
 
 async def test_register_normalizes_email_lowercase(client):
     raw_email = f"MixedCase-{uuid.uuid4().hex[:6]}@Vimana.Test"
-    resp = await client.post(
-        "/api/auth/register",
-        json={
+    resp = await make_account({
             "email": raw_email,
             "password": "test-password-1",
             "display_name": "Case User",
@@ -160,9 +148,7 @@ async def test_register_normalizes_email_lowercase(client):
 async def test_login_is_case_insensitive_for_email(client):
     raw_email = f"Case-Login-{uuid.uuid4().hex[:6]}@Vimana.Test"
     password = "test-password-1"
-    reg = await client.post(
-        "/api/auth/register",
-        json={"email": raw_email, "password": password, "display_name": "CI Login"},
+    reg = await make_account({"email": raw_email, "password": password, "display_name": "CI Login"},
     )
     assert reg.status_code == 201
 
@@ -177,9 +163,7 @@ async def test_login_is_case_insensitive_for_email(client):
 async def test_login_trims_whitespace(client):
     email = unique_email("trim")
     password = "test-password-1"
-    await client.post(
-        "/api/auth/register",
-        json={"email": email, "password": password, "display_name": "Trim"},
+    await make_account({"email": email, "password": password, "display_name": "Trim"},
     )
     resp = await client.post(
         "/api/auth/login",
