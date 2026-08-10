@@ -90,6 +90,11 @@ async def telegram_webhook(
             user.telegram_chat_id = chat_id
             user.telegram_link_token = None
             user.notify_telegram = True
+            # T3.25 — pressing Start in a chat is the proof, so the contact is
+            # written verified. Nothing else can produce a chat id.
+            from app.core.contacts import upsert_contact
+
+            await upsert_contact(db, user, "telegram", chat_id, verified=True)
             await db.commit()
             reply("linked", user.locale)
         else:
@@ -117,9 +122,21 @@ async def disconnect(
 
     Called by: ProfilePage's Telegram switch.
     """
+    from sqlalchemy import delete as _delete
+
+    from app.models.contact import UserContact
+
     current_user.telegram_chat_id = None
     current_user.telegram_link_token = None
     current_user.notify_telegram = False
+    # T3.25 — the contact goes with it. Leaving a confirmed row for a chat the
+    # account just disowned would keep the value reserved against everyone,
+    # including its next legitimate owner.
+    await db.execute(
+        _delete(UserContact).where(
+            UserContact.user_id == current_user.id, UserContact.channel == "telegram"
+        )
+    )
     await db.commit()
     return {"connected": False}
 

@@ -98,6 +98,32 @@ class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
     locale: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def phone_shape(cls, v: str | None) -> str | None:
+        """T3.25 — E.164 or nothing.
+
+        The column was free text, so `+971 50 123 45 67`, `0501234567` and
+        `971501234567` were three different phones belonging to one person, and
+        the `UNIQUE` on the column could not tell. Normalising at the door is
+        what makes the number an identifier rather than a note — and Phase 3.8
+        signs people in with it.
+
+        An empty string clears the field; anything unparseable is refused
+        rather than stored, because a value that fails to normalise is exactly
+        the one that will not compare equal later.
+        """
+        if v is None:
+            return None
+        from app.core.contacts import normalize
+
+        if not v.strip():
+            return None
+        normalized = normalize("sms", v)
+        if normalized is None:
+            raise ValueError("Phone must be a valid international number, e.g. +971501234567")
+        return normalized
     # T3.18 — how much of this identity a stranger may see. Validated here
     # rather than trusted from the client: an unknown value would fall back to
     # `full` in `visible_to`, i.e. a typo in the UI would silently un-hide an

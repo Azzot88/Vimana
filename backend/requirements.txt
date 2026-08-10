@@ -59,6 +59,13 @@ Pillow==12.3.0
 # signature verification; we keep the ceremony state and the credential rows.
 webauthn==2.5.2
 
+# T3.25 — E.164 normalisation. Google's libphonenumber data, not a regex:
+# national formats, trunk prefixes and lengths are a moving dataset, and the
+# version we would hand-roll would be wrong for whichever country nobody
+# thought about. A phone number that is not reduced to one canonical form is a
+# note, not an identifier — and `UNIQUE` cannot tell the difference.
+phonenumbers==8.13.52
+
 # T_UX.9 — HTML email templates. One layout, six locales, strings in JSON;
 # Jinja2 renders both the layout and the individual catalogue strings (so a
 # translation can carry `{{ code }}` without `str.format` choking on a stray

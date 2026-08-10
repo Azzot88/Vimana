@@ -1004,6 +1004,20 @@ async def _ensure_vault_completeness(engine) -> None:
         )
 
 
+async def _ensure_contact_tables(engine) -> None:
+    """T3.25: user_contacts + verification_challenges. Mirrors migration 0045.
+    Idempotent — `create_all` builds them, this covers a pre-existing test DB
+    and, crucially, the *partial* unique index, which `create_all` does not
+    know about because it lives only in the migration."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_user_contacts_verified "
+                "ON user_contacts (channel, value) WHERE verified_at IS NOT NULL"
+            )
+        )
+
+
 async def _ensure_password_reset_columns(engine) -> None:
     """T_SEC.5: users.password_reset_hash + _expires_at. Mirrors migration 0044.
     Idempotent — `create_all` builds them, this covers a pre-existing test DB."""
@@ -1180,6 +1194,7 @@ async def test_engine():
     await _ensure_waitlist_confirmation_column(engine)
     await _ensure_locale_columns(engine)
     await _ensure_password_reset_columns(engine)
+    await _ensure_contact_tables(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

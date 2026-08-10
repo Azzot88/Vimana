@@ -34,3 +34,4 @@ __all__ = [
     "WaitlistEntry",
     "WebAuthnCredential",
 ]
+from app.models.contact import UserContact, VerificationChallenge  # noqa: F401,E402

@@ -15,6 +15,7 @@ from app.api.deps import (
 )
 from app.core.avatar_url import me_out_with_avatar
 from app.core.database import get_db
+from app.core.contacts import upsert_contact
 from app.core.email_verification import (
     RESEND_COOLDOWN,
     CodeExpired,
@@ -96,6 +97,16 @@ async def register(request: Request, body: UserCreate, db: AsyncSession = Depend
         user.email_verified_at = datetime.now(timezone.utc)
 
     db.add(user)
+    # Flushed before the contact row: `user.id` is assigned at flush, and
+    # `upsert_contact` writes a foreign key to it.
+    await db.flush()
+    # T3.25 — the same fact in the table that will own it. Verified only if the
+    # address really is: at ordinary registration nobody has proved anything
+    # yet, and writing `verified` here would put the first lie into the column
+    # the whole table exists to make trustworthy.
+    await upsert_contact(
+        db, user, "email", user.email, verified=user.email_verified_at is not None
+    )
     await db.commit()
     await db.refresh(user)
 
@@ -179,6 +190,12 @@ async def verify_email(
     except CodeInvalid:
         await db.commit()  # persist the incremented attempt counter
         raise HTTPException(status_code=400, detail="Invalid code")
+
+    # T3.25 — a confirmation is exactly the event `user_contacts` records.
+    # Written before the commit so the row and the flag land together: a
+    # confirmed address whose contact row failed to save would be a quiet
+    # disagreement between two places that must always agree.
+    await upsert_contact(db, current_user, "email", current_user.email, verified=True)
 
     try:
         await db.commit()
@@ -584,6 +601,14 @@ async def update_me(
                 status_code=422, detail=f"'{field}' cannot be null"
             )
         setattr(current_user, field, value)
+
+    # T3.25 — a phone edited in the profile becomes a contact row, unverified.
+    # Nobody has confirmed it: there is no mechanism yet (that is `T3.26`), and
+    # writing `verified` for a number the account merely typed would put the
+    # first untrue value into the column the table exists to make trustworthy.
+    if "phone" in fields and fields["phone"]:
+        await upsert_contact(db, current_user, "sms", fields["phone"], verified=False)
+
     await db.commit()
     await db.refresh(current_user)
     return me_out_with_avatar(current_user)
