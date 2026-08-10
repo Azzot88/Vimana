@@ -93,9 +93,6 @@ export interface RecoverySession {
 export const consumeRecoveryCode = (identifier: string, code: string) =>
   api.post<RecoverySession>('/api/auth/recovery/consume', { identifier, code })
 
-/** T3.15 — moving to a new address. Two steps on purpose: the change is only
- *  requested here, and lands when a code sent to the new mailbox comes back
- *  through `verifyEmail`. Until then the old address keeps working. */
 /** T_UX.13 — the Telegram switch turned off: forget the chat entirely. */
 export const disconnectTelegram = () =>
   api.post<{ connected: boolean }>('/api/telegram/disconnect')
@@ -135,6 +132,9 @@ export const loginMethods = (identifier: string) =>
     identifier,
   })
 
+/** T3.15 — moving to a new address. Two steps on purpose: the change is only
+ *  requested here, and lands when a code sent to the new mailbox comes back
+ *  through `verifyEmail`. Until then the old address keeps working. */
 export const changeEmail = (email: string, stepUpToken: string) =>
   api.post<{ status: string; pending_email: string }>(
     '/api/auth/email/change',
@@ -213,7 +213,13 @@ export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 
 export interface UserUpdate {
   display_name?: string
+  /** T3.25 — E.164 or the request is refused; the backend normalises and
+   *  rejects anything unparseable rather than storing it as text. */
   phone?: string
+  /** T_UX.9 — the language every letter to this account is written in. Added
+   *  to the backend schema then and missed here; the strict production build
+   *  caught it the first time something tried to send it. */
+  locale?: string
   public_profile?: 'full' | 'minimal' | 'hidden'
   notify_email?: boolean
   notify_telegram?: boolean
