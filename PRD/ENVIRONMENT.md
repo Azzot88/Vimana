@@ -87,7 +87,7 @@
 - `RATE_LIMIT_ENABLED` (T1.19 slowapi; в тестах = `false`)
 
 **Notifications (Фаза 1):**
-- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` / `TELEGRAM_WEBHOOK_SECRET` (T1.7 Telegram)
+- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` / `TELEGRAM_WEBHOOK_SECRET` (T1.7 Telegram). **Секрет и регистрация вебхука меняются вместе:** Telegram шлёт заголовок `X-Telegram-Bot-Api-Secret-Token` только если секрет был передан **в момент регистрации**. Поменял `TELEGRAM_WEBHOOK_SECRET` или пересоздал backend после его добавления — перерегистрируй вебхук (`POST /api/telegram/set_webhook`, суперюзер, без параметров), иначе все обновления начнут отклоняться с 403 и это будет выглядеть как «бот просто перестал работать». Проверка состояния: `curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo"` — смотреть `url` (пустой = вебхука нет) и `last_error_message`.
 - `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` (T1.7 WhatsApp)
 
 **Admin (Фаза 1, T1.18):**

@@ -126,19 +126,32 @@ async def disconnect(
 
 @router.post("/set_webhook")
 async def register_webhook(
-    webhook_url: str,
     _: User = Depends(require_perm(Permission.TELEGRAM_MANAGE)),
 ) -> dict[str, Any]:
-    """Register the webhook. Superuser only.
+    """Point Telegram at *our* webhook. Superuser only. Takes no input.
 
-    It used to require nothing but a session. Any signed-in account could
-    re-point the bot at a server of their choosing — Telegram would then
-    deliver every update, including the `/start` tokens that link accounts, to
-    a stranger, and linking here would simply stop working. Tightened
-    2026-08-09 alongside the `secret_token` fix; the two together are what
-    makes the webhook trustworthy in either direction.
+    Two holes closed here, both found the hard way.
+
+    It used to require nothing but a session: any signed-in account could
+    re-point the bot at a server of their choosing, and Telegram would deliver
+    every update — including the `/start` tokens that link accounts — to a
+    stranger. Tightened with `TELEGRAM_MANAGE`.
+
+    **And it used to take the URL as a parameter.** `test_contract_fuzz` walks
+    every endpoint in the OpenAPI schema as a superuser, so on a server where
+    the bot is configured the fuzzer called this with a generated URL and
+    `set_webhook` dutifully forwarded it to Telegram. On 2026-08-09 a test run
+    unset the production webhook that way: `getWebhookInfo` came back with
+    `"url": ""`, linking stopped, and nothing in the app looked wrong. A test
+    suite that can break production is not a testing problem, it is this
+    endpoint's problem — so the URL is now derived, and there is no input left
+    to generate. The worst a fuzz run can now do is re-register the correct
+    address.
+
+    Called by: the admin by hand after changing `TELEGRAM_WEBHOOK_SECRET` —
+    the secret only travels with a registration, so the two change together.
     """
     if not settings.TELEGRAM_BOT_TOKEN:
         raise HTTPException(status_code=503, detail="Telegram bot not configured")
-    result = set_webhook(webhook_url)
-    return result
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+    return set_webhook(f"{base}/api/telegram/webhook")

@@ -144,17 +144,20 @@ async def test_set_webhook_endpoint_is_superuser_only(client, session_maker):
     )
     hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    anon = await client.post(
-        "/api/telegram/set_webhook", params={"webhook_url": "https://evil.test/hook"}
-    )
-    assert anon.status_code == 401
+    assert (await client.post("/api/telegram/set_webhook")).status_code == 401
+    assert (
+        await client.post("/api/telegram/set_webhook", headers=hdr)
+    ).status_code == 403
 
-    resp = await client.post(
-        "/api/telegram/set_webhook",
-        params={"webhook_url": "https://evil.test/hook"},
-        headers=hdr,
-    )
-    assert resp.status_code == 403
+
+async def test_set_webhook_takes_no_url(client):
+    """The parameter is gone: a fuzz run once forwarded a generated URL to
+    Telegram and unset the production webhook (2026-08-09)."""
+    import inspect
+
+    from app.api.telegram import register_webhook
+
+    assert "webhook_url" not in inspect.signature(register_webhook).parameters
 
 
 # ── T_UX.12 pt.2 · every branch answers ──────────────────────────────────────

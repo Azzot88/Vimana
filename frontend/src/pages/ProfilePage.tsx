@@ -36,6 +36,7 @@ export default function ProfilePage() {
   const [creatingInvite, setCreatingInvite] = useState(false)
   const [busyChannel, setBusyChannel] = useState<string | null>(null)
   const [emailModal, setEmailModal] = useState(false)
+  const [awaitingLink, setAwaitingLink] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   // T3.19 — the owner's own copy of their record. Read from the public endpoint
@@ -100,9 +101,19 @@ export default function ProfilePage() {
   //
   // Scoped to the one pending case rather than refetching on every focus: a
   // profile that re-reads itself whenever you alt-tab is a request per glance.
-  const linkPending = Boolean(user?.notify_telegram && !user?.telegram_chat_id)
+  // The pending state is «we just sent this person to Telegram», and it has to
+  // be tracked here. Deriving it from `notify_telegram` (the first version)
+  // stopped working the moment T_UX.13 made the switch stop writing that flag
+  // on connect: the flag stays false until the webhook lands, so the condition
+  // was false exactly while the answer was pending, and the profile never
+  // asked again. The screen sat on stale data while the bot had already
+  // confirmed in the chat.
   useEffect(() => {
-    if (!linkPending || !token) return
+    if (!awaitingLink || !token) return
+    if (user?.telegram_chat_id) {
+      setAwaitingLink(false)
+      return
+    }
     const recheck = () => {
       if (document.visibilityState !== 'visible') return
       me()
@@ -111,11 +122,20 @@ export default function ProfilePage() {
     }
     document.addEventListener('visibilitychange', recheck)
     window.addEventListener('focus', recheck)
+    // Focus is the common case and the cheap one, but it is not guaranteed:
+    // the desktop Telegram app can take the link without the browser ever
+    // losing focus, and then no event fires at all. A bounded poll covers that
+    // without becoming a background heartbeat — it exists only between the tap
+    // and the answer, and gives up rather than running forever.
+    const poll = setInterval(recheck, 3000)
+    const stop = setTimeout(() => setAwaitingLink(false), 120_000)
     return () => {
       document.removeEventListener('visibilitychange', recheck)
       window.removeEventListener('focus', recheck)
+      clearInterval(poll)
+      clearTimeout(stop)
     }
-  }, [linkPending, token, setAuth])
+  }, [awaitingLink, token, setAuth, user?.telegram_chat_id])
 
   const copyInviteLink = (token: string) => {
     const url = `${window.location.origin}/invite/${token}`
@@ -173,6 +193,7 @@ export default function ProfilePage() {
       }
       try {
         const { data } = await getTelegramLink()
+        setAwaitingLink(true)
         window.open(data.link, '_blank')
       } catch { /* silent */ }
       return
