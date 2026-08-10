@@ -116,12 +116,14 @@
   },
   "password_changed": {
     "subject": "Vimana · Tu contraseña ha cambiado",
-    "preheader": "Si no has sido tú, actúa ahora",
+    "preheader": "Para la cuenta de abajo",
     "heading": "Tu contraseña ha cambiado",
+    "greeting": "{{ name }}, tu contraseña se ha cambiado correctamente.",
+    "greeting_plain": "Tu contraseña se ha cambiado correctamente.",
     "body": [
-      "La contraseña de esta cuenta acaba de cambiar y se han cerrado todas las demás sesiones.",
-      "Si has sido tú, no hace falta nada más. Si no, restablece la contraseña de inmediato: quien lo hizo tiene la única sesión activa."
+      "Se han cerrado todas las demás sesiones — a partir de ahora solo se entra con la nueva contraseña."
     ],
-    "note": "Este mensaje no es una suscripción y no se puede desactivar: es la única señal de que la cuenta ha cambiado de manos."
+    "facts_account": "cuenta",
+    "note": "Este mensaje no es una suscripción y no se puede desactivar: deja constancia de que la forma de entrar en esta cuenta ha cambiado."
   }
 }

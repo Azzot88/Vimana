@@ -336,3 +336,34 @@ def test_catcher_without_auth_is_not_logged_into(monkeypatch):
     catcher = Circuit(host="mailpit", port=1025, user="dev@vimana.test", password="")
     send_email("who@example.test", "s", "b", circuit=catcher)
     assert logged == []
+
+
+# ── the password-changed letter says whose account it is ─────────────────────
+
+
+def test_password_changed_names_the_account():
+    """«Your password was changed» without saying whose is a sentence the
+    reader cannot act on — people hold several accounts and forward mail."""
+    letter = render("password_changed", "ru", name="Пётр", account="p@example.com")
+    assert "p@example.com" in letter.html
+    assert "p@example.com" in letter.text
+
+
+def test_password_changed_greets_by_name_when_there_is_one():
+    letter = render("password_changed", "ru", name="Пётр", account="p@example.com")
+    assert "Пётр, ваш пароль" in letter.text
+
+
+def test_password_changed_stays_plain_without_a_name():
+    """An account made by a code carries its address prefix as a placeholder;
+    greeting somebody by that is worse than not greeting them."""
+    letter = render("password_changed", "ru", name="", account="p@example.com")
+    assert "Ваш пароль успешно изменён." in letter.text
+    assert "," not in letter.text.splitlines()[1] or "Пётр" not in letter.text
+
+
+def test_password_changed_greets_in_every_locale():
+    for locale in LOCALES:
+        letter = render("password_changed", locale, name="Pyotr", account="p@x.test")
+        assert "Pyotr" in letter.text, locale
+        assert "{{" not in letter.text

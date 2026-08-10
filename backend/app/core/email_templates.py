@@ -57,7 +57,7 @@ _LETTERS: dict[str, dict[str, Any]] = {
         "facts": ["email", "name", "source", "when", "total", "confirmation"]
     },
     "password_reset": {"cta": True},
-    "password_changed": {},
+    "password_changed": {"greeting": True, "facts": ["account"]},
     "deal_status": {},
     "deadline_reminder": {},
 }
@@ -122,7 +122,10 @@ def sample_context(kind: str) -> dict[str, Any]:
         "password_reset": {
             "cta_url": "https://vimana.dealvault.club/reset-password?token=sample-token",
         },
-        "password_changed": {},
+        "password_changed": {
+            "name": "Пётр",
+            "account": "pyotr@example.com",
+        },
         "deal_status": {"status": "in_transit"},
         "deadline_reminder": {},
     }
@@ -180,6 +183,18 @@ def render(kind: str, locale: str | None, **ctx: Any) -> Rendered:
     heading = _fill(strings["heading"], ctx)
     preheader = _fill(strings.get("preheader", ""), ctx)
     body = [_fill(p, ctx) for p in strings.get("body", [])]
+
+    # A letter that addresses someone by name reads as written to them rather
+    # than emitted at them — but only if the name is real. An account created
+    # by a code carries the local part of its address as a placeholder until
+    # the welcome screen, and "Здравствуйте, niktrifonov83" is worse than no
+    # greeting at all. So the plain form is not a fallback for a missing name;
+    # it is what gets used whenever the name is not something a person chose.
+    if shape.get("greeting"):
+        name = (ctx.get("name") or "").strip()
+        greeting = strings.get("greeting" if name else "greeting_plain")
+        if greeting:
+            body.insert(0, _fill(greeting, {**ctx, "name": name}))
     note = _fill(strings["note"], ctx) if strings.get("note") else ""
     footer = cat.get("footer", fallback["footer"])
 

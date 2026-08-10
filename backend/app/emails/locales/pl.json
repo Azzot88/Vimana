@@ -116,12 +116,14 @@
   },
   "password_changed": {
     "subject": "Vimana · Hasło zostało zmienione",
-    "preheader": "Jeśli to nie Ty — działaj teraz",
+    "preheader": "Dla konta poniżej",
     "heading": "Hasło zostało zmienione",
+    "greeting": "{{ name }}, Twoje hasło zostało zmienione.",
+    "greeting_plain": "Twoje hasło zostało zmienione.",
     "body": [
-      "Hasło do tego konta właśnie zmieniono, a wszystkie inne sesje zostały zakończone.",
-      "Jeśli to byłeś Ty — nic więcej nie trzeba. Jeśli nie — natychmiast zresetuj hasło: ten, kto to zrobił, ma jedyną aktywną sesję."
+      "Wszystkie inne sesje zostały zakończone — od teraz wchodzi się wyłącznie nowym hasłem."
     ],
-    "note": "Ten list nie jest subskrypcją i nie da się go wyłączyć: tylko on mówi, że konto zmieniło właściciela."
+    "facts_account": "konto",
+    "note": "Ten list nie jest subskrypcją i nie da się go wyłączyć: zapisuje, że sposób logowania do tego konta się zmienił."
   }
 }

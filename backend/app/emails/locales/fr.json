@@ -116,12 +116,14 @@
   },
   "password_changed": {
     "subject": "Vimana · Votre mot de passe a été changé",
-    "preheader": "Si ce n'était pas vous, agissez maintenant",
+    "preheader": "Pour le compte ci-dessous",
     "heading": "Votre mot de passe a été changé",
+    "greeting": "{{ name }}, votre mot de passe a bien été changé.",
+    "greeting_plain": "Votre mot de passe a bien été changé.",
     "body": [
-      "Le mot de passe de ce compte vient d'être changé, et toutes les autres sessions ont été fermées.",
-      "Si c'était vous, il n'y a rien d'autre à faire. Sinon, réinitialisez le mot de passe immédiatement : la personne qui a fait cela détient la seule session active."
+      "Toutes les autres sessions ont été fermées — désormais, seul le nouveau mot de passe ouvre ce compte."
     ],
-    "note": "Ce message n'est pas un abonnement et ne peut pas être désactivé : il est le seul à signaler que le compte a changé de mains."
+    "facts_account": "compte",
+    "note": "Ce message n'est pas un abonnement et ne peut pas être désactivé : il consigne que la façon d'accéder à ce compte a changé."
   }
 }

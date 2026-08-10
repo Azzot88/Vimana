@@ -116,12 +116,14 @@
   },
   "password_changed": {
     "subject": "Vimana · Your password was changed",
-    "preheader": "If this wasn't you, act now",
+    "preheader": "For the account below",
     "heading": "Your password was changed",
+    "greeting": "{{ name }}, your password has been changed.",
+    "greeting_plain": "Your password has been changed.",
     "body": [
-      "The password for this account has just been changed, and every other session was signed out.",
-      "If it was you, nothing else is needed. If it wasn't, reset the password immediately — whoever did this is holding the only live session."
+      "Every other session was signed out — the new password is the only way in from now on."
     ],
-    "note": "This letter is not a subscription and cannot be turned off: it is the one signal that says the account changed hands."
+    "facts_account": "account",
+    "note": "This letter is not a subscription and cannot be turned off: it is the record that this account's way in has changed."
   }
 }

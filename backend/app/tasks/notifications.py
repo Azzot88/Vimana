@@ -417,7 +417,25 @@ def send_password_changed(user_id: str) -> None:
         user = db.get(User, user_id)
         if not user or not user.email:
             return
-        _send(user, user.email, "password_changed")
+        # The address is named in the letter, not just used as its destination:
+        # people hold several accounts and forward mail between mailboxes, and
+        # "your password was changed" without saying *whose* is a sentence the
+        # reader cannot act on.
+        #
+        # The name is passed only when it is one the person chose. An account
+        # made by a code carries the local part of its address until the
+        # welcome screen, and greeting somebody by their own email prefix is
+        # worse than not greeting them.
+        chosen_name = user.display_name or ""
+        if user.email and chosen_name == user.email.split("@")[0]:
+            chosen_name = ""
+        _send(
+            user,
+            user.email,
+            "password_changed",
+            name=chosen_name,
+            account=user.email,
+        )
 
 
 @celery_app.task(name="app.tasks.notifications.send_channel_code")
