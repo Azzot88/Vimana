@@ -296,3 +296,43 @@ async def test_no_password_still_creates_a_passwordless_account(
     async with session_maker() as db:
         user = (await db.execute(select(User).where(User.email == email))).scalar_one()
         assert user.password_hash is None
+
+
+async def test_a_code_claims_an_account_whose_address_was_never_confirmed(
+    client, queued_codes, session_maker
+):
+    """Without this the second account on the same address dies on the UNIQUE —
+    a 500 handed to the person who just proved they read that mailbox.
+
+    The address is confirmed on the way through: the code is exactly the proof
+    the account was created without.
+    """
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    # `@notverified.test` is outside the auto-verify list, so registration
+    # leaves the address unproven — the state this branch exists for.
+    email = f"claim-{uuidlib.uuid4().hex[:8]}@notverified.test"
+    reg = await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "claimed"},
+    )
+    user_id = reg.json()["id"]
+
+    await _request(client, email)
+    resp = await client.post(
+        "/api/auth/otp/verify",
+        json={"identifier": email, "code": queued_codes[-1][2]},
+    )
+    assert resp.status_code == 200
+
+    me = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {resp.json()['access_token']}"},
+    )
+    assert me.json()["id"] == user_id, "the same account, not a second one"
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        assert user.email_verified_at is not None, "the code was the missing proof"

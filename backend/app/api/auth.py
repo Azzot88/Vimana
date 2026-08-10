@@ -477,6 +477,31 @@ async def otp_verify(
             )
         ).scalar_one_or_none()
 
+        # An account may exist whose address was never confirmed: `register`
+        # (still alive for tests, `T3.28 pt.3b`) creates one that way, and so
+        # does any account predating contacts whose backfill left it
+        # unverified. Without this branch the code below would create a *second*
+        # account on the same address and die on the UNIQUE — a 500 handed to
+        # the person who just proved they read that mailbox.
+        #
+        # Confirming it here is not a shortcut: the code *is* the proof the
+        # registration never collected, so the contact is upgraded rather than
+        # duplicated.
+        if owner_id is None and contact_channel == "email":
+            claimed = (
+                await db.execute(select(User).where(User.email == value))
+            ).scalar_one_or_none()
+            if claimed is not None:
+                owner_id = claimed.id
+                claimed.email_verified_at = claimed.email_verified_at or datetime.now(
+                    timezone.utc
+                )
+                upgraded = await upsert_contact(
+                    db, claimed, "email", value, verified=True
+                )
+                if upgraded is not None:
+                    upgraded.is_login = True
+
         if owner_id:
             user = await db.get(User, owner_id)
             # A password typed alongside the code is **ignored** for an account
