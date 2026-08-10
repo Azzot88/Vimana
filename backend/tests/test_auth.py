@@ -118,8 +118,10 @@ async def test_patch_me_updates_phone(client, sender_headers):
     used to pass is the point: the column took any text, so two spellings of
     one number were two numbers and `UNIQUE` could not tell.
     """
-    suffix = f"{uuid.uuid4().int % 10**7:07d}"
-    new_phone = f"+1202{suffix}"
+    # A real UAE mobile prefix with a non-zero subscriber part: libphonenumber
+    # validates against actual numbering plans, and `+1202` plus seven random
+    # digits is invalid whenever the first of them is 0 or 1.
+    new_phone = f"+97150{1_000_000 + uuid.uuid4().int % 9_000_000}"
     resp = await client.patch(
         "/api/auth/me", headers=sender_headers, json={"phone": new_phone}
     )

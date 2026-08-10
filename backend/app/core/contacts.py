@@ -26,6 +26,7 @@ Functions (PROJECT §6.2a):
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -35,6 +36,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.email_verification import is_valid_email, normalize_email
 from app.models.contact import CHANNELS, UserContact
+
+logger = logging.getLogger(__name__)
 
 PHONE_CHANNELS = ("sms", "whatsapp")
 
@@ -141,6 +144,11 @@ async def upsert_contact(
     """
     value = normalize(channel, raw_value)
     if value is None:
+        # Silent by design — the schemas validate before anything reaches here,
+        # so this is a programming error, not a user one — but not *traceless*:
+        # a no-op returning None is exactly what made a test read the previous
+        # owner's row and blame the wrong code (2026-08-09).
+        logger.warning("contact not recorded: %r is not a usable %s", raw_value, channel)
         return None
 
     existing = (

@@ -83,14 +83,26 @@ async def test_registration_records_the_email_contact(client, session_maker):
 
 
 def _fresh_number() -> str:
-    """A number no earlier run has used.
+    """A valid number no earlier run has used.
 
-    `vimana_test` is never emptied (ENVIRONMENT §8), so a literal here is a
-    value that belongs to whichever account claimed it the first time the suite
-    ever ran — and the second run fails on a constraint that is working
-    correctly. Same lesson as the deals list test, one table over.
+    Two constraints at once, and the first attempt satisfied only one.
+
+    *Unused*, because `vimana_test` is never emptied (ENVIRONMENT §8): a
+    literal belongs to whichever account claimed it the first time the suite
+    ever ran, and the next run fails on a constraint that is working correctly.
+
+    *Valid*, because `normalize` runs the number through libphonenumber, and
+    random digits are usually not a number. `+9715` plus eight random digits
+    looks like a UAE mobile and mostly is not — the prefixes are 50, 52, 54,
+    55, 56 and 58, so five numbers in eight fail. And when it failed, nothing
+    raised: `normalize` returned None, `upsert_contact` did nothing at all, and
+    the test read the *previous* owner's row. A generator that produces invalid
+    data makes tests fail for the wrong reason, which is worse than failing.
+
+    `50` is a real Etisalat prefix; the seven digits after it start at 1 so the
+    subscriber part is never a leading-zero run.
     """
-    return f"+9715{uuidlib.uuid4().int % 10**8:08d}"
+    return f"+97150{1_000_000 + uuidlib.uuid4().int % 9_000_000}"
 
 
 async def test_an_unconfirmed_claim_does_not_reserve_the_value(client, session_maker):
