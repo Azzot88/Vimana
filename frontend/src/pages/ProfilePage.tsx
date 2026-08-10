@@ -89,6 +89,31 @@ export default function ProfilePage() {
     finally { setCreatingInvite(false) }
   }
 
+  // T_UX.12 pt.2 — the linking happens on the server, in a webhook this tab
+  // never sees. Pressing «Connect Telegram» opens Telegram, the bot answers,
+  // the row is written — and the profile keeps saying «not connected» until
+  // something asks again. So it asks on the way back: returning to the tab is
+  // exactly the moment the answer could have changed.
+  //
+  // Scoped to the one pending case rather than refetching on every focus: a
+  // profile that re-reads itself whenever you alt-tab is a request per glance.
+  const linkPending = Boolean(user?.notify_telegram && !user?.telegram_chat_id)
+  useEffect(() => {
+    if (!linkPending || !token) return
+    const recheck = () => {
+      if (document.visibilityState !== 'visible') return
+      me()
+        .then(({ data }) => setAuth(data, token))
+        .catch(() => {})
+    }
+    document.addEventListener('visibilitychange', recheck)
+    window.addEventListener('focus', recheck)
+    return () => {
+      document.removeEventListener('visibilitychange', recheck)
+      window.removeEventListener('focus', recheck)
+    }
+  }, [linkPending, token, setAuth])
+
   const copyInviteLink = (token: string) => {
     const url = `${window.location.origin}/invite/${token}`
     navigator.clipboard?.writeText(url).catch(() => {})

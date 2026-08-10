@@ -97,5 +97,10 @@
       "The delivery deadline for your deal falls within the next 24 hours."
     ],
     "note": "You can turn deal notifications off in your profile."
+  },
+  "chat": {
+    "linked": "Connected. Vimana will send updates about your deals here.\n\nThis bot does not hold conversations — it only delivers. Manage which notifications arrive in your profile.",
+    "stale": "This link has expired.\n\nOpen your profile on the site and press «Connect Telegram» again — links are single-use and short-lived on purpose.",
+    "hello": "This is the Vimana notification bot.\n\nTo connect it, open your profile on the site and press «Connect Telegram». A bare /start cannot identify your account."
   }
 }

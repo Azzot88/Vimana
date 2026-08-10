@@ -97,5 +97,10 @@
       "Termin dostawy w Twojej transakcji upływa w ciągu najbliższych 24 godzin."
     ],
     "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
+  },
+  "chat": {
+    "linked": "Połączono. Tutaj będą przychodzić powiadomienia o Twoich transakcjach.\n\nBot nie prowadzi rozmów — tylko dostarcza. To, jakie powiadomienia otrzymujesz, ustawisz w profilu.",
+    "stale": "Ten link wygasł.\n\nOtwórz profil na stronie i naciśnij „Podłącz Telegram” ponownie — linki są jednorazowe i krótkotrwałe celowo.",
+    "hello": "To bot powiadomień Vimana.\n\nAby go podłączyć, otwórz profil na stronie i naciśnij „Podłącz Telegram”. Samo /start nie pozwala rozpoznać Twojego konta."
   }
 }

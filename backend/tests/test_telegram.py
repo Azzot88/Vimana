@@ -124,3 +124,89 @@ async def test_set_webhook_endpoint_is_superuser_only(client, session_maker):
         headers=hdr,
     )
     assert resp.status_code == 403
+
+
+# ── T_UX.12 pt.2 · every branch answers ──────────────────────────────────────
+
+
+async def test_start_with_valid_token_confirms_in_the_account_language(
+    client, session_maker, monkeypatch
+):
+    """Silence was the complaint: pressing Start worked and looked like nothing."""
+    from app.tasks import notifications as notif
+
+    queued = []
+    monkeypatch.setattr(
+        notif.send_telegram_chat, "delay", lambda *a: queued.append(a)
+    )
+
+    from sqlalchemy import select
+
+    from app.models.user import User
+    from tests.conftest import SEED_PASSWORD, unique_email
+
+    email = unique_email("tg-link")
+    await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": SEED_PASSWORD, "display_name": "tg",
+              "locale": "fr"},
+    )
+    token = f"tok-{uuidlib.uuid4().hex}"
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+        user.telegram_link_token = token
+        await db.commit()
+
+    resp = await client.post(
+        "/api/telegram/webhook",
+        json={"update_id": 1, "message": {"chat": {"id": 999}, "text": f"/start {token}"}},
+    )
+    assert resp.status_code == 200
+    assert queued == [("999", "linked", "fr")], "the reply follows the account's language"
+
+
+async def test_start_with_stale_token_says_so(client, monkeypatch):
+    """An expired link must not be indistinguishable from a broken bot."""
+    from app.tasks import notifications as notif
+
+    queued = []
+    monkeypatch.setattr(notif.send_telegram_chat, "delay", lambda *a: queued.append(a))
+
+    await client.post(
+        "/api/telegram/webhook",
+        json={
+            "update_id": 2,
+            "message": {"chat": {"id": 5}, "text": "/start nope",
+                        "from": {"language_code": "es"}},
+        },
+    )
+    assert queued == [("5", "stale", "es")]
+
+
+async def test_bare_start_explains_what_the_bot_is(client, monkeypatch):
+    from app.tasks import notifications as notif
+
+    queued = []
+    monkeypatch.setattr(notif.send_telegram_chat, "delay", lambda *a: queued.append(a))
+
+    await client.post(
+        "/api/telegram/webhook",
+        json={"update_id": 3, "message": {"chat": {"id": 7}, "text": "/start"}},
+    )
+    assert queued == [("7", "hello", None)]
+
+
+def test_chat_catalogue_is_complete_in_every_locale():
+    """Same guard the letters have: a missing key must fail here, not in a chat."""
+    from app.core.email_templates import CHAT_KINDS, LOCALES, chat_message
+
+    for locale in LOCALES:
+        for kind in CHAT_KINDS:
+            assert chat_message(kind, locale).strip(), f"{locale}/{kind}"
+
+
+def test_chat_message_falls_back_like_a_letter():
+    from app.core.email_templates import chat_message
+
+    assert chat_message("hello", "kl") == chat_message("hello", "en")
+    assert chat_message("hello", None) == chat_message("hello", "en")

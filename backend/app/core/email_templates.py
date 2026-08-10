@@ -68,6 +68,29 @@ _env = Environment(
 )
 
 
+CHAT_KINDS: tuple[str, ...] = ("linked", "stale", "hello")
+
+
+def chat_message(kind: str, locale: str | None) -> str:
+    """Plain localised text for a chat transport (Telegram today).
+
+    Separate from `render` on purpose. A letter has a subject, a layout and two
+    MIME parts; a chat message is a string. Passing one through the other would
+    have meant a footer inviting the reader to reply to an email, inside a bot
+    that cannot be replied to.
+
+    Same six catalogues though, and the same fallback rule — one place where a
+    translation lives, whichever pipe it eventually goes down.
+
+    Called by: `tasks/notifications.send_telegram_chat`.
+    """
+    tag = (locale or DEFAULT_LOCALE).split("-")[0].lower()
+    if tag not in LOCALES:
+        tag = DEFAULT_LOCALE
+    block = {**_catalogue(DEFAULT_LOCALE).get("chat", {}), **_catalogue(tag).get("chat", {})}
+    return block[kind]
+
+
 def sample_context(kind: str) -> dict[str, Any]:
     """Plausible values for one letter's placeholders.
 

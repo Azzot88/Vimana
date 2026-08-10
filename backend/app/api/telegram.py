@@ -1,3 +1,4 @@
+import logging
 import os
 import secrets
 from typing import Any
@@ -13,6 +14,8 @@ from app.core.permissions import Permission, require_perm
 from app.core.database import get_db
 from app.core.telegram import set_webhook
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -54,6 +57,23 @@ async def telegram_webhook(
 
     chat_id = str(msg.get("chat", {}).get("id", ""))
     text: str = msg.get("text", "")
+    # Telegram tells us the client's language. Used only for the two replies
+    # sent before we know whose account this is — once linked, the account's own
+    # `locale` wins, because that is what the person chose on the site.
+    hint = (msg.get("from", {}) or {}).get("language_code")
+
+    from app.tasks.notifications import send_telegram_chat
+
+    def reply(kind: str, locale: str | None) -> None:
+        """Every branch answers. Silence was the whole complaint: pressing Start
+        did the work and looked like nothing happened, and an expired link was
+        indistinguishable from a broken bot."""
+        if not chat_id:
+            return
+        try:
+            send_telegram_chat.delay(chat_id, kind, locale)
+        except Exception:
+            logger.exception("could not queue telegram reply to %s", chat_id)
 
     if text.startswith("/start "):
         token = text.split(" ", 1)[1].strip()
@@ -64,6 +84,11 @@ async def telegram_webhook(
             user.telegram_link_token = None
             user.notify_telegram = True
             await db.commit()
+            reply("linked", user.locale)
+        else:
+            reply("stale", hint)
+    else:
+        reply("hello", hint)
 
     return {"ok": "processed"}
 

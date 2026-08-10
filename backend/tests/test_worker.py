@@ -20,6 +20,7 @@ DISPATCHED_BY_CODE = [
     "app.tasks.notifications.send_verification_code",
     "app.tasks.notifications.notify_deal_status",
     "app.tasks.notifications.send_waitlist_emails",
+    "app.tasks.notifications.send_telegram_chat",
     # Run by hand after deploy, not from the beat schedule — but it is still
     # dispatched by name, and an unregistered name fails the same way.
     "app.tasks.notifications.send_pending_waitlist_confirmations",

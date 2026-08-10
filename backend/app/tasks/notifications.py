@@ -355,6 +355,21 @@ def send_pending_waitlist_confirmations(dry_run: bool = False) -> dict:
         return result
 
 
+@celery_app.task(name="app.tasks.notifications.send_telegram_chat")
+def send_telegram_chat(chat_id: str, kind: str, locale: str | None = None) -> None:
+    """T_UX.12 pt.2 — answer someone who just talked to the bot.
+
+    A task rather than an inline call from the webhook handler: `send_telegram`
+    is synchronous `httpx`, and the handler is async — Telegram would be kept
+    waiting on our round-trip to Telegram.
+
+    Called by: `api/telegram.telegram_webhook`.
+    """
+    from app.core.email_templates import chat_message
+
+    send_telegram(chat_id, chat_message(kind, locale))
+
+
 @celery_app.task(name="app.tasks.notifications.notify_admins_scanner_down")
 def notify_admins_scanner_down(detail: str) -> None:
     """T3.8 — the malware scanner is not answering; files are being queued.

@@ -97,5 +97,10 @@
       "L'échéance de livraison de votre transaction tombe dans les 24 prochaines heures."
     ],
     "note": "Vous pouvez désactiver les notifications de transaction dans votre profil."
+  },
+  "chat": {
+    "linked": "Connecté. Les notifications de vos transactions arriveront ici.\n\nCe bot ne dialogue pas — il ne fait que livrer. Choisissez quelles notifications recevoir dans votre profil.",
+    "stale": "Ce lien a expiré.\n\nOuvrez votre profil sur le site et appuyez de nouveau sur « Connecter Telegram » — les liens sont à usage unique et de courte durée, volontairement.",
+    "hello": "Ceci est le bot de notifications Vimana.\n\nPour le connecter, ouvrez votre profil sur le site et appuyez sur « Connecter Telegram ». Un /start seul ne permet pas d'identifier votre compte."
   }
 }
