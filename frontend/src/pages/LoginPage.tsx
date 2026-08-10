@@ -1,7 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { changePassword, consumeRecoveryCode, login, me } from '../api/auth'
+import {
+  changePassword,
+  consumeRecoveryCode,
+  forgotPassword,
+  login,
+  loginMethods,
+  me,
+} from '../api/auth'
 import NostrAuthButton from '../components/NostrAuthButton'
 import PasskeyAuthButton from '../components/PasskeyAuthButton'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -50,6 +57,11 @@ export default function LoginPage() {
   const [recovering, setRecovering] = useState(false)
   const [recoveryCode, setRecoveryCode] = useState('')
   const [recoveryPassword, setRecoveryPassword] = useState('')
+  // T_SEC.5 — asked once the identifier looks complete, so the screen offers
+  // what this account can actually do instead of a fixed menu.
+  const [methods, setMethods] = useState<string[] | null>(null)
+  const [canReset, setCanReset] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const handleRecovery = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,6 +90,28 @@ export default function LoginPage() {
       setLoading(false)
     }
   }
+
+  // Debounced so typing an address is not a request per keystroke, and only
+  // for something that already looks like one — the endpoint is rate-limited
+  // and an incomplete identifier tells it nothing anyway.
+  useEffect(() => {
+    const value = loginVal.trim()
+    setResetSent(false)
+    if (!value.includes('@') || value.length < 6) {
+      setMethods(null)
+      setCanReset(false)
+      return
+    }
+    const timer = setTimeout(() => {
+      loginMethods(value)
+        .then(({ data }) => {
+          setMethods(data.methods)
+          setCanReset(data.can_reset)
+        })
+        .catch(() => {})
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [loginVal])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -218,11 +252,46 @@ export default function LoginPage() {
               setError('')
             }}
             data-testid="recovery-toggle"
+            hidden={methods !== null && !methods.includes('recovery_code') && !recovering}
             className="w-full text-xs font-body text-navy/50"
           >
             {recovering ? t('auth.recoveryBack') : t('auth.recoveryStart')}
           </button>
         </form>
+
+        {/* T_SEC.5 — the way back that the overwhelming majority actually has.
+            Until now the only one offered was a recovery code, which almost
+            nobody has ever created: the screen answered "prove it with the
+            thing you never made" to a situation the product created. Shown
+            only once the identifier is known to have a password and a verified
+            address — offering a reset to a passkey account is the same mistake
+            in the other direction. */}
+        {!recovering && canReset && (
+          <div className="mt-3">
+            {resetSent ? (
+              <p
+                data-testid="reset-sent"
+                className="bg-cyan/10 border border-cyan/30 rounded-field px-3 py-2 text-xs font-body text-navy"
+              >
+                {t('auth.resetSent')}
+              </p>
+            ) : (
+              <button
+                type="button"
+                data-testid="forgot-password"
+                onClick={async () => {
+                  try {
+                    await forgotPassword(loginVal.trim())
+                  } catch { /* the answer is 202 either way */ }
+                  setResetSent(true)
+                }}
+                className="w-full text-xs font-body text-link underline underline-offset-2"
+              >
+                {t('auth.forgotPassword')}
+              </button>
+            )}
+          </div>
+        )}
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-px bg-navy/10 flex-1" />

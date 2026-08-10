@@ -102,5 +102,16 @@
     "linked": "Connecté. Les notifications de vos transactions arriveront ici.\n\nCe bot ne dialogue pas — il ne fait que livrer. Choisissez quelles notifications recevoir dans votre profil.",
     "stale": "Ce lien a expiré.\n\nOuvrez votre profil sur le site et appuyez de nouveau sur « Connecter Telegram » — les liens sont à usage unique et de courte durée, volontairement.",
     "hello": "Ceci est le bot de notifications Vimana.\n\nPour le connecter, ouvrez votre profil sur le site et appuyez sur « Connecter Telegram ». Un /start seul ne permet pas d'identifier votre compte."
+  },
+  "password_reset": {
+    "subject": "Vimana · Réinitialiser le mot de passe",
+    "preheader": "Le lien est valable une heure",
+    "heading": "Réinitialiser le mot de passe",
+    "body": [
+      "Quelqu'un a demandé la réinitialisation du mot de passe de ce compte. Si c'était vous, utilisez le lien ci-dessous.",
+      "Sinon, il n'y a rien à faire : le mot de passe actuel fonctionne toujours et rien n'a changé."
+    ],
+    "cta": "Choisir un nouveau mot de passe",
+    "note": "Le lien est valable une heure et ne fonctionne qu'une fois. Se connecter avec le nouveau mot de passe met fin à toutes les autres sessions."
   }
 }

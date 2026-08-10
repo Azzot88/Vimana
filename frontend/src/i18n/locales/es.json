@@ -88,7 +88,9 @@
     "signIn": "Iniciar sesión",
     "errorDuplicate": "Ya existe una cuenta con este email.",
     "errorServer": "Error del servidor. Inténtalo de nuevo.",
-    "errorCredentials": "Login o contraseña incorrectos"
+    "errorCredentials": "Login o contraseña incorrectos",
+    "forgotPassword": "¿Has olvidado la contraseña?",
+    "resetSent": "Si esa dirección está registrada y confirmada, el enlace de restablecimiento va en camino. Es válido una hora."
   },
   "passkey": {
     "loginCta": "Entrar con una passkey",
@@ -876,5 +878,15 @@
     "reload": "Recargar",
     "home": "Ir al inicio",
     "details": "Detalles técnicos"
+  },
+  "reset": {
+    "title": "Nueva contraseña",
+    "subtitle": "Elige una y entrarás directamente.",
+    "newPassword": "Nueva contraseña",
+    "submit": "Guardar y entrar",
+    "saving": "Guardando…",
+    "failed": "Este enlace ha caducado o ya se ha usado. Pide uno nuevo en la pantalla de acceso.",
+    "noToken": "El enlace está incompleto. Abre el del mensaje o pide uno nuevo.",
+    "sessionsNotice": "Al cambiar la contraseña se cierran todas las demás sesiones."
   }
 }

@@ -56,6 +56,7 @@ _LETTERS: dict[str, dict[str, Any]] = {
     "waitlist_admin": {
         "facts": ["email", "name", "source", "when", "total", "confirmation"]
     },
+    "password_reset": {"cta": True},
     "deal_status": {},
     "deadline_reminder": {},
 }
@@ -116,6 +117,9 @@ def sample_context(kind: str) -> dict[str, Any]:
             "when": when,
             "total": 3,
             "confirmation": "—",
+        },
+        "password_reset": {
+            "cta_url": "https://vimana.dealvault.club/reset-password?token=sample-token",
         },
         "deal_status": {"status": "in_transit"},
         "deadline_reminder": {},
@@ -196,7 +200,10 @@ def render(kind: str, locale: str | None, **ctx: Any) -> Rendered:
         code_label=code_label,
         facts=facts,
         cta_url=ctx.get("cta_url", ""),
-        cta_label=ctx.get("cta_label", ""),
+        # The button's words are a translation, not a caller's argument: a call
+        # site passing English into a French letter is exactly the drift the
+        # catalogues exist to prevent.
+        cta_label=strings.get("cta", "") if shape.get("cta") else "",
         note=note,
         footer=footer,
     )

@@ -102,5 +102,16 @@
     "linked": "Połączono. Tutaj będą przychodzić powiadomienia o Twoich transakcjach.\n\nBot nie prowadzi rozmów — tylko dostarcza. To, jakie powiadomienia otrzymujesz, ustawisz w profilu.",
     "stale": "Ten link wygasł.\n\nOtwórz profil na stronie i naciśnij „Podłącz Telegram” ponownie — linki są jednorazowe i krótkotrwałe celowo.",
     "hello": "To bot powiadomień Vimana.\n\nAby go podłączyć, otwórz profil na stronie i naciśnij „Podłącz Telegram”. Samo /start nie pozwala rozpoznać Twojego konta."
+  },
+  "password_reset": {
+    "subject": "Vimana · Reset hasła",
+    "preheader": "Link jest ważny godzinę",
+    "heading": "Reset hasła",
+    "body": [
+      "Ktoś poprosił o zresetowanie hasła do tego konta. Jeśli to Ty — użyj linku poniżej.",
+      "Jeśli nie — nic nie trzeba robić: obecne hasło nadal działa i nic się nie zmieniło."
+    ],
+    "cta": "Ustaw nowe hasło",
+    "note": "Link jest ważny godzinę i działa raz. Zalogowanie się nowym hasłem kończy wszystkie inne sesje."
   }
 }

@@ -102,5 +102,16 @@
     "linked": "Conectado. Aquí llegarán las notificaciones de tus acuerdos.\n\nEste bot no mantiene conversaciones — solo entrega. Qué notificaciones recibir se configura en tu perfil.",
     "stale": "Este enlace ha caducado.\n\nAbre tu perfil en el sitio y pulsa «Conectar Telegram» de nuevo — los enlaces son de un solo uso y de vida corta a propósito.",
     "hello": "Este es el bot de notificaciones de Vimana.\n\nPara conectarlo, abre tu perfil en el sitio y pulsa «Conectar Telegram». Un /start a secas no permite saber de quién es la cuenta."
+  },
+  "password_reset": {
+    "subject": "Vimana · Restablecer la contraseña",
+    "preheader": "El enlace es válido durante una hora",
+    "heading": "Restablecer la contraseña",
+    "body": [
+      "Alguien ha pedido restablecer la contraseña de esta cuenta. Si has sido tú, usa el enlace de abajo.",
+      "Si no, no hay nada que hacer: la contraseña actual sigue funcionando y nada ha cambiado."
+    ],
+    "cta": "Elegir una contraseña nueva",
+    "note": "El enlace es válido una hora y funciona una sola vez. Iniciar sesión con la nueva contraseña cierra todas las demás sesiones."
   }
 }

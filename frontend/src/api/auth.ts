@@ -100,6 +100,22 @@ export const consumeRecoveryCode = (identifier: string, code: string) =>
 export const disconnectTelegram = () =>
   api.post<{ connected: boolean }>('/api/telegram/disconnect')
 
+/** T_SEC.5 — 202 whatever the identifier is; the answer never says who exists. */
+export const forgotPassword = (identifier: string) =>
+  api.post<{ status: string }>('/api/auth/password/forgot', { identifier })
+
+export const resetPassword = (token: string, newPassword: string) =>
+  api.post<{ status: string; access_token: string }>('/api/auth/password/reset', {
+    token,
+    new_password: newPassword,
+  })
+
+/** T_SEC.5 — which ways in this identifier can actually use. */
+export const loginMethods = (identifier: string) =>
+  api.post<{ methods: string[]; can_reset: boolean }>('/api/auth/methods', {
+    identifier,
+  })
+
 export const changeEmail = (email: string, stepUpToken: string) =>
   api.post<{ status: string; pending_email: string }>(
     '/api/auth/email/change',

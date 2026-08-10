@@ -102,5 +102,16 @@
     "linked": "Connected. Vimana will send updates about your deals here.\n\nThis bot does not hold conversations — it only delivers. Manage which notifications arrive in your profile.",
     "stale": "This link has expired.\n\nOpen your profile on the site and press «Connect Telegram» again — links are single-use and short-lived on purpose.",
     "hello": "This is the Vimana notification bot.\n\nTo connect it, open your profile on the site and press «Connect Telegram». A bare /start cannot identify your account."
+  },
+  "password_reset": {
+    "subject": "Vimana · Reset your password",
+    "preheader": "The link is valid for one hour",
+    "heading": "Reset your password",
+    "body": [
+      "Someone asked to reset the password for this account. If it was you, use the link below.",
+      "If it wasn't, no action is needed — the current password still works and nothing has changed."
+    ],
+    "cta": "Choose a new password",
+    "note": "The link is valid for one hour and works once. Signing in with the new password ends every other session."
   }
 }

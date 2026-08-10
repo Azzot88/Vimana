@@ -1,7 +1,9 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,6 +58,8 @@ from app.schemas.user import (
 )
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -302,6 +306,162 @@ async def change_password(
         "status": "changed",
         "access_token": replacement,
         "token_type": "bearer",
+    }
+
+
+class ForgotBody(BaseModel):
+    identifier: str
+
+
+class ResetBody(BaseModel):
+    token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def long_enough(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class MethodsBody(BaseModel):
+    identifier: str
+
+
+@router.post("/password/forgot", status_code=202)
+@limiter.limit("5/hour")
+async def forgot_password(
+    request: Request, body: ForgotBody, db: AsyncSession = Depends(get_db)
+):
+    """T_SEC.5 — start a password reset. Answers 202 no matter what.
+
+    Identical answer for an unknown address, a known one, an account with no
+    password and one whose address is unverified. The alternative turns a
+    public form into a directory of who banks here — and the useful half of
+    that leak is free for the attacker and costly for everyone else.
+
+    That silence has a price worth naming: someone whose address is not
+    verified gets no letter and no explanation. It is the right trade anyway —
+    a reset link is the account, and sending it to an address nobody proved
+    they read would let anyone who typed your address take the account.
+    """
+    from app.core.password_reset import issue_token, reset_target
+
+    identifier = normalize_email(body.identifier)
+    result = await db.execute(select(User).where(User.email == identifier))
+    user = result.scalar_one_or_none()
+
+    # No password to reset is not a reason to say anything different out loud;
+    # it is a reason not to send a letter that would confuse a passkey user.
+    if user and user.password_hash and reset_target(user):
+        token = issue_token(user)
+        await db.commit()
+        from app.tasks.notifications import send_password_reset
+
+        try:
+            send_password_reset.delay(str(user.id), token)
+        except Exception:
+            logger.exception("could not queue password reset for %s", user.id)
+
+    return {"status": "accepted"}
+
+
+@router.post("/password/reset")
+@limiter.limit("10/hour")
+async def reset_password(
+    request: Request, body: ResetBody, db: AsyncSession = Depends(get_db)
+):
+    """T_SEC.5 — finish the reset and hand back a session.
+
+    Every other session ends here, exactly as in `change_password` and for a
+    sharper reason: a reset is what someone does when they suspect the account
+    is not only theirs.
+
+    The caller is signed in immediately. Making them type the password they
+    just chose, into the screen that just took it, is a step that protects
+    nobody.
+    """
+    from app.core.password_reset import ResetError, consume_token
+
+    # The token identifies nothing by itself — it is scoped to a user, so the
+    # row is found by the hash comparison, not by the token. Candidates are the
+    # accounts with a pending reset; there is never more than a handful.
+    result = await db.execute(
+        select(User).where(User.password_reset_hash.isnot(None))
+    )
+    for candidate in result.scalars().all():
+        try:
+            consume_token(candidate, body.token)
+        except ResetError:
+            continue
+
+        candidate.password_hash = hash_password(body.new_password)
+        candidate.sessions_valid_from = datetime.now(timezone.utc)
+        await db.commit()
+        return {
+            "status": "reset",
+            "access_token": create_access_token(str(candidate.id)),
+            "token_type": "bearer",
+        }
+
+    raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+
+
+@router.post("/methods", status_code=200)
+@limiter.limit("30/hour")
+async def login_methods(
+    request: Request, body: MethodsBody, db: AsyncSession = Depends(get_db)
+):
+    """T_SEC.5 — which ways in this identifier can actually use.
+
+    The sign-in screen offered a recovery code to every account, including the
+    overwhelming majority who never made one, and offered nothing else to an
+    account that had only a password to forget. Behind the login, step-up has
+    answered this question correctly since T3.15 (`core.step_up.available_methods`);
+    this is the same question asked from outside.
+
+    **An unknown identifier gets the most ordinary answer** — password plus
+    reset — rather than an empty list. It still leaks something: offering a
+    passkey admits one exists. That is unavoidable if the screen is to be
+    usable at all, and it is bounded by the rate limit; answering "no such
+    account" would be worse and answering nothing would put us back where we
+    started.
+    """
+    from app.core.step_up import available_methods
+    from app.models.webauthn import WebAuthnCredential
+
+    identifier = normalize_email(body.identifier)
+    result = await db.execute(select(User).where(User.email == identifier))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return {"methods": ["password"], "can_reset": True}
+
+    count = (
+        await db.execute(
+            select(func.count(WebAuthnCredential.id)).where(
+                WebAuthnCredential.user_id == user.id
+            )
+        )
+    ).scalar() or 0
+
+    methods = available_methods(user, count)
+    has_codes = (
+        await db.execute(
+            select(func.count(RecoveryCode.id)).where(
+                RecoveryCode.user_id == user.id, RecoveryCode.used_at.is_(None)
+            )
+        )
+    ).scalar() or 0
+    if has_codes:
+        methods.append("recovery_code")
+
+    from app.core.password_reset import reset_target
+
+    return {
+        "methods": methods,
+        "can_reset": bool(user.password_hash and reset_target(user)),
     }
 
 

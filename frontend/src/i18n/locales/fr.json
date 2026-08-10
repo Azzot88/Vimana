@@ -88,7 +88,9 @@
     "signIn": "Se connecter",
     "errorDuplicate": "Un compte avec cet email existe déjà.",
     "errorServer": "Erreur serveur. Veuillez réessayer.",
-    "errorCredentials": "Identifiant ou mot de passe incorrect"
+    "errorCredentials": "Identifiant ou mot de passe incorrect",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetSent": "Si cette adresse est enregistrée et confirmée, un lien de réinitialisation est en route. Il est valable une heure."
   },
   "passkey": {
     "loginCta": "Se connecter avec une passkey",
@@ -876,5 +878,15 @@
     "reload": "Recharger",
     "home": "Aller à l'accueil",
     "details": "Détails techniques"
+  },
+  "reset": {
+    "title": "Nouveau mot de passe",
+    "subtitle": "Choisissez-en un et vous serez connecté.",
+    "newPassword": "Nouveau mot de passe",
+    "submit": "Enregistrer et se connecter",
+    "saving": "Enregistrement…",
+    "failed": "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau depuis l'écran de connexion.",
+    "noToken": "Ce lien est incomplet. Ouvrez celui du message, ou demandez-en un nouveau.",
+    "sessionsNotice": "Changer le mot de passe met fin à toutes les autres sessions."
   }
 }

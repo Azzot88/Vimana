@@ -1004,6 +1004,24 @@ async def _ensure_vault_completeness(engine) -> None:
         )
 
 
+async def _ensure_password_reset_columns(engine) -> None:
+    """T_SEC.5: users.password_reset_hash + _expires_at. Mirrors migration 0044.
+    Idempotent — `create_all` builds them, this covers a pre-existing test DB."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "password_reset_hash VARCHAR(255)"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "password_reset_expires_at TIMESTAMPTZ"
+            )
+        )
+
+
 async def _ensure_locale_columns(engine) -> None:
     """T_UX.9: users.locale + waitlist.locale. Mirrors migration 0043.
     Idempotent — `create_all` builds them, this covers a pre-existing test DB."""
@@ -1161,6 +1179,7 @@ async def test_engine():
     await _ensure_hot_path_indexes(engine)
     await _ensure_waitlist_confirmation_column(engine)
     await _ensure_locale_columns(engine)
+    await _ensure_password_reset_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

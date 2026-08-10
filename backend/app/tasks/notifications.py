@@ -355,6 +355,42 @@ def send_pending_waitlist_confirmations(dry_run: bool = False) -> dict:
         return result
 
 
+@celery_app.task(name="app.tasks.notifications.send_password_reset")
+def send_password_reset(user_id: str, token: str) -> None:
+    """T_SEC.5 — deliver the reset link.
+
+    Like the confirmation code, `notify_email` is not consulted: this is not a
+    subscription, it is the answer to a request the person just made, and it is
+    also how an owner learns that someone else asked.
+
+    The token travels as an argument. It exists nowhere else in plaintext — the
+    column holds a hash — and it must not be recomputed here, or the letter and
+    the database would be able to disagree.
+
+    Called by: `api/auth.forgot_password`.
+    """
+    import os
+
+    from app.core.password_reset import reset_target
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        recipient = reset_target(user)
+        if not recipient:
+            return
+        _send(
+            user,
+            recipient,
+            "password_reset",
+            cta_url=f"{base}/reset-password?token={token}",
+        )
+
+
 @celery_app.task(name="app.tasks.notifications.send_telegram_chat")
 def send_telegram_chat(chat_id: str, kind: str, locale: str | None = None) -> None:
     """T_UX.12 pt.2 — answer someone who just talked to the bot.

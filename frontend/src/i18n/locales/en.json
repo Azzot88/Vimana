@@ -102,7 +102,9 @@
     "inactivityWarningBody": "You've been inactive for a while. Click Stay signed in to keep your session, or Log out now to end it.",
     "inactivityLoggedOut": "Signed out due to inactivity. Please sign in again.",
     "stayLoggedIn": "Stay signed in",
-    "logoutNow": "Log out now"
+    "logoutNow": "Log out now",
+    "forgotPassword": "Forgot your password?",
+    "resetSent": "If that address is registered and confirmed, a reset link is on its way. It is valid for one hour."
   },
   "passkey": {
     "loginCta": "Sign in with a passkey",
@@ -922,5 +924,15 @@
     "reload": "Reload",
     "home": "To the home page",
     "details": "Technical details"
+  },
+  "reset": {
+    "title": "New password",
+    "subtitle": "Choose one and you are signed in.",
+    "newPassword": "New password",
+    "submit": "Save and sign in",
+    "saving": "Saving…",
+    "failed": "This link is expired or has already been used. Ask for a new one from the sign-in screen.",
+    "noToken": "This link is incomplete. Open the one from the letter, or ask for a new one.",
+    "sessionsNotice": "Every other session ends when the password changes."
   }
 }

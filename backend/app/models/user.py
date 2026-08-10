@@ -93,6 +93,14 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+    # T_SEC.5 — a pending password reset. Hashed, like the confirmation code
+    # and the password itself: a live token readable out of a backup would be
+    # an account takeover kit for every reset in flight.
+    password_reset_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    password_reset_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Notifications
     # T_UX.9 — which of the six interface languages this person is written to
     # in. Captured at registration from the UI language; editable in the
