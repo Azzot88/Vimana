@@ -122,9 +122,10 @@
     "greeting_plain": "Tu contraseña se ha cambiado correctamente.",
     "body": [
       "Se han cerrado todas las demás sesiones — a partir de ahora solo se entra con la nueva contraseña.",
-      "Si no has sido tú: usa «¿Has olvidado la contraseña?» en la pantalla de acceso. El enlace llega a esta dirección — la que no tiene quien cambió la contraseña, o no le habría hecho falta saberla."
+      "Si no has sido tú — recupera el acceso mediante el enlace en la pantalla de acceso."
     ],
     "facts_account": "cuenta",
-    "note": "Este mensaje no es una suscripción y no se puede desactivar: deja constancia de que la forma de entrar en esta cuenta ha cambiado."
+    "note": "Este mensaje no es una suscripción y no se puede desactivar: deja constancia de que la forma de entrar en esta cuenta ha cambiado.",
+    "cta": "Recuperar el acceso"
   }
 }

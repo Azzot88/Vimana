@@ -122,9 +122,10 @@
     "greeting_plain": "Your password has been changed.",
     "body": [
       "Every other session was signed out — the new password is the only way in from now on.",
-      "If it wasn't you: use «Forgot your password?» on the sign-in screen. The link comes to this address — the one whoever changed it does not have, or they would not have needed the password."
+      "If it wasn't you — restore access through the link on the sign-in screen."
     ],
     "facts_account": "account",
-    "note": "This letter is not a subscription and cannot be turned off: it is the record that this account's way in has changed."
+    "note": "This letter is not a subscription and cannot be turned off: it is the record that this account's way in has changed.",
+    "cta": "Restore access"
   }
 }

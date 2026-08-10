@@ -122,9 +122,10 @@
     "greeting_plain": "Twoje hasło zostało zmienione.",
     "body": [
       "Wszystkie inne sesje zostały zakończone — od teraz wchodzi się wyłącznie nowym hasłem.",
-      "Jeśli to nie Ty — na ekranie logowania jest „Nie pamiętasz hasła?”. Link przyjdzie na ten adres: kto zmienił hasło, nie ma do niego dostępu, inaczej hasło nie byłoby mu potrzebne."
+      "Jeśli to nie Ty — odzyskaj dostęp przez link na ekranie logowania."
     ],
     "facts_account": "konto",
-    "note": "Ten list nie jest subskrypcją i nie da się go wyłączyć: zapisuje, że sposób logowania do tego konta się zmienił."
+    "note": "Ten list nie jest subskrypcją i nie da się go wyłączyć: zapisuje, że sposób logowania do tego konta się zmienił.",
+    "cta": "Odzyskaj dostęp"
   }
 }

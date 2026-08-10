@@ -429,12 +429,19 @@ def send_password_changed(user_id: str) -> None:
         chosen_name = user.display_name or ""
         if user.email and chosen_name == user.email.split("@")[0]:
             chosen_name = ""
+        import os
+
+        base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
         _send(
             user,
             user.email,
             "password_changed",
             name=chosen_name,
             account=user.email,
+            # Straight to the sign-in screen, where "Forgot your password?"
+            # lives. A letter that names a remedy without a way to reach it
+            # asks a worried person to go looking.
+            cta_url=f"{base}/login",
         )
 
 
