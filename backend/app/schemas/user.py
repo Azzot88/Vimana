@@ -63,6 +63,29 @@ class UserUpdate(BaseModel):
     phone: str | None = None
     locale: str | None = None
 
+    @field_validator("locale")
+    @classmethod
+    def locale_is_one_we_write_in(cls, v: str | None) -> str | None:
+        """T3.33 — one of the six, or refused.
+
+        The renderer falls back to English for anything it does not recognise,
+        so an unchecked value would not break a letter — it would quietly send
+        the wrong language forever, and the column would say the person had
+        chosen it. A stored preference that is never honoured is worse than no
+        preference at all.
+
+        `ru-RU` and the like are narrowed rather than refused: that is what a
+        browser reports, and it means the language we do have.
+        """
+        if v is None:
+            return None
+        from app.core.email_templates import LOCALES
+
+        tag = v.strip().split("-")[0].lower()
+        if tag not in LOCALES:
+            raise ValueError(f"locale must be one of: {', '.join(LOCALES)}")
+        return tag
+
     @field_validator("phone")
     @classmethod
     def phone_shape(cls, v: str | None) -> str | None:
@@ -181,6 +204,11 @@ class MeOut(UserOut):
     recovery_codes_remaining: int = 0
     # T3.18 — the owner's own view of their visibility setting.
     public_profile: str = "full"
+    # T3.33 — which of the six languages this account's letters are written in.
+    # Owner-only: it is a fact about how we write to them, not about who they
+    # are, and a counterparty has no business reading it. Sent so the screen can
+    # say so out loud and so the switcher can tell "already this" from "change".
+    locale: str = "en"
     # T3.19 — the one bit that decides whether this account is still a
     # participant or has become a record. Here rather than only on the keypair
     # endpoint so the shell can answer "is anything different about this

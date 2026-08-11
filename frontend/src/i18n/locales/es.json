@@ -717,6 +717,7 @@
       "title": "Qué te llega y por dónde",
       "hint": "Mientras el canal no esté conectado arriba, no llegará nada por él.",
       "notConnected": "sin conectar",
+      "languageNote": "Los mensajes se escriben en el idioma de la interfaz. Cámbialo en la cabecera y los mensajes lo seguirán.",
       "alwaysOn": "siempre activo",
       "open": "Ajustar las notificaciones",
       "channel": {

@@ -712,11 +712,12 @@
     "noContacts": "Aucun contact",
     "notifications": "Notifications",
     "channels": "Canaux",
-    "channelsHint": "Où nous pouvons vous joindre. Activer un canal, c est le connecter.",
+    "channelsHint": "Où nous pouvons vous joindre. Activer un canal, c’est le connecter.",
     "matrix": {
       "title": "Ce qui vous parvient, et par où",
       "hint": "Tant qu'un canal n'est pas connecté ci-dessus, rien n'y passera.",
       "notConnected": "non connecté",
+      "languageNote": "Les messages sont rédigés dans la langue de l’interface. Changez-la en haut et ils suivront.",
       "alwaysOn": "toujours actif",
       "open": "Régler les notifications",
       "channel": {

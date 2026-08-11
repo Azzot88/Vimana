@@ -718,6 +718,7 @@
       "title": "Co i gdzie dociera",
       "hint": "Dopóki kanał nie jest połączony powyżej, nic nim nie dotrze.",
       "notConnected": "nie połączony",
+      "languageNote": "Listy piszemy w języku interfejsu. Zmień go w nagłówku, a listy pójdą za nim.",
       "alwaysOn": "zawsze włączone",
       "open": "Ustaw powiadomienia",
       "channel": {

@@ -768,6 +768,7 @@
       "title": "What reaches you where",
       "hint": "A channel has to be connected above before anything can travel down it.",
       "notConnected": "not connected",
+      "languageNote": "Letters are written in the interface language. Change it in the header and the letters follow.",
       "alwaysOn": "always on",
       "open": "Open notification settings",
       "channel": {

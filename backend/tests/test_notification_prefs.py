@@ -342,6 +342,62 @@ async def test_a_write_to_security_changes_nothing(client):
     assert resp.json()["notification_prefs"]["security"]["email"] is True
 
 
+async def test_the_letter_language_can_be_set_and_is_answered(client):
+    """T3.33 — the switcher writes this, and `/me` reads it back so the switcher
+    can tell "already this" from "change"."""
+    email = unique_email("prefs-locale")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "M"}
+    )
+    token = (
+        await client.post("/api/auth/login", json={"login": email, "password": SEED_PASSWORD})
+    ).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = await client.patch("/api/auth/me", json={"locale": "pl"}, headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["locale"] == "pl"
+    assert (await client.get("/api/auth/me", headers=headers)).json()["locale"] == "pl"
+
+
+async def test_a_regional_tag_is_narrowed_to_the_language(client):
+    """`ru-RU` is what a browser reports, and it means a language we have."""
+    email = unique_email("prefs-regional")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "M"}
+    )
+    token = (
+        await client.post("/api/auth/login", json={"login": email, "password": SEED_PASSWORD})
+    ).json()["access_token"]
+
+    resp = await client.patch(
+        "/api/auth/me",
+        json={"locale": "ru-RU"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.json()["locale"] == "ru"
+
+
+async def test_a_language_we_do_not_write_in_is_refused(client):
+    """The renderer would fall back to English and the column would claim the
+    person had chosen Japanese. A preference that is never honoured is worse
+    than no preference."""
+    email = unique_email("prefs-unknown")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "M"}
+    )
+    token = (
+        await client.post("/api/auth/login", json={"login": email, "password": SEED_PASSWORD})
+    ).json()["access_token"]
+
+    resp = await client.patch(
+        "/api/auth/me",
+        json={"locale": "jp"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+
+
 async def test_a_malformed_write_is_refused(client):
     email = unique_email("prefs-bad")
     await make_account(

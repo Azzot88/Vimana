@@ -67,6 +67,9 @@ export interface User {
    *  columns either way; this is what makes the unreachable ones read as
    *  unreachable instead of as boxes that quietly do nothing. */
   notification_channels?: Record<string, boolean>
+  /** T3.33 — the language letters to this account are written in. Follows the
+   *  interface: the language switcher writes it. */
+  locale?: string
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { updateMe } from '../api/auth'
+import { useAuthStore } from '../stores/auth'
 
 const LANGS: { code: string; endonym: string }[] = [
   { code: 'en', endonym: 'English' },
@@ -27,10 +29,29 @@ export default function LanguageSwitcher() {
 
   const current = LANGS.find((l) => l.code === i18n.language) ?? LANGS[0]
 
+  /**
+   * T3.33 — the account's letters follow the interface.
+   *
+   * The alternative was a second selector in the profile, asked separately.
+   * Two controls for one question is how they come to disagree, and the
+   * disagreement is invisible: the screen is in Polish and the letters keep
+   * arriving in English, with nothing on either to explain it. Somebody who has
+   * just said which language they read has answered the question.
+   *
+   * Only for a signed-in visitor, and silently: a stranger on the landing page
+   * has no account to write to, and a failed write must not stop the interface
+   * from changing — the language they see is the part they asked for.
+   */
   const pick = (code: string) => {
     i18n.changeLanguage(code)
     localStorage.setItem('lang', code)
     setOpen(false)
+
+    const { user, token, setAuth } = useAuthStore.getState()
+    if (!user || !token || user.locale === code) return
+    updateMe({ locale: code })
+      .then(({ data }) => setAuth(data, token))
+      .catch(() => {})
   }
 
   return (

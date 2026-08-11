@@ -46,6 +46,14 @@ export default function NotificationsPage() {
         <ChannelsSection />
         <NotificationMatrix />
       </div>
+
+      {/* T3.33 — said here because it is otherwise invisible. The language
+          switcher in the header now sets the language of letters too, and a
+          control with a second effect nobody mentions is one people discover by
+          receiving mail they cannot read. */}
+      <p className="text-xs font-body text-navy/40">
+        {t('profile.matrix.languageNote')}
+      </p>
     </div>
   )
 }
