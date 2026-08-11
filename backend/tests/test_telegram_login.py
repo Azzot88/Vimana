@@ -8,6 +8,7 @@ never sees.
 The suite drives all three legs — request, webhook, verify — rather than calling
 the helpers, because the thing worth pinning is that they agree about one row.
 """
+import secrets
 import uuid as uuidlib
 
 import pytest
@@ -16,6 +17,16 @@ from sqlalchemy import select
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 BOT = "vimana_test_bot"
+
+# A chat id is an account here, and accounts are never deleted from the test
+# database (conftest §8). Fixed ids would mean the second run of the day finding
+# the first run's account and reading `created: false` where the test says true
+# — a failure about yesterday, not about the code.
+_RUN = secrets.randbelow(10**6)
+CHAT_NEW = f"7{_RUN:06d}"
+CHAT_AGAIN = f"6{_RUN:06d}"
+CHAT_LEGACY = f"8{_RUN:06d}"
+CHAT_PROFILE = f"9{_RUN:06d}"
 
 
 @pytest.fixture(autouse=True)
@@ -57,7 +68,7 @@ async def _link(client):
     return resp.json()["nonce"]
 
 
-async def _start(client, nonce, chat_id="chat-777", first_name="Пётр"):
+async def _start(client, nonce, chat_id=CHAT_NEW, first_name="Пётр"):
     return await client.post(
         "/api/telegram/webhook",
         json={
@@ -102,7 +113,7 @@ async def test_start_mints_the_code_and_records_the_chat(
 
     channel, target, code, _locale = sent_codes[-1]
     assert channel == "telegram"
-    assert target == "chat-777"
+    assert target == CHAT_NEW
     assert code.isdigit() and len(code) == 6
 
     async with session_maker() as db:
@@ -113,7 +124,7 @@ async def test_start_mints_the_code_and_records_the_chat(
                 )
             )
         ).scalars().first()
-    assert row.resolved_value == "chat-777"
+    assert row.resolved_value == CHAT_NEW
     assert row.code_hash is not None
 
 
@@ -135,7 +146,7 @@ async def test_the_code_creates_an_account_with_a_telegram_contact(
             await db.execute(
                 select(UserContact).where(
                     UserContact.channel == "telegram",
-                    UserContact.value == "chat-777",
+                    UserContact.value == CHAT_NEW,
                 )
             )
         ).scalars().first()
@@ -144,20 +155,26 @@ async def test_the_code_creates_an_account_with_a_telegram_contact(
         assert contact.is_login is True
 
         user = await db.get(User, contact.user_id)
-        assert user.telegram_chat_id == "chat-777"
+        assert user.telegram_chat_id == CHAT_NEW
         assert user.email is None, "an account born from a chat has no address"
         assert user.display_name == "Пётр", "the name Telegram already knew"
         assert user.nostr_pubkey, "same shape as every other account (T3.12)"
 
 
 async def test_a_second_sign_in_finds_the_same_account(client, sent_codes):
-    """Not a second account: the chat is the identity here."""
+    """Not a second account: the chat is the identity here.
+
+    Its own chat rather than the one the test above makes — a test that only
+    passes because of the test before it stops meaning anything the moment
+    somebody runs it alone.
+    """
     first = await _link(client)
-    await _start(client, first)
+    await _start(client, first, chat_id=CHAT_AGAIN)
     one = await _verify(client, first, sent_codes[-1][2])
+    assert one.json()["created"] is True
 
     second = await _link(client)
-    await _start(client, second)
+    await _start(client, second, chat_id=CHAT_AGAIN)
     two = await _verify(client, second, sent_codes[-1][2])
 
     assert two.status_code == 200
@@ -178,11 +195,11 @@ async def test_an_account_that_linked_telegram_before_is_adopted(
     )
     async with session_maker() as db:
         user = await db.get(User, uuidlib.UUID(made.json()["id"]))
-        user.telegram_chat_id = "chat-legacy"
+        user.telegram_chat_id = CHAT_LEGACY
         await db.commit()
 
     nonce = await _link(client)
-    await _start(client, nonce, chat_id="chat-legacy")
+    await _start(client, nonce, chat_id=CHAT_LEGACY)
     resp = await _verify(client, nonce, sent_codes[-1][2])
 
     assert resp.status_code == 200
@@ -218,10 +235,10 @@ async def test_telegram_connected_from_the_profile_signs_in_the_same_account(
         "/api/telegram/connect", headers={"Authorization": f"Bearer {token}"}
     )
     connect_token = link.json()["link"].split("start=")[1]
-    await _start(client, connect_token, chat_id="chat-profile")
+    await _start(client, connect_token, chat_id=CHAT_PROFILE)
 
     nonce = await _link(client)
-    await _start(client, nonce, chat_id="chat-profile")
+    await _start(client, nonce, chat_id=CHAT_PROFILE)
     resp = await _verify(client, nonce, sent_codes[-1][2])
 
     assert resp.status_code == 200

@@ -47,6 +47,7 @@ from app.schemas.user import (
     EmailChangeBody,
     EmailVerifyBody,
     MeOut,
+    OtpSession,
     PasswordChangeBody,
     RecoveryCodesOut,
     RecoveryConsumeBody,
@@ -479,7 +480,7 @@ async def otp_request(
     return {"status": "accepted"}
 
 
-@router.post("/otp/verify", response_model=Token)
+@router.post("/otp/verify", response_model=OtpSession)
 @limiter.limit("20/hour")
 async def otp_verify(
     request: Request, body: OtpVerifyBody, db: AsyncSession = Depends(get_db)

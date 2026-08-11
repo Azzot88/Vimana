@@ -208,6 +208,21 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class OtpSession(Token):
+    """T3.27 — a session, plus whether the account was born just now.
+
+    A separate model rather than a field on `Token`: four other endpoints answer
+    with `Token`, and none of them can create an account, so `created` there
+    would be a value that is always false and eventually read as meaningful.
+
+    It exists at all because `response_model` filters the response — the flag
+    was returned from the endpoint and silently dropped on the way out, which is
+    the kind of bug that looks like the server forgot to set it.
+    """
+
+    created: bool = False
+
+
 # T3.16 — recovery codes.
 
 
