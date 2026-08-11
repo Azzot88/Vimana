@@ -51,6 +51,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.cleanup.cleanup_e2e_users",
         "schedule": 86400.0,
     },
+    # T_SEC.6 — sign-in history has a retention limit, and a limit nothing
+    # enforces is a sentence in a document.
+    "purge-old-sign-ins-daily": {
+        "task": "app.tasks.cleanup.purge_old_sign_ins",
+        "schedule": 86400.0,
+    },
     # T3.6 — head-only, so one tick costs one event per deal that moved.
     # T3.8 — drain the queue of files stored while the scanner was unreachable.
     "rescan-pending-attachments-hourly": {

@@ -1049,6 +1049,40 @@ async def _ensure_contact_tables(engine) -> None:
         )
 
 
+async def _ensure_sign_ins_table(engine) -> None:
+    """T_SEC.6: user_sign_ins. Mirrors migration 0046.
+    Idempotent — `create_all` builds the table and both indexes for a fresh
+    database; this covers a test DB that predates the model."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS user_sign_ins (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    fingerprint VARCHAR(64) NOT NULL,
+                    device VARCHAR(120) NOT NULL,
+                    network VARCHAR(64) NOT NULL,
+                    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_user_sign_ins_device "
+                "ON user_sign_ins (user_id, fingerprint)"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_user_sign_ins_last_seen "
+                "ON user_sign_ins (last_seen_at)"
+            )
+        )
+
+
 async def _ensure_password_reset_columns(engine) -> None:
     """T_SEC.5: users.password_reset_hash + _expires_at. Mirrors migration 0044.
     Idempotent — `create_all` builds them, this covers a pre-existing test DB."""
@@ -1226,6 +1260,7 @@ async def test_engine():
     await _ensure_locale_columns(engine)
     await _ensure_password_reset_columns(engine)
     await _ensure_contact_tables(engine)
+    await _ensure_sign_ins_table(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

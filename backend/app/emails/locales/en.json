@@ -127,5 +127,19 @@
     "facts_account": "account",
     "note": "This letter is not a subscription and cannot be turned off: it is the record that this account's way in has changed.",
     "cta": "Restore access"
+  },
+  "new_device": {
+    "subject": "Vimana · A new sign-in to your account",
+    "preheader": "From a device we have not seen before",
+    "heading": "A new sign-in to your account",
+    "body": [
+      "This account was opened from a device we have not seen before. Below is what we could tell about it.",
+      "If it was you, there is nothing to do. If it wasn't, change the way you get in — the link below leads to your password, your passkeys and your recovery codes."
+    ],
+    "facts_device": "device",
+    "facts_place": "approximate location",
+    "facts_when": "time (UTC)",
+    "cta": "Check how you sign in",
+    "note": "The location is approximate and often wrong: mobile networks and VPNs can place a sign-in hundreds of kilometres away. This letter is not a subscription and cannot be turned off."
   }
 }

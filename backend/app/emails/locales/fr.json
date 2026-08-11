@@ -127,5 +127,19 @@
     "facts_account": "compte",
     "note": "Ce message n'est pas un abonnement et ne peut pas être désactivé : il consigne que la façon d'accéder à ce compte a changé.",
     "cta": "Rétablir l'accès"
+  },
+  "new_device": {
+    "subject": "Vimana · Connexion depuis un nouvel appareil",
+    "preheader": "Un appareil que nous n'avions pas encore vu",
+    "heading": "Connexion depuis un nouvel appareil",
+    "body": [
+      "Ce compte a été ouvert depuis un appareil que nous n'avions pas encore vu. Voici ce que nous avons pu en voir.",
+      "Si c'était vous, il n'y a rien à faire. Sinon, changez votre façon d'entrer : le lien ci-dessous mène au mot de passe, aux clés d'accès et aux codes de récupération."
+    ],
+    "facts_device": "appareil",
+    "facts_place": "lieu approximatif",
+    "facts_when": "heure (UTC)",
+    "cta": "Vérifier vos moyens de connexion",
+    "note": "Le lieu est approximatif et souvent faux : les réseaux mobiles et les VPN peuvent le déplacer de plusieurs centaines de kilomètres. Ce message n'est pas un abonnement et ne peut pas être désactivé."
   }
 }

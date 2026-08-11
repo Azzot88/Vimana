@@ -29,6 +29,7 @@ from app.core.email_verification import (
     target_email,
     verify_code,
 )
+from app.core import code_limits, sign_ins
 from app.core.rate_limit import limiter
 from app.core.security import (
     RECOVERY_CODE_COUNT,
@@ -352,6 +353,11 @@ async def otp_request(
     from app.core.contact_verification import CooldownActive, issue
     from app.core.contacts import normalize
 
+    # T3.29 — before anything else, including the channel check: the budget is
+    # about how much of this form one caller gets to use, and refusing later
+    # would let them enumerate channels for free.
+    await code_limits.check(request, body.identifier)
+
     if body.channel not in available_for(body.identifier):
         return {"status": "accepted"}
 
@@ -509,6 +515,17 @@ async def otp_verify(
                     contact.is_login = True
 
         await db.commit()
+        # T_SEC.6 — after the commit, never before: the account exists or the
+        # session is granted regardless of whether the history row lands.
+        #
+        # `owner_id` is what separates a sign-in from a sign-up here. An account
+        # created by this very code has no previous device to be unlike, and a
+        # letter saying "we do not recognise this device" as the first thing a
+        # new member reads would be both true and useless.
+        if owner_id:
+            await sign_ins.announce(db, user.id, request)
+        else:
+            await sign_ins.record(db, user.id, request)
         return {"access_token": create_access_token(str(user.id)), "token_type": "bearer"}
 
     raise HTTPException(status_code=400, detail="Invalid or expired code")
@@ -568,6 +585,7 @@ async def request_contact_code(
     from app.core.contacts import normalize
 
     channel = body.channel
+    await code_limits.check(request, body.identifier)  # T3.29
     if channel not in available_for(body.identifier):
         return {"status": "accepted"}
 
@@ -687,6 +705,10 @@ async def forgot_password(
     they read would let anyone who typed your address take the account.
     """
     from app.core.password_reset import issue_token, reset_target
+
+    # T3.29 — a reset link is not a code, but from the mailbox's side it is the
+    # same thing: mail it did not ask for, arriving from our form.
+    await code_limits.check(request, body.identifier)
 
     identifier = normalize_email(body.identifier)
     result = await db.execute(select(User).where(User.email == identifier))
@@ -824,6 +846,7 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
     ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    await sign_ins.announce(db, user.id, request)
     token = create_access_token(str(user.id))
     return Token(access_token=token)
 
@@ -1021,6 +1044,15 @@ async def consume_recovery_code(
         )
     ).scalar() or 0
     await db.commit()
+
+    # T_SEC.6 — the device is remembered but **not** announced. The letter
+    # below already says this account was entered with a recovery code, which
+    # is the stronger statement of the two; sending both would mean two letters
+    # for one event, and a letter that arrives in pairs is a letter that gets
+    # filtered. Remembering it here also stops the next ordinary sign-in from
+    # the same machine raising a letter about something the owner was told
+    # about a minute ago.
+    await sign_ins.record(db, user.id, request)
 
     # The owner hears about it even if it was not them — especially if it was
     # not them. Fire-and-forget: a broker hiccup must not fail a recovery.

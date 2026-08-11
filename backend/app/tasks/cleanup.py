@@ -273,3 +273,34 @@ def cleanup_e2e_users() -> dict:
 
     logger.info("cleanup_e2e_users deleted %d test users", deleted_count)
     return {"deleted": deleted_count}
+
+
+@celery_app.task(name="app.tasks.cleanup.purge_old_sign_ins")
+def purge_old_sign_ins() -> dict:
+    """T_SEC.6 — forget devices nobody has used in `RETENTION_DAYS`.
+
+    Sign-in history is a category of personal data the product did not hold
+    before this task's feature existed, and a table that only grows is a
+    liability that only grows with it. Ninety days is long enough that a laptop
+    used on holiday is still recognised on the next holiday, and short enough
+    that the table is a recent picture rather than a life story.
+
+    Deleting a row means the device becomes new again, and the letter fires
+    once more if it comes back. That is the intended reading: after three
+    months of silence, "this is the same person's machine" is an assumption
+    that has expired.
+
+    Called by: celery beat (`worker.beat_schedule`), `tests/test_sign_ins.py`.
+    """
+    from app.models.sign_in import RETENTION_DAYS, UserSignIn
+
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=RETENTION_DAYS)
+    with SyncSessionLocal() as db:
+        result = db.execute(
+            delete(UserSignIn).where(UserSignIn.last_seen_at < cutoff)
+        )
+        db.commit()
+
+    removed = result.rowcount or 0
+    logger.info("purge_old_sign_ins removed %d rows", removed)
+    return {"deleted": removed}

@@ -127,5 +127,19 @@
     "facts_account": "cuenta",
     "note": "Este mensaje no es una suscripción y no se puede desactivar: deja constancia de que la forma de entrar en esta cuenta ha cambiado.",
     "cta": "Recuperar el acceso"
+  },
+  "new_device": {
+    "subject": "Vimana · Acceso desde un dispositivo nuevo",
+    "preheader": "Un dispositivo que no habíamos visto antes",
+    "heading": "Acceso desde un dispositivo nuevo",
+    "body": [
+      "Se ha entrado en esta cuenta desde un dispositivo que no habíamos visto antes. Abajo está lo que hemos podido ver de él.",
+      "Si has sido tú, no hay nada que hacer. Si no, cambia tu forma de entrar: el enlace de abajo lleva a la contraseña, las llaves de acceso y los códigos de recuperación."
+    ],
+    "facts_device": "dispositivo",
+    "facts_place": "lugar aproximado",
+    "facts_when": "hora (UTC)",
+    "cta": "Revisar cómo accedes",
+    "note": "El lugar es aproximado y a menudo erróneo: las redes móviles y las VPN lo desplazan cientos de kilómetros. Este mensaje no es una suscripción y no se puede desactivar."
   }
 }

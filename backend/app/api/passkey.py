@@ -43,6 +43,7 @@ from app.core.email_verification import (
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token
+from app.core import sign_ins
 from app.core.step_up import StepUpScope, consume as consume_step_up
 from app.core.webauthn import (
     SCOPE_LOGIN,
@@ -318,6 +319,12 @@ async def login_verify(
     cred.sign_count = result.new_sign_count
     cred.last_used_at = datetime.now(timezone.utc)
     await db.commit()
+    # T_SEC.6 — a passkey is bound to one device, so a *new* device here means a
+    # credential registered on hardware the account has not been seen on. That
+    # is worth a letter for the same reason as any other path, and skipping it
+    # because "passkeys are the secure one" would leave the hole exactly where
+    # it is least expected.
+    await sign_ins.announce(db, user.id, request)
     return Token(access_token=create_access_token(str(user.id)))
 
 
@@ -413,6 +420,10 @@ async def signup_verify(
 
         _dispatch_code(user)
         await db.commit()
+
+    # T_SEC.6 — remembered, not announced: this device *is* the account's first,
+    # and there is nothing yet for it to be unlike.
+    await sign_ins.record(db, user.id, request)
 
     # A token, not just the row: there is no password to sign in with after.
     return SignupOut(

@@ -1,16 +1,23 @@
 import os
 
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 
+from app.core.client_ip import client_ip
 from app.core.config import settings
 
 
 def _key_func(request):
-    return (
-        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-        or get_remote_address(request)
-    )
+    """T_SEC.6 — key on the address nginx observed, not the one the caller sent.
+
+    This read the **leftmost** element of `X-Forwarded-For` until 2026-08-11.
+    That element is whatever the caller wrote: sending
+    `X-Forwarded-For: <random>` with every request put each one in its own
+    bucket, and every limit below — five codes an hour, ten Nostr attempts a
+    minute — was one header away from not existing. nginx's `limit_req` zones
+    key on `$binary_remote_addr` and so were never fooled, which is the only
+    reason this was a hole rather than an open door.
+    """
+    return client_ip(request)
 
 
 # Disabled during tests to avoid noisy interactions with pytest sequences.

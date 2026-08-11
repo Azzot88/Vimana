@@ -58,6 +58,10 @@ _LETTERS: dict[str, dict[str, Any]] = {
     },
     "password_reset": {"cta": True},
     "password_changed": {"greeting": True, "cta": True, "facts": ["account"]},
+    # T_SEC.6. `place` is optional and often missing — the fact list drops empty
+    # values, so a letter without geolocation is simply a shorter letter rather
+    # than one with a blank line where the place should be.
+    "new_device": {"cta": True, "facts": ["device", "place", "when"]},
     "deal_status": {},
     "deadline_reminder": {},
 }
@@ -126,6 +130,12 @@ def sample_context(kind: str) -> dict[str, Any]:
             "name": "Пётр",
             "account": "pyotr@example.com",
             "cta_url": "https://vimana.dealvault.club/login",
+        },
+        "new_device": {
+            "device": "Chrome on macOS",
+            "place": "Dubai, United Arab Emirates",
+            "when": "2026-08-08 20:28 UTC",
+            "cta_url": "https://vimana.dealvault.club/profile/keys",
         },
         "deal_status": {"status": "in_transit"},
         "deadline_reminder": {},

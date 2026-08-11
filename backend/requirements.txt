@@ -72,6 +72,19 @@ phonenumbers==8.13.52
 # brace). Already a transitive dependency of nothing here — added explicitly.
 Jinja2==3.1.4
 
+# T_SEC.6 — naming the device a sign-in came from. `User-Agent` strings are a
+# heap of vendor tokens impersonating each other (Chrome claims Safari, which
+# claims Mozilla); a regex written today is wrong by the next browser release,
+# and the letter would tell people about a device they do not own.
+user-agents==2.2.0
+
+# T_SEC.6 — reading MaxMind's GeoLite2 City file, which we hold locally. The
+# alternative was an HTTP lookup, i.e. sending the address of every sign-in on
+# the platform to a third party. The database itself is **not** in the image
+# (~70 MB, needs a MaxMind account): without `GEOIP_DB_PATH` the letter simply
+# omits the location line.
+geoip2==4.8.0
+
 # Tests
 pytest==8.3.4
 pytest-asyncio==0.24.0

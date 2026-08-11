@@ -127,5 +127,19 @@
     "facts_account": "konto",
     "note": "Ten list nie jest subskrypcją i nie da się go wyłączyć: zapisuje, że sposób logowania do tego konta się zmienił.",
     "cta": "Odzyskaj dostęp"
+  },
+  "new_device": {
+    "subject": "Vimana · Logowanie z nowego urządzenia",
+    "preheader": "Urządzenie, którego wcześniej nie widzieliśmy",
+    "heading": "Logowanie z nowego urządzenia",
+    "body": [
+      "Do tego konta zalogowano się z urządzenia, którego wcześniej nie widzieliśmy. Poniżej to, co udało się o nim ustalić.",
+      "Jeśli to Ty — nie trzeba nic robić. Jeśli nie — zmień sposób logowania: pod linkiem poniżej są hasło, klucze dostępu i kody odzyskiwania."
+    ],
+    "facts_device": "urządzenie",
+    "facts_place": "przybliżone miejsce",
+    "facts_when": "czas (UTC)",
+    "cta": "Sprawdź sposoby logowania",
+    "note": "Miejsce jest przybliżone i często błędne: sieci komórkowe i VPN przesuwają je o setki kilometrów. Ten list nie jest subskrypcją i nie da się go wyłączyć."
   }
 }

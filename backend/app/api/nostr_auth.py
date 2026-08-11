@@ -46,6 +46,7 @@ from app.core.email_verification import (
 from app.core.identity_proof import PURPOSE_LOGIN, PURPOSE_SIGNUP, verify_proof
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token
+from app.core import sign_ins
 from app.models.user import User
 from app.schemas.user import Token, UserOut
 
@@ -186,6 +187,12 @@ async def nostr_verify(
             detail="Identity key was declared lost — this account is retired",
         )
 
+    # T_SEC.6. A Nostr account often has no email at all, and then the letter
+    # has nowhere to go — the task returns without sending. The row is still
+    # written: the moment such an account attaches an address, its device
+    # history is already there to be compared against.
+    await sign_ins.announce(db, user.id, request)
+
     return Token(access_token=create_access_token(str(user.id)))
 
 
@@ -235,6 +242,9 @@ async def nostr_signup(
 
         _dispatch_code(user)
         await db.commit()
+
+    # T_SEC.6 — remembered, not announced: nothing precedes the first device.
+    await sign_ins.record(db, user.id, request)
 
     # A token, not just the row: there is no password to log in with afterwards.
     return SignupOut(

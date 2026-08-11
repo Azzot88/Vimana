@@ -445,6 +445,56 @@ def send_password_changed(user_id: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_new_device")
+def send_new_device(user_id: str, device: str, ip: str, when_iso: str) -> None:
+    """T_SEC.6 — tell the owner their account opened somewhere new.
+
+    Not subject to `notify_email`, like every other letter in the security
+    class: since `T3.28` a mailbox alone opens the account, and this is the only
+    thing that ever says so out loud. A signal you can switch off is not a
+    signal, it is a setting.
+
+    **The address arrives as an argument and leaves with the task.** The history
+    row holds a /24, never the address itself (`models/sign_in`); geolocation
+    needs the whole thing, so it travels through the broker for the length of
+    one lookup — the same shape as a code or a reset token, and for the same
+    reason: it exists nowhere durable.
+
+    The place may come back `None` — the GeoLite2 file is optional and is not in
+    the image. The letter then simply lacks that line. A missing city is not a
+    reason to withhold the fact that somebody signed in.
+
+    Called by: `api/auth.otp_verify`, `api/auth.login`,
+    `api/passkey.login_verify`, `api/nostr_auth.nostr_verify`.
+    """
+    import os
+
+    from app.core.geoip import place_for
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            # An account with no address — a Nostr or passkey identity — has
+            # nowhere to be told. Recorded as a known limit rather than papered
+            # over: the letter cannot reach where there is no mailbox.
+            return
+        _send(
+            user,
+            user.email,
+            "new_device",
+            device=device,
+            place=place_for(ip) or "",
+            when=when_iso,
+            # Straight to the page holding password, passkeys and recovery
+            # codes. A letter that says "change how you get in" and then leaves
+            # the reader to find where is a letter that ends in a shrug.
+            cta_url=f"{base}/profile/keys",
+        )
+
+
 @celery_app.task(name="app.tasks.notifications.send_channel_code")
 def send_channel_code(channel: str, value: str, code: str, locale: str | None) -> None:
     """T3.26 — deliver a confirmation code over whichever channel was chosen.

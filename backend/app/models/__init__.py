@@ -35,3 +35,4 @@ __all__ = [
     "WebAuthnCredential",
 ]
 from app.models.contact import UserContact, VerificationChallenge  # noqa: F401,E402
+from app.models.sign_in import UserSignIn  # noqa: F401,E402
