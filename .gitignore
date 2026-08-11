@@ -38,3 +38,9 @@ postgres_data/
 # Scan / load artefacts — snapshots of one moment, they age badly in a repo
 .zap/zap-report.*
 load/results/*.json
+
+# T_SEC.6 — MaxMind GeoLite2 City, mounted into celery-worker read-only.
+# Out of git for three separate reasons, any one of which is enough: MaxMind's
+# licence is not ours to redistribute, the file is 63 MB, and it refreshes on
+# MaxMind's schedule rather than on our releases.
+data/geoip/

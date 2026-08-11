@@ -132,6 +132,15 @@ services:
     volumes:
       - ./backend:/app
       - nostr_whitelist:/data
+      # T_SEC.6 — MaxMind GeoLite2 City, read-only. Mounted into the **worker
+      # only**: `place_for` is called from `send_new_device` and nowhere else,
+      # and a 63 MB file has no business inside the API container to prove it.
+      #
+      # The database is not in the image and not in git — MaxMind's licence is
+      # not ours to redistribute, and its refresh schedule is not our release
+      # schedule. Absent file → letters go out without the location line, which
+      # is a working state (see `core/geoip.py`), not a broken one.
+      - ./data/geoip:/geoip:ro
     depends_on:
       db:
         condition: service_healthy
