@@ -31,12 +31,16 @@ def spy(monkeypatch):
 def _user(maker, **fields):
     from app.models.user import User
 
+    # Defaults, not hardcoded values: a test that wants an account *without* a
+    # chat has to be able to say so, and passing the same keyword twice is a
+    # `TypeError` rather than an override.
+    fields.setdefault("telegram_chat_id", "chat-123")
+
     with maker() as db:
         user = User(
             email=unique_email("prefs"),
             display_name="Matrix Tester",
             locale="en",
-            telegram_chat_id="chat-123",
             **fields,
         )
         db.add(user)
