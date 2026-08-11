@@ -112,6 +112,8 @@
     "codeBack": "Другой способ",
     "codeFailed": "Код неверный или истёк. Запросите новый.",
     "codeCooldown": "Код только что отправлен. Подождите немного, прежде чем просить снова.",
+    "telegramLogin": "Войти через Telegram",
+    "telegramUnavailable": "Telegram сейчас недоступен.",
     "passwordOptional": "Пароль — необязательно",
     "channel": {
       "email": "Почта",

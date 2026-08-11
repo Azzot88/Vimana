@@ -98,6 +98,8 @@
     "codeBack": "Autre méthode",
     "codeFailed": "Ce code est incorrect ou a expiré. Demandez-en un nouveau.",
     "codeCooldown": "Un code vient d'être envoyé. Patientez avant d'en redemander un.",
+    "telegramLogin": "Continuer avec Telegram",
+    "telegramUnavailable": "Telegram n'est pas disponible pour le moment.",
     "passwordOptional": "Mot de passe — facultatif",
     "channel": {
       "email": "E-mail",

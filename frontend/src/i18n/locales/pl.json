@@ -98,6 +98,8 @@
     "codeBack": "Inny sposób",
     "codeFailed": "Kod jest błędny lub wygasł. Poproś o nowy.",
     "codeCooldown": "Kod właśnie wysłano. Poczekaj chwilę przed kolejną prośbą.",
+    "telegramLogin": "Zaloguj się przez Telegram",
+    "telegramUnavailable": "Telegram jest teraz niedostępny.",
     "passwordOptional": "Hasło — opcjonalnie",
     "channel": {
       "email": "E-mail",

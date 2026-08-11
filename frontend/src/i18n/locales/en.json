@@ -112,6 +112,8 @@
     "codeBack": "Use another way",
     "codeFailed": "That code is wrong or has expired. Ask for a new one.",
     "codeCooldown": "A code was just sent. Give it a moment before asking again.",
+    "telegramLogin": "Continue with Telegram",
+    "telegramUnavailable": "Telegram is not available here right now.",
     "passwordOptional": "Password — optional",
     "channel": {
       "email": "Email",

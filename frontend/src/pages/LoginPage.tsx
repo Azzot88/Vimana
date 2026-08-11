@@ -76,6 +76,12 @@ export default function LoginPage() {
    * months reads as a broken site, not as a new feature.
    */
   const [channels, setChannels] = useState<string[]>([])
+  /** T3.27 — set once a Telegram link has been handed out. It replaces the
+   *  identifier when the code comes back: there was never an address. */
+  const [telegramNonce, setTelegramNonce] = useState('')
+  /** Channels usable with nothing typed at all. Asked once, on load — the
+   *  screen must not decide on its own whether our bot exists. */
+  const [openChannels, setOpenChannels] = useState<string[]>([])
   const [stage, setStage] = useState<'identify' | 'code'>('identify')
   const [code, setCode] = useState('')
   const [sentVia, setSentVia] = useState('')
@@ -112,6 +118,16 @@ export default function LoginPage() {
     }
   }
 
+  // T3.27 — asked once, with nothing typed: which channels work without an
+  // identifier at all. Today that is Telegram, and only where a bot is
+  // configured. A button hardcoded here would be a button that quietly does
+  // nothing on a deployment without one.
+  useEffect(() => {
+    contactChannels('')
+      .then(({ data }) => setOpenChannels(data.channels))
+      .catch(() => setOpenChannels([]))
+  }, [])
+
   // Debounced so typing an address is not a request per keystroke, and only
   // for something that already looks like one — the endpoint is rate-limited
   // and an incomplete identifier tells it nothing anyway.
@@ -140,7 +156,38 @@ export default function LoginPage() {
     return () => clearTimeout(timer)
   }, [loginVal])
 
+  /**
+   * T3.27 — Telegram, which runs backwards.
+   *
+   * Every other channel is told an address and delivers. A bot cannot write to
+   * somebody who has never written to it, so this hands back a link, the person
+   * opens the chat, and the code arrives there. The nonce stands in for the
+   * identifier from then on: they named nothing, and the account is resolved
+   * from the chat they proved.
+   */
+  const startTelegram = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await otpRequest('', 'telegram', i18n.language)
+      if (!data.link || !data.nonce) throw new Error('no link')
+      setTelegramNonce(data.nonce)
+      setSentVia('telegram')
+      setStage('code')
+      // A new tab, not a redirect: the code screen has to survive the trip to
+      // Telegram and back, and on desktop the app takes the link without the
+      // browser going anywhere at all.
+      window.open(data.link, '_blank')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      setError(status === 503 ? t('auth.telegramUnavailable') : t('auth.errorServer'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const sendCode = async (channel: string) => {
+    if (channel === 'telegram') return startTelegram()
     setLoading(true)
     setError('')
     try {
@@ -163,13 +210,18 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const { data } = await otpVerify(loginVal.trim(), code.trim(), password)
+      // T3.27 — for Telegram the nonce *is* the identifier: the person typed no
+      // address, and the exchange is what the code belongs to.
+      const { data } = telegramNonce
+        ? await otpVerify(telegramNonce, code.trim(), undefined, 'telegram')
+        : await otpVerify(loginVal.trim(), code.trim(), password)
       localStorage.setItem('token', data.access_token)
       const { data: user } = await me()
       setAuth(user, data.access_token)
-      // A provisional name means the account was just created here. Sending
-      // them to name it is the one thing left before the product makes sense.
-      navigate(user.display_name === loginVal.trim().split('@')[0] ? '/welcome' : returnUrl)
+      // The server says whether it just made this account. It used to be
+      // guessed by comparing the display name with the local part of the
+      // address — a guess that cannot work at all for an account born in a chat.
+      navigate(data.created ? '/welcome' : returnUrl)
     } catch {
       // One message for wrong, expired and already-spent: the server does not
       // tell them apart either, and separating them helps whoever is guessing.
@@ -427,6 +479,23 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* T3.27 — a way in that needs nothing typed. Placed after the picker
+            because it is a different kind of act: not "send my code there" but
+            "I have no address to give you". */}
+        {!recovering && stage === 'identify' && openChannels.includes('telegram') && (
+          <div className="border-t border-navy/10 pt-4">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={startTelegram}
+              data-testid="login-telegram"
+              className="w-full border border-cyan/40 bg-cyan/5 rounded-field py-2.5 text-sm font-body text-navy disabled:opacity-40"
+            >
+              {t('auth.telegramLogin')}
+            </button>
+          </div>
+        )}
+
         {!recovering && stage === 'code' && (
           <form onSubmit={submitCode} className="space-y-3 border-t border-navy/10 pt-4" data-testid="code-form">
             <p className="text-xs font-body text-muted">
@@ -452,6 +521,10 @@ export default function LoginPage() {
                 setStage('identify')
                 setCode('')
                 setError('')
+                // T3.27 — the nonce belongs to the exchange being abandoned.
+                // Kept, it would be spent against the next code typed here,
+                // which belongs to a different one entirely.
+                setTelegramNonce('')
               }}
               className="w-full text-xs font-body text-muted"
             >

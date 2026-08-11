@@ -39,6 +39,81 @@ async def get_connect_link(
     return {"link": link, "already_connected": bool(current_user.telegram_chat_id)}
 
 
+def _telegram_name(msg: dict) -> str:
+    """What Telegram calls this person, for an account that has no address.
+
+    First and last name if given, else the @username, else nothing. It is a
+    provisional name exactly like the local part of an email address — the
+    welcome screen replaces it — and not a claim that this is who they are.
+
+    Called by: `telegram_webhook`.
+    """
+    sender = (msg.get("from") or {}) if isinstance(msg.get("from"), dict) else {}
+    parts = [str(sender.get("first_name") or ""), str(sender.get("last_name") or "")]
+    full = " ".join(p for p in parts if p).strip()
+    return full or str(sender.get("username") or "")
+
+
+async def _send_login_code(
+    db: AsyncSession, token: str, chat_id: str, locale: str | None, label: str = ""
+) -> bool:
+    """T3.27 — answer a sign-in nonce with a code. True if this was one.
+
+    The exchange was opened by `api/auth.otp_request`, which had nothing to
+    deliver to: a bot cannot write first. Pressing Start is what supplies the
+    chat, so this is the first moment a code can exist — it is minted here and
+    goes straight out, existing nowhere durable, exactly like every other code
+    in the product.
+
+    **`resolved_value` is the chat, and it is written before the code is sent.**
+    `otp/verify` reads it to decide whose account this is; a code delivered to a
+    chat we then failed to record would be a code nobody could spend.
+
+    Returns False for anything that is not an open, unexpired sign-in nonce, so
+    the caller can fall through to its "stale link" reply. Deliberately silent
+    about *why*: an expired nonce and a string somebody made up get the same
+    answer, because the alternative is a bot that confirms which nonces exist.
+
+    Called by: `telegram_webhook`.
+    """
+    from datetime import datetime, timezone
+
+    from app.core.contact_verification import mint_into
+    from app.models.contact import VerificationChallenge
+
+    challenge = (
+        await db.execute(
+            select(VerificationChallenge).where(
+                VerificationChallenge.channel == "telegram",
+                VerificationChallenge.value == token,
+                VerificationChallenge.purpose == "login",
+                VerificationChallenge.code_hash.is_(None),
+            )
+        )
+    ).scalars().first()
+    if challenge is None:
+        return False
+
+    expires = challenge.expires_at
+    if expires and not expires.tzinfo:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires and expires <= datetime.now(timezone.utc):
+        return False
+
+    code = mint_into(challenge)
+    challenge.resolved_value = chat_id
+    challenge.resolved_label = (label or "").strip()[:100] or None
+    await db.commit()
+
+    from app.tasks.notifications import send_channel_code
+
+    try:
+        send_channel_code.delay("telegram", chat_id, code, locale)
+    except Exception:
+        logger.exception("could not queue telegram login code for %s", chat_id)
+    return True
+
+
 @router.post("/webhook")
 async def telegram_webhook(
     update: TelegramUpdate,
@@ -94,9 +169,25 @@ async def telegram_webhook(
             # written verified. Nothing else can produce a chat id.
             from app.core.contacts import upsert_contact
 
-            await upsert_contact(db, user, "telegram", chat_id, verified=True)
+            linked = await upsert_contact(db, user, "telegram", chat_id, verified=True)
+            # T3.27 — **and it becomes a way in.** Said out loud because it is a
+            # real widening: somebody who connected Telegram for notifications
+            # can now also sign in with it. The alternative is worse — sign-in
+            # would not recognise the chat, and the person would get a second
+            # account instead of their own. One chat, one account, and the row
+            # states what is true rather than leaving `is_login` false while the
+            # resolution ignores it.
+            if linked is not None:
+                linked.is_login = True
             await db.commit()
             reply("linked", user.locale)
+        elif await _send_login_code(db, token, chat_id, hint, _telegram_name(msg)):
+            # T3.27 — the same gesture, from the other direction. Above, an
+            # account already signed in is adding Telegram; here, somebody is
+            # signing in *through* Telegram and may not have an account at all.
+            # Both are `/start <token>`, and the two token kinds are told apart
+            # by where they were registered, not by their shape.
+            pass
         else:
             reply("stale", hint)
     else:

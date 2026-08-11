@@ -98,6 +98,8 @@
     "codeBack": "Інший спосіб",
     "codeFailed": "Код невірний або застарів. Запитайте новий.",
     "codeCooldown": "Код щойно надіслано. Зачекайте трохи, перш ніж просити знову.",
+    "telegramLogin": "Увійти через Telegram",
+    "telegramUnavailable": "Telegram зараз недоступний.",
     "passwordOptional": "Пароль — необов'язково",
     "channel": {
       "email": "Пошта",

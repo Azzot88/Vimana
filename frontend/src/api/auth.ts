@@ -102,19 +102,32 @@ export const disconnectTelegram = () =>
 
 /** T3.28 — one door. 202 whatever the identifier is, so the screen learns
  *  nothing it could leak about who has an account here. */
+/** T3.27 — `link` and `nonce` come back only for Telegram, where there is
+ *  nothing to deliver to until the person opens the chat themselves. */
 export const otpRequest = (identifier: string, channel: string, locale: string) =>
-  api.post<{ status: string }>('/api/auth/otp/request', {
+  api.post<{ status: string; link?: string; nonce?: string }>('/api/auth/otp/request', {
     identifier,
     channel,
     locale,
   })
 
-export const otpVerify = (identifier: string, code: string, password?: string) =>
-  api.post<{ access_token: string; token_type: string }>('/api/auth/otp/verify', {
-    identifier,
-    code,
-    password: password || undefined,
-  })
+export const otpVerify = (
+  identifier: string,
+  code: string,
+  password?: string,
+  /** Which exchange this code belongs to. Empty for an address, which describes
+   *  itself; `telegram` when the identifier is an opaque nonce. */
+  channel?: string,
+) =>
+  api.post<{ access_token: string; token_type: string; created?: boolean }>(
+    '/api/auth/otp/verify',
+    {
+      identifier,
+      code,
+      password: password || undefined,
+      channel: channel || undefined,
+    },
+  )
 
 /** T3.26 — which channels can honestly confirm this identifier. */
 export const contactChannels = (identifier: string) =>

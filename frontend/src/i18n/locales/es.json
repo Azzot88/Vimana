@@ -98,6 +98,8 @@
     "codeBack": "Otro método",
     "codeFailed": "El código es incorrecto o ha caducado. Pide uno nuevo.",
     "codeCooldown": "Acabamos de enviar un código. Espera un momento antes de pedir otro.",
+    "telegramLogin": "Entrar con Telegram",
+    "telegramUnavailable": "Telegram no está disponible ahora mismo.",
     "passwordOptional": "Contraseña — opcional",
     "channel": {
       "email": "Correo",

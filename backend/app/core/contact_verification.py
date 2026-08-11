@@ -35,6 +35,11 @@ Functions (PROJECT §6.2a):
   return the plaintext. Called by: `T3.26`, `T3.28`.
 - `verify(db, channel, value, code, purpose)` — check and consume.
   Called by: `T3.26`, `T3.28`.
+- `open_exchange(db, channel, value, purpose)` — register a target before any
+  code exists, for a transport that has to be spoken to first (Telegram).
+  Called by: `api/auth.otp_request`.
+- `mint_into(challenge)` — put a code into an exchange already open.
+  Called by: `api/telegram.telegram_webhook`.
 - `generate_code()` — six digits from `secrets`. Called by: `issue`, tests.
 - `_active(db, channel, value, purpose)` — the live challenge, if any.
   Called by: `issue`, `verify`.
@@ -152,6 +157,61 @@ async def issue(
     return code
 
 
+async def open_exchange(
+    db: AsyncSession,
+    channel: str,
+    value: str,
+    *,
+    purpose: str = "verify",
+    now: datetime | None = None,
+) -> VerificationChallenge:
+    """Register a target now; the code comes later. Caller commits.
+
+    T3.27 — for the one transport that cannot be spoken to first. A Telegram
+    sign-in begins with a link carrying a nonce, and the bot can only answer
+    once the person presses Start; the row exists from the moment the link is
+    issued so that the webhook can tell a nonce we minted from a string a
+    stranger typed.
+
+    No cooldown check and no replacement of an earlier row: each link is its own
+    nonce, so there is nothing to collide with. What bounds this is the caller's
+    rate limit (`T3.29`), which is where a limit on "how much of this form one
+    person gets to use" belongs.
+    """
+    moment = now or datetime.now(timezone.utc)
+    challenge = VerificationChallenge(
+        channel=channel,
+        value=value,
+        code_hash=None,
+        purpose=purpose,
+        expires_at=moment + CODE_TTL,
+    )
+    db.add(challenge)
+    return challenge
+
+
+def mint_into(
+    challenge: VerificationChallenge, *, now: datetime | None = None
+) -> str:
+    """Put a code into an exchange that is already open. Returns it once.
+
+    Separate from `issue` because the row is found, not created: by the time
+    this runs the target has been learned from the transport, and creating a
+    second row would leave the first one — the one the browser is waiting on —
+    without a code forever.
+    """
+    moment = now or datetime.now(timezone.utc)
+    code = generate_code()
+    challenge.code_hash = hash_password(code)
+    challenge.sent_at = moment
+    # The clock starts when the code is sent, not when the link was made: a
+    # person who opens the link ten minutes later should still get the full
+    # window to type what they were just handed.
+    challenge.expires_at = moment + CODE_TTL
+    challenge.attempts = 0
+    return code
+
+
 async def verify(
     db: AsyncSession,
     channel: str,
@@ -185,6 +245,13 @@ async def verify(
             delete(VerificationChallenge).where(VerificationChallenge.id == challenge.id)
         )
         raise CodeExpired("code expired")
+
+    # T3.27 — an exchange opened but never minted. The link was issued and
+    # nobody pressed Start, so there is nothing to be wrong about yet. Answered
+    # as `NoCodeIssued` rather than as a wrong code: counting an attempt here
+    # would let anyone burn a stranger's pending sign-in by guessing at it.
+    if challenge.code_hash is None:
+        raise NoCodeIssued("the exchange is open, no code has been sent")
 
     if not verify_password(code, challenge.code_hash):
         challenge.attempts += 1

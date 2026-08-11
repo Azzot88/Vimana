@@ -1049,6 +1049,31 @@ async def _ensure_contact_tables(engine) -> None:
         )
 
 
+async def _ensure_login_exchange_columns(engine) -> None:
+    """T3.27: verification_challenges gets a nullable code and two learned
+    values. Mirrors migration 0048 — `create_all` builds them for a fresh
+    database, this covers a test DB that predates the model."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE verification_challenges "
+                "ALTER COLUMN code_hash DROP NOT NULL"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE verification_challenges ADD COLUMN IF NOT EXISTS "
+                "resolved_value VARCHAR(255)"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE verification_challenges ADD COLUMN IF NOT EXISTS "
+                "resolved_label VARCHAR(100)"
+            )
+        )
+
+
 async def _ensure_notification_prefs_column(engine) -> None:
     """T3.32: users.notification_prefs. Mirrors migration 0047.
     Idempotent — `create_all` builds it, this covers a pre-existing test DB.
@@ -1276,6 +1301,7 @@ async def test_engine():
     await _ensure_contact_tables(engine)
     await _ensure_sign_ins_table(engine)
     await _ensure_notification_prefs_column(engine)
+    await _ensure_login_exchange_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

@@ -316,8 +316,69 @@ def _announce_password_change(user_id) -> None:
         logger.exception("could not queue password-changed notice for %s", user_id)
 
 
+async def _account_for_chat(db: AsyncSession, chat_id: str, label: str | None):
+    """T3.27 — whose account this chat is, creating one if it is nobody's.
+
+    Returns `(user, created)`. Three cases, and the middle one is the reason
+    this is a function rather than four lines inline:
+
+    1. A confirmed `telegram` contact — the ordinary sign-in.
+    2. `users.telegram_chat_id` with no contact row. Accounts that linked
+       Telegram before `T3.25` are like this, and so is anyone whose contact was
+       removed while the column stayed. Adopting the chat here rather than
+       creating a second account is the same repair `otp_verify` already makes
+       for an unconfirmed address.
+    3. Nobody — a new account, born from a chat. It has no address at all, which
+       is a shape the product already knows: a Nostr account has none either.
+
+    Called by: `api/auth.otp_verify`.
+    """
+    from app.core.accounts import create_user
+    from app.core.contacts import upsert_contact
+    from app.models.contact import UserContact
+
+    owner_id = (
+        await db.execute(
+            select(UserContact.user_id).where(
+                UserContact.channel == "telegram",
+                UserContact.value == chat_id,
+                UserContact.verified_at.isnot(None),
+            )
+        )
+    ).scalars().first()
+    if owner_id:
+        user = await db.get(User, owner_id)
+        if user is not None:
+            return user, False
+
+    adopted = (
+        await db.execute(select(User).where(User.telegram_chat_id == chat_id))
+    ).scalars().first()
+    if adopted is not None:
+        contact = await upsert_contact(db, adopted, "telegram", chat_id, verified=True)
+        if contact is not None:
+            contact.is_login = True
+        adopted.notify_telegram = True
+        return adopted, False
+
+    user = await create_user(db, display_name=(label or "").strip() or None)
+    user.telegram_chat_id = chat_id
+    # The switch *is* the connection (`T_UX.13`), and this chat just became one.
+    # Muting is what the matrix is for, and it starts at the class defaults.
+    user.notify_telegram = True
+    # `create_user` writes a login contact only for an address it was given, and
+    # it was given none. Written here as confirmed because pressing Start is the
+    # proof — nothing else can produce a chat id.
+    contact = await upsert_contact(db, user, "telegram", chat_id, verified=True)
+    if contact is not None:
+        contact.is_login = True
+    return user, True
+
+
 class OtpRequestBody(BaseModel):
-    identifier: str
+    # T3.27 — empty for Telegram: there the person names no address, they open
+    # a chat. Which is the whole reason that channel needs its own branch.
+    identifier: str = ""
     channel: str
     locale: str = "en"
 
@@ -325,6 +386,11 @@ class OtpRequestBody(BaseModel):
 class OtpVerifyBody(BaseModel):
     identifier: str
     code: str
+    # T3.27 — the client says which exchange this code belongs to. For an email
+    # the identifier is self-describing and this stays empty; a Telegram nonce
+    # is an opaque string that could be mistaken for nothing in particular, and
+    # guessing at its shape is how the wrong challenge gets looked up.
+    channel: str | None = None
     # T3.28 pt.4 — a password typed on the sign-in screen, carried by the
     # browser until the code proves the address. Applied **only** when the code
     # creates the account; see `otp_verify`.
@@ -350,13 +416,45 @@ async def otp_request(
     so `purpose` differs, and `contact_verification` scopes every lookup by it.
     """
     from app.core.channels import available_for
-    from app.core.contact_verification import CooldownActive, issue
+    from app.core.contact_verification import CooldownActive, issue, open_exchange
     from app.core.contacts import normalize
 
     # T3.29 — before anything else, including the channel check: the budget is
     # about how much of this form one caller gets to use, and refusing later
     # would let them enumerate channels for free.
     await code_limits.check(request, body.identifier)
+
+    # ── T3.27 · Telegram, which runs backwards ────────────────────────────
+    #
+    # Every other channel is told where to deliver. A bot cannot write to
+    # somebody who has never written to it, so here we hand back a link and the
+    # code follows once they press Start. No identifier is involved, and that is
+    # the point: the person proves a Telegram account, not an address they typed.
+    #
+    # 503 rather than a silent 202 when the bot is unconfigured. The rule about
+    # answering identically exists so a caller cannot learn about *accounts*;
+    # this says something about our own deployment, which the screen has to know
+    # or it offers a button that quietly does nothing.
+    if body.channel == "telegram":
+        from app.core.channels import TELEGRAM, enabled
+        from app.core.config import settings
+
+        if not enabled(TELEGRAM) or not settings.TELEGRAM_BOT_USERNAME:
+            raise HTTPException(status_code=503, detail="Telegram is not available")
+
+        import secrets as _secrets
+
+        nonce = _secrets.token_urlsafe(32)
+        await open_exchange(db, TELEGRAM, nonce, purpose="login")
+        await db.commit()
+        return {
+            "status": "accepted",
+            # The nonce travels back so the browser can spend the code against
+            # this exchange. It identifies a pending sign-in, nothing else: it
+            # names no account and unlocks nothing on its own.
+            "nonce": nonce,
+            "link": f"https://t.me/{settings.TELEGRAM_BOT_USERNAME}?start={nonce}",
+        }
 
     if body.channel not in available_for(body.identifier):
         return {"status": "accepted"}
@@ -412,6 +510,57 @@ async def otp_verify(
     )
     from app.core.contacts import normalize, upsert_contact
     from app.models.contact import UserContact
+
+    # ── T3.27 · a code that arrived in a chat ─────────────────────────────
+    #
+    # The identifier here is the nonce from `otp_request`, not an address: the
+    # person named nothing, they opened a chat. The account is resolved from the
+    # chat id the webhook recorded — which is why the client has to say which
+    # channel this is, rather than us guessing from the string's shape.
+    if body.channel == "telegram":
+        try:
+            challenge = await verify(
+                db, "telegram", body.identifier, body.code, purpose="login"
+            )
+        except NoCodeIssued:
+            # Also the answer for "the link was made but Start was never
+            # pressed". Indistinguishable on purpose: the browser knows it is
+            # waiting, and the server saying so would confirm which nonces are
+            # live to anyone who guesses one.
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+        except CodeExpired:
+            await db.commit()
+            raise HTTPException(status_code=400, detail="Code expired")
+        except TooManyAttempts:
+            await db.commit()
+            raise HTTPException(
+                status_code=429, detail="Too many attempts — request a new code"
+            )
+        except CodeInvalid:
+            await db.commit()
+            raise HTTPException(status_code=400, detail="Invalid code")
+
+        chat_id = challenge.resolved_value
+        if not chat_id:
+            # A verified code with no chat recorded should be impossible: the
+            # webhook writes the chat before it sends anything. Refused rather
+            # than repaired, because the alternative is creating an account with
+            # no way to reach it.
+            logger.error("telegram challenge %s verified without a chat", challenge.id)
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+        user, created = await _account_for_chat(db, chat_id, challenge.resolved_label)
+        await db.commit()
+
+        if created:
+            await sign_ins.record(db, user.id, request)
+        else:
+            await sign_ins.announce(db, user.id, request)
+        return {
+            "access_token": create_access_token(str(user.id)),
+            "token_type": "bearer",
+            "created": created,
+        }
 
     for channel in ("email", "sms", "whatsapp", "telegram_gateway"):
         value = normalize("email" if channel == "email" else "sms", body.identifier)
@@ -526,7 +675,15 @@ async def otp_verify(
             await sign_ins.announce(db, user.id, request)
         else:
             await sign_ins.record(db, user.id, request)
-        return {"access_token": create_access_token(str(user.id)), "token_type": "bearer"}
+        return {
+            "access_token": create_access_token(str(user.id)),
+            "token_type": "bearer",
+            # T3.27 — said outright rather than inferred. The screen used to
+            # decide whether to ask for a name by comparing the display name
+            # with the local part of the address, which is a guess that cannot
+            # work at all for an account born from a chat.
+            "created": not owner_id,
+        }
 
     raise HTTPException(status_code=400, detail="Invalid or expired code")
 
@@ -558,8 +715,20 @@ async def contact_channels(request: Request, body: ChannelsBody):
     number itself. `telegram` is deliberately absent for a phone — pressing
     Start proves control of a Telegram account, never of the number typed a
     minute earlier (see `core/channels`).
+
+    **An empty identifier is a real question, not a mistake** (T3.27): it asks
+    what can be done with nothing typed at all, and the answer is Telegram,
+    where the person names no address and opens a chat instead. The screen has
+    to ask this on load, before there is anything in the field, or it would have
+    to decide on its own whether our bot exists.
     """
-    from app.core.channels import available_for
+    from app.core.channels import TELEGRAM, available_for, enabled
+
+    if not body.identifier.strip():
+        from app.core.config import settings
+
+        usable = enabled(TELEGRAM) and bool(settings.TELEGRAM_BOT_USERNAME)
+        return {"channels": [TELEGRAM] if usable else []}
 
     return {"channels": available_for(body.identifier)}
 
@@ -583,6 +752,7 @@ async def request_contact_code(
     from app.core.channels import available_for, deliver
     from app.core.contact_verification import CooldownActive, issue
     from app.core.contacts import normalize
+
 
     channel = body.channel
     await code_limits.check(request, body.identifier)  # T3.29
