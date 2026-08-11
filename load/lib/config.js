@@ -48,7 +48,20 @@ export const PASSWORD = 'K6Load!23';
 
 /** Register + login, returning the bearer token. Used from `setup()`, which
  *  runs once — doing this per iteration would measure nginx's `auth_zone`
- *  (10 r/min per IP) rather than the application. */
+ *  (10 r/min per IP) rather than the application.
+ *
+ *  **Broken since 2026-08-10 and knowingly left so (found 2026-08-11).**
+ *  `POST /auth/register` was removed in `T3.28 pt.3b`: an account is now born
+ *  from a code sent to a mailbox, and k6 cannot read a mailbox. Every scenario
+ *  that needs a session — `chat_hammer`, `mixed_workload`, `register_burst` —
+ *  dies in `setup()` for that reason and no other.
+ *
+ *  The fix is seeded accounts plus password login (`POST /auth/login` is
+ *  still there), not a test-only door into the product: an endpoint that mints
+ *  sessions for load runs is an endpoint that mints sessions. Recorded in
+ *  TASKS `T_TEST.6` rather than patched here, because deciding how load
+ *  accounts come to exist is a decision, not a repair.
+ */
 export function registerAndLogin(http, prefix, opts = {}) {
   const email = uniqueEmail(prefix);
   const reg = http.post(
@@ -63,7 +76,11 @@ export function registerAndLogin(http, prefix, opts = {}) {
     { headers: JSON_HEADERS },
   );
   if (reg.status !== 201) {
-    throw new Error(`setup: register failed ${reg.status} ${reg.body}`);
+    throw new Error(
+      `setup: register failed ${reg.status}. Since T3.28 there is no ` +
+        `POST /auth/register — accounts are born from a code, and k6 cannot ` +
+        `read a mailbox. This scenario needs seeded accounts; see TASKS T_TEST.6.`,
+    );
   }
   const login = http.post(
     `${BASE_URL}/api/auth/login`,

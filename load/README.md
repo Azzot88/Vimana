@@ -14,12 +14,22 @@ docker compose -f docker-compose.dev.yml --profile load run --rm \
 
 Scenarios:
 
-| file | what it puts under load |
-|---|---|
-| `scripts/browse_trips.js` | the anonymous read path — listing, cursor page 2, airports, categories |
-| `scripts/register_burst.js` | registration under burst; measures the rate limiter as much as the app |
-| `scripts/chat_hammer.js` | concurrent writes into **one** DealVault — the per-deal advisory lock |
-| `scripts/mixed_workload.js` | all three at once, 70 / 20 / 10 |
+| file | what it puts under load | state |
+|---|---|---|
+| `scripts/browse_trips.js` | the anonymous read path — listing, cursor page 2, airports, categories | runs |
+| `scripts/register_burst.js` | registration under burst; measures the rate limiter as much as the app | **dead** |
+| `scripts/chat_hammer.js` | concurrent writes into **one** DealVault — the per-deal advisory lock | **dead** |
+| `scripts/mixed_workload.js` | all three at once, 70 / 20 / 10 | **dead** |
+
+### Three of them do not run (since 2026-08-10)
+
+They call `POST /auth/register`, removed in `T3.28 pt.3b`. An account is now
+born from a code sent to a mailbox, and k6 cannot read a mailbox — so they die
+in `setup()`, with a message saying exactly that.
+
+The fix is seeded accounts plus password login, not a test-only endpoint that
+mints sessions. Tracked in `PRD/TASKS.md` under `T_TEST.6`; `browse_trips` is
+public and unaffected.
 
 Knobs (all env): `BASE_URL` (required), `K6_VUS` (default 100), `K6_DURATION`
 (default `5m`), `ALLOW_PROD=1` to override the production guard, `K6_IMAGE` to
