@@ -425,6 +425,94 @@ def test_geolocation_is_absent_without_a_database(monkeypatch):
     geoip._reader.cache_clear()
 
 
+class _FakeRecord:
+    """Shaped like a `geoip2` City record, filled in only where a test cares.
+
+    Built by hand rather than by shipping a cut-down `.mmdb`: the tiers below
+    are branches in our code, and what is under test is which branch wins, not
+    whether MaxMind can read its own file.
+    """
+
+    def __init__(self, city=None, region=None, country=None, zone=None):
+        self.city = type("C", (), {"name": city})()
+        self.country = type("C", (), {"name": country})()
+        self.location = type("L", (), {"time_zone": zone})()
+        self.subdivisions = type(
+            "S", (), {"most_specific": type("M", (), {"name": region})()}
+        )()
+
+
+@pytest.fixture
+def fake_geoip(monkeypatch):
+    """Point `place_for` at a record the test wrote."""
+    from app.core import geoip
+
+    def _install(record):
+        monkeypatch.setattr(
+            geoip, "_reader", lambda: type("R", (), {"city": lambda self, ip: record})()
+        )
+
+    return _install
+
+
+def test_a_city_wins_when_there_is_one(fake_geoip):
+    from app.core.geoip import place_for
+
+    fake_geoip(_FakeRecord(city="Minneapolis", country="United States"))
+    assert place_for("128.101.101.101") == "Minneapolis, United States"
+
+
+def test_the_region_stands_in_for_a_missing_city(fake_geoip):
+    """Most real sign-ins have no city: VPNs, corporate egress, CGNAT."""
+    from app.core.geoip import place_for
+
+    fake_geoip(_FakeRecord(region="England", country="United Kingdom"))
+    assert place_for("212.102.63.1") == "England, United Kingdom"
+
+
+def test_the_time_zone_stands_in_for_a_missing_region(fake_geoip):
+    """In a country nine zones wide, the zone is the difference between "that
+    is my city" and "that is four thousand kilometres away"."""
+    from app.core.geoip import place_for
+
+    fake_geoip(_FakeRecord(country="Russia", zone="Europe/Moscow"))
+    assert place_for("77.88.55.77") == "Russia (Europe/Moscow)"
+
+
+def test_a_bare_country_is_still_better_than_nothing(fake_geoip):
+    from app.core.geoip import place_for
+
+    fake_geoip(_FakeRecord(country="United States"))
+    assert place_for("8.8.8.8") == "United States"
+
+
+def test_a_city_state_does_not_repeat_itself(fake_geoip):
+    """"Singapore, Singapore" reads as a bug in the letter, not as a place."""
+    from app.core.geoip import place_for
+
+    fake_geoip(_FakeRecord(city="Singapore", country="Singapore"))
+    assert place_for("203.0.113.9") == "Singapore"
+
+
+def test_an_empty_record_yields_nothing(fake_geoip):
+    """None, not a half-filled string: the letter drops the line entirely."""
+    from app.core.geoip import place_for
+
+    fake_geoip(_FakeRecord())
+    assert place_for("203.0.113.9") is None
+
+
+def test_a_lookup_that_raises_is_not_a_failed_letter(monkeypatch):
+    from app.core import geoip
+
+    class _Angry:
+        def city(self, ip):
+            raise RuntimeError("address not in database")
+
+    monkeypatch.setattr(geoip, "_reader", lambda: _Angry())
+    assert geoip.place_for("203.0.113.9") is None
+
+
 def test_the_letter_ignores_the_notify_email_switch(sync_sessions, letters_sent):
     """Security letters are not a subscription — the class is unswitchable."""
     from app.models.user import User
