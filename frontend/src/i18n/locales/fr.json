@@ -711,8 +711,9 @@
     "notifications": "Notifications",
     "channels": "Canaux",
     "matrix": {
-      "hint": "Choisissez ce qui vous parvient et par où. Un canal doit d'abord être connecté ci-dessus.",
+      "hint": "Choisissez ce qui vous parvient et par où. Un canal doit d'abord être connecté dans votre profil.",
       "alwaysOn": "toujours actif",
+      "open": "Régler les notifications",
       "channel": {
         "email": "Courrier",
         "telegram": "Telegram",

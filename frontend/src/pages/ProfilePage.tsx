@@ -11,7 +11,6 @@ import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
 import EditProfileModal from '../components/EditProfileModal'
 import MonoText from '../components/MonoText'
-import NotificationMatrix from '../components/NotificationMatrix'
 import TrustCirclesSection from '../components/TrustCirclesSection'
 import UBASection from '../components/UBASection'
 import VerificationSection from '../components/VerificationSection'
@@ -556,7 +555,27 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          <NotificationMatrix />
+          {/* T3.32 — the matrix itself lives at `/profile/notifications`. This
+              card is the door. Connecting a channel is a profile question
+              ("how do I reach you"); deciding what travels down it is asked at
+              a different moment, usually just after something arrived that
+              nobody wanted — and a table wedged between contacts and invite
+              links is one nobody would go looking for. */}
+          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
+            <h2 className="font-display font-semibold text-base text-navy">
+              {t('profile.notifications')}
+            </h2>
+            <p className="text-sm font-body text-navy/60">
+              {t('profile.matrix.hint')}
+            </p>
+            <Link
+              to="/profile/notifications"
+              data-testid="profile-notifications-link"
+              className="block w-full text-center border border-navy/20 rounded-field py-2.5 text-sm font-body text-navy"
+            >
+              {t('profile.matrix.open')}
+            </Link>
+          </div>
         </div>
       </div>
 

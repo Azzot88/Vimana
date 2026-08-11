@@ -712,8 +712,9 @@
     "notifications": "Powiadomienia",
     "channels": "Kanały",
     "matrix": {
-      "hint": "Wybierz, co i gdzie ma docierać. Kanał trzeba najpierw połączyć powyżej.",
+      "hint": "Wybierz, co i gdzie ma docierać. Kanał trzeba najpierw połączyć w profilu.",
       "alwaysOn": "zawsze włączone",
+      "open": "Ustaw powiadomienia",
       "channel": {
         "email": "Poczta",
         "telegram": "Telegram",

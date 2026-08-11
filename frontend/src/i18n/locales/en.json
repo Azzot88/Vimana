@@ -762,8 +762,9 @@
     "notifications": "Notifications",
     "channels": "Channels",
     "matrix": {
-      "hint": "Choose what reaches you where. A channel has to be connected above first.",
+      "hint": "Choose what reaches you where. A channel has to be connected in your profile first.",
       "alwaysOn": "always on",
+      "open": "Open notification settings",
       "channel": {
         "email": "Mail",
         "telegram": "Telegram",

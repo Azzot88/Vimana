@@ -26,6 +26,7 @@ const DealsPage = lazy(() => import('./pages/DealsPage'))
 const DealPage = lazy(() => import('./pages/DealPage'))
 const DealVaultPage = lazy(() => import('./pages/DealVaultPage'))
 const IdentityPage = lazy(() => import('./pages/IdentityPage'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const ProfileKeysPage = lazy(() => import('./pages/ProfileKeysPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const InvitePage = lazy(() => import('./pages/InvitePage'))
@@ -99,6 +100,9 @@ export default function App() {
               {/* T_UX.6 — its own path so banners, letters and the reader can
                   link straight to it. */}
               <Route path="/profile/keys" element={<ProfileKeysPage />} />
+              {/* T3.32 — a path so a letter can say «change what reaches you»
+                  and mean somewhere in particular. */}
+              <Route path="/profile/notifications" element={<NotificationsPage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/admin/disputes" element={<AdminDisputesPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
