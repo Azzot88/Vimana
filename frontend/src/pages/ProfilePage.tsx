@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
-import { me, updateMe, getTelegramLink, disconnectTelegram } from '../api/auth'
+import { me, updateMe } from '../api/auth'
 import { createInvite, listConnections, listMyInvites, type Connection, type MyInvite } from '../api/social'
 import { getIdentity, type ArchiveRecord } from '../api/trust'
-import AddEmailModal from '../components/AddEmailModal'
 import AdminPanelSection from '../components/AdminPanelSection'
 import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
@@ -34,9 +33,6 @@ export default function ProfilePage() {
   const [invites, setInvites] = useState<MyInvite[]>([])
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [creatingInvite, setCreatingInvite] = useState(false)
-  const [busyChannel, setBusyChannel] = useState<string | null>(null)
-  const [emailModal, setEmailModal] = useState(false)
-  const [awaitingLink, setAwaitingLink] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   // T3.19 — the owner's own copy of their record. Read from the public endpoint
@@ -44,9 +40,9 @@ export default function ProfilePage() {
   // the same numbers by construction, not by two implementations agreeing.
   const [archive, setArchive] = useState<ArchiveRecord | null>(null)
 
-  // T_UX.6 — `refreshUser` moved to `ProfileKeysPage` along with the sections
-  // that needed it: only a security change makes the stored user go stale, and
-  // those now happen on the other screen.
+  // T_UX.6 / T3.32 — `refreshUser` moved out with the sections that needed it:
+  // security changes to `ProfileKeysPage`, channel connection to
+  // `ChannelsSection`. Nothing on this screen makes the stored user go stale.
 
   const loadInvites = async () => {
     setInvitesLoading(true)
@@ -93,50 +89,6 @@ export default function ProfilePage() {
     finally { setCreatingInvite(false) }
   }
 
-  // T_UX.12 pt.2 — the linking happens on the server, in a webhook this tab
-  // never sees. Pressing «Connect Telegram» opens Telegram, the bot answers,
-  // the row is written — and the profile keeps saying «not connected» until
-  // something asks again. So it asks on the way back: returning to the tab is
-  // exactly the moment the answer could have changed.
-  //
-  // Scoped to the one pending case rather than refetching on every focus: a
-  // profile that re-reads itself whenever you alt-tab is a request per glance.
-  // The pending state is «we just sent this person to Telegram», and it has to
-  // be tracked here. Deriving it from `notify_telegram` (the first version)
-  // stopped working the moment T_UX.13 made the switch stop writing that flag
-  // on connect: the flag stays false until the webhook lands, so the condition
-  // was false exactly while the answer was pending, and the profile never
-  // asked again. The screen sat on stale data while the bot had already
-  // confirmed in the chat.
-  useEffect(() => {
-    if (!awaitingLink || !token) return
-    if (user?.telegram_chat_id) {
-      setAwaitingLink(false)
-      return
-    }
-    const recheck = () => {
-      if (document.visibilityState !== 'visible') return
-      me()
-        .then(({ data }) => setAuth(data, token))
-        .catch(() => {})
-    }
-    document.addEventListener('visibilitychange', recheck)
-    window.addEventListener('focus', recheck)
-    // Focus is the common case and the cheap one, but it is not guaranteed:
-    // the desktop Telegram app can take the link without the browser ever
-    // losing focus, and then no event fires at all. A bounded poll covers that
-    // without becoming a background heartbeat — it exists only between the tap
-    // and the answer, and gives up rather than running forever.
-    const poll = setInterval(recheck, 3000)
-    const stop = setTimeout(() => setAwaitingLink(false), 120_000)
-    return () => {
-      document.removeEventListener('visibilitychange', recheck)
-      window.removeEventListener('focus', recheck)
-      clearInterval(poll)
-      clearTimeout(stop)
-    }
-  }, [awaitingLink, token, setAuth, user?.telegram_chat_id])
-
   const copyInviteLink = (token: string) => {
     const url = `${window.location.origin}/invite/${token}`
     navigator.clipboard?.writeText(url).catch(() => {})
@@ -145,15 +97,6 @@ export default function ProfilePage() {
   const handleLogout = () => {
     logout()
     navigate('/login')
-  }
-
-  const handleToggle = async (field: 'notify_telegram' | 'notify_whatsapp') => {
-    if (!user) return
-    const newVal = !user[field]
-    try {
-      const { data } = await updateMe({ [field]: newVal })
-      setAuth(data, token!)
-    } catch { /* silent */ }
   }
 
   /** T3.18 — visibility applies to every public slice at once, so a click here
@@ -166,51 +109,6 @@ export default function ProfilePage() {
       const { data } = await updateMe({ public_profile: value })
       setAuth(data, token)
     } catch { /* silent — the radio snaps back on the next read */ }
-  }
-
-  /**
-   * T_UX.13 — the switch *is* the connection (owner's decision 2026-08-09).
-   *
-   * Before this, a switch could be turned on for a channel that did not exist:
-   * "Telegram — on — not connected" was reachable and looked broken, and the
-   * connect button only appeared *after* enabling notifications to a chat that
-   * was not there. The order was backwards.
-   *
-   * Now there is no "linked but muted" state to be in. On starts connecting,
-   * off forgets the connection. `notify_telegram` is never written from here
-   * for the connect path — the webhook sets it when the link actually lands,
-   * so the switch tells the truth rather than an intention.
-   *
-   * T3.32 — mail is no longer routed through here. It has nothing to connect or
-   * disconnect, and `notify_email` stopped steering delivery when the matrix
-   * arrived, so a switch would have been a control that does nothing. The
-   * parameter type says so rather than a comment alone.
-   */
-  const handleChannelToggle = async (key: 'notify_telegram' | 'notify_whatsapp') => {
-    if (key === 'notify_telegram') {
-      if (user?.telegram_chat_id) {
-        setBusyChannel(key)
-        try {
-          await disconnectTelegram()
-          await refreshUser()
-        } catch { /* silent */ } finally { setBusyChannel(null) }
-        return
-      }
-      try {
-        const { data } = await getTelegramLink()
-        setAwaitingLink(true)
-        window.open(data.link, '_blank')
-      } catch { /* silent */ }
-      return
-    }
-
-    await handleToggle(key)
-  }
-
-  const refreshUser = async () => {
-    if (!token) return
-    const { data } = await me()
-    setAuth(data, token)
   }
 
   return (
@@ -489,84 +387,21 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
-            <h2 className="font-display font-semibold text-base text-navy">
-              {t('profile.channels')}
-            </h2>
-            {([
-              {
-                key: 'notify_email' as const,
-                label: t('profile.email'),
-                // Was "off — turn on to add an address", which described a
-                // switch that no longer exists. A caption outliving the control
-                // it explains is how a screen starts lying quietly.
-                sub: user?.email ?? t('profile.emailAdd'),
-              },
-              {
-                key: 'notify_telegram' as const,
-                label: t('profile.telegram'),
-                sub: user?.telegram_chat_id
-                  ? t('profile.telegramConnected')
-                  : t('profile.telegramWillConnect'),
-              },
-              {
-                key: 'notify_whatsapp' as const,
-                label: t('profile.whatsapp'),
-                sub: user?.whatsapp_number ?? t('profile.whatsappNotSet'),
-              },
-            ]).map(({ key, label, sub }) => (
-              <div key={key} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-body text-navy">{label}</p>
-                  <p className="text-xs font-mono text-navy/40">{sub}</p>
-                </div>
-                {/* T3.32 — this block is now about *connection*, not about
-                    delivery: what reaches you is the matrix below. Mail is the
-                    one channel with nothing to connect or disconnect — an
-                    account cannot un-have its address — so it gets an action
-                    only while there is no address at all. A switch here would
-                    have been the worst kind: `notify_email` stopped steering
-                    anything, so it would have looked like a control and done
-                    nothing. */}
-                {key === 'notify_email' ? (
-                  user?.email ? null : (
-                    <button
-                      type="button"
-                      onClick={() => setEmailModal(true)}
-                      className="text-xs font-body font-medium text-cyan hover:underline"
-                    >
-                      {t('profile.addEmail.title')}
-                    </button>
-                  )
-                ) : (
-                  <button
-                    onClick={() => handleChannelToggle(key)}
-                    disabled={busyChannel === key}
-                    aria-pressed={Boolean(user?.[key])}
-                    aria-label={label}
-                    className={`w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${user?.[key] ? 'bg-cyan' : 'bg-navy/20'}`}
-                  >
-                    <span
-                      className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${user?.[key] ? 'translate-x-2' : '-translate-x-2'}`}
-                    />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* T3.32 — the matrix itself lives at `/profile/notifications`. This
-              card is the door. Connecting a channel is a profile question
-              ("how do I reach you"); deciding what travels down it is asked at
-              a different moment, usually just after something arrived that
-              nobody wanted — and a table wedged between contacts and invite
-              links is one nobody would go looking for. */}
+          {/* T3.32 — channels and the matrix both live at
+              `/profile/notifications`. This card is the door. The profile
+              answers "who am I to the other party"; how to reach me and what
+              travels down each channel is one task asked at a different
+              moment — usually just after something arrived that nobody
+              wanted — and wedged between contacts and invite links it was a
+              table nobody would go looking for. */}
           <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
             <h2 className="font-display font-semibold text-base text-navy">
               {t('profile.notifications')}
             </h2>
+            {/* Not `matrix.hint` — that one says "connected above", which is
+                true on the notifications page and false here. */}
             <p className="text-sm font-body text-navy/60">
-              {t('profile.matrix.hint')}
+              {t('profile.matrix.title')}
             </p>
             <Link
               to="/profile/notifications"
@@ -578,16 +413,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-
-      {emailModal && (
-        <AddEmailModal
-          onClose={() => setEmailModal(false)}
-          onDone={async () => {
-            setEmailModal(false)
-            await refreshUser()
-          }}
-        />
-      )}
 
       {/* Admin panel full-width if user has access (arbiter/superuser) */}
       <AdminPanelSection />

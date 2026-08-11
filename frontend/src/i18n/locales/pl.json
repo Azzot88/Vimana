@@ -711,8 +711,11 @@
     "noContacts": "Brak kontaktów",
     "notifications": "Powiadomienia",
     "channels": "Kanały",
+    "channelsHint": "Gdzie możemy Cię zastać. Włączenie kanału jest jego połączeniem.",
     "matrix": {
-      "hint": "Wybierz, co i gdzie ma docierać. Kanał trzeba najpierw połączyć w profilu.",
+      "title": "Co i gdzie dociera",
+      "hint": "Dopóki kanał nie jest połączony powyżej, nic nim nie dotrze.",
+      "notConnected": "nie połączony",
       "alwaysOn": "zawsze włączone",
       "open": "Ustaw powiadomienia",
       "channel": {

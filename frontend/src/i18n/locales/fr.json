@@ -710,8 +710,11 @@
     "noContacts": "Aucun contact",
     "notifications": "Notifications",
     "channels": "Canaux",
+    "channelsHint": "Où nous pouvons vous joindre. Activer un canal, c est le connecter.",
     "matrix": {
-      "hint": "Choisissez ce qui vous parvient et par où. Un canal doit d'abord être connecté dans votre profil.",
+      "title": "Ce qui vous parvient, et par où",
+      "hint": "Tant qu'un canal n'est pas connecté ci-dessus, rien n'y passera.",
+      "notConnected": "non connecté",
       "alwaysOn": "toujours actif",
       "open": "Régler les notifications",
       "channel": {

@@ -7,7 +7,7 @@ thing: a field whose value is not the column, computed in the one place every
 """
 from __future__ import annotations
 
-from app.core.notification_prefs import locked_classes, resolved
+from app.core.notification_prefs import connected_channels, locked_classes, resolved
 from app.core.storage import get_presigned_url
 from app.models.user import User
 from app.schemas.user import MeOut
@@ -21,4 +21,5 @@ def me_out_with_avatar(user: User) -> MeOut:
     # screen guess at the missing cells.
     out.notification_prefs = resolved(user)
     out.notification_locked = locked_classes()
+    out.notification_channels = connected_channels(user)
     return out

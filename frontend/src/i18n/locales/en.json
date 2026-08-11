@@ -761,8 +761,11 @@
     "noContacts": "No contacts",
     "notifications": "Notifications",
     "channels": "Channels",
+    "channelsHint": "Where we can reach you. Turning a channel on is what connects it.",
     "matrix": {
-      "hint": "Choose what reaches you where. A channel has to be connected in your profile first.",
+      "title": "What reaches you where",
+      "hint": "A channel has to be connected above before anything can travel down it.",
+      "notConnected": "not connected",
       "alwaysOn": "always on",
       "open": "Open notification settings",
       "channel": {

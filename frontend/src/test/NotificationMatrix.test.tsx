@@ -8,10 +8,11 @@ import { renderWithProviders } from './render'
 /**
  * T3.32 — the matrix draws itself from the server's answer.
  *
- * The property worth pinning is that this component knows no list of its own:
- * rows and columns come from `/me`. A hardcoded list here would drift from
- * `core/notification_prefs` and start offering switches for messages nobody
- * sends — which is the exact failure the backend registry exists to prevent.
+ * Two properties are pinned here. First, this component knows no list of its
+ * own: rows and columns come from `/me`, and a hardcoded list would drift from
+ * `core/notification_prefs`. Second, a column the account cannot be reached on
+ * is visibly unusable rather than absent — the earlier version hid it, which
+ * left a person unable to tell whether the channel exists here at all.
  */
 vi.mock('../api/auth', async () => {
   const actual = await vi.importActual<typeof import('../api/auth')>('../api/auth')
@@ -37,14 +38,18 @@ const base: User = {
   telegram_chat_id: 'chat-1',
   whatsapp_number: null,
   notification_prefs: {
-    deal: { email: true, telegram: true },
-    deadline: { email: true, telegram: false },
-    security: { email: true, telegram: true },
+    deal: { email: true, telegram: true, whatsapp: true },
+    deadline: { email: true, telegram: false, whatsapp: true },
+    security: { email: true, telegram: true, whatsapp: true },
   },
   notification_locked: ['security'],
+  // Mail and Telegram are reachable; WhatsApp has no number on this account.
+  notification_channels: { email: true, telegram: true, whatsapp: false },
 }
 
 const sign = (user: User) => useAuthStore.getState().setAuth(user, 'token-1')
+
+const cell = (id: string) => screen.getByTestId(id) as HTMLInputElement
 
 describe('NotificationMatrix', () => {
   beforeEach(() => {
@@ -52,46 +57,47 @@ describe('NotificationMatrix', () => {
     sign(base)
   })
 
-  it('draws a switch per class and channel from the server answer', () => {
+  it('draws a checkbox per class and channel from the server answer', () => {
     renderWithProviders(<NotificationMatrix />)
 
-    expect(screen.getByTestId('matrix-deal-email')).toBeTruthy()
-    expect(screen.getByTestId('matrix-deal-telegram')).toBeTruthy()
-    expect(screen.getByTestId('matrix-deadline-telegram')).toBeTruthy()
+    expect(cell('matrix-deal-email').type).toBe('checkbox')
+    expect(cell('matrix-deal-telegram')).toBeTruthy()
+    expect(cell('matrix-deadline-whatsapp')).toBeTruthy()
   })
 
-  it('shows a switched-off cell as off', () => {
+  it('shows a switched-off cell as unchecked', () => {
     renderWithProviders(<NotificationMatrix />)
 
-    expect(screen.getByTestId('matrix-deadline-telegram').getAttribute('aria-pressed')).toBe(
-      'false',
-    )
-    expect(screen.getByTestId('matrix-deal-telegram').getAttribute('aria-pressed')).toBe('true')
+    expect(cell('matrix-deadline-telegram').checked).toBe(false)
+    expect(cell('matrix-deal-telegram').checked).toBe(true)
   })
 
-  it('renders the security row as fixed rather than as switches', () => {
+  it('keeps an unreachable channel visible but unusable', () => {
+    // Stored `true`, no number: nothing will arrive, so the box must not claim
+    // otherwise. The column stays — hiding it hid the fact WhatsApp exists.
+    renderWithProviders(<NotificationMatrix />)
+
+    const box = cell('matrix-deal-whatsapp')
+    expect(box.disabled).toBe(true)
+    expect(box.checked).toBe(false)
+    expect(screen.getAllByText(/not connected|не подключён/i).length).toBeGreaterThan(0)
+  })
+
+  it('renders the security row as fixed rather than as choices', () => {
     // The row is shown, not hidden: an owner has to be able to see that these
     // letters exist and that they arrive whatever else is off.
     renderWithProviders(<NotificationMatrix />)
 
-    const cell = screen.getByTestId('matrix-security-email') as HTMLButtonElement
-    expect(cell.disabled).toBe(true)
-    expect(cell.getAttribute('aria-pressed')).toBe('true')
+    const box = cell('matrix-security-email')
+    expect(box.disabled).toBe(true)
+    expect(box.checked).toBe(true)
   })
 
   it('sends only the cell that was clicked', async () => {
-    const answered: User = {
-      ...base,
-      notification_prefs: {
-        deal: { email: true, telegram: false },
-        deadline: { email: true, telegram: false },
-        security: { email: true, telegram: true },
-      },
-    }
-    vi.mocked(updateMe).mockResolvedValue({ data: answered } as never)
+    vi.mocked(updateMe).mockResolvedValue({ data: base } as never)
 
     renderWithProviders(<NotificationMatrix />)
-    fireEvent.click(screen.getByTestId('matrix-deal-telegram'))
+    fireEvent.click(cell('matrix-deal-telegram'))
 
     await waitFor(() => expect(updateMe).toHaveBeenCalledWith({
       notification_prefs: { deal: { telegram: false } },
@@ -100,14 +106,19 @@ describe('NotificationMatrix', () => {
 
   it('does not write when a locked cell is clicked', () => {
     renderWithProviders(<NotificationMatrix />)
-    fireEvent.click(screen.getByTestId('matrix-security-telegram'))
+    fireEvent.click(cell('matrix-security-telegram'))
 
     expect(updateMe).not.toHaveBeenCalled()
   })
 
-  it('draws nothing when no channel is live', () => {
-    // An account whose channels are all switched off server-side gets an empty
-    // matrix. Headers with no body read as a broken table, so the block goes.
+  it('does not write when an unreachable cell is clicked', () => {
+    renderWithProviders(<NotificationMatrix />)
+    fireEvent.click(cell('matrix-deal-whatsapp'))
+
+    expect(updateMe).not.toHaveBeenCalled()
+  })
+
+  it('draws nothing before /me has answered', () => {
     sign({ ...base, notification_prefs: {}, notification_locked: [] })
     const { container } = renderWithProviders(<NotificationMatrix />)
 

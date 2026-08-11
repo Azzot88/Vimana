@@ -11,10 +11,14 @@ import { useAuthStore } from '../stores/auth'
  *
  *  **The rows and columns come from the server, not from this file.** Which
  *  classes are shown (only those something actually sends) and which channels
- *  are live (`CHANNEL_*_ENABLED`) are decisions with one home in
- *  `core/notification_prefs`. A list hardcoded here would be a second copy free
- *  to drift — and drift here means offering somebody a switch for a message
- *  that never arrives.
+ *  exist are decisions with one home in `core/notification_prefs`. A list
+ *  hardcoded here would be a second copy free to drift — and drift here means
+ *  offering somebody a switch for a message that never arrives.
+ *
+ *  **Checkboxes, not switches** (owner's decision 2026-08-11). A switch is a
+ *  power control and belongs to the channel itself, above; twelve of them in a
+ *  grid read as twelve devices rather than as one set of choices. A checkbox is
+ *  what a cell in a table is.
  *
  *  Labels are the exception and have to be local: they are translations, and
  *  there are six of them per row.
@@ -26,19 +30,20 @@ export default function NotificationMatrix() {
 
   const prefs = user?.notification_prefs ?? {}
   const locked = new Set(user?.notification_locked ?? [])
+  const reachable = user?.notification_channels ?? {}
   const classes = Object.keys(prefs)
   // Every row carries the same channels — the server fills the matrix in full,
   // so the first row is a safe place to read the column order from.
   const channels = Object.keys(prefs[classes[0]] ?? {})
 
-  // Nothing to draw before /me answers, and nothing to draw for an account with
-  // no live channel at all. An empty table with headers reads as broken.
+  // Nothing to draw before /me answers. An empty table with headers reads as
+  // broken.
   if (!classes.length || !channels.length) return null
 
   /** One cell, one request. The backend merges rather than assigns, so a click
    *  cannot disturb a row this screen is not even showing. */
   const toggle = async (eventClass: string, channel: string) => {
-    if (!token || locked.has(eventClass)) return
+    if (!token || locked.has(eventClass) || !reachable[channel]) return
     const cellKey = `${eventClass}:${channel}`
     setBusy(cellKey)
     try {
@@ -47,7 +52,7 @@ export default function NotificationMatrix() {
       })
       setAuth(data, token)
     } catch {
-      // Silent, and the cell snaps back on the next read: the switch reflects
+      // Silent, and the cell snaps back on the next read: the checkbox reflects
       // what the server stored, never what was clicked.
     } finally {
       setBusy(null)
@@ -58,7 +63,7 @@ export default function NotificationMatrix() {
     <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
       <div>
         <h2 className="font-display font-semibold text-base text-navy">
-          {t('profile.notifications')}
+          {t('profile.matrix.title')}
         </h2>
         <p className="text-xs font-body text-navy/50 mt-1">
           {t('profile.matrix.hint')}
@@ -68,19 +73,34 @@ export default function NotificationMatrix() {
       {/* Scrolls inside itself rather than pushing the page sideways — three
           channels plus a label column is already wide on a phone. */}
       <div className="overflow-x-auto -mx-2 px-2">
-        <table className="w-full min-w-[20rem] border-collapse">
+        <table className="w-full min-w-[22rem] border-collapse">
           <thead>
             <tr>
               <th className="text-left pb-2" />
-              {channels.map((channel) => (
-                <th
-                  key={channel}
-                  scope="col"
-                  className="pb-2 px-2 text-xs font-body font-medium text-navy/60 text-center whitespace-nowrap"
-                >
-                  {t(`profile.matrix.channel.${channel}`)}
-                </th>
-              ))}
+              {channels.map((channel) => {
+                const connected = Boolean(reachable[channel])
+                return (
+                  <th
+                    key={channel}
+                    scope="col"
+                    className="pb-2 px-2 text-center whitespace-nowrap align-bottom"
+                  >
+                    <span
+                      className={`block text-xs font-body font-medium ${connected ? 'text-navy/60' : 'text-navy/30'}`}
+                    >
+                      {t(`profile.matrix.channel.${channel}`)}
+                    </span>
+                    {/* The reason lives in the header, once, rather than in
+                        every cell below it: the column is unusable as a whole,
+                        and repeating that four times is noise. */}
+                    {!connected && (
+                      <span className="block text-[10px] font-body text-navy/30">
+                        {t('profile.matrix.notConnected')}
+                      </span>
+                    )}
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -99,6 +119,7 @@ export default function NotificationMatrix() {
                     </span>
                   </th>
                   {channels.map((channel) => {
+                    const connected = Boolean(reachable[channel])
                     const on = Boolean(prefs[eventClass]?.[channel])
                     const cellKey = `${eventClass}:${channel}`
                     const label = `${t(`profile.matrix.class.${eventClass}`)} — ${t(
@@ -106,23 +127,18 @@ export default function NotificationMatrix() {
                     )}`
                     return (
                       <td key={channel} className="py-3 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggle(eventClass, channel)}
-                          disabled={isLocked || busy === cellKey}
-                          aria-pressed={on || isLocked}
+                        <input
+                          type="checkbox"
+                          // A locked class is checked whatever is stored: the
+                          // letters go out regardless, and an unchecked box
+                          // next to «always on» would contradict its own label.
+                          checked={(on || isLocked) && connected}
+                          disabled={isLocked || !connected || busy === cellKey}
+                          onChange={() => toggle(eventClass, channel)}
                           aria-label={label}
                           data-testid={`matrix-${eventClass}-${channel}`}
-                          className={`w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${
-                            on || isLocked ? 'bg-cyan' : 'bg-navy/20'
-                          } ${isLocked ? 'cursor-not-allowed' : ''}`}
-                        >
-                          <span
-                            className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${
-                              on || isLocked ? 'translate-x-2' : '-translate-x-2'
-                            }`}
-                          />
-                        </button>
+                          className="w-4 h-4 accent-cyan align-middle disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
                       </td>
                     )
                   })}

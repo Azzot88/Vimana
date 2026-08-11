@@ -60,9 +60,13 @@ export interface User {
    *  something actually sends, only channels that are live, and every cell
    *  already filled in. The stored column is partial; this is not. */
   notification_prefs?: NotificationPrefs
-  /** Classes that render as a fixed row rather than as switches. Sent by the
+  /** Classes that render as a fixed row rather than as choices. Sent by the
    *  server so "security cannot be turned off" is stated in one place. */
   notification_locked?: string[]
+  /** Which channels this account actually has an address on. All three are
+   *  columns either way; this is what makes the unreachable ones read as
+   *  unreachable instead of as boxes that quietly do nothing. */
+  notification_channels?: Record<string, boolean>
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────

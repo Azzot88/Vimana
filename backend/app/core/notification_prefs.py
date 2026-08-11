@@ -44,8 +44,10 @@ Functions (PROJECT §6.2a):
   Called by: `core/avatar_url.me_out_with_avatar`.
 - `locked_classes() -> list[str]` — classes the screen must render as fixed.
   Called by: `core/avatar_url.me_out_with_avatar`.
-- `active_channels() -> tuple[str, ...]` — transports live right now.
+- `active_channels() -> tuple[str, ...]` — the matrix's columns.
   Called by: `resolved`, `sanitize`.
+- `connected_channels(user) -> dict[str, bool]` — which of them this account
+  actually has an address on. Called by: `core/avatar_url.me_out_with_avatar`.
 - `sanitize(raw) -> dict` — what a client is allowed to write.
   Called by: `schemas/user.UserUpdate`.
 - `merged(current, incoming) -> dict` — apply a partial write.
@@ -117,13 +119,32 @@ def class_of(kind: str) -> str | None:
 
 
 def active_channels() -> tuple[str, ...]:
-    """Transports switched on right now, in a fixed order.
+    """All three transports, always, in a fixed order.
 
-    Read through `channels.enabled` so that WhatsApp appears in the matrix on
-    the day `T3.31` turns it on, and not one deploy earlier. A column for a pipe
-    that does not exist is the same lie as a row for a message nobody sends.
+    This hid a channel until `channels.enabled` said yes, so WhatsApp was to
+    appear on the day `T3.31` turned it on. Owner's decision 2026-08-11: show
+    all three. The worry that produced the earlier rule — a column for a pipe
+    that does not exist — is answered better by `connected_channels`: the column
+    is there, and it is visibly unusable until the account has an address on it.
+    Hiding it left the person wondering whether WhatsApp exists here at all.
     """
-    return tuple(name for name in NOTIFY_CHANNELS if channels.enabled(name))
+    return NOTIFY_CHANNELS
+
+
+def connected_channels(user) -> dict[str, bool]:
+    """Which channels this account can actually be reached on.
+
+    The same three attributes `_notify_user` checks before handing anything to
+    a transport — deliberately, so that "the screen says connected" and "the
+    worker will actually send" cannot drift apart. A preference on a channel
+    with no address is a wish, and the screen should say so rather than offer a
+    switch that changes nothing.
+    """
+    return {
+        channels.EMAIL: bool(getattr(user, "email", None)),
+        channels.TELEGRAM: bool(getattr(user, "telegram_chat_id", None)),
+        channels.WHATSAPP: bool(getattr(user, "whatsapp_number", None)),
+    }
 
 
 def visible_classes() -> tuple[EventClass, ...]:

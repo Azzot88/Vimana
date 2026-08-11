@@ -174,16 +174,32 @@ def test_security_is_the_locked_class():
     assert locked_classes() == ["security"]
 
 
-def test_whatsapp_stays_out_of_the_matrix_until_it_is_switched_on(monkeypatch):
-    """T3.31 is deferred. A column for a pipe that does not exist is the same
-    lie as a row for a message nobody sends."""
+def test_all_three_channels_are_columns(monkeypatch):
+    """Owner's decision 2026-08-11. The earlier rule hid a channel until
+    `channels.enabled` said yes, which left a person unable to tell whether
+    WhatsApp exists here at all. It is shown, and `connected_channels` is what
+    makes it read as unusable."""
     from app.core.notification_prefs import active_channels
 
     monkeypatch.delenv("CHANNEL_WHATSAPP_ENABLED", raising=False)
-    assert "whatsapp" not in active_channels()
+    assert active_channels() == ("email", "telegram", "whatsapp")
 
-    monkeypatch.setenv("CHANNEL_WHATSAPP_ENABLED", "true")
-    assert "whatsapp" in active_channels()
+
+def test_a_channel_counts_as_connected_only_with_an_address(sync_sessions):
+    """The same three attributes `_notify_user` checks before handing anything
+    to a transport — so "the screen says connected" and "the worker will send"
+    cannot drift apart."""
+    from app.core.notification_prefs import connected_channels
+
+    user = _user(sync_sessions)
+    assert connected_channels(user) == {
+        "email": True,
+        "telegram": True,
+        "whatsapp": False,
+    }
+
+    bare = _user(sync_sessions, telegram_chat_id=None)
+    assert connected_channels(bare)["telegram"] is False
 
 
 # ── what a client may write ──────────────────────────────────────────────────
@@ -247,9 +263,16 @@ async def test_me_answers_with_the_matrix_filled_in(client):
     prefs = resp.json()["notification_prefs"]
 
     assert set(prefs) == {"deal", "deadline", "security"}
-    assert set(prefs["deal"]) == {"email", "telegram"}
+    assert set(prefs["deal"]) == {"email", "telegram", "whatsapp"}
     assert prefs["deal"]["email"] is True
     assert resp.json()["notification_locked"] == ["security"]
+    # The account has an address only on mail, so that is the only column the
+    # screen may let anybody click.
+    assert resp.json()["notification_channels"] == {
+        "email": True,
+        "telegram": False,
+        "whatsapp": False,
+    }
 
 
 async def test_one_cell_can_be_written_on_its_own(client):

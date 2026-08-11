@@ -710,8 +710,11 @@
     "noContacts": "Sin contactos",
     "notifications": "Notificaciones",
     "channels": "Canales",
+    "channelsHint": "Dónde podemos localizarte. Activar un canal es conectarlo.",
     "matrix": {
-      "hint": "Elige qué te llega y por dónde. El canal debe estar conectado en tu perfil primero.",
+      "title": "Qué te llega y por dónde",
+      "hint": "Mientras el canal no esté conectado arriba, no llegará nada por él.",
+      "notConnected": "sin conectar",
       "alwaysOn": "siempre activo",
       "open": "Ajustar las notificaciones",
       "channel": {

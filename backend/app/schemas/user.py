@@ -197,6 +197,10 @@ class MeOut(UserOut):
     # Classes the screen must render as fixed rather than as switches. Sent
     # rather than hardcoded so "security cannot be turned off" has one source.
     notification_locked: list[str] = []
+    # Which channels this account actually has an address on. The matrix shows
+    # all three columns either way; this is what makes the unreachable ones read
+    # as unreachable instead of as switches that quietly do nothing.
+    notification_channels: dict[str, bool] = {}
 
 
 class Token(BaseModel):
