@@ -33,7 +33,21 @@ def _send(user_or_locale, to: str, kind: str, **ctx) -> bool:
 
 
 def _notify_user(user, kind: str, **ctx) -> None:
-    """Fan one event out to whichever channels this user has turned on.
+    """Fan one event out to whichever channels want this **class** of event.
+
+    T3.32 — the three booleans used to answer this, one channel at a time for
+    every event there is. Now the question is asked of the matrix, per class, so
+    "cargo delivered in Telegram, everything else by mail" is a thing an account
+    can say.
+
+    A channel still needs somewhere to deliver to: a preference without a chat
+    id is a wish, not an address. The two conditions are separate on purpose —
+    the first is what the person asked for, the second is whether we can.
+
+    The security class comes back `True` from `wants` whatever is stored, which
+    is where "you cannot switch off the letter that says somebody else is in
+    your account" now lives — as a property of the class rather than as seven
+    functions each remembering not to check a flag.
 
     Only email is templated: Telegram and WhatsApp are plain-text transports,
     and they take the text part of the same letter rather than a second string
@@ -42,13 +56,24 @@ def _notify_user(user, kind: str, **ctx) -> None:
     Called by: `notify_deal_status`, `check_upcoming_deadlines`.
     """
     from app.core.email_templates import render
+    from app.core.notification_prefs import class_of, wants
 
+    event_class = class_of(kind)
     letter = render(kind, getattr(user, "locale", None), **ctx)
-    if user.notify_email and user.email:
+
+    def wanted(channel: str) -> bool:
+        # A letter with no class belongs to nobody's preferences — the waitlist
+        # pair goes to an address with no account behind it. Such letters do not
+        # come through here, and if one ever does it is delivered rather than
+        # dropped: an unclassified message is a bug, and a bug that swallows
+        # somebody's notification is the worse of the two outcomes.
+        return True if event_class is None else wants(user, event_class, channel)
+
+    if user.email and wanted("email"):
         send_email(user.email, letter.subject, letter.text, letter.html)
-    if user.notify_telegram and user.telegram_chat_id:
+    if user.telegram_chat_id and wanted("telegram"):
         send_telegram(user.telegram_chat_id, letter.text)
-    if user.notify_whatsapp and user.whatsapp_number:
+    if user.whatsapp_number and wanted("whatsapp"):
         send_whatsapp(user.whatsapp_number, letter.text)
 
 

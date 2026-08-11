@@ -709,6 +709,31 @@
     "invite": "+ Invitar",
     "noContacts": "Sin contactos",
     "notifications": "Notificaciones",
+    "channels": "Canales",
+    "matrix": {
+      "hint": "Elige qué te llega y por dónde. El canal debe estar conectado arriba primero.",
+      "alwaysOn": "siempre activo",
+      "channel": {
+        "email": "Correo",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp"
+      },
+      "class": {
+        "deal": "Acuerdos",
+        "deadline": "Plazos",
+        "vault": "Mensajes de la caja",
+        "trust": "Verificación y confianza",
+        "dispute": "Disputas",
+        "security": "Seguridad"
+      },
+      "classHint": {
+        "deal": "acordado, aceptado, en tránsito, entregado, confirmado, cerrado",
+        "deadline": "24 horas antes del plazo",
+        "vault": "mensajes nuevos en la caja de un acuerdo",
+        "trust": "insignias, niveles, conexiones",
+        "dispute": "abierta, respondida, resuelta"
+      }
+    },
     "email": "Email",
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
@@ -730,7 +755,6 @@
     "editHint": "Las direcciones se gestionan en la sección «Direcciones postales».",
     "emailAdd": "sin indicar — añadir",
     "telegramWillConnect": "desactivado — actívalo para conectar",
-    "emailWillAdd": "desactivado — actívalo para añadir una dirección",
     "addEmail": {
       "title": "Añadir dirección de correo",
       "body": "Aquí llegarán las notificaciones de tus acuerdos, y por esta dirección vuelve el acceso si pierdes tu llave.",

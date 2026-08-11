@@ -13,6 +13,11 @@ export interface TokenResponse {
 
 export type UserRole = 'user' | 'arbiter' | 'superuser'
 
+/** T3.32 — event class → channel → wanted. Keys are not enumerated on purpose:
+ *  the server decides which classes are shown and which channels are live, and
+ *  a union type here would be a second, quietly diverging copy of that list. */
+export type NotificationPrefs = Record<string, Record<string, boolean>>
+
 export interface User {
   id: string
   display_name: string
@@ -51,6 +56,13 @@ export interface User {
    *  shell reads this one bit to decide whether it is showing a participant or
    *  a record. */
   key_lost?: boolean
+  /** T3.32 — the full matrix as the screen draws it: only classes that
+   *  something actually sends, only channels that are live, and every cell
+   *  already filled in. The stored column is partial; this is not. */
+  notification_prefs?: NotificationPrefs
+  /** Classes that render as a fixed row rather than as switches. Sent by the
+   *  server so "security cannot be turned off" is stated in one place. */
+  notification_locked?: string[]
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────
@@ -216,6 +228,9 @@ export interface UserUpdate {
   can_carry?: boolean
   can_send?: boolean
   whatsapp_number?: string
+  /** T3.32 — send only the cell that changed. The backend merges rather than
+   *  assigns, so a partial write is the intended shape, not a shortcut. */
+  notification_prefs?: NotificationPrefs
 }
 
 export const login = (payload: LoginPayload) =>

@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -111,6 +112,14 @@ class User(Base):
     notify_email: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     notify_telegram: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     notify_whatsapp: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # T3.32 — event class × channel. Deliberately **partial**: a missing key
+    # reads as the default (`core/notification_prefs`), so adding a class needs
+    # no migration and no guess about what existing accounts wanted. The three
+    # booleans above stop steering delivery and become what the screen still
+    # uses to say whether a channel is connected at all.
+    notification_prefs: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
     telegram_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     telegram_link_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     whatsapp_number: Mapped[str | None] = mapped_column(String(30), nullable=True)

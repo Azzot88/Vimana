@@ -1049,6 +1049,20 @@ async def _ensure_contact_tables(engine) -> None:
         )
 
 
+async def _ensure_notification_prefs_column(engine) -> None:
+    """T3.32: users.notification_prefs. Mirrors migration 0047.
+    Idempotent — `create_all` builds it, this covers a pre-existing test DB.
+    The backfill is deliberately **not** mirrored: a fresh row starts empty and
+    reads as the defaults, which is what a new account gets in production too."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "notification_prefs JSONB NOT NULL DEFAULT '{}'::jsonb"
+            )
+        )
+
+
 async def _ensure_sign_ins_table(engine) -> None:
     """T_SEC.6: user_sign_ins. Mirrors migration 0046.
     Idempotent — `create_all` builds the table and both indexes for a fresh
@@ -1261,6 +1275,7 @@ async def test_engine():
     await _ensure_password_reset_columns(engine)
     await _ensure_contact_tables(engine)
     await _ensure_sign_ins_table(engine)
+    await _ensure_notification_prefs_column(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

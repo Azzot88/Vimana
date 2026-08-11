@@ -11,6 +11,7 @@ import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
 import EditProfileModal from '../components/EditProfileModal'
 import MonoText from '../components/MonoText'
+import NotificationMatrix from '../components/NotificationMatrix'
 import TrustCirclesSection from '../components/TrustCirclesSection'
 import UBASection from '../components/UBASection'
 import VerificationSection from '../components/VerificationSection'
@@ -147,7 +148,7 @@ export default function ProfilePage() {
     navigate('/login')
   }
 
-  const handleToggle = async (field: 'notify_email' | 'notify_telegram' | 'notify_whatsapp') => {
+  const handleToggle = async (field: 'notify_telegram' | 'notify_whatsapp') => {
     if (!user) return
     const newVal = !user[field]
     try {
@@ -180,8 +181,13 @@ export default function ProfilePage() {
    * off forgets the connection. `notify_telegram` is never written from here
    * for the connect path — the webhook sets it when the link actually lands,
    * so the switch tells the truth rather than an intention.
+   *
+   * T3.32 — mail is no longer routed through here. It has nothing to connect or
+   * disconnect, and `notify_email` stopped steering delivery when the matrix
+   * arrived, so a switch would have been a control that does nothing. The
+   * parameter type says so rather than a comment alone.
    */
-  const handleChannelToggle = async (key: 'notify_email' | 'notify_telegram' | 'notify_whatsapp') => {
+  const handleChannelToggle = async (key: 'notify_telegram' | 'notify_whatsapp') => {
     if (key === 'notify_telegram') {
       if (user?.telegram_chat_id) {
         setBusyChannel(key)
@@ -196,11 +202,6 @@ export default function ProfilePage() {
         setAwaitingLink(true)
         window.open(data.link, '_blank')
       } catch { /* silent */ }
-      return
-    }
-
-    if (key === 'notify_email' && !user?.email) {
-      setEmailModal(true)
       return
     }
 
@@ -491,13 +492,16 @@ export default function ProfilePage() {
 
           <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <h2 className="font-display font-semibold text-base text-navy">
-              {t('profile.notifications')}
+              {t('profile.channels')}
             </h2>
             {([
               {
                 key: 'notify_email' as const,
                 label: t('profile.email'),
-                sub: user?.email ?? t('profile.emailWillAdd'),
+                // Was "off — turn on to add an address", which described a
+                // switch that no longer exists. A caption outliving the control
+                // it explains is how a screen starts lying quietly.
+                sub: user?.email ?? t('profile.emailAdd'),
               },
               {
                 key: 'notify_telegram' as const,
@@ -517,20 +521,42 @@ export default function ProfilePage() {
                   <p className="text-sm font-body text-navy">{label}</p>
                   <p className="text-xs font-mono text-navy/40">{sub}</p>
                 </div>
-                <button
-                  onClick={() => handleChannelToggle(key)}
-                  disabled={busyChannel === key}
-                  aria-pressed={Boolean(user?.[key])}
-                  aria-label={label}
-                  className={`w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${user?.[key] ? 'bg-cyan' : 'bg-navy/20'}`}
-                >
-                  <span
-                    className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${user?.[key] ? 'translate-x-2' : '-translate-x-2'}`}
-                  />
-                </button>
+                {/* T3.32 — this block is now about *connection*, not about
+                    delivery: what reaches you is the matrix below. Mail is the
+                    one channel with nothing to connect or disconnect — an
+                    account cannot un-have its address — so it gets an action
+                    only while there is no address at all. A switch here would
+                    have been the worst kind: `notify_email` stopped steering
+                    anything, so it would have looked like a control and done
+                    nothing. */}
+                {key === 'notify_email' ? (
+                  user?.email ? null : (
+                    <button
+                      type="button"
+                      onClick={() => setEmailModal(true)}
+                      className="text-xs font-body font-medium text-cyan hover:underline"
+                    >
+                      {t('profile.addEmail.title')}
+                    </button>
+                  )
+                ) : (
+                  <button
+                    onClick={() => handleChannelToggle(key)}
+                    disabled={busyChannel === key}
+                    aria-pressed={Boolean(user?.[key])}
+                    aria-label={label}
+                    className={`w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${user?.[key] ? 'bg-cyan' : 'bg-navy/20'}`}
+                  >
+                    <span
+                      className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${user?.[key] ? 'translate-x-2' : '-translate-x-2'}`}
+                    />
+                  </button>
+                )}
               </div>
             ))}
           </div>
+
+          <NotificationMatrix />
         </div>
       </div>
 

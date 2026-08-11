@@ -710,6 +710,31 @@
     "invite": "+ Zaproś",
     "noContacts": "Brak kontaktów",
     "notifications": "Powiadomienia",
+    "channels": "Kanały",
+    "matrix": {
+      "hint": "Wybierz, co i gdzie ma docierać. Kanał trzeba najpierw połączyć powyżej.",
+      "alwaysOn": "zawsze włączone",
+      "channel": {
+        "email": "Poczta",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp"
+      },
+      "class": {
+        "deal": "Transakcje",
+        "deadline": "Terminy",
+        "vault": "Wiadomości w sejfie",
+        "trust": "Weryfikacja i zaufanie",
+        "dispute": "Spory",
+        "security": "Bezpieczeństwo"
+      },
+      "classHint": {
+        "deal": "uzgodniona, przyjęta, w drodze, dostarczona, potwierdzona, zamknięta",
+        "deadline": "24 godziny przed terminem",
+        "vault": "nowe wiadomości w sejfie transakcji",
+        "trust": "odznaki, poziomy, powiązania",
+        "dispute": "otwarty, odpowiedź, rozstrzygnięty"
+      }
+    },
     "email": "Email",
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
@@ -731,7 +756,6 @@
     "editHint": "Adresami zarządza się w sekcji „Adresy pocztowe”.",
     "emailAdd": "brak — dodaj",
     "telegramWillConnect": "wyłączone — włącz, aby połączyć",
-    "emailWillAdd": "wyłączone — włącz, aby dodać adres",
     "addEmail": {
       "title": "Dodaj adres e-mail",
       "body": "Tu będą przychodzić powiadomienia o transakcjach, a przez ten adres wraca dostęp, jeśli stracisz klucz.",

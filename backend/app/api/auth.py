@@ -927,6 +927,17 @@ async def update_me(
             raise HTTPException(
                 status_code=422, detail=f"'{field}' cannot be null"
             )
+        if field == "notification_prefs":
+            # T3.32 — merged, not assigned. The screen sends the cell that was
+            # clicked; assigning would make one click erase every other row, and
+            # would make a client one deploy behind reset the class it does not
+            # yet render.
+            from app.core.notification_prefs import merged
+
+            current_user.notification_prefs = merged(
+                current_user.notification_prefs, value or {}
+            )
+            continue
         setattr(current_user, field, value)
 
     # T3.25 — a phone edited in the profile becomes a contact row, unverified.

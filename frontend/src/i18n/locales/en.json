@@ -760,6 +760,31 @@
     "invite": "+ Invite",
     "noContacts": "No contacts",
     "notifications": "Notifications",
+    "channels": "Channels",
+    "matrix": {
+      "hint": "Choose what reaches you where. A channel has to be connected above first.",
+      "alwaysOn": "always on",
+      "channel": {
+        "email": "Mail",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp"
+      },
+      "class": {
+        "deal": "Deals",
+        "deadline": "Deadlines",
+        "vault": "Vault messages",
+        "trust": "Verification and trust",
+        "dispute": "Disputes",
+        "security": "Security"
+      },
+      "classHint": {
+        "deal": "agreed, accepted, in transit, delivered, confirmed, closed",
+        "deadline": "24 hours before a deadline",
+        "vault": "new messages in a deal's vault",
+        "trust": "badges, levels, connections",
+        "dispute": "opened, answered, decided"
+      }
+    },
     "email": "Email",
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
@@ -780,7 +805,6 @@
     },
     "emailAdd": "not set — add",
     "telegramWillConnect": "off — turn on to connect",
-    "emailWillAdd": "off — turn on to add an address",
     "addEmail": {
       "title": "Add an email address",
       "body": "Notifications about your deals will go here, and this is how access comes back if you lose your key.",

@@ -97,6 +97,27 @@ class UserUpdate(BaseModel):
     notify_telegram: bool | None = None
     notify_whatsapp: bool | None = None
     whatsapp_number: str | None = None
+    # T3.32 — a **partial** matrix: one cell, one row, or the lot. Merged onto
+    # what is stored (`api/auth.update_me`), never replacing it, so two screens
+    # editing two different rows do not overwrite each other.
+    notification_prefs: dict | None = None
+
+    @field_validator("notification_prefs")
+    @classmethod
+    def prefs_are_writable(cls, v: dict | None) -> dict | None:
+        """Drop what a client may not set; refuse what it has misunderstood.
+
+        Unknown classes and channels are dropped rather than rejected — that is
+        what a client one deploy out of step sends, and failing the whole write
+        over a stale key would break the screen for everyone mid-rollout. A
+        non-boolean value is a different thing: the client does not know what
+        this field is, and is told so.
+        """
+        if v is None:
+            return None
+        from app.core.notification_prefs import sanitize
+
+        return sanitize(v)
     # T1.24 mode switching + capability updates
     active_mode: str | None = None
     can_carry: bool | None = None
@@ -167,6 +188,15 @@ class MeOut(UserOut):
     key_lost: bool = False
     # T_UX.4 B — presigned R2 URL, minted per response. None if not set.
     avatar_url: str | None = None
+    # T3.32 — the matrix as the screen draws it: every visible class × every
+    # live channel, gaps already filled with the defaults. The stored column is
+    # partial on purpose and never leaves the server in that shape — a client
+    # that had to know the defaults to render a half-empty object would be a
+    # second copy of the rules, written in TypeScript, free to drift.
+    notification_prefs: dict[str, dict[str, bool]] = {}
+    # Classes the screen must render as fixed rather than as switches. Sent
+    # rather than hardcoded so "security cannot be turned off" has one source.
+    notification_locked: list[str] = []
 
 
 class Token(BaseModel):

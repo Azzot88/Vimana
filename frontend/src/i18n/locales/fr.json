@@ -709,6 +709,31 @@
     "invite": "+ Inviter",
     "noContacts": "Aucun contact",
     "notifications": "Notifications",
+    "channels": "Canaux",
+    "matrix": {
+      "hint": "Choisissez ce qui vous parvient et par où. Un canal doit d'abord être connecté ci-dessus.",
+      "alwaysOn": "toujours actif",
+      "channel": {
+        "email": "Courrier",
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp"
+      },
+      "class": {
+        "deal": "Transactions",
+        "deadline": "Échéances",
+        "vault": "Messages du coffre",
+        "trust": "Vérification et confiance",
+        "dispute": "Litiges",
+        "security": "Sécurité"
+      },
+      "classHint": {
+        "deal": "convenue, acceptée, en transit, livrée, confirmée, clôturée",
+        "deadline": "24 heures avant l'échéance",
+        "vault": "nouveaux messages dans le coffre d'une transaction",
+        "trust": "badges, niveaux, relations",
+        "dispute": "ouvert, réponse, tranché"
+      }
+    },
     "email": "Email",
     "telegram": "Telegram",
     "whatsapp": "WhatsApp",
@@ -730,7 +755,6 @@
     "editHint": "Les adresses se gèrent dans la section « Adresses postales ».",
     "emailAdd": "non renseignée — ajouter",
     "telegramWillConnect": "désactivé — activez pour connecter",
-    "emailWillAdd": "désactivé — activez pour ajouter une adresse",
     "addEmail": {
       "title": "Ajouter une adresse e-mail",
       "body": "Les notifications de vos transactions arriveront ici, et c'est par cette adresse que l'accès revient si vous perdez votre clé.",
