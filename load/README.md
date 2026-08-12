@@ -19,7 +19,12 @@ Scenarios:
 | `scripts/browse_trips.js` | the anonymous read path — listing, cursor page 2, airports, categories | trips, for page 2 |
 | `scripts/signup_burst.js` | the public code form under burst; measures the limiters as much as the app | no |
 | `scripts/chat_hammer.js` | concurrent writes into **one** DealVault — the per-deal advisory lock | accounts 0–1 |
+| `scripts/write_spread.js` | the same write across **many** deals — the platform's write ceiling | accounts 0–1 |
 | `scripts/mixed_workload.js` | all three at once, 70 / 20 / 10 | accounts 2–3 |
+
+`chat_hammer` and `write_spread` are a pair and neither means much alone: the
+first is the ceiling of one conversation (the lock, by design), the second is
+the ceiling of the write path.
 
 ## Seeding
 
