@@ -16,7 +16,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-import { BASE_URL, DURATION, THRESHOLDS, VUS, auth, registerAndLogin } from '../lib/config.js';
+import { BASE_URL, DURATION, THRESHOLDS, VUS, auth, loginAs } from '../lib/config.js';
 import { summarise } from '../lib/summary.js';
 
 export const options = {
@@ -26,8 +26,11 @@ export const options = {
 };
 
 export function setup() {
-  const carrier = registerAndLogin(http, 'k6-carrier', { canCarry: true });
-  const sender = registerAndLogin(http, 'k6-sender', { canSend: true });
+  // Two seeded accounts, 0 and 1. Both can carry and send, so which is which
+  // is decided here rather than at seeding time — the deal needs one of each,
+  // and nothing else about them differs.
+  const carrier = loginAs(http, 0);
+  const sender = loginAs(http, 1);
 
   const departAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
   const trip = http.post(

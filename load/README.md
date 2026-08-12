@@ -14,22 +14,38 @@ docker compose -f docker-compose.dev.yml --profile load run --rm \
 
 Scenarios:
 
-| file | what it puts under load | state |
+| file | what it puts under load | needs seeding |
 |---|---|---|
-| `scripts/browse_trips.js` | the anonymous read path — listing, cursor page 2, airports, categories | runs |
-| `scripts/register_burst.js` | registration under burst; measures the rate limiter as much as the app | **dead** |
-| `scripts/chat_hammer.js` | concurrent writes into **one** DealVault — the per-deal advisory lock | **dead** |
-| `scripts/mixed_workload.js` | all three at once, 70 / 20 / 10 | **dead** |
+| `scripts/browse_trips.js` | the anonymous read path — listing, cursor page 2, airports, categories | trips, for page 2 |
+| `scripts/signup_burst.js` | the public code form under burst; measures the limiters as much as the app | no |
+| `scripts/chat_hammer.js` | concurrent writes into **one** DealVault — the per-deal advisory lock | accounts 0–1 |
+| `scripts/mixed_workload.js` | all three at once, 70 / 20 / 10 | accounts 2–3 |
 
-### Three of them do not run (since 2026-08-10)
+## Seeding
 
-They call `POST /auth/register`, removed in `T3.28 pt.3b`. An account is now
-born from a code sent to a mailbox, and k6 cannot read a mailbox — so they die
-in `setup()`, with a message saying exactly that.
+Three scenarios need a session, and since `T3.28` an account is born from a code
+sent to a mailbox — which k6 cannot read. They sign in with a password instead,
+as accounts created once by a command:
 
-The fix is seeded accounts plus password login, not a test-only endpoint that
-mints sessions. Tracked in `PRD/TASKS.md` under `T_TEST.6`; `browse_trips` is
-public and unaffected.
+```bash
+docker compose -f docker-compose.dev.yml exec -T backend \
+  python -m app.cli.load_seed --password '<secret>'
+```
+
+Then give k6 the same value: `-e K6_PASSWORD='<secret>'`. The password has no
+default on purpose — these are real accounts on a real deployment, and a
+credential in a repository is a credential.
+
+Seeded accounts are `k6-load-N@e2e.vimana.local`, pruned by `cleanup_e2e_users`
+after 24 h like every other e2e account; `--purge` removes them now instead.
+The same command seeds 40 open trips, without which `/api/trips` never returns a
+`next_cursor` and the cursor path in `browse_trips` is never exercised — which
+is what happened in every run up to 2026-08-11.
+
+**Not a test-only endpoint.** The obvious alternative is a door that mints a
+session for a load run. An endpoint that mints sessions is an endpoint that
+mints sessions, whatever the comment above it says, and it would live in
+production forever for a test that runs monthly.
 
 Knobs (all env): `BASE_URL` (required), `K6_VUS` (default 100), `K6_DURATION`
 (default `5m`), `RUN_LABEL` (suffixes the results file so a sweep does not
@@ -125,10 +141,12 @@ outlive a k6 upgrade.
 
 ## Reading the results honestly
 
-- **`register_burst`** — nginx `auth_zone` allows 10 r/min per IP with burst 5,
-  and slowapi sits behind it. From one machine, most of this run is refusals.
-  429 is therefore counted as expected (`rate_limited` metric) rather than as a
-  failure; what is being measured is whether the refusal is *cheap*.
+- **`signup_burst`** — three limiters stand in front of the code form: nginx's
+  zones, slowapi's per-endpoint budget, and since `T3.29` a budget per mailbox
+  (5/hour) and per source (10 distinct mailboxes an hour). From one machine the
+  last of those trips within seconds and most of the run is refusals. 429 is
+  therefore counted as expected (`rate_limited`) rather than as a failure; what
+  is being measured is whether the refusal is *cheap*.
 - **`chat_hammer`** — the deviation from the roadmap's "100 users in one
   DealVault" is deliberate and explained in the file header: two real
   participants writing concurrently hit the same per-deal advisory lock, and a

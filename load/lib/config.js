@@ -44,51 +44,55 @@ export function uniqueEmail(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${__VU}-${rand}@e2e.vimana.local`;
 }
 
-export const PASSWORD = 'K6Load!23';
-
-/** Register + login, returning the bearer token. Used from `setup()`, which
- *  runs once — doing this per iteration would measure nginx's `auth_zone`
- *  (10 r/min per IP) rather than the application.
+/** T_TEST.6 — the seeded accounts' password, supplied per run.
  *
- *  **Broken since 2026-08-10 and knowingly left so (found 2026-08-11).**
- *  `POST /auth/register` was removed in `T3.28 pt.3b`: an account is now born
- *  from a code sent to a mailbox, and k6 cannot read a mailbox. Every scenario
- *  that needs a session — `chat_hammer`, `mixed_workload`, `register_burst` —
- *  dies in `setup()` for that reason and no other.
- *
- *  The fix is seeded accounts plus password login (`POST /auth/login` is
- *  still there), not a test-only door into the product: an endpoint that mints
- *  sessions for load runs is an endpoint that mints sessions. Recorded in
- *  TASKS `T_TEST.6` rather than patched here, because deciding how load
- *  accounts come to exist is a decision, not a repair.
+ *  Not a constant any more. These are real accounts on a real deployment, and
+ *  a credential committed to a repository is a credential — anybody reading
+ *  the file would know both the address pattern and the way in.
  */
-export function registerAndLogin(http, prefix, opts = {}) {
-  const email = uniqueEmail(prefix);
-  const reg = http.post(
-    `${BASE_URL}/api/auth/register`,
-    JSON.stringify({
-      email,
-      password: PASSWORD,
-      display_name: `k6 ${prefix}`,
-      can_carry: opts.canCarry !== false,
-      can_send: opts.canSend !== false,
-    }),
-    { headers: JSON_HEADERS },
-  );
-  if (reg.status !== 201) {
+export const PASSWORD = __ENV.K6_PASSWORD || '';
+
+/** Deterministic addresses, matching `backend/app/cli/load_seed.email_for`.
+ *
+ *  Duplicated rather than fetched: k6 has no way to ask, and a scenario that
+ *  had to be handed a list of accounts would be a scenario nobody can run from
+ *  one command line. The pattern is named in both places so a change to either
+ *  is a change somebody makes on purpose.
+ */
+export function seededEmail(index) {
+  return `k6-load-${index}@e2e.vimana.local`;
+}
+
+/** Sign in as one of the seeded accounts. Used from `setup()`, which runs once
+ *  — doing this per iteration would measure nginx's `auth_zone` (60 r/min per
+ *  IP) rather than the application.
+ *
+ *  **Replaced `registerAndLogin` on 2026-08-11.** That helper posted to
+ *  `POST /auth/register`, removed in `T3.28 pt.3b`, so every scenario needing a
+ *  session had been dying in `setup()` since 2026-08-10 — which is why nothing
+ *  is known about the product's write path. Accounts now come from
+ *  `app.cli.load_seed`, run once before a session, and this signs in with the
+ *  password they were given.
+ */
+export function loginAs(http, index) {
+  if (!PASSWORD) {
     throw new Error(
-      `setup: register failed ${reg.status}. Since T3.28 there is no ` +
-        `POST /auth/register — accounts are born from a code, and k6 cannot ` +
-        `read a mailbox. This scenario needs seeded accounts; see TASKS T_TEST.6.`,
+      'setup: K6_PASSWORD is not set. Seed the accounts first:\n' +
+        "  docker compose exec -T backend python -m app.cli.load_seed --password '<secret>'\n" +
+        'then pass the same value as -e K6_PASSWORD=<secret>.',
     );
   }
+  const email = seededEmail(index);
   const login = http.post(
     `${BASE_URL}/api/auth/login`,
     JSON.stringify({ login: email, password: PASSWORD }),
     { headers: JSON_HEADERS },
   );
   if (login.status !== 200) {
-    throw new Error(`setup: login failed ${login.status} ${login.body}`);
+    throw new Error(
+      `setup: login as ${email} failed ${login.status}. ` +
+        'Seed the accounts and check that K6_PASSWORD matches what they were seeded with.',
+    );
   }
   return { email, token: login.json('access_token') };
 }

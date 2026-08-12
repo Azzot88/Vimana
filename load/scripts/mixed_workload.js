@@ -7,7 +7,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-import { BASE_URL, DURATION, JSON_HEADERS, PASSWORD, THRESHOLDS, VUS, auth, registerAndLogin, uniqueEmail } from '../lib/config.js';
+import { BASE_URL, DURATION, JSON_HEADERS, THRESHOLDS, VUS, auth, loginAs, uniqueEmail } from '../lib/config.js';
 import { summarise } from '../lib/summary.js';
 
 http.setResponseCallback(http.expectedStatuses({ min: 200, max: 299 }, 429));
@@ -41,8 +41,10 @@ export const options = {
 };
 
 export function setup() {
-  const carrier = registerAndLogin(http, 'k6-mix-carrier', { canCarry: true });
-  const sender = registerAndLogin(http, 'k6-mix-sender', { canSend: true });
+  // Accounts 2 and 3, so a mixed run and a `chat_hammer` run can share a
+  // deployment without writing into each other's deal.
+  const carrier = loginAs(http, 2);
+  const sender = loginAs(http, 3);
 
   const departAt = new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
   const trip = http.post(
@@ -96,16 +98,20 @@ export function chat(data) {
 }
 
 export function register() {
+  // The sign-up door as it is since `T3.28`: an address goes in, a code comes
+  // back by mail, and the account exists when the code is spent. Only the first
+  // half is load-bearing here — k6 cannot read a mailbox, and the point of this
+  // slice is the traffic the door takes, not the accounts it makes.
   const resp = http.post(
-    `${BASE_URL}/api/auth/register`,
+    `${BASE_URL}/api/auth/otp/request`,
     JSON.stringify({
-      email: uniqueEmail('k6-mix'),
-      password: PASSWORD,
-      display_name: 'k6 mixed',
+      identifier: uniqueEmail('k6-mix'),
+      channel: 'email',
+      locale: 'en',
     }),
-    { headers: JSON_HEADERS, tags: { name: 'register' } },
+    { headers: JSON_HEADERS, tags: { name: 'signup' } },
   );
-  check(resp, { 'register 201 or 429': (r) => r.status === 201 || r.status === 429 });
+  check(resp, { 'signup 202 or 429': (r) => r.status === 202 || r.status === 429 });
   sleep(5);
 }
 
