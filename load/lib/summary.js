@@ -153,9 +153,27 @@ export function summarise(scenarioName, data) {
   const out = {};
   out.stdout = report;
   now.endpoints = perEndpoint;
+  // What this run *was*, written next to what it measured. A sweep across
+  // concurrencies and instance sizes produces numbers that are meaningless
+  // apart from their conditions, and a results file that only says "745.78"
+  // is one somebody will later compare against the wrong thing.
+  now.conditions = {
+    label: __ENV.RUN_LABEL || '',
+    vus: Number(__ENV.K6_VUS || 100),
+    duration: __ENV.K6_DURATION || '5m',
+    at: new Date().toISOString(),
+  };
   // Written inside the container, where the repo's `load/` is mounted at
   // `/load` — so this lands in `load/results/` on the host, next to the
   // baseline it will be compared against.
-  out[`/load/results/${scenarioName}.json`] = JSON.stringify({ [scenarioName]: now }, null, 2);
+  //
+  // `RUN_LABEL` keeps a sweep from overwriting itself: without it every run
+  // lands on the same filename, and a four-point curve ends as one number.
+  const suffix = __ENV.RUN_LABEL ? `.${__ENV.RUN_LABEL}` : '';
+  out[`/load/results/${scenarioName}${suffix}.json`] = JSON.stringify(
+    { [scenarioName]: now },
+    null,
+    2,
+  );
   return out;
 }

@@ -107,6 +107,10 @@ services:
     # under load. More workers on two cores buy context switches and memory
     # pressure, not throughput.
     #
+    # Read from the environment so the number can follow the machine without a
+    # commit: `UVICORN_WORKERS=4` in `.env` on a four-core box. The default is
+    # the value this box wants, so nothing changes for anyone who sets nothing.
+    #
     # Safe because nothing lives in process memory: rate-limit counters,
     # WebAuthn ceremonies, Nostr challenges and the token blacklist are all in
     # Redis, and there are no module-level caches. **One caveat, named rather
@@ -118,7 +122,7 @@ services:
     # TASKS T_TEST.6 rather than done here.
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000
-      --workers 2 --proxy-headers --forwarded-allow-ips=*
+      --workers ${UVICORN_WORKERS:-2} --proxy-headers --forwarded-allow-ips=*
 
   frontend:
     # T_SEC.2 — production static build served by internal nginx on :80.

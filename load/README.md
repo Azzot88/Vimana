@@ -32,8 +32,39 @@ mints sessions. Tracked in `PRD/TASKS.md` under `T_TEST.6`; `browse_trips` is
 public and unaffected.
 
 Knobs (all env): `BASE_URL` (required), `K6_VUS` (default 100), `K6_DURATION`
-(default `5m`), `ALLOW_PROD=1` to override the production guard, `K6_IMAGE` to
-pin the k6 version.
+(default `5m`), `RUN_LABEL` (suffixes the results file so a sweep does not
+overwrite itself), `ALLOW_PROD=1` to override the production guard, `K6_IMAGE`
+to pin the k6 version.
+
+## Measuring a change of machine
+
+A single number at a single concurrency cannot tell a slow application from a
+small box. A **curve** can: run the same scenario at several concurrencies, and
+read the shape.
+
+```bash
+for vus in 10 25 50 100; do
+  docker compose -f docker-compose.dev.yml --profile load run --rm \
+    -e BASE_URL=https://<host> -e ALLOW_PROD=1 \
+    -e K6_VUS=$vus -e K6_DURATION=2m -e RUN_LABEL=small-$vus \
+    k6 run /load/scripts/browse_trips.js
+done
+```
+
+What the shape means:
+
+- **p95 at 10 VUs is the floor** — one request, nothing queueing. If that number
+  is already large, the cost is per-request and no instance size removes it.
+- **Flat until some concurrency, then climbing** — the knee is where capacity
+  ends. Everything left of it is the application; everything right of it is the
+  machine.
+- **Halving the cores halves the latency at the same VUs** — pure capacity.
+  Latency that refuses to fall when cores are added means something serialises,
+  and then the box is not the answer.
+
+Set the worker count to match the cores of whatever you are measuring:
+`UVICORN_WORKERS=4` in the project `.env`, then recreate `backend`. The default
+is 2, which is what a two-core box wants.
 
 ## Staging only
 
