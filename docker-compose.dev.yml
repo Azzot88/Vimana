@@ -93,9 +93,32 @@ services:
     # restarts the workers whenever a file under the mounted ./backend changes —
     # a `git pull` mid-request drops that request. Code changes now need the
     # container recreated (ENVIRONMENT §9 already prescribes `up -d --build`).
+    # --workers 2: one per core (T_TEST.6, 2026-08-11). uvicorn defaults to a
+    # single process, and the load run showed exactly what that costs — 100 VUs,
+    # p95 949 ms against a 500 ms threshold, and **30 % of the machine idle**:
+    # zero I/O wait, no swap, no sustained steal. A single-threaded process
+    # cannot use more than one of two cores, so a whole core sat unused while
+    # requests queued behind the one that was pinned. The giveaway was that
+    # `/api/categories` — a dozen static rows — took 560 ms at the median,
+    # a quarter of what the heaviest listing took. That is a queue, not a query.
+    #
+    # Two, not four: the box is a t3.small with 2 GB shared with Postgres,
+    # Redis, nginx, the frontend and two Celery processes, and ~300 MB was free
+    # under load. More workers on two cores buy context switches and memory
+    # pressure, not throughput.
+    #
+    # Safe because nothing lives in process memory: rate-limit counters,
+    # WebAuthn ceremonies, Nostr challenges and the token blacklist are all in
+    # Redis, and there are no module-level caches. **One caveat, named rather
+    # than discovered later:** `lifespan` runs `ensure_user_zero` and
+    # `ensure_service_keys` per worker, so both run twice on every deploy. Both
+    # are idempotent and both are wrapped in their own `try`, but two workers
+    # backfilling the same account can each mint a keypair and one write wins.
+    # The clean answer is to move those backfills out of startup; recorded in
+    # TASKS T_TEST.6 rather than done here.
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000
-      --proxy-headers --forwarded-allow-ips=*
+      --workers 2 --proxy-headers --forwarded-allow-ips=*
 
   frontend:
     # T_SEC.2 — production static build served by internal nginx on :80.
