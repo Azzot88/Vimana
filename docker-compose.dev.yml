@@ -120,9 +120,32 @@ services:
     # backfilling the same account can each mint a keypair and one write wins.
     # The clean answer is to move those backfills out of startup; recorded in
     # TASKS T_TEST.6 rather than done here.
+    # T_OPS.1 — a deploy stops losing requests.
+    #
+    # Measured, not assumed: a load run started right after `--force-recreate`
+    # answered 1.8 % of requests with an error; the same run on a warmed
+    # container answered 0 %. Two settings, and the order between them is the
+    # whole point.
+    #
+    # `--timeout-graceful-shutdown 20`: on SIGTERM uvicorn stops accepting new
+    # connections and gives what is already in flight up to twenty seconds to
+    # finish, instead of cutting it off.
+    #
+    # `stop_grace_period: 40s` below **must exceed** the drain plus that
+    # timeout, or Docker sends SIGKILL in the middle of the graceful shutdown
+    # and we would have traded one abrupt stop for another. 5 (drain) + 20
+    # (graceful) + margin.
+    #
+    # `DRAIN_SECONDS` is the half that matters once there is a balancer: the
+    # process answers `/ready` with 503 and keeps serving for that long, so a
+    # balancer can take it out of rotation *before* it stops existing. Nothing
+    # about it is cloud-specific — an HTTP endpoint and an env var are what
+    # nginx, HAProxy, Traefik and every managed balancer read.
+    stop_grace_period: 40s
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000
       --workers ${UVICORN_WORKERS:-2} --proxy-headers --forwarded-allow-ips=*
+      --timeout-graceful-shutdown 20
 
   frontend:
     # T_SEC.2 — production static build served by internal nginx on :80.

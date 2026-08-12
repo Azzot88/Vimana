@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import uuid
@@ -74,6 +75,15 @@ async def lifespan(app: FastAPI):
             "domains skip email verification. This must not be set in production.",
             ", ".join(sorted(auto_verify_domains())),
         )
+
+    # T_OPS.1 — stop taking traffic before stopping. Installed last, so a
+    # failure in any backfill above does not leave the drain half-wired, and
+    # installed here rather than at import so it binds to the running loop —
+    # with `--workers N` each worker installs its own.
+    from app.core.readiness import install as install_drain
+
+    install_drain(asyncio.get_running_loop())
+
     yield
 
 
@@ -248,7 +258,32 @@ app.include_router(inquiries_router, prefix="/api", tags=["inquiries"])
 
 @app.get("/health")
 async def health():
+    """Liveness: is this process alive. A supervisor restarts it when not.
+
+    Deliberately **not** the same question as `/ready`. A process that is
+    draining before shutdown is alive and must keep answering 200 here, or a
+    supervisor would kill it mid-drain — which is the failure this pair exists
+    to prevent, arriving from the other direction.
+    """
     return {"status": "ok"}
+
+
+@app.get("/ready")
+async def ready():
+    """T_OPS.1 — readiness: should this process be given traffic.
+
+    503 while draining, so a balancer takes it out of rotation before it stops
+    existing. With one backend and no health checking in front, this changes no
+    routing **today** — it is the half of a zero-downtime deploy that has to be
+    in place before a balancer can be put in front of several instances.
+
+    Called by: an external load balancer or reverse proxy; `tests/test_readiness.py`.
+    """
+    from app.core.readiness import is_ready
+
+    if is_ready():
+        return {"status": "ready"}
+    return JSONResponse(status_code=503, content={"status": "draining"})
 
 
 @app.get("/health/storage")
