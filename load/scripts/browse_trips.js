@@ -6,7 +6,7 @@
 // picture. When p95 moves here, it moved in a query.
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Trend } from 'k6/metrics';
+import { Counter, Trend } from 'k6/metrics';
 
 import { BASE_URL, DURATION, THRESHOLDS, VUS } from '../lib/config.js';
 import { summarise } from '../lib/summary.js';
@@ -23,9 +23,22 @@ const EP = {
   categories: new Trend('ep_categories', true),
 };
 
-/** Record a response against both its endpoint trend and its check. */
+// A `Trend` carries avg/min/med/max/percentiles and **no count** — the first
+// breakdown printed "0 requests" for every row, which is worse than printing
+// nothing because it looks like a measurement. The count matters: the run of
+// 2026-08-11 fired zero `trips:page2` requests, and only the row's absence said
+// so. A counter says it in the row itself.
+const HITS = {
+  'trips:list': new Counter('epc_trips_list'),
+  'trips:page2': new Counter('epc_trips_page2'),
+  airports: new Counter('epc_airports'),
+  categories: new Counter('epc_categories'),
+};
+
+/** Record a response against its endpoint trend, its counter and its check. */
 function timed(res, key, ok) {
   EP[key].add(res.timings.duration);
+  HITS[key].add(1);
   check(res, ok);
   return res;
 }

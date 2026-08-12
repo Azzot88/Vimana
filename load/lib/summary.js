@@ -62,12 +62,14 @@ export function extract(data) {
  */
 function endpoints(data) {
   return Object.keys(data.metrics)
-    .filter((name) => name.startsWith('ep_'))
+    .filter((name) => name.startsWith('ep_') && !name.startsWith('epc_'))
     .map((name) => ({
       name: name.slice(3),
       p95: metric(data, name, 'p(95)'),
       med: metric(data, name, 'med'),
-      count: metric(data, name, 'count'),
+      // From the paired counter, not from the trend: a trend has no count, and
+      // reading one off it printed a confident zero for every endpoint.
+      count: metric(data, `epc_${name.slice(3)}`, 'count'),
     }))
     .sort((a, b) => (b.p95 || 0) - (a.p95 || 0));
 }
