@@ -110,7 +110,7 @@ export function summarise(scenarioName, data) {
   //
   // A baseline with no recorded conditions predates this and is assumed to be
   // the 100-VU run it was: compared for 100-VU runs, ignored otherwise.
-  const vusNow = Number(__ENV.K6_VUS || 100);
+  const vusNow = Number(__ENV.LOAD_VUS || 100);
   const vusBefore = recorded && recorded.conditions ? recorded.conditions.vus : 100;
   const comparable = recorded && vusBefore === vusNow;
   const before = comparable ? recorded : null;
@@ -174,8 +174,8 @@ export function summarise(scenarioName, data) {
   // is one somebody will later compare against the wrong thing.
   now.conditions = {
     label: __ENV.RUN_LABEL || '',
-    vus: Number(__ENV.K6_VUS || 100),
-    duration: __ENV.K6_DURATION || '5m',
+    vus: Number(__ENV.LOAD_VUS || 100),
+    duration: __ENV.LOAD_DURATION || '5m',
     at: new Date().toISOString(),
   };
   // Written inside the container, where the repo's `load/` is mounted at

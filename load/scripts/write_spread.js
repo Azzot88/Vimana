@@ -16,7 +16,7 @@
 //   write_spread → the ceiling of the platform's write path
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Trend } from 'k6/metrics';
+import { Counter, Trend } from 'k6/metrics';
 
 import { BASE_URL, DURATION, THRESHOLDS, VUS, auth, loginAs } from '../lib/config.js';
 import { summarise } from '../lib/summary.js';
@@ -25,9 +25,12 @@ import { summarise } from '../lib/summary.js';
 // ten where `chat_hammer` was still linear. More chains would measure the same
 // thing and cost more setup; fewer would reintroduce the contention this
 // scenario exists to avoid.
-const DEALS = Number(__ENV.K6_DEALS || 8);
+const DEALS = Number(__ENV.LOAD_DEALS || 8);
 
 const write = new Trend('ep_vault_write', true);
+// The paired counter — a `Trend` carries no count, and without this the
+// breakdown prints a confident zero next to a real latency.
+const writes = new Counter('epc_vault_write');
 
 export const options = {
   vus: VUS,
@@ -97,6 +100,7 @@ export default function (data) {
     { ...auth(token), tags: { name: 'vault:write' } },
   );
   write.add(resp.timings.duration);
+  writes.add(1);
   check(resp, { 'message 201': (r) => r.status === 201 });
 
   sleep(Math.random());

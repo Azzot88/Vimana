@@ -24,8 +24,14 @@ if (PROD_HOSTS.includes(host) && __ENV.ALLOW_PROD !== '1') {
   );
 }
 
-export const VUS = Number(__ENV.K6_VUS || 100);
-export const DURATION = __ENV.K6_DURATION || '5m';
+// `LOAD_`, not `K6_`. **`K6_VUS` and `K6_DURATION` belong to k6 itself**: set
+// either one and k6 applies it as a CLI-level option, which *replaces the
+// `scenarios` block entirely* with a single default executor. `mixed_workload`
+// exports no `default` function, so on 2026-08-11 it died with
+// "executor default: function 'default' not found in exports" — a message that
+// says nothing about the real cause. Our knobs stay out of k6's namespace.
+export const VUS = Number(__ENV.LOAD_VUS || 100);
+export const DURATION = __ENV.LOAD_DURATION || '5m';
 
 // The acceptance criterion from the roadmap, in the one place k6 reads it.
 export const THRESHOLDS = {
@@ -50,7 +56,7 @@ export function uniqueEmail(prefix) {
  *  a credential committed to a repository is a credential — anybody reading
  *  the file would know both the address pattern and the way in.
  */
-export const PASSWORD = __ENV.K6_PASSWORD || '';
+export const PASSWORD = __ENV.LOAD_PASSWORD || '';
 
 /** Deterministic addresses, matching `backend/app/cli/load_seed.email_for`.
  *
@@ -77,9 +83,9 @@ export function seededEmail(index) {
 export function loginAs(http, index) {
   if (!PASSWORD) {
     throw new Error(
-      'setup: K6_PASSWORD is not set. Seed the accounts first:\n' +
+      'setup: LOAD_PASSWORD is not set. Seed the accounts first:\n' +
         "  docker compose exec -T backend python -m app.cli.load_seed --password '<secret>'\n" +
-        'then pass the same value as -e K6_PASSWORD=<secret>.',
+        'then pass the same value as -e LOAD_PASSWORD=<secret>.',
     );
   }
   const email = seededEmail(index);
@@ -91,7 +97,7 @@ export function loginAs(http, index) {
   if (login.status !== 200) {
     throw new Error(
       `setup: login as ${email} failed ${login.status}. ` +
-        'Seed the accounts and check that K6_PASSWORD matches what they were seeded with.',
+        'Seed the accounts and check that LOAD_PASSWORD matches what they were seeded with.',
     );
   }
   return { email, token: login.json('access_token') };

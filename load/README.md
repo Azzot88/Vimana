@@ -37,7 +37,7 @@ docker compose -f docker-compose.dev.yml exec -T backend \
   python -m app.cli.load_seed --password '<secret>'
 ```
 
-Then give k6 the same value: `-e K6_PASSWORD='<secret>'`. The password has no
+Then give k6 the same value: `-e LOAD_PASSWORD='<secret>'`. The password has no
 default on purpose — these are real accounts on a real deployment, and a
 credential in a repository is a credential.
 
@@ -52,7 +52,7 @@ session for a load run. An endpoint that mints sessions is an endpoint that
 mints sessions, whatever the comment above it says, and it would live in
 production forever for a test that runs monthly.
 
-Knobs (all env): `BASE_URL` (required), `K6_VUS` (default 100), `K6_DURATION`
+Knobs (all env): `BASE_URL` (required), `LOAD_VUS` (default 100), `LOAD_DURATION`
 (default `5m`), `RUN_LABEL` (suffixes the results file so a sweep does not
 overwrite itself), `ALLOW_PROD=1` to override the production guard, `K6_IMAGE`
 to pin the k6 version.
@@ -67,7 +67,7 @@ read the shape.
 for vus in 10 25 50 100; do
   docker compose -f docker-compose.dev.yml --profile load run --rm \
     -e BASE_URL=https://<host> -e ALLOW_PROD=1 \
-    -e K6_VUS=$vus -e K6_DURATION=2m -e RUN_LABEL=small-$vus \
+    -e LOAD_VUS=$vus -e LOAD_DURATION=2m -e RUN_LABEL=small-$vus \
     k6 run /load/scripts/browse_trips.js
 done
 ```
