@@ -117,32 +117,45 @@ baseline answers the question a load test actually exists for: "did it get
 slower than last time".
 
 ```bash
-# after a run you trust, on a quiet staging box:
-cp load/results/browse_trips.json load/baseline.json     # first scenario
-# merging a second scenario: keep both top-level keys in baseline.json
+# after a run you trust, on a warmed instance:
+cp load/results/browse_trips.<label>.json load/baseline.json
+# a second scenario: merge, keeping both top-level keys
 ```
 
-`baseline.json` is a flat object keyed by scenario name:
+Results files carry the `RUN_LABEL` suffix, so pick the run deliberately rather
+than whichever one happened last.
+
+`baseline.json` is a flat object keyed by scenario name, and every run since
+2026-08-11 records the conditions inside it:
 
 ```json
-{ "browse_trips": { "p95": 180.4, "med": 90.1, "failed": 0, "reqs": 12000, "rps": 40.0 } }
+{
+  "browse_trips": {
+    "p95": 180.4, "med": 90.1, "failed": 0, "rps": 40.0,
+    "conditions": { "label": "seeded-100", "vus": 100, "duration": "2m", "at": "…" }
+  }
+}
 ```
 
-Every later run prints its numbers next to the recorded ones and flags anything
-more than **±10%** away.
+Later runs print their numbers next to the recorded ones and flag anything more
+than **±10%** away — **but only against a baseline taken at the same
+concurrency.** A sweep point at 10 VUs is not a regression against a 100-VU
+baseline; it is a different question, and the summary says so instead of
+comparing.
 
-`baseline.json` **is** in the repository now (recorded 2026-08-06 from the
-2026-08-03 run), and it holds `browse_trips` only. Read it for what it is: the
-state the product was in, not the state it should reach — its p95 is over the
-threshold, and the threshold is the thing that says pass or fail. The baseline
-answers the other question, the one a single run cannot: *did anything get
-slower than last time.*
+**The file in the repository is stale, knowingly** (2026-08-11): it holds the
+2026-08-03 run, taken on a **single uvicorn worker**, before `--workers 2`,
+before the trips were seeded (so page 2 never fired), and before the instance
+experiment. Everything compared against it is compared against a configuration
+that no longer exists. It stays until somebody records a run they trust rather
+than being deleted, because "no baseline" and "an old baseline plainly labelled"
+are different amounts of information — but read the label first.
 
-Conditions are part of the number and do not survive being changed: that run
-went against **production** over TLS (no staging existed), 100 VUs, 5 minutes,
+Conditions are part of the number and do not survive being changed. That run
+went against **production** over TLS (no staging exists), 100 VUs, 5 minutes,
 from the same host. Comparing a staging run against it says nothing. When you
-record a new one, record the k6 version alongside (`K6_IMAGE`) if you want it to
-outlive a k6 upgrade.
+record a new one, note the k6 version (`K6_IMAGE`) if you want it to outlive a
+k6 upgrade.
 
 ## Reading the results honestly
 
