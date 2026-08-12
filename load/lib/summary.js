@@ -93,6 +93,20 @@ export function summarise(scenarioName, data) {
   const now = extract(data);
   const before = BASELINE ? BASELINE[scenarioName] : null;
 
+  const failures = [
+    ['429 rate limited', 'err_429'],
+    ['502/503/504 gateway', 'err_gateway'],
+    ['5xx application', 'err_5xx'],
+    ['4xx other', 'err_4xx'],
+    ['transport (status 0)', 'err_other'],
+  ]
+    .map(([label, name]) => [label, metric(data, name, 'count') || 0])
+    .filter(([, count]) => count > 0);
+
+  const whoRefused = failures.length
+    ? ['', '  failures by kind:', ...failures.map(([l, c]) => `    ${l.padEnd(22)} ${c}`)]
+    : [];
+
   const perEndpoint = endpoints(data);
   const breakdown = perEndpoint.length
     ? [
@@ -119,6 +133,7 @@ export function summarise(scenarioName, data) {
     line('tls p95', now.tls_p95, before && before.tls_p95),
     line('failed', now.failed, before && before.failed),
     line('rps', now.rps, before && before.rps),
+    ...whoRefused,
     ...breakdown,
     before
       ? ''
