@@ -157,7 +157,7 @@
 - **Swagger / OpenAPI выключены в prod** через env `EXPOSE_DOCS=false` → `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`. В dev остаются открыты `/docs`, `/redoc`. Реализация — T_SEC.1.
 - **nginx security headers** (см. T_SEC.1): CSP, HSTS `max-age=31536000; includeSubDomains`, X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `strict-origin-when-cross-origin`, Permissions-Policy минимальный, `server_tokens off`.
 - **Probe-пути блокируются** на уровне nginx: `.env`, `.git`, `wp-admin`, `.php`, `.aspx` → 403/404.
-- **Rate-limit** на `/api/auth/login` и `/api/auth/register` — slowapi + nginx `limit_req` дублированно.
+- **Rate-limit** на `/api/auth/login`, `/api/auth/otp/request` и `/api/auth/otp/verify` — slowapi + nginx `limit_req` дублированно. ~~`/api/auth/register`~~ удалён в `T3.28 pt.3b`; зоны перевешены на заменившие его двери 2026-08-11 — до этого `register_zone` месяц охраняла несуществующий путь, а настоящая форма кода не имела слоя nginx вовсе.
 - **Публичные endpoint'ы** только `/health` (для docker healthcheck); всё остальное — JWT auth или RBAC.
 - **Наружу публикуется только nginx** (80/443). Relay с T_SEC.4 порт не публикует вовсе — он доступен как `wss://<домен>/relay` через тот же nginx; 7777 в security group можно закрыть. `db`, `redis` и `backend` слушают `127.0.0.1` — T_SEC.3. До этого `backend` был опубликован на `0.0.0.0:8000` и открыт в security group: прямое обращение обходило TLS, security-заголовки, probe-deny и обе зоны `limit_req`, а ключ slowapi берётся из `X-Forwarded-For` (`core/rate_limit.py`), который прямой клиент подставляет сам. Доступ для отладки — SSH-туннель (`ssh -L 8000:127.0.0.1:8000`), не публикация порта.
 
