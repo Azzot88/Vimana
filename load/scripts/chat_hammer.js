@@ -17,6 +17,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 import { BASE_URL, DURATION, THRESHOLDS, VUS, auth, loginAs } from '../lib/config.js';
+import { countFailure } from '../lib/failures.js';
 import { summarise } from '../lib/summary.js';
 
 export const options = {
@@ -79,12 +80,14 @@ export default function (data) {
     JSON.stringify({ text: `k6 message vu=${__VU} iter=${__ITER}` }),
     { ...opts, tags: { name: 'vault:write' } },
   );
+  countFailure(write);
   check(write, { 'message 201': (r) => r.status === 201 });
 
   const read = http.get(`${BASE_URL}/api/deals/${data.dealId}/dealvault?limit=20`, {
     ...opts,
     tags: { name: 'vault:read' },
   });
+  countFailure(read);
   check(read, { 'vault 200': (r) => r.status === 200 });
 
   // The chain check is the expensive read: it recomputes hashes from genesis.
@@ -95,6 +98,7 @@ export default function (data) {
       ...opts,
       tags: { name: 'vault:chain' },
     });
+    countFailure(chain);
     check(chain, { 'chain 200': (r) => r.status === 200 });
   }
 

@@ -21,6 +21,7 @@ import { check } from 'k6';
 import { Counter } from 'k6/metrics';
 
 import { BASE_URL, DURATION, JSON_HEADERS, THRESHOLDS, VUS, uniqueEmail } from '../lib/config.js';
+import { countFailure } from '../lib/failures.js';
 import { summarise } from '../lib/summary.js';
 
 const rateLimited = new Counter('rate_limited');
@@ -55,6 +56,11 @@ export default function () {
   } else if (resp.status === 202) {
     accepted.add(1);
   }
+  // Counted in the shared breakdown too. The two are not redundant: `429` here
+  // is a success (the limiter working) and there it is a category, and a run
+  // where the refusals are 503 rather than 429 means something entirely
+  // different — the difference is invisible without both.
+  countFailure(resp);
 
   check(resp, {
     'signup answered 202 or 429': (r) => r.status === 202 || r.status === 429,

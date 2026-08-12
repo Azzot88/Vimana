@@ -9,6 +9,7 @@ import { check, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 
 import { BASE_URL, DURATION, THRESHOLDS, VUS } from '../lib/config.js';
+import { countFailure } from '../lib/failures.js';
 import { summarise } from '../lib/summary.js';
 
 // One trend per endpoint, so the summary can say *which* one owns the tail.
@@ -35,33 +36,11 @@ const HITS = {
   categories: new Counter('epc_categories'),
 };
 
-// Who refused, not merely how often. The 2026-08-11 run with two workers put
-// `http_req_failed` at 1.8 % — over the 1 % threshold — and a rate alone cannot
-// tell nginx's rate limiter (429) from an upstream that fell over (502/504)
-// from the application raising (500). Those are three different repairs, and
-// guessing between them is a run wasted.
-const ERR = {
-  rate_limited: new Counter('err_429'),
-  gateway: new Counter('err_gateway'),
-  server: new Counter('err_5xx'),
-  client: new Counter('err_4xx'),
-  none: new Counter('err_other'),
-};
-
-function classify(status) {
-  if (status === 429) return ERR.rate_limited;
-  if (status === 502 || status === 503 || status === 504) return ERR.gateway;
-  if (status >= 500) return ERR.server;
-  if (status >= 400) return ERR.client;
-  // k6 reports a transport failure — refused, reset, timed out — as status 0.
-  return ERR.none;
-}
-
 /** Record a response against its endpoint trend, its counter and its check. */
 function timed(res, key, ok) {
   EP[key].add(res.timings.duration);
   HITS[key].add(1);
-  if (res.status < 200 || res.status >= 400) classify(res.status).add(1);
+  countFailure(res);
   check(res, ok);
   return res;
 }

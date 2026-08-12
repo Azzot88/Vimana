@@ -19,6 +19,7 @@ import { check, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 
 import { BASE_URL, DURATION, THRESHOLDS, VUS, auth, loginAs } from '../lib/config.js';
+import { countFailure } from '../lib/failures.js';
 import { summarise } from '../lib/summary.js';
 
 // Eight, so that fifty VUs put about six on each chain — comfortably under the
@@ -101,6 +102,7 @@ export default function (data) {
   );
   write.add(resp.timings.duration);
   writes.add(1);
+  countFailure(resp);
   check(resp, { 'message 201': (r) => r.status === 201 });
 
   sleep(Math.random());

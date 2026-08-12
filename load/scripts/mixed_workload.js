@@ -8,6 +8,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 import { BASE_URL, DURATION, JSON_HEADERS, THRESHOLDS, VUS, auth, loginAs, uniqueEmail } from '../lib/config.js';
+import { countFailure } from '../lib/failures.js';
 import { summarise } from '../lib/summary.js';
 
 http.setResponseCallback(http.expectedStatuses({ min: 200, max: 299 }, 429));
@@ -93,6 +94,7 @@ export function chat(data) {
     JSON.stringify({ text: `k6 mixed vu=${__VU}` }),
     { ...opts, tags: { name: 'vault:write' } },
   );
+  countFailure(write);
   check(write, { 'message 201': (r) => r.status === 201 });
   sleep(Math.random() * 2);
 }
@@ -111,6 +113,7 @@ export function register() {
     }),
     { headers: JSON_HEADERS, tags: { name: 'signup' } },
   );
+  countFailure(resp);
   check(resp, { 'signup 202 or 429': (r) => r.status === 202 || r.status === 429 });
   sleep(5);
 }
