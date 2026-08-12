@@ -100,7 +100,20 @@ function line(label, now, before, up = false) {
 /** Use as: `export function handleSummary(data) { return summarise('name', data) }` */
 export function summarise(scenarioName, data) {
   const now = extract(data);
-  const before = BASELINE ? BASELINE[scenarioName] : null;
+  const recorded = BASELINE ? BASELINE[scenarioName] : null;
+
+  // **Only compare runs at the same concurrency.** A sweep at 10 VUs against a
+  // baseline taken at 100 printed `rps -72.8 % ⚠ REGRESSION` — for a run that
+  // was *asked* to generate less traffic. Throughput is set by the number of
+  // virtual users until the server saturates, so across concurrencies it
+  // measures the load generator, not the product.
+  //
+  // A baseline with no recorded conditions predates this and is assumed to be
+  // the 100-VU run it was: compared for 100-VU runs, ignored otherwise.
+  const vusNow = Number(__ENV.K6_VUS || 100);
+  const vusBefore = recorded && recorded.conditions ? recorded.conditions.vus : 100;
+  const comparable = recorded && vusBefore === vusNow;
+  const before = comparable ? recorded : null;
 
   const failures = [
     ['429 rate limited', 'err_429'],
@@ -146,7 +159,9 @@ export function summarise(scenarioName, data) {
     ...breakdown,
     before
       ? ''
-      : '  (no baseline recorded — see load/README.md to make this run the baseline)',
+      : recorded
+        ? `  (baseline was taken at ${vusBefore} VUs — not compared)`
+        : '  (no baseline recorded — see load/README.md to make this run the baseline)',
     '',
   ].join('\n');
 
