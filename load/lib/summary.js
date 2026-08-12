@@ -74,7 +74,14 @@ function endpoints(data) {
     .sort((a, b) => (b.p95 || 0) - (a.p95 || 0));
 }
 
-function line(label, now, before) {
+/** `up` is whether a larger number is the better one.
+ *
+ *  It exists because the first version assumed every metric wants to go down,
+ *  and then printed `rps: 126 (+20.3%) ⚠ REGRESSION` — a fifth more throughput,
+ *  labelled as a fault. A reader who trusts the label chases a win; a reader
+ *  who learns to ignore the label stops reading it at all, which is worse.
+ */
+function line(label, now, before, up = false) {
   if (now === null) return `  ${label}: —`;
   const shown = now.toFixed(label === 'failed' ? 4 : 2);
   if (before === null || before === undefined || before === 0) {
@@ -82,9 +89,11 @@ function line(label, now, before) {
   }
   const delta = (now - before) / before;
   const pct = (delta * 100).toFixed(1);
-  // Only slower/worse counts as a regression. Faster is printed too, because a
-  // sudden improvement is usually a scenario that stopped doing its work.
-  const flag = delta > TOLERANCE ? '  ⚠ REGRESSION' : delta < -TOLERANCE ? '  ↓ faster' : '';
+  const worse = up ? -delta : delta;
+  // Improvement is printed too, not only flagged: a sudden one is usually a
+  // scenario that stopped doing its work.
+  const flag =
+    worse > TOLERANCE ? '  ⚠ REGRESSION' : worse < -TOLERANCE ? '  ✓ better' : '';
   return `  ${label}: ${shown}  (baseline ${before.toFixed(2)}, ${delta > 0 ? '+' : ''}${pct}%)${flag}`;
 }
 
@@ -132,7 +141,7 @@ export function summarise(scenarioName, data) {
     line('connect p95', now.connecting_p95, before && before.connecting_p95),
     line('tls p95', now.tls_p95, before && before.tls_p95),
     line('failed', now.failed, before && before.failed),
-    line('rps', now.rps, before && before.rps),
+    line('rps', now.rps, before && before.rps, true),
     ...whoRefused,
     ...breakdown,
     before
