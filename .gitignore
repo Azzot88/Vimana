@@ -4,6 +4,10 @@ CLAUDE.md
 graphify-out/
 skills/
 
+# Разбор чужой платформы + замер её экономики по блокчейну. Ссылки на файл
+# в PRD есть, сам файл — только локально.
+PRD/hodlBTCescrow.md
+
 # Environment
 .env
 .env.*

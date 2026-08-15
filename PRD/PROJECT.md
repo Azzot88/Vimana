@@ -40,6 +40,8 @@ PROJECT.md управляет **процессом**, но не переопре
    │   IMPLEMENTATIONPLAN  как строим           CHANGELOG ..... логи изменений
    │      ▼                                         ▼
    └─ TASKS .............. что делаем сейчас     README ........ витрина GitHub
+                                                    ▼
+                                                 hodlBTCescrow . BTC-эскроу 2-of-3 (Фаза 5)
 ```
 
 **PRD-цепочка ровно:** MASTERPLAN → DESIGNGUIDELINES → USERJOURNEY → IMPLEMENTATIONPLAN → TASKS.
