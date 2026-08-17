@@ -11,8 +11,21 @@ interface ParsedAddress {
   note?: string
 }
 
+/** Pre-deal inquiry messages have no envelope — they are still recognised by
+ *  the prefix, and that is the only place the prefix is still read. */
 export function isAddressMessage(text: string | null | undefined): boolean {
   return !!text && text.startsWith(PREFIX)
+}
+
+/** T3.34 — vault messages carry their type in a field. The prefix stays as a
+ *  fallback only for rows the 0050 backfill could not decrypt; it costs one
+ *  comparison and saves an old deal from rendering an address as raw text. */
+export function isAddressCard(
+  msg: { card_kind?: string | null },
+  text: string | null | undefined,
+): boolean {
+  if (msg.card_kind) return msg.card_kind === 'address.shared'
+  return isAddressMessage(text)
 }
 
 function parseAddress(text: string): ParsedAddress {

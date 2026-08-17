@@ -14,7 +14,7 @@ import api from '../api/client'
 import { inviteRecipient } from '../api/participants'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
-import AddressCard, { isAddressMessage } from '../components/AddressCard'
+import AddressCard, { isAddressCard } from '../components/AddressCard'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
@@ -216,7 +216,7 @@ export default function DealVaultPage() {
               </p>
             )
           }
-          if (shown && isAddressMessage(shown)) {
+          if (shown && isAddressCard(msg, shown)) {
             return <AddressCard text={shown} />
           }
           if (shown) {

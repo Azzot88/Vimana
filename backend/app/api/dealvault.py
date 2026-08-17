@@ -28,9 +28,12 @@ from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, presign_ttl_for_kind, upload_file
 from app.core.threshold import E2EPayload, envelope_parts, nip44_decrypt
-from app.models.deal import Attachment, AttachmentKind, Deal, DealEventType, DealVaultMessage
+from app.core.cards import CardKind, role_of, spec_for
+from app.models.deal import (
+    Attachment, AttachmentKind, CardState, Deal, DealEventType, DealVaultMessage,
+)
 from app.models.user import User
-from app.schemas.dealvault import AttachmentOut, MessageCreate, MessageOut
+from app.schemas.dealvault import AttachmentOut, CardAckIn, MessageCreate, MessageOut
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +174,13 @@ def _build_message_out(
         ciphertext_b64=ciphertext_b64,
         nonce_b64=nonce_b64,
         read_packages=read_packages,
+        card_kind=msg.card_kind,
+        card_payload=msg.card_payload,
+        card_state=msg.card_state.value if msg.card_state else None,
+        requires_ack_by=msg.requires_ack_by.value if msg.requires_ack_by else None,
+        acked_by_id=msg.acked_by_id,
+        acked_at=msg.acked_at,
+        supersedes_id=msg.supersedes_id,
         attachments=attachments_out,
         created_at=msg.created_at,
     )
@@ -279,6 +289,9 @@ async def share_address(
         sender_id=current_user.id,
         text=text,
         is_system=True,
+        # T3.34 — the type lives here now. The text keeps the address so the
+        # card renders exactly as before; only recognition moved off the prefix.
+        card_kind=CardKind.address_shared.value,
     )
     sign_vault_message(msg, current_user)
     db.add(msg)
@@ -296,6 +309,13 @@ async def share_address(
         nostr_event_id=msg.nostr_event_id,
         nostr_created_at=msg.nostr_created_at,
         nostr_pubkey=msg.nostr_pubkey,
+        card_kind=msg.card_kind,
+        card_payload=msg.card_payload,
+        card_state=msg.card_state.value if msg.card_state else None,
+        requires_ack_by=msg.requires_ack_by.value if msg.requires_ack_by else None,
+        acked_by_id=msg.acked_by_id,
+        acked_at=msg.acked_at,
+        supersedes_id=msg.supersedes_id,
         attachments=[],
         created_at=msg.created_at,
     )
@@ -518,3 +538,83 @@ async def decrypt_message_for_me(
         raise HTTPException(status_code=422, detail=f"AES-GCM decrypt failed: {exc}")
 
     return {"message_id": str(message_id), "text": plaintext}
+
+
+@router.post(
+    "/{deal_id}/dealvault/messages/{message_id}/ack",
+    response_model=MessageOut,
+)
+async def ack_card(
+    deal_id: uuid.UUID,
+    message_id: uuid.UUID,
+    body: CardAckIn,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.34 — answer a card that is waiting on you.
+
+    The role check is the whole point of the endpoint. Hiding the button in the
+    UI is a convenience; refusing the write here is the rule (§6.9.5 п.6).
+    """
+    deal = await _get_deal_as_participant(deal_id, current_user, db)
+    _ensure_not_sealed(deal)
+
+    if body.decision not in ("accepted", "declined"):
+        raise HTTPException(status_code=422, detail="decision must be accepted or declined")
+
+    msg = (
+        await db.execute(
+            select(DealVaultMessage).where(
+                DealVaultMessage.id == message_id,
+                DealVaultMessage.deal_id == deal_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if msg is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.card_kind is None:
+        raise HTTPException(status_code=422, detail="Message is not a card")
+    if spec_for(msg.card_kind) is None:
+        # A row written by a version that knew a kind this one does not. Refusing
+        # beats guessing at what the card meant.
+        raise HTTPException(status_code=422, detail="Unknown card type")
+    if msg.requires_ack_by is None:
+        raise HTTPException(status_code=422, detail="This card does not await an answer")
+    if msg.card_state is not CardState.pending:
+        # Answering twice is not an error the user can fix by retrying, so it
+        # gets a conflict rather than a validation complaint.
+        raise HTTPException(status_code=409, detail="Card is no longer pending")
+
+    if role_of(deal, current_user.id) is not msg.requires_ack_by:
+        raise HTTPException(
+            status_code=403, detail="This card awaits the other side"
+        )
+
+    msg.card_state = (
+        CardState.accepted if body.decision == "accepted" else CardState.declined
+    )
+    msg.acked_by_id = current_user.id
+    msg.acked_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(msg)
+
+    return MessageOut(
+        id=msg.id,
+        deal_id=msg.deal_id,
+        sender_id=msg.sender_id,
+        text=msg.text,
+        is_system=msg.is_system,
+        nostr_sig=msg.nostr_sig,
+        nostr_event_id=msg.nostr_event_id,
+        nostr_created_at=msg.nostr_created_at,
+        nostr_pubkey=msg.nostr_pubkey,
+        card_kind=msg.card_kind,
+        card_payload=msg.card_payload,
+        card_state=msg.card_state.value if msg.card_state else None,
+        requires_ack_by=msg.requires_ack_by.value if msg.requires_ack_by else None,
+        acked_by_id=msg.acked_by_id,
+        acked_at=msg.acked_at,
+        supersedes_id=msg.supersedes_id,
+        attachments=[],
+        created_at=msg.created_at,
+    )

@@ -28,6 +28,15 @@ export interface VaultMessage {
   sender_id: string | null
   text: string | null
   is_system: boolean
+  // T3.34 — the envelope. `card_kind` is what picks a renderer; the prefix in
+  // the text is no longer consulted for anything.
+  card_kind?: string | null
+  card_payload?: Record<string, unknown> | null
+  card_state?: 'pending' | 'accepted' | 'declined' | 'expired' | 'superseded' | null
+  requires_ack_by?: 'sender' | 'carrier' | 'recipient' | 'operator' | null
+  acked_by_id?: string | null
+  acked_at?: string | null
+  supersedes_id?: string | null
   nostr_sig?: string | null
   nostr_event_id?: string | null
   nostr_created_at?: number | null
@@ -157,4 +166,17 @@ export const sendPhotoMessage = async (
   const { data: page } = await listMessages(dealId, { limit: 100 })
   const fresh = page.items.find((m) => m.id === msg.id)
   return fresh ?? msg
+}
+
+/** T3.34 — answer a card that is waiting on this side. */
+export async function ackCard(
+  dealId: string,
+  messageId: string,
+  decision: 'accepted' | 'declined',
+): Promise<VaultMessage> {
+  const { data } = await api.post<VaultMessage>(
+    `/deals/${dealId}/dealvault/messages/${messageId}/ack`,
+    { decision },
+  )
+  return data
 }

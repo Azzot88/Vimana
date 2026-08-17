@@ -39,6 +39,30 @@ class DealEventType(str, enum.Enum):
     identity_ref = "identity_ref"
 
 
+class CardState(str, enum.Enum):
+    """T3.34 — lifecycle of a typed card.
+
+    A card is never edited. `superseded` is how a correction looks: the newer
+    card points back through `supersedes_id` and the older one stops counting.
+    """
+
+    pending = "pending"
+    accepted = "accepted"
+    declined = "declined"
+    expired = "expired"
+    superseded = "superseded"
+
+
+class CardAckRole(str, enum.Enum):
+    """Who owes the answer. Resolved against `Deal.sender_id` / `carrier_id` /
+    `recipient_id`; `operator` is the arbiter surface."""
+
+    sender = "sender"
+    carrier = "carrier"
+    recipient = "recipient"
+    operator = "operator"
+
+
 class DisputeStatus(str, enum.Enum):
     open = "open"
     claimed = "claimed"
@@ -171,6 +195,32 @@ class DealVaultMessage(Base):
     text_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     text_nonce: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
+    # T3.34 — the envelope. Deliberately plain columns and NOT encrypted: the
+    # server has to read them to validate a transition, decide who still owes an
+    # answer, and drive reminders. The sensitive part of a card stays in `text`,
+    # which is encrypted exactly as before.
+    #
+    # `card_kind` is a plain string rather than a DB enum on purpose. The
+    # catalogue grows with every task from T3.35 to T3.39, and a DB enum would
+    # turn each new card type into a migration. Validation lives in
+    # `app.core.cards.CardKind`, where adding a member costs nothing.
+    card_kind: Mapped[str | None] = mapped_column(String(48), nullable=True, index=True)
+    card_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    card_state: Mapped[CardState | None] = mapped_column(
+        SAEnum(CardState), nullable=True
+    )
+    requires_ack_by: Mapped[CardAckRole | None] = mapped_column(
+        SAEnum(CardAckRole), nullable=True
+    )
+    acked_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    acked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    supersedes_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("deal_vault_messages.id"), nullable=True
+    )
     nostr_sig: Mapped[str | None] = mapped_column(String(128), nullable=True)
     nostr_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nostr_created_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

@@ -34,6 +34,15 @@ class MessageOut(BaseModel):
     ciphertext_b64: str | None = None
     nonce_b64: str | None = None
     read_packages: dict[str, Any] | None = None
+    # T3.34 — the envelope. Plain by design: the client needs the type to pick a
+    # renderer and the state to know whether an answer is still owed.
+    card_kind: str | None = None
+    card_payload: dict[str, Any] | None = None
+    card_state: str | None = None
+    requires_ack_by: str | None = None
+    acked_by_id: uuid.UUID | None = None
+    acked_at: datetime | None = None
+    supersedes_id: uuid.UUID | None = None
     attachments: list[AttachmentOut]
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -49,3 +58,10 @@ class MessageCreate(BaseModel):
     # T2.3 — client-encrypted blob. When provided, `text` MUST be null; server
     # stores the blob opaque. Structure enforced by `core.threshold.E2EPayload`.
     e2e_payload: dict[str, Any] | None = None
+
+
+class CardAckIn(BaseModel):
+    """T3.34 — answering a card. Declining is a first-class outcome, not an
+    absence of accepting: the record has to show that somebody said no."""
+
+    decision: str  # "accepted" | "declined"
