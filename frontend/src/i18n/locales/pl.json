@@ -536,7 +536,8 @@
       "publish": "Publikacja",
       "preview": "Podgląd",
       "alsoOnNostr": "Opublikuj także w sieci Nostr",
-      "terms": "Warunki"
+      "terms": "Warunki",
+      "rules": "Zasady"
     },
     "newTripHook": {
       "voice": "Wprowadzanie głosowe",
@@ -557,7 +558,13 @@
     "currency": "Waluta",
     "maxDeclaredValue": "Maks. wartość deklarowana",
     "priceOnRequest": "na zapytanie",
-    "termsHint": "Twoja baza. Nadawca i tak może zaproponować swoje w czacie."
+    "termsHint": "Twoja baza. Nadawca i tak może zaproponować swoje w czacie.",
+    "categoriesChosen": "Wybrane",
+    "categoriesAvailable": "Dostępne kategorie",
+    "categoriesNoneChosen": "Nic nie wybrano — kliknij poniżej.",
+    "categoriesAllChosen": "Wybrano wszystko.",
+    "categoriesRemove": "usuń",
+    "rulesHint": "Wypełnione z profilu. Edytuj tylko dla tego lotu; puste = brak zasad."
   },
   "deals": {
     "title": "Transakcje",
@@ -936,7 +943,10 @@
   },
   "address": {
     "sectionTitle": "Adresy pocztowe",
-    "empty": "Brak adresów. Dodaj jeden, by było wiadomo, gdzie dostarczyć."
+    "empty": "Brak adresów. Dodaj jeden, by było wiadomo, gdzie dostarczyć.",
+    "addAndReturn": "Dodaj adres i wróć",
+    "returnHint": "Dodaj adres, a potem wróć do rozmowy.",
+    "backToChat": "Wróć do czatu"
   },
   "error": {
     "title": "Coś się zepsuło na tym ekranie",
@@ -1101,5 +1111,21 @@
       "expired": "wygasłe",
       "superseded": "zastąpione"
     }
+  },
+  "prefs": {
+    "title": "Wyświetlanie",
+    "hint": "Zapisane na koncie, nie zgadywane z przeglądarki.",
+    "weight": "Waga",
+    "kg": "Kilogramy",
+    "lb": "Funty",
+    "dates": "Data i godzina",
+    "european": "Europejski",
+    "american": "Amerykański",
+    "example": "Przykład",
+    "carriageRules": "Zasady przewozu",
+    "carriageRulesHint": "Ustalane raz i kopiowane do każdego nowego lotu. Edycja nie zmienia lotów już opublikowanych.",
+    "save": "Zapisz",
+    "saved": "Zapisano",
+    "saveFailed": "Nie udało się zapisać"
   }
 }

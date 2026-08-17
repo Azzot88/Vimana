@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { me, updateMe } from '../api/auth'
@@ -8,6 +8,7 @@ import { getIdentity, type ArchiveRecord } from '../api/trust'
 import AdminPanelSection from '../components/AdminPanelSection'
 import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
+import DisplayPrefsSection from '../components/DisplayPrefsSection'
 import EditProfileModal from '../components/EditProfileModal'
 import MonoText from '../components/MonoText'
 import TrustCirclesSection from '../components/TrustCirclesSection'
@@ -27,6 +28,12 @@ function formatRemaining(expiresAt: string): string {
 
 export default function ProfilePage() {
   const navigate = useNavigate()
+  // T_UX.12 — somebody sent here from a chat to add a missing address gets a
+  // way back to that exact conversation. Without it the trip to the profile
+  // ends wherever the profile ends, and the sentence they were mid-way through
+  // is somebody else's problem.
+  const [searchParams] = useSearchParams()
+  const returnTo = searchParams.get('return_to')
   const { t, i18n } = useTranslation()
   const { user, token, setAuth, logout } = useAuthStore()
   const [connections, setConnections] = useState<Connection[]>([])
@@ -113,6 +120,19 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
+      {/* T_UX.12 return banner */}
+      {returnTo && (
+        <div className="mb-4 rounded-card border border-cyan/40 bg-cyan/5 px-4 py-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm font-body text-navy/70">{t('address.returnHint')}</p>
+          <button
+            type="button"
+            onClick={() => navigate(returnTo)}
+            className="px-4 py-2 rounded-field bg-cyan text-white text-sm font-body"
+          >
+            {t('address.backToChat')}
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="font-display font-bold text-2xl text-navy">{t('profile.title')}</h1>
         <button
@@ -207,6 +227,7 @@ export default function ProfilePage() {
         {/* Right column — addresses + social + keys + notifications */}
         <div className="space-y-4">
           <AddressesSection />
+          <DisplayPrefsSection />
 
           <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">

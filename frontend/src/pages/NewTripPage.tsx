@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { createTrip } from '../api/trips'
 import { listRouteNotes, type RouteNote } from '../api/notices'
 import AirportSelect from '../components/AirportSelect'
-import CategorySelect from '../components/CategorySelect'
+import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 
 const DRAFT_KEY = 'trips:draft:v1'
@@ -23,6 +23,7 @@ interface Draft {
   minDealPrice: string
   currency: string
   maxDeclaredValue: string
+  carriageRules: string
 }
 
 const EMPTY: Draft = {
@@ -36,6 +37,7 @@ const EMPTY: Draft = {
   minDealPrice: '',
   currency: 'USD',
   maxDeclaredValue: '',
+  carriageRules: '',
 }
 
 function loadDraft(): Draft {
@@ -63,33 +65,23 @@ export default function NewTripPage() {
   const [draft, setDraft] = useState<Draft>(loadDraft)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [categoryDraft, setCategoryDraft] = useState('')
 
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
   }, [draft])
 
+  // T_UX.11 — the standing rules from the profile are a starting point, not a
+  // lock: prefilled once when the field is untouched, editable per trip.
+  useEffect(() => {
+    if (user?.carriage_rules && !draft.carriageRules) {
+      patch({ carriageRules: user.carriage_rules })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.carriage_rules])
+
   const patch = useCallback((delta: Partial<Draft>) => {
     setDraft((prev) => ({ ...prev, ...delta }))
   }, [])
-
-  const addCategory = (cat: string) => {
-    const key = cat.trim().toLowerCase()
-    if (!key) return
-    setDraft((prev) =>
-      prev.categories.includes(key)
-        ? prev
-        : { ...prev, categories: [...prev.categories, key] },
-    )
-    setCategoryDraft('')
-  }
-
-  const removeCategory = (cat: string) => {
-    setDraft((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((c) => c !== cat),
-    }))
-  }
 
   const validate = (): string | null => {
     if (!draft.origin || !draft.destination) return t('trips.newTripValidation.route') as string
@@ -153,6 +145,9 @@ export default function NewTripPage() {
         max_declared_value: draft.maxDeclaredValue
           ? Number(draft.maxDeclaredValue)
           : null,
+        // T_UX.11 — sent explicitly so an emptied field means "this trip has no
+        // rules" rather than "fall back to my template".
+        carriage_rules: draft.carriageRules,
       })
       localStorage.removeItem(DRAFT_KEY)
       navigate('/trips')
@@ -388,27 +383,25 @@ export default function NewTripPage() {
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.categories')}
           </p>
-          {draft.categories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {draft.categories.map((cat) => (
-                <span
-                  key={cat}
-                  className="px-3 py-1 rounded-full text-xs font-mono bg-cyan text-white inline-flex items-center gap-1"
-                >
-                  {t(`categories.${cat}`, { defaultValue: cat })}
-                  <button
-                    type="button"
-                    onClick={() => removeCategory(cat)}
-                    aria-label={t('common.close') as string}
-                    className="hover:text-white/80"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <CategorySelect value={categoryDraft} onChange={addCategory} />
+          <CategoryBubbles
+            selected={draft.categories}
+            onChange={(next) => patch({ categories: next })}
+          />
+        </div>
+
+        {/* Carriage rules cell 1x2 — T_UX.11 */}
+        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-2">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.rules')}
+          </p>
+          <p className="text-[11px] font-body text-navy/40">{t('trips.rulesHint')}</p>
+          <textarea
+            value={draft.carriageRules}
+            onChange={(e) => patch({ carriageRules: e.target.value })}
+            rows={3}
+            maxLength={4000}
+            className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+          />
         </div>
 
         {/* Publish cell 1x1 */}

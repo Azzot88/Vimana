@@ -274,8 +274,13 @@ export default function DealVaultPage() {
     )
   }
 
+  // T_UX.13 — the chat grows with its content instead of always claiming the
+  // whole viewport. A fixed height meant a two-message deal showed a screenful
+  // of emptiness with the composer stranded at the bottom; `min-h` keeps it
+  // from collapsing, `max-h` hands scrolling to the message list once the
+  // conversation outgrows the screen.
   return (
-    <div className="max-w-2xl flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
+    <div className="max-w-2xl flex flex-col min-h-[22rem] max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-10rem)]">
       <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
         <Link to={`/deals/${dealId}`} className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
           ← {t('chat.backToDeal')}

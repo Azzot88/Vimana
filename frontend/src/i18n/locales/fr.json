@@ -535,7 +535,8 @@
       "publish": "Publication",
       "preview": "Aperçu",
       "alsoOnNostr": "Publier aussi sur le réseau Nostr",
-      "terms": "Conditions"
+      "terms": "Conditions",
+      "rules": "Règles"
     },
     "newTripHook": {
       "voice": "Saisie vocale",
@@ -556,7 +557,13 @@
     "currency": "Devise",
     "maxDeclaredValue": "Valeur déclarée max.",
     "priceOnRequest": "sur demande",
-    "termsHint": "Votre base. L'expéditeur peut toujours faire une contre-offre."
+    "termsHint": "Votre base. L'expéditeur peut toujours faire une contre-offre.",
+    "categoriesChosen": "Choisies",
+    "categoriesAvailable": "Catégories disponibles",
+    "categoriesNoneChosen": "Rien de choisi — cliquez ci-dessous.",
+    "categoriesAllChosen": "Tout est choisi.",
+    "categoriesRemove": "retirer",
+    "rulesHint": "Pré-remplies depuis votre profil. À modifier pour ce trajet ; vide = aucune règle."
   },
   "deals": {
     "title": "Transactions",
@@ -935,7 +942,10 @@
   },
   "address": {
     "sectionTitle": "Adresses postales",
-    "empty": "Aucune adresse pour l'instant. Ajoutez-en une pour indiquer où livrer."
+    "empty": "Aucune adresse pour l'instant. Ajoutez-en une pour indiquer où livrer.",
+    "addAndReturn": "Ajouter une adresse et revenir",
+    "returnHint": "Ajoutez une adresse, puis revenez à la conversation.",
+    "backToChat": "Retour au chat"
   },
   "error": {
     "title": "Quelque chose a cassé sur cet écran",
@@ -1100,5 +1110,21 @@
       "expired": "expiré",
       "superseded": "remplacé"
     }
+  },
+  "prefs": {
+    "title": "Affichage",
+    "hint": "Enregistré sur votre compte, pas deviné depuis le navigateur.",
+    "weight": "Poids",
+    "kg": "Kilogrammes",
+    "lb": "Livres",
+    "dates": "Date et heure",
+    "european": "Européen",
+    "american": "Américain",
+    "example": "Exemple",
+    "carriageRules": "Règles de transport",
+    "carriageRulesHint": "Définies une fois et copiées dans chaque nouveau trajet. Les modifier ne change pas les trajets déjà publiés.",
+    "save": "Enregistrer",
+    "saved": "Enregistré",
+    "saveFailed": "Échec de l'enregistrement"
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { listAddresses, type Address } from '../api/addresses'
 import MonoText from './MonoText'
@@ -14,6 +15,8 @@ interface Props {
  *  the actual POST to the parent (parent owns the message state). */
 export default function ShareAddressModal({ open, onClose, onShare }: Props) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [addresses, setAddresses] = useState<Address[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<string | null>(null)
@@ -35,6 +38,19 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
   }, [open, t])
 
   if (!open) return null
+
+  // T_UX.12 — an empty list used to be a dead end: the modal said "no
+  // addresses" and the chat's share button answered 422 forever. The way out
+  // has to be offered here, and it has to come back — a person sent to their
+  // profile mid-conversation should not have to find the deal again.
+  const goAddAddress = () => {
+    onClose()
+    navigate(
+      `/profile?add_address=1&return_to=${encodeURIComponent(
+        location.pathname + location.search,
+      )}`,
+    )
+  }
 
   const handleShare = async () => {
     if (!selected) return
@@ -67,9 +83,16 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
         {loading ? (
           <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
         ) : addresses.length === 0 ? (
-          <p className="text-sm font-body text-navy/60">
-            {t('address.empty')}
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm font-body text-navy/60">{t('address.empty')}</p>
+            <button
+              type="button"
+              onClick={goAddAddress}
+              className="px-4 py-2 rounded-field bg-cyan text-white text-sm font-body"
+            >
+              {t('address.addAndReturn')}
+            </button>
+          </div>
         ) : (
           <div className="space-y-2">
             {addresses.map((a) => (

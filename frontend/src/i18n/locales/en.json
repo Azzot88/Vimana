@@ -364,7 +364,10 @@
     "default": "Default",
     "makeDefault": "Make default",
     "confirmDelete": "Delete address \"{{label}}\"?",
-    "pickerTitle": "Which address to share?"
+    "pickerTitle": "Which address to share?",
+    "addAndReturn": "Add an address and come back",
+    "returnHint": "Add an address, then return to the conversation.",
+    "backToChat": "Back to the chat"
   },
   "mode": {
     "switchToSend": "Switch to Send",
@@ -581,7 +584,8 @@
       "publish": "Publish",
       "preview": "Preview",
       "alsoOnNostr": "Also publish to Nostr network",
-      "terms": "Terms"
+      "terms": "Terms",
+      "rules": "Rules"
     },
     "newTripHook": {
       "voice": "Voice input",
@@ -602,7 +606,13 @@
     "currency": "Currency",
     "maxDeclaredValue": "Max declared value",
     "priceOnRequest": "on request",
-    "termsHint": "Your baseline. A sender may still counter in chat."
+    "termsHint": "Your baseline. A sender may still counter in chat.",
+    "categoriesChosen": "Chosen",
+    "categoriesAvailable": "Available categories",
+    "categoriesNoneChosen": "Nothing chosen yet — pick from below.",
+    "categoriesAllChosen": "Everything is chosen.",
+    "categoriesRemove": "remove",
+    "rulesHint": "Prefilled from your profile. Edit for this trip only; leave empty for no rules."
   },
   "deals": {
     "title": "Deals",
@@ -1146,5 +1156,21 @@
       "expired": "expired",
       "superseded": "superseded"
     }
+  },
+  "prefs": {
+    "title": "Display",
+    "hint": "Stored on your account, not guessed from the browser.",
+    "weight": "Weight",
+    "kg": "Kilograms",
+    "lb": "Pounds",
+    "dates": "Dates and time",
+    "european": "European",
+    "american": "American",
+    "example": "Example",
+    "carriageRules": "Carriage rules",
+    "carriageRulesHint": "Written once and copied into each new trip. Editing them later does not change trips already published.",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Could not save"
   }
 }

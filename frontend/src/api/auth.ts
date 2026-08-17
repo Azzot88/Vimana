@@ -70,6 +70,12 @@ export interface User {
   /** T3.33 — the language letters to this account are written in. Follows the
    *  interface: the language switcher writes it. */
   locale?: string
+  /** T_UX.10 — display preferences, stored per account rather than guessed
+   *  from the browser. */
+  unit_weight?: 'kg' | 'lb'
+  date_format?: 'eu' | 'us'
+  /** T_UX.11 — standing carriage rules, copied into each new trip. */
+  carriage_rules?: string | null
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────
@@ -232,6 +238,9 @@ export const uploadAvatar = (file: File) => {
 export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 
 export interface UserUpdate {
+  unit_weight?: 'kg' | 'lb'
+  date_format?: 'eu' | 'us'
+  carriage_rules?: string | null
   display_name?: string
   /** T3.25 — E.164 or the request is refused; the backend normalises and
    *  rejects anything unparseable rather than storing it as text. */

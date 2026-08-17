@@ -535,7 +535,8 @@
       "publish": "Publicación",
       "preview": "Vista previa",
       "alsoOnNostr": "Publicar también en la red Nostr",
-      "terms": "Condiciones"
+      "terms": "Condiciones",
+      "rules": "Reglas"
     },
     "newTripHook": {
       "voice": "Entrada de voz",
@@ -556,7 +557,13 @@
     "currency": "Moneda",
     "maxDeclaredValue": "Valor declarado máx.",
     "priceOnRequest": "a consultar",
-    "termsHint": "Tu base. El remitente aún puede contraofertar en el chat."
+    "termsHint": "Tu base. El remitente aún puede contraofertar en el chat.",
+    "categoriesChosen": "Elegidas",
+    "categoriesAvailable": "Categorías disponibles",
+    "categoriesNoneChosen": "Nada elegido todavía — pulsa abajo.",
+    "categoriesAllChosen": "Todo elegido.",
+    "categoriesRemove": "quitar",
+    "rulesHint": "Rellenadas desde tu perfil. Edítalas solo para este viaje; vacío = sin reglas."
   },
   "deals": {
     "title": "Acuerdos",
@@ -935,7 +942,10 @@
   },
   "address": {
     "sectionTitle": "Direcciones postales",
-    "empty": "Aún no hay direcciones. Añade una para indicar dónde entregar."
+    "empty": "Aún no hay direcciones. Añade una para indicar dónde entregar.",
+    "addAndReturn": "Añadir dirección y volver",
+    "returnHint": "Añade una dirección y vuelve a la conversación.",
+    "backToChat": "Volver al chat"
   },
   "error": {
     "title": "Algo se ha roto en esta pantalla",
@@ -1100,5 +1110,21 @@
       "expired": "caducado",
       "superseded": "reemplazado"
     }
+  },
+  "prefs": {
+    "title": "Visualización",
+    "hint": "Se guarda en tu cuenta, no se deduce del navegador.",
+    "weight": "Peso",
+    "kg": "Kilogramos",
+    "lb": "Libras",
+    "dates": "Fecha y hora",
+    "european": "Europeo",
+    "american": "Americano",
+    "example": "Ejemplo",
+    "carriageRules": "Reglas de transporte",
+    "carriageRulesHint": "Se definen una vez y se copian en cada viaje nuevo. Editarlas no cambia los viajes ya publicados.",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "saveFailed": "No se pudo guardar"
   }
 }
