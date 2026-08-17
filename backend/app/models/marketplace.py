@@ -55,6 +55,17 @@ class Trip(Base):
     depart_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     capacity: Mapped[float] = mapped_column(Float)
     allowed_categories: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # T3.35 — the carrier's baseline terms. Before this the model carried no
+    # price at all, so every deal had to invent one in chat and nothing was
+    # comparable between trips.
+    price_per_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    min_deal_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD")
+    allowed_handover_methods: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # Informational until the standing bond exists (T5.1a): declares what the
+    # carrier is prepared to cover, so a sender can filter before matching.
+    max_declared_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bond_tier: Mapped[str | None] = mapped_column(String(16), nullable=True)
     status: Mapped[TripStatus] = mapped_column(SAEnum(TripStatus), default=TripStatus.draft)
     # T3.5 — Nostr publication tracking. Unique event_id enforces idempotency
     # for the replaceable kind-30402 event (updates rewrite in-place).

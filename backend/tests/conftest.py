@@ -1091,6 +1091,21 @@ async def _ensure_vault_card_columns(engine) -> None:
         )
 
 
+async def _ensure_trip_terms_columns(engine) -> None:
+    """T3.35: the carrier's baseline price on an existing `trips` table.
+    Mirrors migration 0051."""
+    async with engine.begin() as conn:
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS price_per_kg DOUBLE PRECISION",
+            "ADD COLUMN IF NOT EXISTS min_deal_price DOUBLE PRECISION",
+            "ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'USD'",
+            "ADD COLUMN IF NOT EXISTS allowed_handover_methods JSON",
+            "ADD COLUMN IF NOT EXISTS max_declared_value DOUBLE PRECISION",
+            "ADD COLUMN IF NOT EXISTS bond_tier VARCHAR(16)",
+        ):
+            await conn.execute(text(f"ALTER TABLE trips {ddl}"))
+
+
 async def _ensure_platform_parameters(engine) -> None:
     """T3.40: parameters table. `create_all` covers it for a fresh database;
     this exists so a pre-0049 test DB gets the same shape."""
@@ -1378,6 +1393,7 @@ async def test_engine():
     await _ensure_login_exchange_columns(engine)
     await _ensure_vault_card_columns(engine)
     await _ensure_platform_parameters(engine)
+    await _ensure_trip_terms_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

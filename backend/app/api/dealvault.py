@@ -595,6 +595,18 @@ async def ack_card(
     )
     msg.acked_by_id = current_user.id
     msg.acked_at = datetime.now(timezone.utc)
+
+    # T3.35 — accepting a proposal is what creates the contract. Kept here
+    # rather than in a second endpoint so the client has one gesture for every
+    # card, and so a proposal cannot be "accepted" without the snapshot existing.
+    if (
+        msg.card_state is CardState.accepted
+        and msg.card_kind in (CardKind.terms_proposed.value, CardKind.terms_countered.value)
+    ):
+        from app.api.terms import agree_from_proposal
+
+        await agree_from_proposal(db, deal, msg, current_user)
+
     await db.commit()
     await db.refresh(msg)
 

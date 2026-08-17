@@ -253,6 +253,22 @@ def route_distance_km(origin: str, destination: str) -> float | None:
     return _haversine_km(a.lat, a.lon, b.lat, b.lon)
 
 
+def corridor_of(origin: str, destination: str) -> str | None:
+    """Country-level corridor for two IATA codes, e.g. `AE->US`.
+
+    Terms are normalised to a corridor rather than an airport pair so that
+    Dubai→New York and Abu Dhabi→Newark compare as the same route — which is
+    how a sender thinks about it, and how a corridor-scoped platform parameter
+    is looked up.
+    """
+    index = _by_iata()
+    a = index.get((origin or "").strip().upper())
+    b = index.get((destination or "").strip().upper())
+    if a is None or b is None:
+        return None
+    return f"{a.country_iso}->{b.country_iso}"
+
+
 def nearest(lat: float, lon: float, limit: int = 5) -> list[Airport]:
     # `nsmallest` keeps a heap of `limit` instead of sorting all ~7 000 entries
     # to hand back five (T_PERF.1).
