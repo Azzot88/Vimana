@@ -9,7 +9,7 @@ import { usePrefs } from '../hooks/usePrefs'
 import MonoText from '../components/MonoText'
 import StatusBadge from '../components/StatusBadge'
 
-/** T_UX.15 — the panel answers one question, and which one depends on the mode.
+/** T_UX.19 — the panel answers one question, and which one depends on the mode.
  *
  *  It used to answer both at once: a carrier saw the deals they were sending
  *  and a sender saw a "trips I carry" block they would never fill. Everything
@@ -38,7 +38,10 @@ export default function DashboardPage() {
     try {
       const [dealsRes, tripsRes, inqRes] = await Promise.all([
         listDeals(),
-        listTrips({ carrier_id: user.id, limit: 50 }),
+        // `all`, then filtered below: the public board returns only `open`,
+        // so asking without a status would silently drop matched trips — the
+        // ones with somebody already counting on them.
+        listTrips({ carrier_id: user.id, status: 'all', limit: 50 }),
         listMyInquiries().catch(() => ({ data: [] as Inquiry[] })),
       ])
       setDeals(dealsRes.data.items)

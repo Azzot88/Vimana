@@ -95,7 +95,7 @@ export default function App() {
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/trips" element={<TripsPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />
-              {/* T_UX.14 — the deals tab became history: a finished delivery is
+              {/* T_UX.18 — the deals tab became history: a finished delivery is
                   something you look up, not something you navigate by. `/deals`
                   stays as the entry point old links point at. */}
               <Route path="/history" element={<DealsPage />} />
@@ -112,7 +112,7 @@ export default function App() {
                   and mean somewhere in particular. */}
               <Route path="/profile/notifications" element={<NotificationsPage />} />
               <Route path="/invite" element={<InvitePage />} />
-              {/* T_UX.15 — merged into `/disputes`; the old link keeps working. */}
+              {/* T_UX.19 — merged into `/disputes`; the old link keeps working. */}
               <Route path="/admin/disputes" element={<Navigate to="/disputes" replace />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/notices" element={<AdminNoticesPage />} />

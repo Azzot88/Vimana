@@ -35,7 +35,7 @@ export default function Navbar() {
             <NavLink to="/dashboard" end className={linkClass}>
               {t('nav.dashboard')}
             </NavLink>
-            {/* T_UX.14 — the two modes want different boards. A carrier's own
+            {/* T_UX.18 — the two modes want different boards. A carrier's own
                 trips and their controls live on the panel; other carriers'
                 trips are not their business. A sender needs the opposite: the
                 board of what is available to book. */}

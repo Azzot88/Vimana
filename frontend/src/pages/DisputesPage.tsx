@@ -8,7 +8,7 @@ import StatusBadge from '../components/StatusBadge'
 import ArbiterQueue from '../components/ArbiterQueue'
 import { useAuthStore } from '../stores/auth'
 
-/** T_UX.14 — open disputes, on their own screen.
+/** T_UX.18 — open disputes, on their own screen.
  *
  *  When the deals tab became history, disputes were the one thing that could
  *  not go with it. A finished deal is worth looking up; an open dispute is
@@ -20,7 +20,7 @@ export default function DisputesPage() {
   const { t } = useTranslation()
   const prefs = usePrefs()
   const me = useAuthStore((s) => s.user)
-  // T_UX.15 — one entry, not two. An arbiter's queue is *more* of this screen,
+  // T_UX.19 — one entry, not two. An arbiter's queue is *more* of this screen,
   // not a different screen: a separate "Arbitration" tab listed the same word
   // twice and left the reader to guess which one held their own case.
   const isArbiter = me?.role === 'arbiter' || me?.role === 'superuser'

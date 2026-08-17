@@ -1,4 +1,4 @@
-"""T_UX.15 — withdrawing a published trip.
+"""T_UX.19 — withdrawing a published trip.
 
 Until this existed a trip could be created and never taken back: plans changed,
 the listing stayed up, and senders kept writing to it. The rules worth pinning

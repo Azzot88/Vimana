@@ -1092,7 +1092,7 @@ async def _ensure_vault_card_columns(engine) -> None:
 
 
 async def _ensure_display_prefs_columns(engine) -> None:
-    """T_UX.10 / T_UX.11: mirrors migration 0052 for a pre-existing test DB."""
+    """T_UX.14 / T_UX.15: mirrors migration 0052 for a pre-existing test DB."""
     async with engine.begin() as conn:
         for ddl in (
             "ADD COLUMN IF NOT EXISTS unit_weight VARCHAR(4) NOT NULL DEFAULT 'kg'",

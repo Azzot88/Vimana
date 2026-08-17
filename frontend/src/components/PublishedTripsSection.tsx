@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
 import MonoText from './MonoText'
 
-/** T_UX.14 — everything this account has published, and the way to history.
+/** T_UX.18 — everything this account has published, and the way to history.
  *
  *  The panel shows what is live. This is the other question — "what have I
  *  flown" — and it belongs where the rest of the account's own record lives

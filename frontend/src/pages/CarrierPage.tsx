@@ -8,7 +8,7 @@ import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import UBAChip from '../components/UBAChip'
 
-/** T_UX.14 — the person behind a trip.
+/** T_UX.18 — the person behind a trip.
  *
  *  A carrier's name used to be text. Handing a stranger a parcel is the moment
  *  somebody most wants to know who they are dealing with, and the answer was

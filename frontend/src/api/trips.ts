@@ -22,7 +22,7 @@ export interface Trip {
   currency?: string
   allowed_handover_methods?: string[] | null
   max_declared_value?: number | null
-  /** T_UX.11 — the rules copied into this trip when it was published. */
+  /** T_UX.15 — the rules copied into this trip when it was published. */
   carriage_rules?: string | null
   status: string
   created_at: string
@@ -50,9 +50,9 @@ export interface TripFilters {
   origin?: string
   destination?: string
   date?: string
-  /** T_UX.14 — everything one carrier is flying, for their public page. */
+  /** T_UX.18 — everything one carrier is flying, for their public page. */
   carrier_id?: string
-  /** T_UX.15 — `all` or a specific status. Accepted only about your own trips:
+  /** T_UX.19 — `all` or a specific status. Accepted only about your own trips:
    *  a withdrawn trip is no longer a public listing. */
   status?: string
   after?: string
@@ -65,7 +65,7 @@ export const createTrip = (payload: CreateTripPayload) =>
 export const listTrips = (filters?: TripFilters) =>
   api.get<Page<Trip>>('/api/trips', { params: filters })
 
-/** T_UX.15 — withdraw a published trip. Cancelled, not deleted: somebody may
+/** T_UX.19 — withdraw a published trip. Cancelled, not deleted: somebody may
  *  already be talking about it. */
 export const cancelTrip = (tripId: string) =>
   api.post<Trip>(`/api/trips/${tripId}/cancel`)

@@ -62,10 +62,10 @@ class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
     locale: str | None = None
-    # T_UX.10 — display preferences.
+    # T_UX.14 — display preferences.
     unit_weight: Literal["kg", "lb"] | None = None
     date_format: Literal["eu", "us"] | None = None
-    # T_UX.11 — standing carriage rules, the template copied into new trips.
+    # T_UX.15 — standing carriage rules, the template copied into new trips.
     carriage_rules: str | None = Field(default=None, max_length=4000)
 
     @field_validator("locale")

@@ -276,7 +276,7 @@ export default function DealVaultPage() {
     )
   }
 
-  // T_UX.13 — the chat grows with its content instead of always claiming the
+  // T_UX.17 — the chat grows with its content instead of always claiming the
   // whole viewport. A fixed height meant a two-message deal showed a screenful
   // of emptiness with the composer stranded at the bottom; `min-h` keeps it
   // from collapsing, `max-h` hands scrolling to the message list once the

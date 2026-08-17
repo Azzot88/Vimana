@@ -192,7 +192,7 @@ export default function DealPage() {
               <p className="text-xs font-body font-medium text-navy/40 mb-1">
                 {t('deals.carriageRules')}
               </p>
-              {/* T_UX.11 — what the sender agreed to when they chose this trip.
+              {/* T_UX.15 — what the sender agreed to when they chose this trip.
                   Shown in full rather than behind a link: rules nobody reads are
                   rules nobody agreed to. */}
               <p className="text-sm font-body text-navy whitespace-pre-wrap">

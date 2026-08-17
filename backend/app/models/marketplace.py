@@ -66,7 +66,7 @@ class Trip(Base):
     # carrier is prepared to cover, so a sender can filter before matching.
     max_declared_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     bond_tier: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    # T_UX.11 — a copy of the carrier's standing rules, taken at publish time.
+    # T_UX.15 — a copy of the carrier's standing rules, taken at publish time.
     # A copy on purpose: rules edited later must not rewrite what a sender read
     # when they chose this trip.
     carriage_rules: Mapped[str | None] = mapped_column(Text, nullable=True)

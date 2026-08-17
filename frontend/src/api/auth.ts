@@ -70,11 +70,11 @@ export interface User {
   /** T3.33 — the language letters to this account are written in. Follows the
    *  interface: the language switcher writes it. */
   locale?: string
-  /** T_UX.10 — display preferences, stored per account rather than guessed
+  /** T_UX.14 — display preferences, stored per account rather than guessed
    *  from the browser. */
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
-  /** T_UX.11 — standing carriage rules, copied into each new trip. */
+  /** T_UX.15 — standing carriage rules, copied into each new trip. */
   carriage_rules?: string | null
 }
 

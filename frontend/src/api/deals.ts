@@ -37,7 +37,7 @@ export interface DealDetail extends Deal {
   cargo_category: string
   declared_value: number
   currency: string
-  /** T_UX.11 — the rules copied into this trip when it was published, not the
+  /** T_UX.15 — the rules copied into this trip when it was published, not the
    *  carrier's current template. */
   carriage_rules?: string | null
 }

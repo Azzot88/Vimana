@@ -10,7 +10,7 @@ import {
 } from '../api/admin'
 import MonoText from './MonoText'
 
-/** T_UX.15 — the arbiter's queue, as a section rather than a screen.
+/** T_UX.19 — the arbiter's queue, as a section rather than a screen.
  *
  *  It used to be its own tab called "Arbitration" sitting next to "Disputes",
  *  which read as two different things and was one: the arbiter's own case and

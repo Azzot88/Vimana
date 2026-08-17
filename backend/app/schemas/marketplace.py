@@ -25,7 +25,7 @@ class TripCreate(BaseModel):
     currency: str = Field(default="USD", min_length=3, max_length=3)
     allowed_handover_methods: list[str] | None = None
     max_declared_value: float | None = Field(default=None, ge=0)
-    # T_UX.11 — omitted means "use my standing rules"; an explicit empty string
+    # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
     carriage_rules: str | None = Field(default=None, max_length=4000)
 
@@ -121,7 +121,7 @@ class DealDetailOut(BaseModel):
     cargo_category: str
     declared_value: float
     currency: str
-    # T_UX.11 — the rules the sender agreed to when they chose this trip. Read
+    # T_UX.15 — the rules the sender agreed to when they chose this trip. Read
     # from the trip's own copy, not the carrier's current template: a rule
     # edited after the match is not the rule this deal was struck under.
     carriage_rules: str | None = None

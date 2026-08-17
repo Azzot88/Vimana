@@ -145,7 +145,7 @@ export default function TripsPage() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
                       {t('trips.carrier')}:{' '}
-                      {/* T_UX.14 — handing a stranger a parcel is the moment
+                      {/* T_UX.18 — handing a stranger a parcel is the moment
                           somebody most wants to know who they are dealing with.
                           The name stops being text. */}
                       <Link

@@ -49,7 +49,7 @@ async def create_trip(
         currency=body.currency,
         allowed_handover_methods=body.allowed_handover_methods,
         max_declared_value=body.max_declared_value,
-        # T_UX.11 — the carrier's standing rules are **copied** into the trip,
+        # T_UX.15 — the carrier's standing rules are **copied** into the trip,
         # not referenced. Edited later they must not rewrite what a sender read
         # when they chose this trip. `None` means "use my template"; an explicit
         # empty string means this trip carries no rules.
@@ -82,7 +82,7 @@ async def cancel_trip(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """T_UX.15 — withdraw a published trip.
+    """T_UX.19 — withdraw a published trip.
 
     Until now a trip could be created and never taken back. Plans change, and a
     carrier whose flight moved had no way to say so: the listing stayed up and
@@ -116,11 +116,11 @@ async def list_trips(
     origin: str | None = None,
     destination: str | None = None,
     date: date | None = None,
-    # T_UX.14 — every place a trip is shown makes the carrier's name a link, and
+    # T_UX.18 — every place a trip is shown makes the carrier's name a link, and
     # the page behind it is "everything this carrier is flying". Without a filter
     # that page would have to pull the whole board and sift it client-side.
     carrier_id: uuid.UUID | None = None,
-    # T_UX.15 — the board is open trips only, and that is right for a board. But
+    # T_UX.19 — the board is open trips only, and that is right for a board. But
     # "my published trips" in a profile is a history: it has to contain the ones
     # that were withdrawn and the ones that flew. Asking for anything other than
     # `open` is therefore allowed **only about yourself** — a withdrawn trip is

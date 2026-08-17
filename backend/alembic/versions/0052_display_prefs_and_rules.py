@@ -1,4 +1,4 @@
-"""T_UX.10 / T_UX.11 — display preferences and standing carriage rules.
+"""T_UX.14 / T_UX.15 — display preferences and standing carriage rules.
 
 Both defaults are chosen rather than inherited. `kg` and `eu` are what the
 starting corridor (UAE ↔ US) reads on the sending end and what the rest of the

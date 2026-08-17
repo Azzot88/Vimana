@@ -8,7 +8,7 @@ import {
   type WeightUnit,
 } from '../lib/format'
 
-/** T_UX.10 — one place that knows how this account reads numbers.
+/** T_UX.14 — one place that knows how this account reads numbers.
  *
  *  Every screen used to call `toLocaleString(i18n.language)` on its own, which
  *  tied the clock format to the interface language: a Russian-speaking carrier

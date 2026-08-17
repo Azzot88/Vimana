@@ -39,7 +39,7 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
 
   if (!open) return null
 
-  // T_UX.12 — an empty list used to be a dead end: the modal said "no
+  // T_UX.16 — an empty list used to be a dead end: the modal said "no
   // addresses" and the chat's share button answered 422 forever. The way out
   // has to be offered here, and it has to come back — a person sent to their
   // profile mid-conversation should not have to find the deal again.

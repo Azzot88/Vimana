@@ -173,7 +173,7 @@ async def test_proposal_flags_a_price_below_the_carrier_minimum(
     assert ok.json()["payload"]["below_carrier_minimum"] is False
 
 
-# ── T_UX.10 / T_UX.11 — display preferences and carriage rules ────────────
+# ── T_UX.14 / T_UX.15 — display preferences and carriage rules ────────────
 
 
 async def test_display_preferences_round_trip(client, carrier_headers):

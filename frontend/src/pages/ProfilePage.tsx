@@ -29,7 +29,7 @@ function formatRemaining(expiresAt: string): string {
 
 export default function ProfilePage() {
   const navigate = useNavigate()
-  // T_UX.12 — somebody sent here from a chat to add a missing address gets a
+  // T_UX.16 — somebody sent here from a chat to add a missing address gets a
   // way back to that exact conversation. Without it the trip to the profile
   // ends wherever the profile ends, and the sentence they were mid-way through
   // is somebody else's problem.
@@ -121,7 +121,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      {/* T_UX.12 return banner */}
+      {/* T_UX.16 return banner */}
       {returnTo && (
         <div className="mb-4 rounded-card border border-cyan/40 bg-cyan/5 px-4 py-3 flex flex-wrap items-center gap-3">
           <p className="text-sm font-body text-navy/70">{t('address.returnHint')}</p>
@@ -230,7 +230,7 @@ export default function ProfilePage() {
           <AddressesSection />
           <DisplayPrefsSection />
           <PublishedTripsSection />
-          {/* T_UX.15 — disputes moved off the main nav. They matter, but they
+          {/* T_UX.19 — disputes moved off the main nav. They matter, but they
               are rare and slow: a permanent tab for something most accounts
               never open crowds out what people do every day. */}
           <Link

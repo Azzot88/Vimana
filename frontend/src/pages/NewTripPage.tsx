@@ -72,7 +72,7 @@ export default function NewTripPage() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
   }, [draft])
 
-  // T_UX.11 — the standing rules from the profile are a starting point, not a
+  // T_UX.15 — the standing rules from the profile are a starting point, not a
   // lock: prefilled once when the field is untouched, editable per trip.
   useEffect(() => {
     if (user?.carriage_rules && !draft.carriageRules) {
@@ -147,7 +147,7 @@ export default function NewTripPage() {
         max_declared_value: draft.maxDeclaredValue
           ? Number(draft.maxDeclaredValue)
           : null,
-        // T_UX.11 — sent explicitly so an emptied field means "this trip has no
+        // T_UX.15 — sent explicitly so an emptied field means "this trip has no
         // rules" rather than "fall back to my template".
         carriage_rules: draft.carriageRules,
       })
@@ -391,7 +391,7 @@ export default function NewTripPage() {
           />
         </div>
 
-        {/* Carriage rules cell 1x2 — T_UX.11 */}
+        {/* Carriage rules cell 1x2 — T_UX.15 */}
         <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-2">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.rules')}

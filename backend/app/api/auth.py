@@ -1069,7 +1069,7 @@ async def me(
 
 _NOT_NULL_UPDATE_FIELDS = {
     "display_name",
-    # T_UX.10 — a display preference with no value is not "no preference", it
+    # T_UX.14 — a display preference with no value is not "no preference", it
     # is a screen that cannot decide how to print a weight.
     "unit_weight",
     "date_format",

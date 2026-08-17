@@ -1,4 +1,4 @@
-/** T_UX.10 — printing weights and dates the way this account reads them.
+/** T_UX.14 — printing weights and dates the way this account reads them.
  *
  *  Stored on the user rather than read from the browser: a carrier flying
  *  between metric and imperial countries thinks in one of them, and that does

@@ -4,7 +4,7 @@ import { updateMe } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime, formatWeight, type DateStyle, type WeightUnit } from '../lib/format'
 
-/** T_UX.10 / T_UX.11 — units, date style and standing carriage rules.
+/** T_UX.14 / T_UX.15 — units, date style and standing carriage rules.
  *
  *  The preview under the switches is not decoration. "European" and "American"
  *  mean nothing until you see `17.08.2026, 14:30` next to `08/17/2026, 02:30 PM`
