@@ -581,7 +581,8 @@
       "confirmed": "Confirmé",
       "closed": "Clôturé",
       "disputed": "Litige"
-    }
+    },
+    "agreeTerms": "Convenir des conditions"
   },
   "profile": {
     "title": "Profil",

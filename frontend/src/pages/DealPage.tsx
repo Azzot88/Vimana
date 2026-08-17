@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { openDispute } from '../api/admin'
-import { getDeal, acceptDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
+import { getDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
@@ -88,15 +88,12 @@ export default function DealPage() {
 
   useEffect(() => { load() }, [dealId, user?.id])
 
-  const handleAction = async (action: 'accept' | 'handoff' | 'confirm') => {
+  const handleAction = async (action: 'handoff' | 'confirm') => {
     if (!dealId) return
     setActionLoading(true)
     setError('')
     try {
-      if (action === 'accept') {
-        await acceptDeal(dealId)
-        await load()
-      } else if (action === 'handoff') {
+      if (action === 'handoff') {
         // T_UX.7 pt.3 — no free-text note. It was persisted into the event payload
         // and hashed into the chain, so one party's UI language ended up inside
         // shared evidence the other party reads. `event_type` already says
@@ -196,14 +193,16 @@ export default function DealPage() {
         )}
 
         <div className="px-4 sm:px-6 pb-6 flex flex-col sm:flex-row sm:flex-wrap gap-3">
+          {/* T3.35 — a deal is accepted by agreeing terms, not by a bare
+              button. Two routes to one status is how a deal ends up in a state
+              nobody expected; the contract card in the vault is the only one. */}
           {isCarrier && deal.status === 'matched' && (
-            <button
-              onClick={() => handleAction('accept')}
-              disabled={actionLoading}
-              className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            <Link
+              to={`/deals/${deal.id}/vault`}
+              className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity inline-flex items-center"
             >
-              {actionLoading ? '...' : t('deals.accept')}
-            </button>
+              {t('deals.agreeTerms')}
+            </Link>
           )}
           {isCarrier && deal.status === 'accepted' && (
             <button

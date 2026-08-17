@@ -627,7 +627,8 @@
       "confirmed": "Confirmed",
       "closed": "Closed",
       "disputed": "Disputed"
-    }
+    },
+    "agreeTerms": "Agree terms"
   },
   "profile": {
     "title": "Profile",

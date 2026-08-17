@@ -20,7 +20,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user
 from app.core.cards import CATALOGUE, CardKind, CardSpec, resolve_ack_role, role_of
 from app.core.database import get_db
-from app.core.deal_chain import append_deal_event
+from app.core.deal_chain import append_deal_event, content_hash_of
 from app.core.params import resolve_all
 from app.core.signing import sign_vault_message
 from app.models.deal import (
@@ -77,11 +77,24 @@ async def _emit(
     db: AsyncSession,
     deal: Deal,
     kind: CardKind,
+    actor: User,
     *,
     payload: dict | None = None,
     supersedes: uuid.UUID | None = None,
 ) -> DealVaultMessage:
-    """A server-authored card. `sender_id` stays NULL — nobody wrote it."""
+    """A server-authored card. `sender_id` stays NULL — nobody wrote it.
+
+    **It is still chained.** T3.6 made the chain cover vault content, and a
+    message with no chain entry is one that can be deleted or edited without the
+    verifier noticing. Server-emitted cards are not a lesser kind of evidence —
+    the fixation of price at handover and the sealing of the vault are among the
+    most important rows in a deal — so they get the same `message_added` entry
+    as anything a person typed.
+
+    `actor` is whoever's action caused the emission. The chain has no notion of
+    "the platform did it", and inventing a null actor would mean loosening a
+    NOT NULL that exists to keep every entry attributable.
+    """
     msg = DealVaultMessage(
         deal_id=deal.id,
         sender_id=None,
@@ -95,6 +108,19 @@ async def _emit(
     )
     db.add(msg)
     await db.flush()
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.message_added,
+        actor_id=actor.id,
+        payload={
+            "message_id": str(msg.id),
+            "content_hash": content_hash_of(msg.text_ciphertext, msg.text_nonce),
+            "card_kind": kind.value,
+            "emitted_by_platform": True,
+        },
+        author=actor,
+    )
     return msg
 
 
@@ -262,7 +288,9 @@ async def apply_acceptance(
         payload: dict | None = None
         if spec.on_accept_emit is CardKind.handoff_confirmed:
             payload = await _fixation_payload(db, deal)
-        await _emit(db, deal, spec.on_accept_emit, payload=payload, supersedes=card.id)
+        await _emit(
+            db, deal, spec.on_accept_emit, actor, payload=payload, supersedes=card.id
+        )
 
     if spec.on_accept_status is not None:
         deal.status = spec.on_accept_status
@@ -282,3 +310,26 @@ async def apply_acceptance(
                 payload={"card_kind": card.card_kind, "message_id": str(card.id)},
                 author=actor,
             )
+
+
+async def record_card(
+    db: AsyncSession,
+    deal: Deal,
+    kind: CardKind,
+    actor: User,
+    *,
+    payload: dict | None = None,
+) -> DealVaultMessage:
+    """T3.39 — put a platform-side event into the vault as a card.
+
+    Disputes and sealing are not raised through `POST /cards` and should not be:
+    those endpoints do real work the card cannot carry — issuing an
+    `OperatorAccessGrant`, closing the hash chain. What they were missing is the
+    other half: the deal's own record showed a status change with no card
+    explaining it, so a party reading the chat saw the conversation stop.
+
+    So the endpoints keep their machinery and call this to leave the card. The
+    caller commits — the card belongs to the same transaction as the thing it
+    records, or it is a note about something that may not have happened.
+    """
+    return await _emit(db, deal, kind, actor, payload=payload)

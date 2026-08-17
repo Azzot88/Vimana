@@ -582,7 +582,8 @@
       "confirmed": "Potwierdzono",
       "closed": "Zamknięto",
       "disputed": "Spór"
-    }
+    },
+    "agreeTerms": "Uzgodnij warunki"
   },
   "profile": {
     "title": "Profil",

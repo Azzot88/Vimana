@@ -151,34 +151,6 @@ async def match_deal(
     return deal
 
 
-@router.post("/{deal_id}/accept", response_model=DealOut)
-async def accept_deal(
-    deal_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    deal = await db.get(Deal, deal_id)
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
-    if deal.carrier_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only carrier can accept")
-
-    deal.status = DealStatus.accepted
-
-    await append_deal_event(
-        db,
-        deal_id=deal.id,
-        event_type=DealEventType.accepted,
-        actor_id=current_user.id,
-        author=current_user,
-    )
-
-    await db.commit()
-    await db.refresh(deal)
-    notify_deal_status.delay(str(deal.id), deal.status.value)
-    return deal
-
-
 @router.post("/{deal_id}/event", response_model=DealEventOut)
 async def add_event(
     deal_id: uuid.UUID,
@@ -285,6 +257,20 @@ async def confirm_deal(
         actor_id=current_user.id,
         payload={"message_count": message_count, "file_count": file_count},
         author=current_user,
+    )
+    # T3.39 — the last thing in the vault should say the vault is closed.
+    # Without it the record simply stops, which reads as an abandoned deal
+    # rather than a finished one. Emitted **before** `sealed_at`, because the
+    # chain refuses writes into a sealed vault and this card must be chained.
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+
+    await record_card(
+        db,
+        deal,
+        CardKind.deal_sealed,
+        current_user,
+        payload={"message_count": message_count, "file_count": file_count},
     )
     deal.sealed_at = datetime.now(timezone.utc)
 

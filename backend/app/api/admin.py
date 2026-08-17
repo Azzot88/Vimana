@@ -102,6 +102,13 @@ async def open_dispute(
     # unseals the vault so evidence can be appended. The chain records both
     # the seal and this unseal — nothing is hidden.
     deal.sealed_at = None
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+
+    await record_card(
+        db, deal, CardKind.dispute_opened, current_user,
+        payload={"dispute_id": str(dispute.id)}
+    )
     await append_deal_event(
         db,
         deal_id=deal_id,
@@ -146,6 +153,19 @@ async def grant_arbiter_access(
         db.add(OperatorAccessGrant(dispute_id=dispute_id, granted_by=current_user.id))
     else:
         row.revoked_at = None
+
+    # T3.39 — consent to the arbiter reading the vault is something both parties
+    # should see in the vault itself, not only in an admin table.
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+
+    await record_card(
+        db,
+        deal,
+        CardKind.arbiter_joined,
+        current_user,
+        payload={"dispute_id": str(dispute_id), "granted_by": str(current_user.id)},
+    )
     await db.commit()
     return dispute
 
@@ -229,6 +249,12 @@ async def resolve_dispute(
     current_user: User = Depends(require_perm(Permission.DISPUTE_RESOLVE)),
     db: AsyncSession = Depends(get_db),
 ):
+    # Whether the vault was sealed by *this* resolution — the seal card belongs
+    # in the record only when the seal actually happened here.
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+
+    sealed_here = False
     dispute = await db.get(Dispute, dispute_id)
     if not dispute:
         raise HTTPException(status_code=404, detail="Dispute not found")
@@ -282,7 +308,20 @@ async def resolve_dispute(
                 },
                 author=current_user,
             )
+            # Before `sealed_at`: `append_deal_event` refuses to write into a
+            # sealed vault, and this card has to be chained like any other.
+            await record_card(db, deal, CardKind.deal_sealed, current_user)
             deal.sealed_at = datetime.now(timezone.utc)
+            sealed_here = True
+
+    if deal is not None:
+        await record_card(
+            db,
+            deal,
+            CardKind.dispute_resolved,
+            current_user,
+            payload={"dispute_id": str(dispute.id), "outcome": dispute.status.value},
+        )
 
     await db.commit()
     await db.refresh(dispute)

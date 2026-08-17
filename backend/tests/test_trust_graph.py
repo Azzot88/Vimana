@@ -78,8 +78,10 @@ async def test_confirm_deal_creates_dealt_with_edges(
     )
     deal_id = match.json()["id"]
 
-    # accept + handoff + confirm
-    await client.post(f"/api/deals/{deal_id}/accept", headers=carrier_headers)
+    # agree terms + handoff + confirm
+    from tests.conftest import agree_terms
+
+    await agree_terms(client, sender_headers, carrier_headers, deal_id)
     await client.post(
         f"/api/deals/{deal_id}/event",
         headers=carrier_headers,

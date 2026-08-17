@@ -595,7 +595,8 @@
       "confirmed": "Підтверджено",
       "closed": "Закрито",
       "disputed": "Спір"
-    }
+    },
+    "agreeTerms": "Узгодити умови"
   },
   "profile": {
     "title": "Профіль",

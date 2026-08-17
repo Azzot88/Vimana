@@ -63,7 +63,6 @@ class Case:
 # check pass this test — the request would never have reached it.
 MATRIX: dict[tuple[str, str], Case] = {
     # ---- deals ---------------------------------------------------------
-    ("POST", "/api/deals/{deal_id}/accept"): Case(DENIED, "only the carrier accepts"),
     ("POST", "/api/deals/{deal_id}/event"): Case(
         DENIED, "only participants add events", json={"event_type": "handoff"}
     ),

@@ -64,9 +64,6 @@ export interface DealEvent {
 export const matchDeal = (payload: MatchDealPayload) =>
   api.post<Deal>('/api/deals/match', payload)
 
-export const acceptDeal = (dealId: string) =>
-  api.post<Deal>(`/api/deals/${dealId}/accept`)
-
 export const addEvent = (dealId: string, event_type: string, note?: string) =>
   api.post<DealEvent>(`/api/deals/${dealId}/event`, {
     event_type,

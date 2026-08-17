@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.cards import CardKind, role_of
 from app.core.database import get_db
-from app.core.deal_chain import append_deal_event
+from app.core.deal_chain import append_deal_event, content_hash_of
 from app.core.params import resolve_all
 from app.core.signing import sign_vault_message
 from app.core.terms import below_carrier_minimum, normalize
@@ -185,6 +185,22 @@ async def agree_from_proposal(
         supersedes_id=proposal.id,
     )
     db.add(agreed)
+    await db.flush()
+    # The contract is the row an arbiter reads first — it belongs in the chain
+    # for the same reason every other message does.
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.message_added,
+        actor_id=actor.id,
+        payload={
+            "message_id": str(agreed.id),
+            "content_hash": content_hash_of(agreed.text_ciphertext, agreed.text_nonce),
+            "card_kind": CardKind.terms_agreed.value,
+            "emitted_by_platform": True,
+        },
+        author=actor,
+    )
 
     # The one place `accepted` is reached through a card. The legacy
     # `POST /deals/{id}/accept` still exists for the old UI; retiring it is a

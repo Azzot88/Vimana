@@ -44,27 +44,57 @@ async def test_match_creates_deal(client, carrier_headers, sender_headers):
     assert deal_id
 
 
-async def test_accept_moves_deal_to_accepted(client, carrier_headers, sender_headers):
+async def test_agreeing_terms_moves_deal_to_accepted(
+    client, carrier_headers, sender_headers
+):
+    """T3.35 — the only route to `accepted`. The bare `/accept` endpoint is
+    gone: a status reachable two ways eventually gets reached the way nobody
+    planned for."""
+    from tests.conftest import agree_terms
+
+    trip_id = await _create_open_trip(client, carrier_headers)
+    deal_id = await _match_deal(client, sender_headers, trip_id)
+    await agree_terms(client, sender_headers, carrier_headers, deal_id)
+
+    resp = await client.get(f"/api/deals/{deal_id}", headers=carrier_headers)
+    assert resp.json()["status"] == "accepted"
+
+
+async def test_bare_accept_endpoint_is_gone(client, carrier_headers, sender_headers):
+    """Pinned deliberately: leaving the old route mounted would keep the second
+    path alive for anyone still calling it."""
     trip_id = await _create_open_trip(client, carrier_headers)
     deal_id = await _match_deal(client, sender_headers, trip_id)
 
     resp = await client.post(f"/api/deals/{deal_id}/accept", headers=carrier_headers)
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "accepted"
+    assert resp.status_code in (404, 405)
 
 
-async def test_accept_forbidden_for_sender(client, carrier_headers, sender_headers):
+async def test_own_proposal_cannot_be_accepted_by_its_author(
+    client, carrier_headers, sender_headers
+):
+    """The replacement for "the sender may not accept": agreement takes two."""
     trip_id = await _create_open_trip(client, carrier_headers)
     deal_id = await _match_deal(client, sender_headers, trip_id)
-
-    resp = await client.post(f"/api/deals/{deal_id}/accept", headers=sender_headers)
+    proposal = await client.post(
+        f"/api/deals/{deal_id}/terms",
+        headers=sender_headers,
+        json={"weight_kg": 2, "price_total": 60, "declared_value": 500},
+    )
+    resp = await client.post(
+        f"/api/deals/{deal_id}/dealvault/messages/{proposal.json()['id']}/ack",
+        headers=sender_headers,
+        json={"decision": "accepted"},
+    )
     assert resp.status_code == 403
 
 
 async def test_event_handoff_marks_in_transit(client, carrier_headers, sender_headers):
     trip_id = await _create_open_trip(client, carrier_headers)
     deal_id = await _match_deal(client, sender_headers, trip_id)
-    await client.post(f"/api/deals/{deal_id}/accept", headers=carrier_headers)
+    from tests.conftest import agree_terms
+
+    await agree_terms(client, sender_headers, carrier_headers, deal_id)
 
     resp = await client.post(
         f"/api/deals/{deal_id}/event",
@@ -80,7 +110,9 @@ async def test_event_handoff_marks_in_transit(client, carrier_headers, sender_he
 async def test_confirm_closes_deal(client, carrier_headers, sender_headers):
     trip_id = await _create_open_trip(client, carrier_headers)
     deal_id = await _match_deal(client, sender_headers, trip_id)
-    await client.post(f"/api/deals/{deal_id}/accept", headers=carrier_headers)
+    from tests.conftest import agree_terms
+
+    await agree_terms(client, sender_headers, carrier_headers, deal_id)
     await client.post(
         f"/api/deals/{deal_id}/event",
         headers=carrier_headers,

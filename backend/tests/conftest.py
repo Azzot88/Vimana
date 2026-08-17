@@ -1870,5 +1870,34 @@ async def step_up_token(
     return resp.json()["step_up_token"]
 
 
+async def agree_terms(client, sender_headers, carrier_headers, deal_id, **over):
+    """T3.35 — move a deal to `accepted` the only way there is.
+
+    `POST /deals/{id}/accept` is gone: two routes to one status is how a deal
+    ends up in a state nobody expected (§6.9.5 п.1). Tests that merely need an
+    accepted deal call this instead of reaching for a shortcut that no longer
+    exists in the product either.
+    """
+    body = {
+        "weight_kg": 2,
+        "price_total": 60,
+        "declared_value": 500,
+        "currency": "USD",
+        "payment_method": "cash",
+    }
+    body.update(over)
+    proposal = await client.post(
+        f"/api/deals/{deal_id}/terms", headers=sender_headers, json=body
+    )
+    assert proposal.status_code == 201, proposal.text
+    ack = await client.post(
+        f"/api/deals/{deal_id}/dealvault/messages/{proposal.json()['id']}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert ack.status_code == 200, ack.text
+    return proposal.json()["id"]
+
+
 def unique_email(prefix: str = "user") -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}@vimana.test"

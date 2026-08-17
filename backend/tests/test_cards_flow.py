@@ -373,3 +373,51 @@ def test_only_server_cards_have_no_creator():
             # Server-emitted ones are fine; they are reached via on_accept_emit
             # or a dedicated endpoint.
             assert spec.ack_by is None or kind.value.startswith("terms."), kind
+
+
+# ── platform-side events reach the record too ─────────────────────────────
+
+
+async def test_dispute_leaves_a_card_in_the_vault(
+    client, sender_headers, deal
+):
+    """T3.39 — a status change with no card behind it reads, to whoever is in
+    the chat, as the conversation simply stopping."""
+    r = await client.post(
+        f"/api/deals/{deal.id}/dispute",
+        headers=sender_headers,
+        json={"reason": "parcel never arrived"},
+    )
+    assert r.status_code == 201, r.text
+
+    listing = await client.get(
+        f"/api/deals/{deal.id}/dealvault", headers=sender_headers
+    )
+    kinds = [m["card_kind"] for m in listing.json()["items"]]
+    assert "dispute.opened" in kinds
+
+
+async def test_platform_cards_are_chained(
+    client, sender_headers, carrier_headers, deal, session_maker
+):
+    """The important one. A vault message with no chain entry can be deleted or
+    edited without the verifier noticing, and the cards the *server* writes —
+    the fixation of price, the seal — are the last ones that should be
+    deletable. `_emit` chains for exactly this reason.
+    """
+    import uuid as uuidlib
+
+    from app.core.deal_chain import verify_content
+
+    proposed = await _card(
+        client, sender_headers, deal.id, "pickup.proposed", {"method": "courier"}
+    )
+    ack = await _ack(client, carrier_headers, deal.id, proposed.json()["id"])
+    assert ack.status_code == 200, ack.text
+
+    async with session_maker() as db:
+        result = await verify_content(db, uuidlib.UUID(str(deal.id)))
+
+    assert result["content_ok"] is True, result["mismatches"]
+    # The emitted half of the step is covered, not just the half a person wrote.
+    assert result["checked_messages"] >= 2
