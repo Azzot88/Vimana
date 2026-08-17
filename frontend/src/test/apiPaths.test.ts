@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
 
 /**
  * Every request path starts with `/api`.
@@ -15,31 +13,40 @@ import { join } from 'node:path'
  * never exercised. Hence a check on the source itself, in the same spirit as the
  * IDOR matrix on the backend: a new endpoint fails this file by the mere fact of
  * being written the wrong way.
+ *
+ * Sources are read through `import.meta.glob` rather than `node:fs` on purpose.
+ * The same `tsc` run that type-checks this file also builds the browser bundle,
+ * and it has no Node types — a test reaching for `fs` breaks the production
+ * build, which is a worse outcome than the bug it was written to prevent.
  */
-const API_DIR = join(__dirname, '..', 'api')
+const SOURCES = import.meta.glob('../api/*.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
+
 const CALL = /\bapi\.(get|post|patch|put|delete)\s*(?:<[^>]*>)?\s*\(\s*([`'"])([^`'"]*)\2/g
 
 describe('api paths', () => {
-  const files = readdirSync(API_DIR).filter(
-    (f) => f.endsWith('.ts') && f !== 'client.ts',
+  const files = Object.entries(SOURCES).filter(
+    ([path]) => !path.endsWith('client.ts'),
   )
 
   it('finds the api modules to check', () => {
     expect(files.length).toBeGreaterThan(5)
   })
 
-  for (const file of files) {
-    it(`${file} prefixes every path with /api`, () => {
-      const source = readFileSync(join(API_DIR, file), 'utf8')
+  for (const [path, source] of files) {
+    it(`${path.split('/').pop()} prefixes every path with /api`, () => {
       const offenders: string[] = []
       for (const m of source.matchAll(CALL)) {
-        const path = m[3]
+        const url = m[3]
         // Template literals that *begin* with an expression are not decidable
         // here; none exist today, and one appearing is a reason to look rather
         // than to widen the rule silently.
-        if (!path.startsWith('/api')) offenders.push(path || '<computed>')
+        if (!url.startsWith('/api')) offenders.push(url || '<computed>')
       }
-      expect(offenders, `paths without the /api prefix in ${file}`).toEqual([])
+      expect(offenders, `paths without the /api prefix in ${path}`).toEqual([])
     })
   }
 })
