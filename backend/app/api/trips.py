@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.core.identity import require_live_identity
 from app.core.nostr_publish import (
@@ -120,11 +120,36 @@ async def list_trips(
     # the page behind it is "everything this carrier is flying". Without a filter
     # that page would have to pull the whole board and sift it client-side.
     carrier_id: uuid.UUID | None = None,
+    # T_UX.15 — the board is open trips only, and that is right for a board. But
+    # "my published trips" in a profile is a history: it has to contain the ones
+    # that were withdrawn and the ones that flew. Asking for anything other than
+    # `open` is therefore allowed **only about yourself** — a withdrawn trip is
+    # no longer a public listing, and letting strangers enumerate them would
+    # publish a carrier's changes of plan.
+    status: str | None = None,
     db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
     after: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    stmt = select(Trip).where(Trip.status == TripStatus.open)
+    own = (
+        current_user is not None
+        and carrier_id is not None
+        and carrier_id == current_user.id
+    )
+    if status is not None and not own:
+        raise HTTPException(
+            status_code=403, detail="Only your own trips can be listed by status"
+        )
+    if status is None:
+        stmt = select(Trip).where(Trip.status == TripStatus.open)
+    elif status == "all":
+        stmt = select(Trip)
+    else:
+        try:
+            stmt = select(Trip).where(Trip.status == TripStatus(status))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Unknown trip status")
 
     # Exact match, not `ilike '%code%'` (T_PERF.1). `origin`/`destination` hold
     # IATA codes — `AirportSelect` can only emit one — so a substring match was

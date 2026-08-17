@@ -52,6 +52,9 @@ export interface TripFilters {
   date?: string
   /** T_UX.14 — everything one carrier is flying, for their public page. */
   carrier_id?: string
+  /** T_UX.15 — `all` or a specific status. Accepted only about your own trips:
+   *  a withdrawn trip is no longer a public listing. */
+  status?: string
   after?: string
   limit?: number
 }

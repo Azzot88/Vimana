@@ -22,7 +22,8 @@ export default function PublishedTripsSection() {
 
   useEffect(() => {
     if (!me?.id) return
-    listTrips({ carrier_id: me.id, limit: 50 })
+    // History, not the board: withdrawn and flown trips belong here too.
+      listTrips({ carrier_id: me.id, status: 'all', limit: 50 })
       .then(({ data }) => setTrips(data.items))
       .catch(() => setTrips([]))
       .finally(() => setLoading(false))

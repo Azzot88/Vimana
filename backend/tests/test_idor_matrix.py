@@ -71,6 +71,10 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("GET", "/api/deals/{deal_id}/chain"): Case(
         DENIED, "chain status names the deal's events"
     ),
+    # ---- trips (T_UX.15) -----------------------------------------------
+    ("POST", "/api/trips/{trip_id}/cancel"): Case(
+        DENIED, "withdrawing a stranger's trip"
+    ),
     ("POST", "/api/deals/{deal_id}/cards"): Case(
         DENIED,
         "raising a card in a stranger's deal",
