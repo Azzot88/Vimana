@@ -34,8 +34,24 @@ depends_on = None
 
 SHARED_ADDRESS_PREFIX = "📍 SHARED ADDRESS"
 
+# `create_type=False` plus an explicit `.create()` below. `op.add_column` does
+# NOT emit CREATE TYPE for an enum — only `create_table` does — so a bare
+# `sa.Enum(...)` here fails with `type "cardstate" does not exist`.
+card_state = postgresql.ENUM(
+    "pending", "accepted", "declined", "expired", "superseded",
+    name="cardstate", create_type=False,
+)
+card_ack_role = postgresql.ENUM(
+    "sender", "carrier", "recipient", "operator",
+    name="cardackrole", create_type=False,
+)
+
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    card_state.create(bind, checkfirst=True)
+    card_ack_role.create(bind, checkfirst=True)
+
     op.add_column(
         "deal_vault_messages",
         sa.Column("card_kind", sa.String(length=48), nullable=True),
@@ -46,22 +62,11 @@ def upgrade() -> None:
     )
     op.add_column(
         "deal_vault_messages",
-        sa.Column(
-            "card_state",
-            sa.Enum(
-                "pending", "accepted", "declined", "expired", "superseded",
-                name="cardstate",
-            ),
-            nullable=True,
-        ),
+        sa.Column("card_state", card_state, nullable=True),
     )
     op.add_column(
         "deal_vault_messages",
-        sa.Column(
-            "requires_ack_by",
-            sa.Enum("sender", "carrier", "recipient", "operator", name="cardackrole"),
-            nullable=True,
-        ),
+        sa.Column("requires_ack_by", card_ack_role, nullable=True),
     )
     op.add_column(
         "deal_vault_messages",
@@ -135,5 +140,5 @@ def downgrade() -> None:
         "requires_ack_by", "card_state", "card_payload", "card_kind",
     ):
         op.drop_column("deal_vault_messages", column)
-    sa.Enum(name="cardackrole").drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name="cardstate").drop(op.get_bind(), checkfirst=True)
+    card_ack_role.drop(op.get_bind(), checkfirst=True)
+    card_state.drop(op.get_bind(), checkfirst=True)
