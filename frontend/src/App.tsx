@@ -36,6 +36,7 @@ const AdminNoticesPage = lazy(() => import('./pages/AdminNoticesPage'))
 const AdminEmailPage = lazy(() => import('./pages/AdminEmailPage'))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
+const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const JoinDealPage = lazy(() => import('./pages/JoinDealPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
@@ -108,6 +109,7 @@ export default function App() {
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/notices" element={<AdminNoticesPage />} />
               <Route path="/admin/email" element={<AdminEmailPage />} />
+              <Route path="/admin/params" element={<AdminParamsPage />} />
               <Route path="/admin/deals/:dealId/vault" element={<AdminVaultPage />} />
             </Route>
           </Route>

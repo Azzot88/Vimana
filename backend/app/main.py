@@ -23,6 +23,7 @@ from app.api.cities import router as cities_router
 from app.api.dealvault import router as dealvault_router
 from app.api.deals import router as deals_router
 from app.api.inquiries import router as inquiries_router
+from app.api.platform_params import router as platform_params_router
 from app.api.keypair import router as keypair_router
 from app.api.social import router as social_router
 from app.api.telegram import router as telegram_router
@@ -254,6 +255,7 @@ app.include_router(trust_router, prefix="/api", tags=["trust"])
 app.include_router(waitlist_router, prefix="/api/waitlist", tags=["waitlist"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
 app.include_router(inquiries_router, prefix="/api", tags=["inquiries"])
+app.include_router(platform_params_router, prefix="/api", tags=["admin"])
 
 
 @app.get("/health")

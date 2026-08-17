@@ -46,6 +46,9 @@ class Permission(str, enum.Enum):
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"
     ARBITER_ASSIGN = "arbiter:assign"
+    # T3.40 — business-logic parameters. Deliberately NOT in the arbiter bundle:
+    # resolving a dispute and setting the fee everyone pays are different powers.
+    PARAMS_MANAGE = "params:manage"
     # T_UX.8 pt.2 — reading the waitlist. Its own name rather than a reuse of
     # `USERS_MANAGE`: these are people who are *not* users yet, and a permission
     # that reads "manage users" would quietly grant a second, different thing.

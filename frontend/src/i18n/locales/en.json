@@ -7,7 +7,8 @@
     "disputes": "Disputes",
     "users": "Users",
     "notices": "Notices",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "params": "Parameters"
   },
   "dispute": {
     "openButton": "Open dispute",
@@ -68,7 +69,9 @@
       "actions": "Actions"
     },
     "email": "Mail",
-    "emailDesc": "Circuits and letter previews"
+    "emailDesc": "Circuits and letter previews",
+    "params": "Parameters",
+    "paramsDesc": "Rates and thresholds, versioned"
   },
   "auth": {
     "title": "Vimana",
@@ -996,5 +999,30 @@
     "nameHint": "Your counterparties see this name. You can change it later in your profile.",
     "save": "Continue",
     "skip": "Skip for now"
+  },
+  "adminParams": {
+    "title": "Business parameters",
+    "hint": "Rates and thresholds the platform charges by. A change writes a new version and never edits the old one.",
+    "scope": "Corridor",
+    "apply": "Apply",
+    "viewing": "Viewing",
+    "change": "Change",
+    "save": "Save",
+    "history": "History",
+    "noHistory": "No changes yet — running on the built-in default.",
+    "reason": "Why is it changing?",
+    "proposed": "proposed",
+    "loadError": "Could not load parameters",
+    "saveError": "Could not save the parameter",
+    "source": {
+      "default": "default",
+      "global": "global",
+      "corridor": "corridor"
+    },
+    "group": {
+      "fees": "Fees",
+      "bond": "Carrier bond",
+      "premium": "Premium"
+    }
   }
 }

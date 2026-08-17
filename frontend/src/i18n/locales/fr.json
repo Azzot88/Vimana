@@ -6,7 +6,8 @@
     "profile": "Profil",
     "disputes": "Litiges",
     "users": "Utilisateurs",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "params": "Paramètres"
   },
   "dispute": {
     "openButton": "Ouvrir un litige",
@@ -59,7 +60,9 @@
       "actions": "Actions"
     },
     "email": "Courrier",
-    "emailDesc": "Circuits et aperçu des messages"
+    "emailDesc": "Circuits et aperçu des messages",
+    "params": "Paramètres",
+    "paramsDesc": "Taux et seuils, versionnés"
   },
   "auth": {
     "title": "Vimana",
@@ -950,5 +953,30 @@
     "nameHint": "Vos interlocuteurs voient ce nom. Vous pourrez le changer plus tard dans votre profil.",
     "save": "Continuer",
     "skip": "Passer"
+  },
+  "adminParams": {
+    "title": "Paramètres métier",
+    "hint": "Taux et seuils appliqués par la plateforme. Une modification crée une version et ne remplace jamais l'ancienne.",
+    "scope": "Corridor",
+    "apply": "Appliquer",
+    "viewing": "Affichage",
+    "change": "Modifier",
+    "save": "Enregistrer",
+    "history": "Historique",
+    "noHistory": "Aucune modification — valeur par défaut utilisée.",
+    "reason": "Pourquoi ce changement ?",
+    "proposed": "proposé",
+    "loadError": "Impossible de charger les paramètres",
+    "saveError": "Impossible d'enregistrer le paramètre",
+    "source": {
+      "default": "par défaut",
+      "global": "global",
+      "corridor": "corridor"
+    },
+    "group": {
+      "fees": "Frais",
+      "bond": "Caution du transporteur",
+      "premium": "Premium"
+    }
   }
 }

@@ -42,6 +42,13 @@ const LINKS: AdminLink[] = [
     roles: ['superuser'],
     icon: '✉',
   },
+  {
+    to: '/admin/params',
+    labelKey: 'admin.params',
+    descKey: 'admin.paramsDesc',
+    roles: ['superuser'],
+    icon: '⚙',
+  },
 ]
 
 /** T_UX.2 pt.3 follow-up — surface all admin routes in the personal cabinet

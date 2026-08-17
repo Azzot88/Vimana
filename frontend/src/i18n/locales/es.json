@@ -6,7 +6,8 @@
     "profile": "Perfil",
     "disputes": "Disputas",
     "users": "Usuarios",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "params": "Parámetros"
   },
   "dispute": {
     "openButton": "Abrir disputa",
@@ -59,7 +60,9 @@
       "actions": "Acciones"
     },
     "email": "Correo",
-    "emailDesc": "Circuitos y vista previa de los mensajes"
+    "emailDesc": "Circuitos y vista previa de los mensajes",
+    "params": "Parámetros",
+    "paramsDesc": "Tarifas y umbrales, con versiones"
   },
   "auth": {
     "title": "Vimana",
@@ -950,5 +953,30 @@
     "nameHint": "Tus contrapartes ven este nombre. Puedes cambiarlo luego en tu perfil.",
     "save": "Continuar",
     "skip": "Omitir"
+  },
+  "adminParams": {
+    "title": "Parámetros de negocio",
+    "hint": "Tarifas y umbrales que cobra la plataforma. Un cambio crea una versión nueva y nunca edita la anterior.",
+    "scope": "Corredor",
+    "apply": "Aplicar",
+    "viewing": "Viendo",
+    "change": "Cambiar",
+    "save": "Guardar",
+    "history": "Historial",
+    "noHistory": "Sin cambios todavía — se usa el valor por defecto.",
+    "reason": "¿Por qué cambia?",
+    "proposed": "propuesto",
+    "loadError": "No se pudieron cargar los parámetros",
+    "saveError": "No se pudo guardar el parámetro",
+    "source": {
+      "default": "por defecto",
+      "global": "global",
+      "corridor": "corredor"
+    },
+    "group": {
+      "fees": "Tarifas",
+      "bond": "Fianza del transportista",
+      "premium": "Premium"
+    }
   }
 }

@@ -6,7 +6,8 @@
     "profile": "Profil",
     "disputes": "Spory",
     "users": "Użytkownicy",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "params": "Parametry"
   },
   "dispute": {
     "openButton": "Otwórz spór",
@@ -59,7 +60,9 @@
       "actions": "Akcje"
     },
     "email": "Poczta",
-    "emailDesc": "Obwody i podgląd listów"
+    "emailDesc": "Obwody i podgląd listów",
+    "params": "Parametry",
+    "paramsDesc": "Stawki i progi, wersjonowane"
   },
   "auth": {
     "title": "Vimana",
@@ -951,5 +954,30 @@
     "nameHint": "Tę nazwę widzą Twoi kontrahenci. Możesz ją później zmienić w profilu.",
     "save": "Dalej",
     "skip": "Pomiń"
+  },
+  "adminParams": {
+    "title": "Parametry biznesowe",
+    "hint": "Stawki i progi, według których platforma pobiera opłaty. Zmiana tworzy nową wersję i nigdy nie nadpisuje starej.",
+    "scope": "Korytarz",
+    "apply": "Zastosuj",
+    "viewing": "Podgląd",
+    "change": "Zmień",
+    "save": "Zapisz",
+    "history": "Historia",
+    "noHistory": "Brak zmian — działa wartość domyślna.",
+    "reason": "Dlaczego się zmienia?",
+    "proposed": "propozycja",
+    "loadError": "Nie udało się wczytać parametrów",
+    "saveError": "Nie udało się zapisać parametru",
+    "source": {
+      "default": "domyślnie",
+      "global": "globalnie",
+      "corridor": "korytarz"
+    },
+    "group": {
+      "fees": "Opłaty",
+      "bond": "Kaucja przewoźnika",
+      "premium": "Premium"
+    }
   }
 }
