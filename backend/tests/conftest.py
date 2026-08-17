@@ -1049,6 +1049,80 @@ async def _ensure_contact_tables(engine) -> None:
         )
 
 
+async def _ensure_vault_card_columns(engine) -> None:
+    """T3.34: the card envelope on an *existing* table.
+
+    `create_all` builds new tables but never alters old ones, and
+    `deal_vault_messages` predates this task — so a test database that was
+    created before 0050 would otherwise be missing every column the card tests
+    touch. Mirrors migration 0050 minus the backfill, which has nothing to
+    convert in a fresh test DB.
+    """
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "DO $$ BEGIN CREATE TYPE cardstate AS ENUM "
+                "('pending','accepted','declined','expired','superseded'); "
+                "EXCEPTION WHEN duplicate_object THEN null; END $$;"
+            )
+        )
+        await conn.execute(
+            text(
+                "DO $$ BEGIN CREATE TYPE cardackrole AS ENUM "
+                "('sender','carrier','recipient','operator'); "
+                "EXCEPTION WHEN duplicate_object THEN null; END $$;"
+            )
+        )
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS card_kind VARCHAR(48)",
+            "ADD COLUMN IF NOT EXISTS card_payload JSON",
+            "ADD COLUMN IF NOT EXISTS card_state cardstate",
+            "ADD COLUMN IF NOT EXISTS requires_ack_by cardackrole",
+            "ADD COLUMN IF NOT EXISTS acked_by_id UUID",
+            "ADD COLUMN IF NOT EXISTS acked_at TIMESTAMPTZ",
+            "ADD COLUMN IF NOT EXISTS supersedes_id UUID",
+        ):
+            await conn.execute(text(f"ALTER TABLE deal_vault_messages {ddl}"))
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_deal_vault_messages_card_kind "
+                "ON deal_vault_messages (card_kind)"
+            )
+        )
+
+
+async def _ensure_platform_parameters(engine) -> None:
+    """T3.40: parameters table. `create_all` covers it for a fresh database;
+    this exists so a pre-0049 test DB gets the same shape."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "DO $$ BEGIN CREATE TYPE paramvaluetype AS ENUM "
+                "('percent','decimal','integer','string'); "
+                "EXCEPTION WHEN duplicate_object THEN null; END $$;"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS platform_parameters ("
+                "id UUID PRIMARY KEY, key VARCHAR(64) NOT NULL, "
+                "scope VARCHAR(32) NOT NULL DEFAULT 'global', "
+                "value VARCHAR(128) NOT NULL, "
+                "value_type paramvaluetype NOT NULL DEFAULT 'decimal', "
+                "effective_from TIMESTAMPTZ NOT NULL DEFAULT now(), "
+                "comment TEXT NOT NULL DEFAULT '', "
+                "created_by_id UUID REFERENCES users(id), "
+                "created_at TIMESTAMPTZ NOT NULL DEFAULT now())"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_platform_parameters_key_scope_from "
+                "ON platform_parameters (key, scope, effective_from)"
+            )
+        )
+
+
 async def _ensure_login_exchange_columns(engine) -> None:
     """T3.27: verification_challenges gets a nullable code and two learned
     values. Mirrors migration 0048 — `create_all` builds them for a fresh
@@ -1302,6 +1376,8 @@ async def test_engine():
     await _ensure_sign_ins_table(engine)
     await _ensure_notification_prefs_column(engine)
     await _ensure_login_exchange_columns(engine)
+    await _ensure_vault_card_columns(engine)
+    await _ensure_platform_parameters(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()
