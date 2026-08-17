@@ -175,7 +175,7 @@ export async function ackCard(
   decision: 'accepted' | 'declined',
 ): Promise<VaultMessage> {
   const { data } = await api.post<VaultMessage>(
-    `/deals/${dealId}/dealvault/messages/${messageId}/ack`,
+    `/api/deals/${dealId}/dealvault/messages/${messageId}/ack`,
     { decision },
   )
   return data

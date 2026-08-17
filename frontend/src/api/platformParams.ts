@@ -29,12 +29,12 @@ export interface ParamVersion {
 }
 
 export async function listParams(scope = 'global'): Promise<ParamCurrent[]> {
-  const { data } = await api.get<ParamCurrent[]>('/admin/params', { params: { scope } })
+  const { data } = await api.get<ParamCurrent[]>('/api/admin/params', { params: { scope } })
   return data
 }
 
 export async function paramHistory(key: string, scope?: string): Promise<ParamVersion[]> {
-  const { data } = await api.get<ParamVersion[]>(`/admin/params/${key}/history`, {
+  const { data } = await api.get<ParamVersion[]>(`/api/admin/params/${key}/history`, {
     params: scope ? { scope } : undefined,
   })
   return data
@@ -47,6 +47,6 @@ export async function setParam(input: {
   comment?: string
   effective_from?: string
 }): Promise<ParamVersion> {
-  const { data } = await api.post<ParamVersion>('/admin/params', input)
+  const { data } = await api.post<ParamVersion>('/api/admin/params', input)
   return data
 }

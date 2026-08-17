@@ -54,12 +54,12 @@ export interface TermsInput {
 /** Current contract, or the proposal still awaiting an answer. `null` when
  *  neither exists yet. */
 export async function getTerms(dealId: string): Promise<Terms | null> {
-  const { data } = await api.get<Terms | null>(`/deals/${dealId}/terms`)
+  const { data } = await api.get<Terms | null>(`/api/deals/${dealId}/terms`)
   return data
 }
 
 export async function proposeTerms(dealId: string, input: TermsInput): Promise<Terms> {
-  const { data } = await api.post<Terms>(`/deals/${dealId}/terms`, input)
+  const { data } = await api.post<Terms>(`/api/deals/${dealId}/terms`, input)
   return data
 }
 
@@ -70,6 +70,6 @@ export async function raiseCard(
   payload: Record<string, unknown> = {},
   text?: string,
 ) {
-  const { data } = await api.post(`/deals/${dealId}/cards`, { kind, payload, text })
+  const { data } = await api.post(`/api/deals/${dealId}/cards`, { kind, payload, text })
   return data
 }
