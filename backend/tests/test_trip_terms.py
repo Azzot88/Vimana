@@ -171,3 +171,71 @@ async def test_proposal_flags_a_price_below_the_carrier_minimum(
     )
     assert ok.status_code == 201, ok.text
     assert ok.json()["payload"]["below_carrier_minimum"] is False
+
+
+# ── T_UX.10 / T_UX.11 — display preferences and carriage rules ────────────
+
+
+async def test_display_preferences_round_trip(client, carrier_headers):
+    r = await client.patch(
+        "/api/me", headers=carrier_headers, json={"unit_weight": "lb", "date_format": "us"}
+    )
+    assert r.status_code == 200, r.text
+    me = await client.get("/api/me", headers=carrier_headers)
+    assert me.json()["unit_weight"] == "lb"
+    assert me.json()["date_format"] == "us"
+
+
+async def test_unknown_unit_rejected(client, carrier_headers):
+    r = await client.patch(
+        "/api/me", headers=carrier_headers, json={"unit_weight": "stones"}
+    )
+    assert r.status_code == 422
+
+
+async def test_display_preference_cannot_be_nulled(client, carrier_headers):
+    """No value is not "no preference" — it is a screen that cannot decide how
+    to print a weight."""
+    r = await client.patch(
+        "/api/me", headers=carrier_headers, json={"unit_weight": None}
+    )
+    assert r.status_code == 422
+
+
+async def test_trip_inherits_standing_carriage_rules(client, carrier_headers):
+    await client.patch(
+        "/api/me", headers=carrier_headers, json={"carriage_rules": "No liquids."}
+    )
+    r = await client.post("/api/trips", headers=carrier_headers, json=_payload())
+    assert r.status_code == 201, r.text
+    assert r.json()["carriage_rules"] == "No liquids."
+
+
+async def test_trip_rules_are_a_copy_not_a_reference(client, carrier_headers):
+    """The whole reason the text sits on both rows: a rule edited in March must
+    not rewrite what a sender read in February."""
+    await client.patch(
+        "/api/me", headers=carrier_headers, json={"carriage_rules": "Version one."}
+    )
+    created = await client.post("/api/trips", headers=carrier_headers, json=_payload())
+    trip_id = created.json()["id"]
+
+    await client.patch(
+        "/api/me", headers=carrier_headers, json={"carriage_rules": "Version two."}
+    )
+    listing = await client.get("/api/trips", headers=carrier_headers)
+    mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
+    assert mine["carriage_rules"] == "Version one."
+
+
+async def test_trip_can_override_with_no_rules(client, carrier_headers):
+    """Omitted means "use my template"; an explicit empty string means this
+    trip carries none. The two have to stay distinguishable."""
+    await client.patch(
+        "/api/me", headers=carrier_headers, json={"carriage_rules": "Template."}
+    )
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(carriage_rules="")
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["carriage_rules"] == ""

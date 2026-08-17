@@ -25,6 +25,9 @@ class TripCreate(BaseModel):
     currency: str = Field(default="USD", min_length=3, max_length=3)
     allowed_handover_methods: list[str] | None = None
     max_declared_value: float | None = Field(default=None, ge=0)
+    # T_UX.11 — omitted means "use my standing rules"; an explicit empty string
+    # means "this trip has none", and the two must stay distinguishable.
+    carriage_rules: str | None = Field(default=None, max_length=4000)
 
     @field_validator("currency")
     @classmethod
@@ -65,6 +68,7 @@ class TripOut(BaseModel):
     currency: str = "USD"
     allowed_handover_methods: list[str] | None = None
     max_declared_value: float | None = None
+    carriage_rules: str | None = None
     status: str
     created_at: datetime
     # T3.5 — Nostr publish state (surfaced to clients for the "📡 Also on Nostr" chip).

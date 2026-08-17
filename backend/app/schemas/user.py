@@ -62,6 +62,11 @@ class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
     locale: str | None = None
+    # T_UX.10 — display preferences.
+    unit_weight: Literal["kg", "lb"] | None = None
+    date_format: Literal["eu", "us"] | None = None
+    # T_UX.11 — standing carriage rules, the template copied into new trips.
+    carriage_rules: str | None = Field(default=None, max_length=4000)
 
     @field_validator("locale")
     @classmethod
@@ -185,6 +190,10 @@ class UserOut(BaseModel):
 
 
 class MeOut(UserOut):
+    unit_weight: str = "kg"
+    date_format: str = "eu"
+    carriage_rules: str | None = None
+
     """Owner-only view. Receiving addresses moved to `receiving_addresses` and
     its own endpoints (T_UX.4); the single-address `receiving_*` fields were
     dropped in `T_KEYS.1` after the read fallback proved unreachable."""

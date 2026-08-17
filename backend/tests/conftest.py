@@ -1091,6 +1091,20 @@ async def _ensure_vault_card_columns(engine) -> None:
         )
 
 
+async def _ensure_display_prefs_columns(engine) -> None:
+    """T_UX.10 / T_UX.11: mirrors migration 0052 for a pre-existing test DB."""
+    async with engine.begin() as conn:
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS unit_weight VARCHAR(4) NOT NULL DEFAULT 'kg'",
+            "ADD COLUMN IF NOT EXISTS date_format VARCHAR(2) NOT NULL DEFAULT 'eu'",
+            "ADD COLUMN IF NOT EXISTS carriage_rules TEXT",
+        ):
+            await conn.execute(text(f"ALTER TABLE users {ddl}"))
+        await conn.execute(
+            text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS carriage_rules TEXT")
+        )
+
+
 async def _ensure_trip_terms_columns(engine) -> None:
     """T3.35: the carrier's baseline price on an existing `trips` table.
     Mirrors migration 0051."""
@@ -1394,6 +1408,7 @@ async def test_engine():
     await _ensure_vault_card_columns(engine)
     await _ensure_platform_parameters(engine)
     await _ensure_trip_terms_columns(engine)
+    await _ensure_display_prefs_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

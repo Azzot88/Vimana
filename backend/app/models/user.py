@@ -11,6 +11,7 @@ from sqlalchemy import (
     LargeBinary,
     SmallInteger,
     String,
+    Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -109,6 +110,23 @@ class User(Base):
     # predate the column and to any path that forgets to pass one, and English
     # is the safer guess for the corridor the product launches on.
     locale: Mapped[str] = mapped_column(String(5), default="en", server_default="en")
+    # T_UX.10 — display preferences. Stored, not derived from the browser: a
+    # carrier who flies between metric and imperial countries reads weights in
+    # whichever one they think in, and that does not change with the device
+    # they happen to open the site on.
+    unit_weight: Mapped[str] = mapped_column(
+        String(4), default="kg", server_default="kg"
+    )
+    # `eu` = 24-hour clock and day-first dates; `us` = 12-hour and month-first.
+    # One switch rather than two because nobody wants a 12-hour clock with
+    # day-first dates, and offering the combination invites the mistake.
+    date_format: Mapped[str] = mapped_column(
+        String(2), default="eu", server_default="eu"
+    )
+    # T_UX.11 — the carrier's standing carriage rules, written once and copied
+    # into each trip. Copied rather than referenced: a rule changed in March
+    # must not silently rewrite what a sender agreed to in February.
+    carriage_rules: Mapped[str | None] = mapped_column(Text, nullable=True)
     notify_email: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     notify_telegram: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     notify_whatsapp: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

@@ -49,6 +49,15 @@ async def create_trip(
         currency=body.currency,
         allowed_handover_methods=body.allowed_handover_methods,
         max_declared_value=body.max_declared_value,
+        # T_UX.11 — the carrier's standing rules are **copied** into the trip,
+        # not referenced. Edited later they must not rewrite what a sender read
+        # when they chose this trip. `None` means "use my template"; an explicit
+        # empty string means this trip carries no rules.
+        carriage_rules=(
+            body.carriage_rules
+            if body.carriage_rules is not None
+            else current_user.carriage_rules
+        ),
         status=TripStatus.open,
     )
     db.add(trip)
@@ -141,6 +150,7 @@ async def list_trips(
                     currency=t.currency,
                     allowed_handover_methods=t.allowed_handover_methods,
                     max_declared_value=t.max_declared_value,
+                    carriage_rules=t.carriage_rules,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,
                     nostr_event_id=t.nostr_event_id,
