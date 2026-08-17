@@ -99,11 +99,11 @@ describe('AdminParamsPage', () => {
     renderWithProviders(<AdminParamsPage />)
     await waitFor(() => expect(listParams).toHaveBeenCalled())
 
-    fireEvent.click(screen.getByText(/change|Изменить/i))
+    fireEvent.click(screen.getByRole('button', { name: /change|Изменить/i }))
     const inputs = screen.getAllByRole('textbox')
     fireEvent.change(inputs[inputs.length - 2], { target: { value: '4' } })
     fireEvent.change(inputs[inputs.length - 1], { target: { value: 'решение владельца' } })
-    fireEvent.click(screen.getByText(/^save$|^Сохранить$/i))
+    fireEvent.click(screen.getByRole('button', { name: /save|Сохранить/i }))
 
     await waitFor(() =>
       expect(setParam).toHaveBeenCalledWith({
@@ -125,7 +125,7 @@ describe('AdminParamsPage', () => {
     fireEvent.change(screen.getByPlaceholderText('AE->US'), {
       target: { value: 'ae->us' },
     })
-    fireEvent.click(screen.getByText(/apply|Применить/i))
+    fireEvent.click(screen.getByRole('button', { name: /apply|Применить/i }))
 
     await waitFor(() => expect(listParams).toHaveBeenCalledWith('AE->US'))
   })

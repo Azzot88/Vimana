@@ -28,9 +28,13 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
   const kind = msg.card_kind ?? ''
   const spec = specForKind(kind)
   const payload = (msg.card_payload ?? {}) as Record<string, unknown>
-  const awaitingMe = msg.card_state === 'pending' && msg.requires_ack_by === myRole
-  const awaitingThem = msg.card_state === 'pending' && !awaitingMe
-  const needsPhoto = spec?.needsPhoto && msg.attachments.length === 0
+  const needsPhoto = Boolean(spec?.needsPhoto) && msg.attachments.length === 0
+  // A declaration whose evidence has not arrived is not answerable yet: the
+  // server refuses the ack with 422. Offering the button anyway is the exact
+  // failure this component is supposed to avoid — a control that does nothing.
+  const awaitingMe =
+    msg.card_state === 'pending' && msg.requires_ack_by === myRole && !needsPhoto
+  const awaitingThem = msg.card_state === 'pending' && !awaitingMe && !needsPhoto
 
   const answer = async (decision: 'accepted' | 'declined') => {
     setBusy(true)

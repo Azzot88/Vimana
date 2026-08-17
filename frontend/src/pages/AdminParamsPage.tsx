@@ -53,9 +53,14 @@ export default function AdminParamsPage() {
   }
 
   useEffect(() => {
+    // Hooks run before the redirect below renders, so without this guard the
+    // page fires an admin request on behalf of somebody it is about to turn
+    // away. The server answers 403 either way — this keeps the request from
+    // being made at all.
+    if (me?.role !== 'superuser') return
     void reload(scope)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope])
+  }, [scope, me?.role])
 
   if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
 
