@@ -7,6 +7,7 @@ status moves only through a card.
 """
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timedelta, timezone
 
 import pytest_asyncio
@@ -80,14 +81,19 @@ async def _ack(client, headers, deal_id, msg_id, decision="accepted"):
     )
 
 
+# A real 1×1 PNG. It has to decode, not merely start with the right magic
+# bytes: `validate_upload` (T3.8) opens the image rather than trusting the
+# declared MIME type, which is the whole point of that check.
+_ONE_PIXEL_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE"
+    "hQGAhKmMIQAAAABJRU5ErkJggg=="
+)
+
+
 async def _attach_photo(client, headers, deal_id, msg_id, kind):
-    """A 1×1 PNG is enough: the rule under test is "is there evidence", not
+    """One pixel is enough: the rule under test is "is there evidence", not
     "is the photograph any good"."""
-    png = bytes.fromhex(
-        "89504e470d0a1a0a0000000d494844520000000100000001080600000"
-        "01f15c4890000000a49444154789c6360000002000100ffff0300000600"
-        "0557bfabd40000000049454e44ae426082"
-    )
+    png = _ONE_PIXEL_PNG
     return await client.post(
         f"/api/deals/{deal_id}/dealvault/messages/{msg_id}/attachments",
         headers=headers,
