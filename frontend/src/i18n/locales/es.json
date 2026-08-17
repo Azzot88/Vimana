@@ -563,7 +563,8 @@
     "categoriesNoneChosen": "Nada elegido todavía — pulsa abajo.",
     "categoriesAllChosen": "Todo elegido.",
     "categoriesRemove": "quitar",
-    "rulesHint": "Rellenadas desde tu perfil. Edítalas solo para este viaje; vacío = sin reglas."
+    "rulesHint": "Rellenadas desde tu perfil. Edítalas solo para este viaje; vacío = sin reglas.",
+    "hasRules": "con reglas"
   },
   "deals": {
     "title": "Acuerdos",
@@ -589,7 +590,8 @@
       "closed": "Cerrado",
       "disputed": "Disputa"
     },
-    "agreeTerms": "Acordar condiciones"
+    "agreeTerms": "Acordar condiciones",
+    "carriageRules": "Reglas de transporte"
   },
   "profile": {
     "title": "Perfil",

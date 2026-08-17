@@ -121,6 +121,10 @@ class DealDetailOut(BaseModel):
     cargo_category: str
     declared_value: float
     currency: str
+    # T_UX.11 — the rules the sender agreed to when they chose this trip. Read
+    # from the trip's own copy, not the carrier's current template: a rule
+    # edited after the match is not the rule this deal was struck under.
+    carriage_rules: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

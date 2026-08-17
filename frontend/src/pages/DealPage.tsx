@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
+import { usePrefs } from '../hooks/usePrefs'
 import { openDispute } from '../api/admin'
 import { getDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
@@ -15,6 +16,7 @@ import VerificationRespondModal from '../components/VerificationRespondModal'
 import { useRouteNotes } from '../hooks/useRouteNotes'
 
 export default function DealPage() {
+  const prefs = usePrefs()
   const { t } = useTranslation()
   const { dealId } = useParams<{ dealId: string }>()
   const user = useAuthStore((s) => s.user)
@@ -156,7 +158,7 @@ export default function DealPage() {
                 {deal.origin} → {deal.destination}
               </MonoText>
               <MonoText className="text-sm text-white/60">
-                {new Date(deal.depart_at).toLocaleString('ru-RU')}
+                {prefs.dateTime(deal.depart_at)}
               </MonoText>
             </div>
             <div className="self-start"><StatusBadge status={deal.status} /></div>
@@ -180,6 +182,19 @@ export default function DealPage() {
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.category')}</p>
             <MonoText className="text-sm text-navy">{deal.cargo_category}</MonoText>
           </div>
+          {deal.carriage_rules && (
+            <div className="sm:col-span-2">
+              <p className="text-xs font-body font-medium text-navy/40 mb-1">
+                {t('deals.carriageRules')}
+              </p>
+              {/* T_UX.11 — what the sender agreed to when they chose this trip.
+                  Shown in full rather than behind a link: rules nobody reads are
+                  rules nobody agreed to. */}
+              <p className="text-sm font-body text-navy whitespace-pre-wrap">
+                {deal.carriage_rules}
+              </p>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.dealId')}</p>
             <MonoText className="text-xs text-navy/50 break-all">{deal.id}</MonoText>

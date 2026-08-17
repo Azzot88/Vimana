@@ -564,7 +564,8 @@
     "categoriesNoneChosen": "Nic nie wybrano — kliknij poniżej.",
     "categoriesAllChosen": "Wybrano wszystko.",
     "categoriesRemove": "usuń",
-    "rulesHint": "Wypełnione z profilu. Edytuj tylko dla tego lotu; puste = brak zasad."
+    "rulesHint": "Wypełnione z profilu. Edytuj tylko dla tego lotu; puste = brak zasad.",
+    "hasRules": "są zasady"
   },
   "deals": {
     "title": "Transakcje",
@@ -590,7 +591,8 @@
       "closed": "Zamknięto",
       "disputed": "Spór"
     },
-    "agreeTerms": "Uzgodnij warunki"
+    "agreeTerms": "Uzgodnij warunki",
+    "carriageRules": "Zasady przewozu"
   },
   "profile": {
     "title": "Profil",

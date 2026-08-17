@@ -12,10 +12,12 @@ import RouteNoteBadge from '../components/RouteNoteBadge'
 import UBAChip from '../components/UBAChip'
 import { filterNotesForCorridor, useRouteNotes } from '../hooks/useRouteNotes'
 import { usePersistedState } from '../hooks/usePersistedState'
+import { usePrefs } from '../hooks/usePrefs'
 
 export default function TripsPage() {
+  const prefs = usePrefs()
   const user = useAuthStore((s) => s.user)
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
   // T_UX.2 pt.3 — все active route notes одним запросом, фильтр per trip
@@ -161,11 +163,19 @@ export default function TripsPage() {
                         <RouteNoteBadge key={n.id} note={n} compact />
                       ))}
                     </span>
-                    <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
-                    <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} {t('trips.kg')}</MonoText></span>
+                    <MonoText className="text-xs">{prefs.dateTime(trip.depart_at)}</MonoText>
+                    <span>{t('trips.capacity')}: <MonoText className="text-xs">{prefs.weight(trip.capacity)}</MonoText></span>
                     {/* T3.35 — the published baseline, so two trips on one
                         corridor are comparable before anyone opens a chat.
                         Absent price is stated as such rather than hidden. */}
+                    {trip.carriage_rules && (
+                      <span
+                        title={trip.carriage_rules}
+                        className="inline-flex items-center gap-1 text-navy/50"
+                      >
+                        📋 {t('trips.hasRules')}
+                      </span>
+                    )}
                     <span>
                       {t('trips.pricePerKg')}:{' '}
                       <MonoText className="text-xs">

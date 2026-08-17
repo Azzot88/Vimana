@@ -612,7 +612,8 @@
     "categoriesNoneChosen": "Nothing chosen yet — pick from below.",
     "categoriesAllChosen": "Everything is chosen.",
     "categoriesRemove": "remove",
-    "rulesHint": "Prefilled from your profile. Edit for this trip only; leave empty for no rules."
+    "rulesHint": "Prefilled from your profile. Edit for this trip only; leave empty for no rules.",
+    "hasRules": "has rules"
   },
   "deals": {
     "title": "Deals",
@@ -638,7 +639,8 @@
       "closed": "Closed",
       "disputed": "Disputed"
     },
-    "agreeTerms": "Agree terms"
+    "agreeTerms": "Agree terms",
+    "carriageRules": "Carriage rules"
   },
   "profile": {
     "title": "Profile",

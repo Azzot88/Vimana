@@ -563,7 +563,8 @@
     "categoriesNoneChosen": "Rien de choisi — cliquez ci-dessous.",
     "categoriesAllChosen": "Tout est choisi.",
     "categoriesRemove": "retirer",
-    "rulesHint": "Pré-remplies depuis votre profil. À modifier pour ce trajet ; vide = aucune règle."
+    "rulesHint": "Pré-remplies depuis votre profil. À modifier pour ce trajet ; vide = aucune règle.",
+    "hasRules": "règles définies"
   },
   "deals": {
     "title": "Transactions",
@@ -589,7 +590,8 @@
       "closed": "Clôturé",
       "disputed": "Litige"
     },
-    "agreeTerms": "Convenir des conditions"
+    "agreeTerms": "Convenir des conditions",
+    "carriageRules": "Règles de transport"
   },
   "profile": {
     "title": "Profil",

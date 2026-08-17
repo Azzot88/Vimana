@@ -5,10 +5,12 @@ import { useAuthStore } from '../stores/auth'
 import { listDeals, type Deal } from '../api/deals'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
+import { usePrefs } from '../hooks/usePrefs'
 
 export default function DealsPage() {
+  const prefs = usePrefs()
   const user = useAuthStore((s) => s.user)
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -55,7 +57,7 @@ export default function DealsPage() {
                       <span className="bg-navy/5 px-2 py-0.5 rounded font-mono">{role}</span>
                     </div>
                     <MonoText className="text-xs text-navy/40">
-                      {new Date(deal.created_at).toLocaleString(i18n.language)}
+                      {prefs.dateTime(deal.created_at)}
                     </MonoText>
                   </div>
                   <div className="flex flex-col items-end gap-2">

@@ -318,6 +318,9 @@ async def get_deal(
         cargo_category=order.category if order else "",
         declared_value=order.declared_value if order else 0,
         currency=order.currency if order else "USD",
+        # T_UX.11 — the trip's own copy, not the carrier's current template: a
+        # rule edited after the match is not the rule this deal was struck under.
+        carriage_rules=trip.carriage_rules if trip else None,
     )
 
 

@@ -22,6 +22,7 @@ import CardActions from '../components/CardActions'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
+import { usePrefs } from '../hooks/usePrefs'
 
 /** T_UX.7 pt.3 — keys, not labels. The labels themselves were Russian literals
  *  and doubled as the `alt` text on every attachment, so five locales got a
@@ -35,7 +36,8 @@ const KIND_KEY: Record<AttachmentKind, string> = {
 }
 
 export default function DealVaultPage() {
-  const { t, i18n } = useTranslation()
+  const prefs = usePrefs()
+  const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const { dealId } = useParams<{ dealId: string }>()
   const [messages, setMessages] = useState<VaultMessage[]>([])
@@ -192,7 +194,7 @@ export default function DealVaultPage() {
             </span>
           )}
           <MonoText className="text-xs text-navy/30 ml-auto">
-            {new Date(msg.created_at).toLocaleTimeString(i18n.language)}
+            {prefs.time(msg.created_at)}
           </MonoText>
         </div>
 

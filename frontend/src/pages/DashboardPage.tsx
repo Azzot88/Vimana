@@ -8,10 +8,12 @@ import { listTrips, type Trip } from '../api/trips'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
 import { APP_VERSION } from '../version'
+import { usePrefs } from '../hooks/usePrefs'
 
 export default function DashboardPage() {
+  const prefs = usePrefs()
   const { user, setAuth, token } = useAuthStore()
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [deals, setDeals] = useState<Deal[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,11 +151,11 @@ export default function DashboardPage() {
                       {trip.origin} → {trip.destination}
                     </MonoText>
                     <MonoText className="text-xs text-navy/50">
-                      {new Date(trip.depart_at).toLocaleDateString(i18n.language)}
+                      {prefs.date(trip.depart_at)}
                     </MonoText>
                   </div>
                   <p className="text-xs font-body text-navy/50 mt-1">
-                    {t('trips.capacity')}: {trip.capacity} {t('trips.kg')}
+                    {t('trips.capacity')}: {prefs.weight(trip.capacity)}
                   </p>
                 </div>
               ))}

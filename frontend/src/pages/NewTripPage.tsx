@@ -7,6 +7,7 @@ import { listRouteNotes, type RouteNote } from '../api/notices'
 import AirportSelect from '../components/AirportSelect'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
+import { usePrefs } from '../hooks/usePrefs'
 
 const DRAFT_KEY = 'trips:draft:v1'
 
@@ -58,6 +59,7 @@ const VOICE_ENABLED = false
 const SCAN_ENABLED = false
 
 export default function NewTripPage() {
+  const prefs = usePrefs()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const user = useAuthStore((s) => s.user)
@@ -445,7 +447,7 @@ export default function NewTripPage() {
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
               <span>
                 {t('trips.capacity')}:{' '}
-                <MonoText className="text-xs">{draft.capacity || '?'} {t('trips.kg')}</MonoText>
+                <MonoText className="text-xs">{draft.capacity ? prefs.weight(Number(draft.capacity)) : '?'}</MonoText>
               </span>
               {draft.categories.length > 0 && (
                 <span className="flex flex-wrap gap-1">
