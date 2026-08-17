@@ -9,11 +9,8 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
 import pytest_asyncio
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
-
-pytestmark = pytest.mark.asyncio
 
 
 @pytest_asyncio.fixture
@@ -53,7 +50,6 @@ async def deal(session_maker, seed_carrier, seed_sender, seed_trip):
         await db.commit()
         await db.refresh(d)
         return d
-
 
 
 BASE = {

@@ -9,10 +9,7 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
-
-pytestmark = pytest.mark.asyncio
 
 
 async def _set_receiving_address(client, headers) -> None:

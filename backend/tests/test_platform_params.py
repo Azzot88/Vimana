@@ -10,7 +10,6 @@ from __future__ import annotations
 import pytest
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
-pytestmark = pytest.mark.asyncio
 
 
 async def _superuser_headers(client, session_maker) -> dict[str, str]:
