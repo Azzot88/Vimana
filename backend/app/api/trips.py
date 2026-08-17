@@ -131,6 +131,16 @@ async def list_trips(
                     depart_at=t.depart_at,
                     capacity=t.capacity,
                     allowed_categories=t.allowed_categories,
+                    # T3.35 — the listing is the whole point of storing a
+                    # baseline: two trips on one corridor have to be comparable
+                    # before anyone opens a chat. This block is hand-built
+                    # rather than `from_attributes`, so a new column reaches the
+                    # POST response for free and the listing only if named here.
+                    price_per_kg=t.price_per_kg,
+                    min_deal_price=t.min_deal_price,
+                    currency=t.currency,
+                    allowed_handover_methods=t.allowed_handover_methods,
+                    max_declared_value=t.max_declared_value,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,
                     nostr_event_id=t.nostr_event_id,
