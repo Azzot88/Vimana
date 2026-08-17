@@ -17,6 +17,8 @@ import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
 import TermsCard from '../components/TermsCard'
 import TermsProposeForm from '../components/TermsProposeForm'
+import DealCard from '../components/DealCard'
+import CardActions from '../components/CardActions'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
@@ -214,6 +216,18 @@ export default function DealVaultPage() {
 
         {(() => {
           const shown = msg.is_e2e ? decrypted[msg.id] : msg.text
+          if (msg.card_kind && msg.card_kind !== 'address.shared'
+              && !msg.card_kind.startsWith('terms.') && dealId) {
+            return (
+              <DealCard
+                msg={msg}
+                dealId={dealId}
+                myRole={dealRole}
+                mine={msg.sender_id === user?.id}
+                onChanged={load}
+              />
+            )
+          }
           if (msg.card_kind?.startsWith('terms.') && dealId) {
             return (
               <TermsCard
@@ -356,6 +370,9 @@ export default function DealVaultPage() {
               📍 {t('chat.shareAddress.button')}
             </button>
           </div>
+          {dealRole && dealId && (
+            <CardActions dealId={dealId} myRole={dealRole} onDone={load} />
+          )}
           {dealRole && (
             <div className="mb-3">
               {termsOpen ? (
