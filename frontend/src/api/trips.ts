@@ -22,6 +22,8 @@ export interface Trip {
   currency?: string
   allowed_handover_methods?: string[] | null
   max_declared_value?: number | null
+  /** T_UX.11 — the rules copied into this trip when it was published. */
+  carriage_rules?: string | null
   status: string
   created_at: string
   nostr_event_id?: string | null
@@ -39,6 +41,9 @@ export interface CreateTripPayload {
   currency?: string
   allowed_handover_methods?: string[] | null
   max_declared_value?: number | null
+  /** Sent explicitly: an emptied field means "this trip has no rules", not
+   *  "fall back to my profile template". */
+  carriage_rules?: string | null
 }
 
 export interface TripFilters {
