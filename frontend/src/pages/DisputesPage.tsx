@@ -5,6 +5,8 @@ import { listDeals, type Deal } from '../api/deals'
 import { usePrefs } from '../hooks/usePrefs'
 import MonoText from '../components/MonoText'
 import StatusBadge from '../components/StatusBadge'
+import ArbiterQueue from '../components/ArbiterQueue'
+import { useAuthStore } from '../stores/auth'
 
 /** T_UX.14 — open disputes, on their own screen.
  *
@@ -17,6 +19,11 @@ import StatusBadge from '../components/StatusBadge'
 export default function DisputesPage() {
   const { t } = useTranslation()
   const prefs = usePrefs()
+  const me = useAuthStore((s) => s.user)
+  // T_UX.15 — one entry, not two. An arbiter's queue is *more* of this screen,
+  // not a different screen: a separate "Arbitration" tab listed the same word
+  // twice and left the reader to guess which one held their own case.
+  const isArbiter = me?.role === 'arbiter' || me?.role === 'superuser'
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -33,6 +40,9 @@ export default function DisputesPage() {
       <h1 className="text-xl font-display font-semibold text-navy">
         {t('nav.disputes')}
       </h1>
+      <h2 className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+        {t('disputes.mine')}
+      </h2>
 
       {error && <p className="text-sm font-body text-danger">{error}</p>}
       {loading && <p className="text-sm font-body text-navy/40">{t('common.loading')}</p>}
@@ -60,6 +70,8 @@ export default function DisputesPage() {
           </Link>
         ))}
       </div>
+
+      {isArbiter && <ArbiterQueue />}
     </div>
   )
 }

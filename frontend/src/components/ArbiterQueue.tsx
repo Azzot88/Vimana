@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import {
   claimDispute,
@@ -8,9 +8,16 @@ import {
   resolveDispute,
   type Dispute,
 } from '../api/admin'
-import MonoText from '../components/MonoText'
+import MonoText from './MonoText'
 
-export default function AdminDisputesPage() {
+/** T_UX.15 — the arbiter's queue, as a section rather than a screen.
+ *
+ *  It used to be its own tab called "Arbitration" sitting next to "Disputes",
+ *  which read as two different things and was one: the arbiter's own case and
+ *  the queue they judge both answer to the same word. Rendered here, under a
+ *  person's own disputes, the queue is plainly *more* of the same screen.
+ */
+export default function ArbiterQueue() {
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const [disputes, setDisputes] = useState<Dispute[]>([])
@@ -20,8 +27,7 @@ export default function AdminDisputesPage() {
   const [closesDeal, setClosesDeal] = useState(false)
   const [error, setError] = useState('')
 
-  const canView = user?.role === 'arbiter' || user?.role === 'superuser'
-  if (!canView) return <Navigate to="/dashboard" replace />
+
 
   const load = async () => {
     setLoading(true)
@@ -64,10 +70,10 @@ export default function AdminDisputesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-display font-bold text-2xl text-navy">
+    <div className="space-y-4 pt-6 border-t border-navy/10">
+      <h2 className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
         {t('admin.disputesTitle')}
-      </h1>
+      </h2>
 
       {error && (
         <p className="text-xs font-mono text-danger">{error}</p>

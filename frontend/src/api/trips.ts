@@ -61,3 +61,8 @@ export const createTrip = (payload: CreateTripPayload) =>
 
 export const listTrips = (filters?: TripFilters) =>
   api.get<Page<Trip>>('/api/trips', { params: filters })
+
+/** T_UX.15 — withdraw a published trip. Cancelled, not deleted: somebody may
+ *  already be talking about it. */
+export const cancelTrip = (tripId: string) =>
+  api.post<Trip>(`/api/trips/${tripId}/cancel`)

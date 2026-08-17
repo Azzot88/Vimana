@@ -545,7 +545,15 @@
     "noTrips": "No published trips",
     "publishFirst": "Publish a trip",
     "noDeals": "No active deals",
-    "findCarrier": "Find a carrier and send your package"
+    "findCarrier": "Find a carrier and send your package",
+    "myTrips": "My trips",
+    "carryingNow": "Carrying now",
+    "myShipments": "My shipments",
+    "noShipments": "Nothing on its way yet.",
+    "withdraw": "Withdraw",
+    "withdrawFailed": "Could not withdraw the trip",
+    "inquiries": "{{count}} asking",
+    "viewAsSender": "See as a sender"
   },
   "trips": {
     "title": "Trips",
@@ -1186,6 +1194,8 @@
     "tripsCount": "{{count}} published trips"
   },
   "disputes": {
-    "none": "No open disputes."
+    "none": "No open disputes.",
+    "mine": "My disputes",
+    "profileHint": "Open cases and the arbitration record."
   }
 }

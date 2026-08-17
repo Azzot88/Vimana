@@ -497,7 +497,15 @@
     "noTrips": "Brak opublikowanych lotów",
     "publishFirst": "Opublikuj lot",
     "noDeals": "Brak aktywnych transakcji",
-    "findCarrier": "Znajdź przewoźnika i wyślij paczkę"
+    "findCarrier": "Znajdź przewoźnika i wyślij paczkę",
+    "myTrips": "Moje loty",
+    "carryingNow": "Wiozę teraz",
+    "myShipments": "Moje przesyłki",
+    "noShipments": "Nic jeszcze w drodze.",
+    "withdraw": "Wycofaj",
+    "withdrawFailed": "Nie udało się wycofać lotu",
+    "inquiries": "pytających: {{count}}",
+    "viewAsSender": "Zobacz jak nadawca"
   },
   "trips": {
     "title": "Loty",
@@ -1141,6 +1149,8 @@
     "tripsCount": "Opublikowane loty: {{count}}"
   },
   "disputes": {
-    "none": "Brak otwartych sporów."
+    "none": "Brak otwartych sporów.",
+    "mine": "Moje spory",
+    "profileHint": "Otwarte sprawy i zapis arbitrażu."
   }
 }

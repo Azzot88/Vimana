@@ -44,17 +44,9 @@ export default function Navbar() {
                 {t('nav.trips')}
               </NavLink>
             )}
-            <NavLink to="/disputes" className={linkClass}>
-              {t('nav.disputes')}
-            </NavLink>
             <NavLink to="/profile" className={linkClass}>
               {t('nav.profile')}
             </NavLink>
-            {(user?.role === 'arbiter' || user?.role === 'superuser') && (
-              <NavLink to="/admin/disputes" className={linkClass}>
-                {t('nav.arbitration')}
-              </NavLink>
-            )}
             {user?.role === 'superuser' && (
               <>
                 <NavLink to="/admin/users" className={linkClass}>

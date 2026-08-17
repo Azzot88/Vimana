@@ -230,6 +230,20 @@ export default function ProfilePage() {
           <AddressesSection />
           <DisplayPrefsSection />
           <PublishedTripsSection />
+          {/* T_UX.15 — disputes moved off the main nav. They matter, but they
+              are rare and slow: a permanent tab for something most accounts
+              never open crowds out what people do every day. */}
+          <Link
+            to="/disputes"
+            className="block bg-white rounded-card border border-navy/10 p-4 hover:border-cyan/40 transition-colors"
+          >
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('nav.disputes')}
+            </p>
+            <p className="text-xs font-body text-navy/40 mt-0.5">
+              {t('disputes.profileHint')}
+            </p>
+          </Link>
 
           <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">

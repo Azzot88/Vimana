@@ -496,7 +496,15 @@
     "noTrips": "Sin vuelos publicados",
     "publishFirst": "Publicar vuelo",
     "noDeals": "Sin acuerdos activos",
-    "findCarrier": "Encuentra un transportista y envía tu paquete"
+    "findCarrier": "Encuentra un transportista y envía tu paquete",
+    "myTrips": "Mis viajes",
+    "carryingNow": "Llevando ahora",
+    "myShipments": "Mis envíos",
+    "noShipments": "Nada en camino todavía.",
+    "withdraw": "Retirar",
+    "withdrawFailed": "No se pudo retirar el viaje",
+    "inquiries": "preguntan: {{count}}",
+    "viewAsSender": "Ver como remitente"
   },
   "trips": {
     "title": "Vuelos",
@@ -1140,6 +1148,8 @@
     "tripsCount": "Viajes publicados: {{count}}"
   },
   "disputes": {
-    "none": "No hay disputas abiertas."
+    "none": "No hay disputas abiertas.",
+    "mine": "Mis disputas",
+    "profileHint": "Casos abiertos y registro de arbitraje."
   }
 }

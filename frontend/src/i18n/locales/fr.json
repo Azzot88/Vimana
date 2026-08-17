@@ -496,7 +496,15 @@
     "noTrips": "Aucun vol publié",
     "publishFirst": "Publier un vol",
     "noDeals": "Aucune transaction active",
-    "findCarrier": "Trouvez un transporteur et envoyez votre colis"
+    "findCarrier": "Trouvez un transporteur et envoyez votre colis",
+    "myTrips": "Mes trajets",
+    "carryingNow": "En cours de transport",
+    "myShipments": "Mes envois",
+    "noShipments": "Rien en route pour l'instant.",
+    "withdraw": "Retirer",
+    "withdrawFailed": "Impossible de retirer le trajet",
+    "inquiries": "demandes : {{count}}",
+    "viewAsSender": "Voir côté expéditeur"
   },
   "trips": {
     "title": "Vols",
@@ -1140,6 +1148,8 @@
     "tripsCount": "Trajets publiés : {{count}}"
   },
   "disputes": {
-    "none": "Aucun litige en cours."
+    "none": "Aucun litige en cours.",
+    "mine": "Mes litiges",
+    "profileHint": "Dossiers ouverts et historique d'arbitrage."
   }
 }

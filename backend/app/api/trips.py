@@ -76,6 +76,41 @@ async def create_trip(
     return trip
 
 
+@router.post("/{trip_id}/cancel", response_model=TripOut)
+async def cancel_trip(
+    trip_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T_UX.15 — withdraw a published trip.
+
+    Until now a trip could be created and never taken back. Plans change, and a
+    carrier whose flight moved had no way to say so: the listing stayed up and
+    senders kept writing to it. Withdrawing is the control the panel was
+    missing, not a nicety.
+
+    Cancelled rather than deleted. Somebody may already have opened a
+    conversation about this trip, and deleting the row would leave that thread
+    pointing at nothing; a cancelled trip still explains itself.
+    """
+    trip = await db.get(Trip, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.carrier_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your trip")
+    if trip.status not in (TripStatus.draft, TripStatus.open):
+        # A matched trip is somebody else's plan too — withdrawing it silently
+        # would cancel their delivery without telling them.
+        raise HTTPException(
+            status_code=409, detail="Only an open trip can be withdrawn"
+        )
+
+    trip.status = TripStatus.cancelled
+    await db.commit()
+    await db.refresh(trip)
+    return trip
+
+
 @router.get("", response_model=Page[TripOut])
 async def list_trips(
     origin: str | None = None,
