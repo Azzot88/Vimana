@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -143,7 +144,17 @@ export default function TripsPage() {
                   </MonoText>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      {t('trips.carrier')}: <span className="text-navy font-medium">{trip.carrier_name}</span>
+                      {t('trips.carrier')}:{' '}
+                      {/* T_UX.14 — handing a stranger a parcel is the moment
+                          somebody most wants to know who they are dealing with.
+                          The name stops being text. */}
+                      <Link
+                        to={`/carriers/${trip.carrier_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-navy font-medium hover:text-cyan transition-colors underline decoration-navy/20 underline-offset-2"
+                      >
+                        {trip.carrier_name}
+                      </Link>
                       <UBAChip uba={trip.carrier_uba} level={trip.carrier_uba_level} />
                       {/* T3.17 — a retired identity, said before anyone offers
                           it a deal. Grey, not red: this is not a warning about

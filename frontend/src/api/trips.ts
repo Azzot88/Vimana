@@ -50,6 +50,8 @@ export interface TripFilters {
   origin?: string
   destination?: string
   date?: string
+  /** T_UX.14 — everything one carrier is flying, for their public page. */
+  carrier_id?: string
   after?: string
   limit?: number
 }

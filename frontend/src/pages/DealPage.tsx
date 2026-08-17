@@ -172,7 +172,12 @@ export default function DealPage() {
           </div>
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.carrier')}</p>
-            <p className="text-sm font-body text-navy font-medium">{deal.carrier_name}</p>
+            <Link
+              to={`/carriers/${deal.carrier_id}`}
+              className="text-sm font-body text-navy font-medium hover:text-cyan transition-colors underline decoration-navy/20 underline-offset-2"
+            >
+              {deal.carrier_name}
+            </Link>
           </div>
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.cargo')}</p>

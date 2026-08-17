@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useAuthStore } from '../stores/auth'
 
 const iconClass = 'w-5 h-5'
 
@@ -38,6 +39,7 @@ function IconProfile() {
 }
 
 export default function BottomNav() {
+  const isCarrierMode = useAuthStore((s) => s.user?.active_mode) === 'carrier'
   const { t } = useTranslation()
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -51,13 +53,15 @@ export default function BottomNav() {
         <IconHome />
         <span>{t('nav.dashboard')}</span>
       </NavLink>
-      <NavLink to="/trips" className={linkClass}>
-        <IconTrips />
-        <span>{t('nav.trips')}</span>
-      </NavLink>
-      <NavLink to="/deals" className={linkClass}>
+      {!isCarrierMode && (
+        <NavLink to="/trips" className={linkClass}>
+          <IconTrips />
+          <span>{t('nav.trips')}</span>
+        </NavLink>
+      )}
+      <NavLink to="/disputes" className={linkClass}>
         <IconDeals />
-        <span>{t('nav.deals')}</span>
+        <span>{t('nav.disputes')}</span>
       </NavLink>
       <NavLink to="/profile" className={linkClass}>
         <IconProfile />

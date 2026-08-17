@@ -8,7 +8,9 @@
     "users": "Users",
     "notices": "Notices",
     "logout": "Sign out",
-    "params": "Parameters"
+    "params": "Parameters",
+    "history": "History",
+    "arbitration": "Arbitration"
   },
   "dispute": {
     "openButton": "Open dispute",
@@ -844,7 +846,9 @@
       "submit": "Continue",
       "stepUpBody": "Confirm it is you — the code then goes to the new address.",
       "failed": "Could not add the address."
-    }
+    },
+    "publishedTrips": "Published trips",
+    "noPublishedTrips": "Nothing published yet."
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
@@ -1174,5 +1178,14 @@
     "save": "Save",
     "saved": "Saved",
     "saveFailed": "Could not save"
+  },
+  "carrier": {
+    "unknown": "Carrier",
+    "noTrips": "No published trips.",
+    "write": "Write",
+    "tripsCount": "{{count}} published trips"
+  },
+  "disputes": {
+    "none": "No open disputes."
   }
 }

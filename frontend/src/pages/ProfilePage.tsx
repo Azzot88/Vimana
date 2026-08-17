@@ -9,6 +9,7 @@ import AdminPanelSection from '../components/AdminPanelSection'
 import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import AddressesSection from '../components/AddressesSection'
 import DisplayPrefsSection from '../components/DisplayPrefsSection'
+import PublishedTripsSection from '../components/PublishedTripsSection'
 import EditProfileModal from '../components/EditProfileModal'
 import MonoText from '../components/MonoText'
 import TrustCirclesSection from '../components/TrustCirclesSection'
@@ -228,6 +229,7 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <AddressesSection />
           <DisplayPrefsSection />
+          <PublishedTripsSection />
 
           <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
             <div className="flex items-center justify-between">

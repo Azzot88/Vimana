@@ -7,7 +7,9 @@
     "disputes": "Spory",
     "users": "Użytkownicy",
     "logout": "Wyloguj",
-    "params": "Parametry"
+    "params": "Parametry",
+    "history": "Historia",
+    "arbitration": "Arbitraż"
   },
   "dispute": {
     "openButton": "Otwórz spór",
@@ -792,7 +794,9 @@
       "submit": "Dalej",
       "stepUpBody": "Potwierdź, że to Ty — kod pójdzie wtedy na nowy adres.",
       "failed": "Nie udało się dodać adresu."
-    }
+    },
+    "publishedTrips": "Opublikowane loty",
+    "noPublishedTrips": "Nic jeszcze nie opublikowano."
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FAZA 1",
@@ -1129,5 +1133,14 @@
     "save": "Zapisz",
     "saved": "Zapisano",
     "saveFailed": "Nie udało się zapisać"
+  },
+  "carrier": {
+    "unknown": "Przewoźnik",
+    "noTrips": "Brak opublikowanych lotów.",
+    "write": "Napisz",
+    "tripsCount": "Opublikowane loty: {{count}}"
+  },
+  "disputes": {
+    "none": "Brak otwartych sporów."
   }
 }

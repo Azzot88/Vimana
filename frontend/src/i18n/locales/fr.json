@@ -7,7 +7,9 @@
     "disputes": "Litiges",
     "users": "Utilisateurs",
     "logout": "Déconnexion",
-    "params": "Paramètres"
+    "params": "Paramètres",
+    "history": "Historique",
+    "arbitration": "Arbitrage"
   },
   "dispute": {
     "openButton": "Ouvrir un litige",
@@ -791,7 +793,9 @@
       "submit": "Continuer",
       "stepUpBody": "Confirmez que c'est bien vous — le code partira ensuite vers la nouvelle adresse.",
       "failed": "Impossible d'ajouter l'adresse."
-    }
+    },
+    "publishedTrips": "Trajets publiés",
+    "noPublishedTrips": "Rien de publié pour l'instant."
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
@@ -1128,5 +1132,14 @@
     "save": "Enregistrer",
     "saved": "Enregistré",
     "saveFailed": "Échec de l'enregistrement"
+  },
+  "carrier": {
+    "unknown": "Transporteur",
+    "noTrips": "Aucun trajet publié.",
+    "write": "Écrire",
+    "tripsCount": "Trajets publiés : {{count}}"
+  },
+  "disputes": {
+    "none": "Aucun litige en cours."
   }
 }

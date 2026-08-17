@@ -81,6 +81,10 @@ async def list_trips(
     origin: str | None = None,
     destination: str | None = None,
     date: date | None = None,
+    # T_UX.14 — every place a trip is shown makes the carrier's name a link, and
+    # the page behind it is "everything this carrier is flying". Without a filter
+    # that page would have to pull the whole board and sift it client-side.
+    carrier_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
@@ -97,6 +101,8 @@ async def list_trips(
         stmt = stmt.where(Trip.origin == origin.strip().upper())
     if destination:
         stmt = stmt.where(Trip.destination == destination.strip().upper())
+    if carrier_id:
+        stmt = stmt.where(Trip.carrier_id == carrier_id)
     if date:
         # Half-open UTC day instead of `cast(depart_at, Date) = :date`: a
         # function on the column rules the index out for every row.

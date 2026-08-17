@@ -7,7 +7,9 @@
     "disputes": "Disputas",
     "users": "Usuarios",
     "logout": "Cerrar sesión",
-    "params": "Parámetros"
+    "params": "Parámetros",
+    "history": "Historial",
+    "arbitration": "Arbitraje"
   },
   "dispute": {
     "openButton": "Abrir disputa",
@@ -791,7 +793,9 @@
       "submit": "Continuar",
       "stepUpBody": "Confirma que eres tú — el código irá después a la nueva dirección.",
       "failed": "No se ha podido añadir la dirección."
-    }
+    },
+    "publishedTrips": "Viajes publicados",
+    "noPublishedTrips": "Nada publicado todavía."
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FASE 1",
@@ -1128,5 +1132,14 @@
     "save": "Guardar",
     "saved": "Guardado",
     "saveFailed": "No se pudo guardar"
+  },
+  "carrier": {
+    "unknown": "Transportista",
+    "noTrips": "Sin viajes publicados.",
+    "write": "Escribir",
+    "tripsCount": "Viajes publicados: {{count}}"
+  },
+  "disputes": {
+    "none": "No hay disputas abiertas."
   }
 }

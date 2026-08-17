@@ -6,6 +6,8 @@ import ModeSwitcher from './ModeSwitcher'
 
 export default function Navbar() {
   const { user, logout } = useAuthStore()
+  // Reactive, not `getState()`: the nav has to change the moment the mode does.
+  const isCarrierMode = user?.active_mode === 'carrier'
   const { t } = useTranslation()
   const navigate = useNavigate()
 
@@ -33,18 +35,24 @@ export default function Navbar() {
             <NavLink to="/dashboard" end className={linkClass}>
               {t('nav.dashboard')}
             </NavLink>
-            <NavLink to="/trips" className={linkClass}>
-              {t('nav.trips')}
-            </NavLink>
-            <NavLink to="/deals" className={linkClass}>
-              {t('nav.deals')}
+            {/* T_UX.14 — the two modes want different boards. A carrier's own
+                trips and their controls live on the panel; other carriers'
+                trips are not their business. A sender needs the opposite: the
+                board of what is available to book. */}
+            {!isCarrierMode && (
+              <NavLink to="/trips" className={linkClass}>
+                {t('nav.trips')}
+              </NavLink>
+            )}
+            <NavLink to="/disputes" className={linkClass}>
+              {t('nav.disputes')}
             </NavLink>
             <NavLink to="/profile" className={linkClass}>
               {t('nav.profile')}
             </NavLink>
             {(user?.role === 'arbiter' || user?.role === 'superuser') && (
               <NavLink to="/admin/disputes" className={linkClass}>
-                {t('nav.disputes')}
+                {t('nav.arbitration')}
               </NavLink>
             )}
             {user?.role === 'superuser' && (

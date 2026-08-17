@@ -37,6 +37,8 @@ const AdminEmailPage = lazy(() => import('./pages/AdminEmailPage'))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
+const CarrierPage = lazy(() => import('./pages/CarrierPage'))
+const DisputesPage = lazy(() => import('./pages/DisputesPage'))
 const JoinDealPage = lazy(() => import('./pages/JoinDealPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
@@ -94,7 +96,13 @@ export default function App() {
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/trips" element={<TripsPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />
-              <Route path="/deals" element={<DealsPage />} />
+              {/* T_UX.14 — the deals tab became history: a finished delivery is
+                  something you look up, not something you navigate by. `/deals`
+                  stays as the entry point old links point at. */}
+              <Route path="/history" element={<DealsPage />} />
+              <Route path="/deals" element={<Navigate to="/history" replace />} />
+              <Route path="/disputes" element={<DisputesPage />} />
+              <Route path="/carriers/:carrierId" element={<CarrierPage />} />
               <Route path="/deals/:dealId" element={<DealPage />} />
               <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
               <Route path="/profile" element={<ProfilePage />} />
