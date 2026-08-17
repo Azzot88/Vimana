@@ -564,10 +564,12 @@ async def ack_card(
 
     msg = (
         await db.execute(
-            select(DealVaultMessage).where(
+            select(DealVaultMessage)
+            .where(
                 DealVaultMessage.id == message_id,
                 DealVaultMessage.deal_id == deal_id,
             )
+            .options(selectinload(DealVaultMessage.attachments))
         )
     ).scalar_one_or_none()
     if msg is None:
@@ -599,13 +601,20 @@ async def ack_card(
     # T3.35 — accepting a proposal is what creates the contract. Kept here
     # rather than in a second endpoint so the client has one gesture for every
     # card, and so a proposal cannot be "accepted" without the snapshot existing.
-    if (
-        msg.card_state is CardState.accepted
-        and msg.card_kind in (CardKind.terms_proposed.value, CardKind.terms_countered.value)
-    ):
-        from app.api.terms import agree_from_proposal
+    if msg.card_state is CardState.accepted:
+        if msg.card_kind in (
+            CardKind.terms_proposed.value,
+            CardKind.terms_countered.value,
+        ):
+            from app.api.terms import agree_from_proposal
 
-        await agree_from_proposal(db, deal, msg, current_user)
+            await agree_from_proposal(db, deal, msg, current_user)
+        else:
+            # T3.36–T3.39 — everything the catalogue declares about acceptance:
+            # required evidence, the paired card, the status move.
+            from app.api.cards import apply_acceptance
+
+            await apply_acceptance(db, deal, msg, current_user)
 
     await db.commit()
     await db.refresh(msg)

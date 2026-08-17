@@ -978,5 +978,31 @@
       "bond": "Fianza del transportista",
       "premium": "Premium"
     }
+  },
+  "terms": {
+    "proposalTitle": "Condiciones propuestas",
+    "agreedTitle": "Condiciones acordadas",
+    "proposeTitle": "Proponer condiciones",
+    "counterTitle": "Contraoferta",
+    "normalized": "Cifras comparables",
+    "price": "Precio",
+    "weight": "Peso, kg",
+    "declaredValue": "Valor declarado",
+    "paymentMethod": "Pago",
+    "direction": "Dirección",
+    "distance": "Distancia",
+    "chargeableWeight": "Peso facturable, kg",
+    "perKg": "Precio por kg",
+    "perKm": "Precio por km",
+    "cargoDescription": "Qué se transporta",
+    "belowMinimum": "Por debajo del mínimo indicado por el transportista",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "send": "Enviar",
+    "awaitingOther": "Esperando a la otra parte",
+    "superseded": "reemplazado",
+    "declined": "rechazado",
+    "answerFailed": "No se pudo enviar la respuesta",
+    "proposeFailed": "No se pudo enviar la propuesta"
   }
 }

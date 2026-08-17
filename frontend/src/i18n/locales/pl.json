@@ -979,5 +979,31 @@
       "bond": "Kaucja przewoźnika",
       "premium": "Premium"
     }
+  },
+  "terms": {
+    "proposalTitle": "Proponowane warunki",
+    "agreedTitle": "Uzgodnione warunki",
+    "proposeTitle": "Zaproponuj warunki",
+    "counterTitle": "Kontrpropozycja",
+    "normalized": "Wartości porównywalne",
+    "price": "Cena",
+    "weight": "Waga, kg",
+    "declaredValue": "Wartość deklarowana",
+    "paymentMethod": "Płatność",
+    "direction": "Kierunek",
+    "distance": "Odległość",
+    "chargeableWeight": "Waga rozliczeniowa, kg",
+    "perKg": "Cena za kg",
+    "perKm": "Cena za km",
+    "cargoDescription": "Co jest przewożone",
+    "belowMinimum": "Poniżej minimum podanego przez przewoźnika",
+    "accept": "Akceptuj",
+    "decline": "Odrzuć",
+    "send": "Wyślij",
+    "awaitingOther": "Czekamy na drugą stronę",
+    "superseded": "zastąpione",
+    "declined": "odrzucone",
+    "answerFailed": "Nie udało się wysłać odpowiedzi",
+    "proposeFailed": "Nie udało się wysłać propozycji"
   }
 }

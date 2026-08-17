@@ -1025,5 +1025,31 @@
       "bond": "Залог перевозчика",
       "premium": "Премиум"
     }
+  },
+  "terms": {
+    "proposalTitle": "Предложенные условия",
+    "agreedTitle": "Согласованные условия",
+    "proposeTitle": "Предложить условия",
+    "counterTitle": "Встречное предложение",
+    "normalized": "Сопоставимые величины",
+    "price": "Цена",
+    "weight": "Вес, кг",
+    "declaredValue": "Объявленная стоимость",
+    "paymentMethod": "Оплата",
+    "direction": "Направление",
+    "distance": "Расстояние",
+    "chargeableWeight": "Оплачиваемый вес, кг",
+    "perKg": "Цена за кг",
+    "perKm": "Цена за км",
+    "cargoDescription": "Что везём",
+    "belowMinimum": "Ниже минимума, заявленного перевозчиком",
+    "accept": "Принять",
+    "decline": "Отклонить",
+    "send": "Отправить",
+    "awaitingOther": "Ждём вторую сторону",
+    "superseded": "заменено",
+    "declined": "отклонено",
+    "answerFailed": "Не удалось отправить ответ",
+    "proposeFailed": "Не удалось отправить предложение"
   }
 }

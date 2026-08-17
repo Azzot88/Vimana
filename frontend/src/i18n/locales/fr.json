@@ -978,5 +978,31 @@
       "bond": "Caution du transporteur",
       "premium": "Premium"
     }
+  },
+  "terms": {
+    "proposalTitle": "Conditions proposées",
+    "agreedTitle": "Conditions convenues",
+    "proposeTitle": "Proposer des conditions",
+    "counterTitle": "Contre-proposition",
+    "normalized": "Valeurs comparables",
+    "price": "Prix",
+    "weight": "Poids, kg",
+    "declaredValue": "Valeur déclarée",
+    "paymentMethod": "Paiement",
+    "direction": "Direction",
+    "distance": "Distance",
+    "chargeableWeight": "Poids taxable, kg",
+    "perKg": "Prix par kg",
+    "perKm": "Prix par km",
+    "cargoDescription": "Ce qui est transporté",
+    "belowMinimum": "En dessous du minimum indiqué par le transporteur",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "send": "Envoyer",
+    "awaitingOther": "En attente de l'autre partie",
+    "superseded": "remplacé",
+    "declined": "refusé",
+    "answerFailed": "Impossible d'envoyer la réponse",
+    "proposeFailed": "Impossible d'envoyer la proposition"
   }
 }

@@ -1,20 +1,27 @@
-"""T3.34 — the card catalogue and what each kind is allowed to do.
+"""T3.34–T3.39 — the card catalogue, declared rather than coded.
 
-Design note that outlives this task: the type of a card is a **field**, not a
+Design note that outlives these tasks: the type of a card is a **field**, not a
 prefix in the message text. T1.26 shipped `📍 SHARED ADDRESS` as a string the
 frontend parsed back out; that worked for one card and does not survive thirty.
 
-The catalogue below is the full list from IMPLEMENTATIONPLAN §6.9.4, declared in
-one pass even though only part of it has behaviour yet. Declaring it whole is
-deliberate: it keeps later tasks from inventing a second naming scheme, and
-`implemented` says plainly which kinds a caller may actually create today.
+The second decision is this table. Groups 2–5 could each have been an endpoint
+module — four files repeating the same four checks (is the caller a party, may
+this role create this card, who owes the answer, what does accepting change).
+Instead every card declares those four things here, and one generic endpoint
+reads the declaration. A new card type is a row, not a module; the invariants of
+§6.9.5 are enforced in one place rather than four.
 """
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from app.models.deal import CardAckRole
+from app.models.deal import AttachmentKind, CardAckRole, DealStatus
+
+# Sentinel for "whoever did not create the card". Terms, handover conditions and
+# cancellation all need it: the answer is always owed by the other side, and
+# which side that is depends on who spoke first.
+COUNTERPARTY = "counterparty"
 
 
 class CardKind(str, enum.Enum):
@@ -42,7 +49,7 @@ class CardKind(str, enum.Enum):
     delivery_declared = "delivery.declared"
     delivery_confirmed = "delivery.confirmed"
 
-    # Group 4 — settlement (T3.38, escrow parts in Phase 5)
+    # Group 4 — settlement (T3.38; escrow parts land in Phase 5)
     payment_method_agreed = "payment.method_agreed"
     payment_declared = "payment.declared"
     payment_confirmed = "payment.confirmed"
@@ -70,62 +77,119 @@ class CardKind(str, enum.Enum):
     b2b_proof_of_delivery = "b2b.proof_of_delivery"
 
 
+PARTIES = frozenset({CardAckRole.sender, CardAckRole.carrier})
+ALL_PARTIES = PARTIES | {CardAckRole.recipient}
+
+
 @dataclass(frozen=True)
 class CardSpec:
     kind: CardKind
     group: str
-    # Who must answer. None = informational, nothing is owed.
-    requires_ack_by: CardAckRole | None
-    # False while the kind is declared but has no creation path yet.
-    implemented: bool
+    # Empty means the card is only ever produced by the server.
+    creator_roles: frozenset = field(default_factory=frozenset)
+    # A role, COUNTERPARTY, or None for an informational card nobody answers.
+    ack_by: object | None = None
+    # Enforced at creation: a declaration without its evidence is a claim.
+    requires_attachment: AttachmentKind | None = None
+    # Deal status reached when the card is accepted.
+    on_accept_status: DealStatus | None = None
+    # Card the server emits in reply to an acceptance, so that the record shows
+    # both halves of a two-sided step rather than one card changing colour.
+    on_accept_emit: CardKind | None = None
+    implemented: bool = False
 
 
-def _spec(kind: CardKind, group: str, ack: CardAckRole | None = None, *, implemented: bool = False) -> CardSpec:
-    return CardSpec(kind=kind, group=group, requires_ack_by=ack, implemented=implemented)
+def _s(kind: CardKind, group: str, **kw) -> CardSpec:
+    return CardSpec(kind=kind, group=group, **kw)
 
 
 CATALOGUE: dict[CardKind, CardSpec] = {
     s.kind: s
     for s in (
-        _spec(CardKind.terms_proposed, "terms"),
-        _spec(CardKind.terms_countered, "terms"),
-        _spec(CardKind.terms_agreed, "terms"),
-        _spec(CardKind.terms_declined, "terms"),
-        _spec(CardKind.terms_amended, "terms"),
-        _spec(CardKind.terms_reconfirm_requested, "terms"),
-        _spec(CardKind.handover_conditions, "logistics"),
-        _spec(CardKind.pickup_proposed, "logistics"),
-        _spec(CardKind.pickup_confirmed, "logistics"),
-        _spec(CardKind.dropoff_proposed, "logistics"),
-        _spec(CardKind.dropoff_confirmed, "logistics"),
-        # The one kind that exists today: T1.26's shared address, now typed.
-        # Informational — nobody owes an answer to an address.
-        _spec(CardKind.address_shared, "logistics", None, implemented=True),
-        _spec(CardKind.route_note, "logistics"),
-        _spec(CardKind.handoff_declared, "custody", CardAckRole.carrier),
-        _spec(CardKind.handoff_confirmed, "custody"),
-        _spec(CardKind.transit_update, "custody"),
-        _spec(CardKind.delivery_declared, "custody", CardAckRole.recipient),
-        _spec(CardKind.delivery_confirmed, "custody"),
-        _spec(CardKind.payment_method_agreed, "settlement"),
-        _spec(CardKind.payment_declared, "settlement"),
-        _spec(CardKind.payment_confirmed, "settlement"),
-        _spec(CardKind.escrow_funded, "settlement"),
-        _spec(CardKind.collateral_posted, "settlement"),
-        _spec(CardKind.escrow_release_requested, "settlement"),
-        _spec(CardKind.escrow_released, "settlement"),
-        _spec(CardKind.escrow_refunded, "settlement"),
-        _spec(CardKind.issue_reported, "exceptions"),
-        _spec(CardKind.cancel_requested, "exceptions", CardAckRole.carrier),
-        _spec(CardKind.cancel_confirmed, "exceptions"),
-        _spec(CardKind.dispute_opened, "exceptions"),
-        _spec(CardKind.arbiter_joined, "exceptions"),
-        _spec(CardKind.dispute_resolved, "exceptions"),
-        _spec(CardKind.deal_sealed, "closing"),
-        _spec(CardKind.feedback_left, "closing"),
-        _spec(CardKind.b2b_order_created, "b2b"),
-        _spec(CardKind.b2b_leg_domestic, "b2b"),
-        _spec(CardKind.b2b_proof_of_delivery, "b2b"),
+        # ── group 1 · terms ────────────────────────────────────────────────
+        # Created through `/terms`, which also normalises — hence not creatable
+        # through the generic endpoint.
+        _s(CardKind.terms_proposed, "terms", ack_by=COUNTERPARTY, implemented=True),
+        _s(CardKind.terms_countered, "terms", ack_by=COUNTERPARTY, implemented=True),
+        _s(CardKind.terms_agreed, "terms", implemented=True),
+        _s(CardKind.terms_declined, "terms"),
+        _s(CardKind.terms_amended, "terms", ack_by=COUNTERPARTY),
+        _s(CardKind.terms_reconfirm_requested, "terms", ack_by=COUNTERPARTY, implemented=True),
+
+        # ── group 2 · handover logistics ───────────────────────────────────
+        _s(CardKind.handover_conditions, "logistics", creator_roles=PARTIES,
+           ack_by=COUNTERPARTY, implemented=True),
+        _s(CardKind.pickup_proposed, "logistics", creator_roles=PARTIES,
+           ack_by=COUNTERPARTY, on_accept_emit=CardKind.pickup_confirmed,
+           implemented=True),
+        _s(CardKind.pickup_confirmed, "logistics", implemented=True),
+        _s(CardKind.dropoff_proposed, "logistics", creator_roles=ALL_PARTIES,
+           ack_by=COUNTERPARTY, on_accept_emit=CardKind.dropoff_confirmed,
+           implemented=True),
+        _s(CardKind.dropoff_confirmed, "logistics", implemented=True),
+        _s(CardKind.address_shared, "logistics", implemented=True),
+        _s(CardKind.route_note, "logistics"),
+
+        # ── group 3 · custody ──────────────────────────────────────────────
+        # The sender declares the handover and the carrier confirms taking it:
+        # the cargo changes hands, so both hands have to say so.
+        _s(CardKind.handoff_declared, "custody",
+           creator_roles=frozenset({CardAckRole.sender}),
+           ack_by=CardAckRole.carrier,
+           requires_attachment=AttachmentKind.handoff_photo,
+           on_accept_status=DealStatus.in_transit,
+           on_accept_emit=CardKind.handoff_confirmed,
+           implemented=True),
+        _s(CardKind.handoff_confirmed, "custody", implemented=True),
+        _s(CardKind.transit_update, "custody",
+           creator_roles=frozenset({CardAckRole.carrier}), implemented=True),
+        _s(CardKind.delivery_declared, "custody",
+           creator_roles=frozenset({CardAckRole.carrier}),
+           ack_by=COUNTERPARTY,  # resolved to recipient when there is one
+           requires_attachment=AttachmentKind.receipt_photo,
+           on_accept_status=DealStatus.delivered,
+           on_accept_emit=CardKind.delivery_confirmed,
+           implemented=True),
+        _s(CardKind.delivery_confirmed, "custody", implemented=True),
+
+        # ── group 4 · settlement ───────────────────────────────────────────
+        _s(CardKind.payment_method_agreed, "settlement", creator_roles=PARTIES,
+           ack_by=COUNTERPARTY, implemented=True),
+        # The payer declares, the receiver of the money confirms. That second
+        # card is what separates "said they paid" from "confirmed it arrived",
+        # and the deal does not close without it — even in cash.
+        _s(CardKind.payment_declared, "settlement",
+           creator_roles=frozenset({CardAckRole.sender}),
+           ack_by=CardAckRole.carrier,
+           on_accept_status=DealStatus.confirmed,
+           on_accept_emit=CardKind.payment_confirmed,
+           implemented=True),
+        _s(CardKind.payment_confirmed, "settlement", implemented=True),
+        _s(CardKind.escrow_funded, "settlement"),
+        _s(CardKind.collateral_posted, "settlement"),
+        _s(CardKind.escrow_release_requested, "settlement"),
+        _s(CardKind.escrow_released, "settlement"),
+        _s(CardKind.escrow_refunded, "settlement"),
+
+        # ── group 5 · exceptions ───────────────────────────────────────────
+        _s(CardKind.issue_reported, "exceptions", creator_roles=ALL_PARTIES,
+           implemented=True),
+        _s(CardKind.cancel_requested, "exceptions", creator_roles=PARTIES,
+           ack_by=COUNTERPARTY, on_accept_status=DealStatus.closed,
+           on_accept_emit=CardKind.cancel_confirmed, implemented=True),
+        _s(CardKind.cancel_confirmed, "exceptions", implemented=True),
+        _s(CardKind.dispute_opened, "exceptions"),
+        _s(CardKind.arbiter_joined, "exceptions"),
+        _s(CardKind.dispute_resolved, "exceptions"),
+
+        # ── group 6 · closing ──────────────────────────────────────────────
+        _s(CardKind.deal_sealed, "closing"),
+        _s(CardKind.feedback_left, "closing"),
+
+        # ── group 7 · B2B ──────────────────────────────────────────────────
+        _s(CardKind.b2b_order_created, "b2b"),
+        _s(CardKind.b2b_leg_domestic, "b2b"),
+        _s(CardKind.b2b_proof_of_delivery, "b2b"),
     )
 }
 
@@ -150,3 +214,23 @@ def role_of(deal, user_id) -> CardAckRole | None:
     if deal.recipient_id is not None and deal.recipient_id == user_id:
         return CardAckRole.recipient
     return None
+
+
+def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole | None:
+    """Who owes the answer to this card.
+
+    `COUNTERPARTY` is resolved here rather than stored, because it depends on
+    who spoke. Delivery is the one asymmetric case: the person receiving the
+    parcel confirms it, and that is the recipient when the deal has one and the
+    sender when it does not — a deal with no separate recipient is one where the
+    sender is both ends.
+    """
+    if spec.ack_by is None:
+        return None
+    if isinstance(spec.ack_by, CardAckRole):
+        return spec.ack_by
+    if spec.kind is CardKind.delivery_declared:
+        return CardAckRole.recipient if deal.recipient_id else CardAckRole.sender
+    return (
+        CardAckRole.carrier if creator is CardAckRole.sender else CardAckRole.sender
+    )

@@ -1024,5 +1024,31 @@
       "bond": "Carrier bond",
       "premium": "Premium"
     }
+  },
+  "terms": {
+    "proposalTitle": "Proposed terms",
+    "agreedTitle": "Agreed terms",
+    "proposeTitle": "Propose terms",
+    "counterTitle": "Counter-offer",
+    "normalized": "Comparable figures",
+    "price": "Price",
+    "weight": "Weight, kg",
+    "declaredValue": "Declared value",
+    "paymentMethod": "Payment",
+    "direction": "Direction",
+    "distance": "Distance",
+    "chargeableWeight": "Chargeable weight, kg",
+    "perKg": "Price per kg",
+    "perKm": "Price per km",
+    "cargoDescription": "What is being carried",
+    "belowMinimum": "Below this carrier's stated minimum",
+    "accept": "Accept",
+    "decline": "Decline",
+    "send": "Send",
+    "awaitingOther": "Awaiting the other side",
+    "superseded": "superseded",
+    "declined": "declined",
+    "answerFailed": "Could not send the answer",
+    "proposeFailed": "Could not send the proposal"
   }
 }

@@ -15,6 +15,8 @@ import { inviteRecipient } from '../api/participants'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
+import TermsCard from '../components/TermsCard'
+import TermsProposeForm from '../components/TermsProposeForm'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
@@ -42,6 +44,7 @@ export default function DealVaultPage() {
   const [uploadKind, setUploadKind] = useState<AttachmentKind>('handoff_photo')
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
   const [parties, setParties] = useState<{
     e2e: E2EParties | null
     senderId: string | null
@@ -50,6 +53,15 @@ export default function DealVaultPage() {
   const [decrypted, setDecrypted] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  // T3.35 — a card that awaits the other side must not offer this user a
+  // button the server will refuse anyway.
+  const dealRole: 'sender' | 'carrier' | null =
+    user?.id && parties.senderId === user.id
+      ? 'sender'
+      : user?.id && parties.carrierId === user.id
+        ? 'carrier'
+        : null
 
   const load = async () => {
     if (!dealId) return
@@ -202,6 +214,16 @@ export default function DealVaultPage() {
 
         {(() => {
           const shown = msg.is_e2e ? decrypted[msg.id] : msg.text
+          if (msg.card_kind?.startsWith('terms.') && dealId) {
+            return (
+              <TermsCard
+                msg={msg}
+                dealId={dealId}
+                myRole={dealRole}
+                onChanged={load}
+              />
+            )
+          }
           if (msg.is_e2e && shown === undefined) {
             return (
               <p className="text-sm font-body text-navy/40 italic bg-ivory rounded-field px-3 py-2 inline-block">
@@ -334,6 +356,27 @@ export default function DealVaultPage() {
               📍 {t('chat.shareAddress.button')}
             </button>
           </div>
+          {dealRole && (
+            <div className="mb-3">
+              {termsOpen ? (
+                <TermsProposeForm
+                  dealId={dealId!}
+                  onDone={() => {
+                    setTermsOpen(false)
+                    void load()
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setTermsOpen(true)}
+                  className="text-xs font-body text-cyan"
+                >
+                  {t('terms.proposeTitle')}
+                </button>
+              )}
+            </div>
+          )}
           <form onSubmit={handleSend} className="flex gap-2">
             <input
               type="text"

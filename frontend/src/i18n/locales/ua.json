@@ -992,5 +992,31 @@
       "bond": "Застава перевізника",
       "premium": "Преміум"
     }
+  },
+  "terms": {
+    "proposalTitle": "Запропоновані умови",
+    "agreedTitle": "Узгоджені умови",
+    "proposeTitle": "Запропонувати умови",
+    "counterTitle": "Зустрічна пропозиція",
+    "normalized": "Порівнянні величини",
+    "price": "Ціна",
+    "weight": "Вага, кг",
+    "declaredValue": "Оголошена вартість",
+    "paymentMethod": "Оплата",
+    "direction": "Напрямок",
+    "distance": "Відстань",
+    "chargeableWeight": "Оплачувана вага, кг",
+    "perKg": "Ціна за кг",
+    "perKm": "Ціна за км",
+    "cargoDescription": "Що веземо",
+    "belowMinimum": "Нижче мінімуму, заявленого перевізником",
+    "accept": "Прийняти",
+    "decline": "Відхилити",
+    "send": "Надіслати",
+    "awaitingOther": "Чекаємо на другу сторону",
+    "superseded": "замінено",
+    "declined": "відхилено",
+    "answerFailed": "Не вдалося надіслати відповідь",
+    "proposeFailed": "Не вдалося надіслати пропозицію"
   }
 }

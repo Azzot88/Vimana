@@ -24,6 +24,7 @@ from app.api.dealvault import router as dealvault_router
 from app.api.deals import router as deals_router
 from app.api.inquiries import router as inquiries_router
 from app.api.platform_params import router as platform_params_router
+from app.api.cards import router as cards_router
 from app.api.terms import router as terms_router
 from app.api.keypair import router as keypair_router
 from app.api.social import router as social_router
@@ -258,6 +259,7 @@ app.include_router(admin_router, prefix="/api", tags=["admin"])
 app.include_router(inquiries_router, prefix="/api", tags=["inquiries"])
 app.include_router(platform_params_router, prefix="/api", tags=["admin"])
 app.include_router(terms_router, prefix="/api/deals", tags=["terms"])
+app.include_router(cards_router, prefix="/api/deals", tags=["cards"])
 
 
 @app.get("/health")
