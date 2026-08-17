@@ -72,9 +72,29 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("GET", "/api/deals/{deal_id}/chain"): Case(
         DENIED, "chain status names the deal's events"
     ),
+    # ---- terms (T3.35) -------------------------------------------------
+    ("GET", "/api/deals/{deal_id}/terms"): Case(
+        DENIED, "the contract states the price two other people agreed"
+    ),
+    ("POST", "/api/deals/{deal_id}/terms"): Case(
+        DENIED,
+        "proposing terms into a stranger's deal",
+        json={
+            "weight_kg": 2,
+            "price_total": 50,
+            "declared_value": 500,
+            "currency": "USD",
+            "payment_method": "cash",
+        },
+    ),
     # ---- DealVault -----------------------------------------------------
     ("GET", "/api/deals/{deal_id}/dealvault"): Case(
         DENIED, "the vault is the deal's private content"
+    ),
+    ("POST", "/api/deals/{deal_id}/dealvault/messages/{message_id}/ack"): Case(
+        DENIED,
+        "answering a card in a stranger's deal — the rule the UI only decorates",
+        json={"decision": "accepted"},
     ),
     ("POST", "/api/deals/{deal_id}/dealvault/messages"): Case(
         DENIED, "writing into a stranger's vault", json={"text": "idor probe"}
@@ -173,6 +193,10 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED, "superuser-only"
     ),
     ("DELETE", "/api/admin/users/{user_id}"): Case(DENIED, "superuser-only"),
+    # ---- platform parameters (T3.40) -----------------------------------
+    ("GET", "/api/admin/params/{key}/history"): Case(
+        DENIED, "who changed the fee and when is superuser-only"
+    ),
     # ---- notices (admin CRUD) ------------------------------------------
     ("PATCH", "/api/admin/route-notes/{note_id}"): Case(
         DENIED, "superuser-only", json={"headline": "idor probe"}
@@ -464,6 +488,9 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "credential_id": str(credential_id),
         "user_id": str(seed_carrier.id),
         "npub": npub,
+        # T3.40 — a real parameter name: the row asserts that a stranger is
+        # refused, not that an unknown key is a 404.
+        "key": "carrier_fee_percent",
         # Only the capability rows use this, and they want an unknown one.
         "token": uuidlib.uuid4().hex,
     }
