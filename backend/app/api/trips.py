@@ -42,6 +42,13 @@ async def create_trip(
         depart_at=body.depart_at,
         capacity=body.capacity,
         allowed_categories=body.allowed_categories,
+        # T3.35 — the carrier's baseline terms travel with the listing, so a
+        # sender can compare two trips on a corridor before opening a chat.
+        price_per_kg=body.price_per_kg,
+        min_deal_price=body.min_deal_price,
+        currency=body.currency,
+        allowed_handover_methods=body.allowed_handover_methods,
+        max_declared_value=body.max_declared_value,
         status=TripStatus.open,
     )
     db.add(trip)

@@ -534,7 +534,8 @@
       "categories": "Catégories autorisées",
       "publish": "Publication",
       "preview": "Aperçu",
-      "alsoOnNostr": "Publier aussi sur le réseau Nostr"
+      "alsoOnNostr": "Publier aussi sur le réseau Nostr",
+      "terms": "Conditions"
     },
     "newTripHook": {
       "voice": "Saisie vocale",
@@ -549,7 +550,13 @@
       "pastDate": "La date doit être dans le futur",
       "capacity": "Le poids doit être d'au moins 0.5 kg",
       "capacityWarning": "Un poids supérieur à 15 kg est inhabituel pour bagage à main. Publier ?"
-    }
+    },
+    "pricePerKg": "Prix par kg",
+    "minDealPrice": "Transaction minimale",
+    "currency": "Devise",
+    "maxDeclaredValue": "Valeur déclarée max.",
+    "priceOnRequest": "sur demande",
+    "termsHint": "Votre base. L'expéditeur peut toujours faire une contre-offre."
   },
   "deals": {
     "title": "Transactions",

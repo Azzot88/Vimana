@@ -534,7 +534,8 @@
       "categories": "Categorías permitidas",
       "publish": "Publicación",
       "preview": "Vista previa",
-      "alsoOnNostr": "Publicar también en la red Nostr"
+      "alsoOnNostr": "Publicar también en la red Nostr",
+      "terms": "Condiciones"
     },
     "newTripHook": {
       "voice": "Entrada de voz",
@@ -549,7 +550,13 @@
       "pastDate": "La fecha debe ser en el futuro",
       "capacity": "El peso debe ser al menos 0.5 kg",
       "capacityWarning": "Un peso mayor a 15 kg es inusual para equipaje de mano. ¿Publicar?"
-    }
+    },
+    "pricePerKg": "Precio por kg",
+    "minDealPrice": "Trato mínimo",
+    "currency": "Moneda",
+    "maxDeclaredValue": "Valor declarado máx.",
+    "priceOnRequest": "a consultar",
+    "termsHint": "Tu base. El remitente aún puede contraofertar en el chat."
   },
   "deals": {
     "title": "Acuerdos",

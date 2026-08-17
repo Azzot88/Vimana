@@ -535,7 +535,8 @@
       "categories": "Dozwolone kategorie",
       "publish": "Publikacja",
       "preview": "Podgląd",
-      "alsoOnNostr": "Opublikuj także w sieci Nostr"
+      "alsoOnNostr": "Opublikuj także w sieci Nostr",
+      "terms": "Warunki"
     },
     "newTripHook": {
       "voice": "Wprowadzanie głosowe",
@@ -550,7 +551,13 @@
       "pastDate": "Data musi być w przyszłości",
       "capacity": "Waga musi być co najmniej 0.5 kg",
       "capacityWarning": "Waga powyżej 15 kg jest nietypowa dla bagażu podręcznego. Opublikować?"
-    }
+    },
+    "pricePerKg": "Cena za kg",
+    "minDealPrice": "Minimalna transakcja",
+    "currency": "Waluta",
+    "maxDeclaredValue": "Maks. wartość deklarowana",
+    "priceOnRequest": "na zapytanie",
+    "termsHint": "Twoja baza. Nadawca i tak może zaproponować swoje w czacie."
   },
   "deals": {
     "title": "Transakcje",

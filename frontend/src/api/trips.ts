@@ -15,6 +15,13 @@ export interface Trip {
   depart_at: string
   capacity: number
   allowed_categories: string[]
+  /** T3.35 — the carrier's published baseline. Null means "price on request",
+   *  which is a legitimate listing rather than a missing field. */
+  price_per_kg?: number | null
+  min_deal_price?: number | null
+  currency?: string
+  allowed_handover_methods?: string[] | null
+  max_declared_value?: number | null
   status: string
   created_at: string
   nostr_event_id?: string | null
@@ -27,6 +34,11 @@ export interface CreateTripPayload {
   depart_at: string
   capacity: number
   allowed_categories: string[]
+  price_per_kg?: number | null
+  min_deal_price?: number | null
+  currency?: string
+  allowed_handover_methods?: string[] | null
+  max_declared_value?: number | null
 }
 
 export interface TripFilters {

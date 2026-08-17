@@ -1,7 +1,14 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+# Mirrors `schemas.cards.HandoverMethod`. Kept as a set here rather than
+# imported to avoid a marketplace→cards dependency for one literal list.
+HANDOVER_METHODS = {
+    "in_person", "local_post", "courier", "parcel_locker", "poste_restante",
+}
 
 
 class TripCreate(BaseModel):
@@ -10,6 +17,29 @@ class TripCreate(BaseModel):
     depart_at: datetime
     capacity: float
     allowed_categories: list[str] | None = None
+    # T3.35 — the carrier's baseline terms. Optional on purpose: a trip without
+    # a stated price is a legitimate listing ("price on request"), and forcing a
+    # number would make carriers invent one to get past the form.
+    price_per_kg: float | None = Field(default=None, gt=0, le=10_000)
+    min_deal_price: float | None = Field(default=None, ge=0, le=1_000_000)
+    currency: str = Field(default="USD", min_length=3, max_length=3)
+    allowed_handover_methods: list[str] | None = None
+    max_declared_value: float | None = Field(default=None, ge=0)
+
+    @field_validator("currency")
+    @classmethod
+    def _upper(cls, v: str) -> str:
+        return v.upper()
+
+    @field_validator("allowed_handover_methods")
+    @classmethod
+    def _known_methods(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        unknown = set(v) - HANDOVER_METHODS
+        if unknown:
+            raise ValueError(f"unknown handover methods: {sorted(unknown)}")
+        return v
 
 
 class TripOut(BaseModel):
@@ -28,6 +58,13 @@ class TripOut(BaseModel):
     depart_at: datetime
     capacity: float
     allowed_categories: list[str] | None
+    # T3.35 — shown on the trip card so two trips on one corridor are
+    # comparable before anyone opens a chat.
+    price_per_kg: float | None = None
+    min_deal_price: float | None = None
+    currency: str = "USD"
+    allowed_handover_methods: list[str] | None = None
+    max_declared_value: float | None = None
     status: str
     created_at: datetime
     # T3.5 — Nostr publish state (surfaced to clients for the "📡 Also on Nostr" chip).

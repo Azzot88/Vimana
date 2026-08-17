@@ -17,6 +17,12 @@ interface Draft {
   capacity: string
   categories: string[]
   alsoOnNostr: boolean
+  // T3.35 — the carrier's baseline terms. Strings because they come from
+  // inputs; empty means "not stated", which is a real answer.
+  pricePerKg: string
+  minDealPrice: string
+  currency: string
+  maxDeclaredValue: string
 }
 
 const EMPTY: Draft = {
@@ -26,6 +32,10 @@ const EMPTY: Draft = {
   capacity: '',
   categories: [],
   alsoOnNostr: true,
+  pricePerKg: '',
+  minDealPrice: '',
+  currency: 'USD',
+  maxDeclaredValue: '',
 }
 
 function loadDraft(): Draft {
@@ -135,6 +145,14 @@ export default function NewTripPage() {
         depart_at: draft.departAt,
         capacity: cap,
         allowed_categories: draft.categories,
+        // Empty stays empty: a trip without a stated price is "price on
+        // request", not a trip priced at zero.
+        price_per_kg: draft.pricePerKg ? Number(draft.pricePerKg) : null,
+        min_deal_price: draft.minDealPrice ? Number(draft.minDealPrice) : null,
+        currency: draft.currency || 'USD',
+        max_declared_value: draft.maxDeclaredValue
+          ? Number(draft.maxDeclaredValue)
+          : null,
       })
       localStorage.removeItem(DRAFT_KEY)
       navigate('/trips')
@@ -269,6 +287,70 @@ export default function NewTripPage() {
             required
             className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
           />
+        </div>
+
+        {/* Terms cell 1x1 — T3.35 */}
+        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.terms')}
+          </p>
+          <p className="text-[11px] font-body text-navy/40 -mt-1">
+            {t('trips.termsHint')}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <label className="flex-1 min-w-[6rem]">
+              <span className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.pricePerKg')}
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={draft.pricePerKg}
+                onChange={(e) => patch({ pricePerKg: e.target.value })}
+                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              />
+            </label>
+            <label className="flex-1 min-w-[6rem]">
+              <span className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.minDealPrice')}
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={draft.minDealPrice}
+                onChange={(e) => patch({ minDealPrice: e.target.value })}
+                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              />
+            </label>
+            <label className="w-24">
+              <span className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.currency')}
+              </span>
+              <input
+                maxLength={3}
+                value={draft.currency}
+                onChange={(e) =>
+                  patch({ currency: e.target.value.toUpperCase() })
+                }
+                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="block text-[11px] font-body text-navy/40 mb-1">
+              {t('trips.maxDeclaredValue')}
+            </span>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              value={draft.maxDeclaredValue}
+              onChange={(e) => patch({ maxDeclaredValue: e.target.value })}
+              className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+            />
+          </label>
         </div>
 
         {/* Capacity cell 1x1 */}

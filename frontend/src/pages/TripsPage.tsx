@@ -163,6 +163,17 @@ export default function TripsPage() {
                     </span>
                     <MonoText className="text-xs">{new Date(trip.depart_at).toLocaleString(i18n.language)}</MonoText>
                     <span>{t('trips.capacity')}: <MonoText className="text-xs">{trip.capacity} {t('trips.kg')}</MonoText></span>
+                    {/* T3.35 — the published baseline, so two trips on one
+                        corridor are comparable before anyone opens a chat.
+                        Absent price is stated as such rather than hidden. */}
+                    <span>
+                      {t('trips.pricePerKg')}:{' '}
+                      <MonoText className="text-xs">
+                        {trip.price_per_kg
+                          ? `${trip.price_per_kg} ${trip.currency ?? 'USD'}`
+                          : t('trips.priceOnRequest')}
+                      </MonoText>
+                    </span>
                   </div>
                   {trip.allowed_categories.length > 0 && (
                     <div className="flex flex-wrap gap-1">

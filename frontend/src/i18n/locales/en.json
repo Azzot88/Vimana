@@ -580,7 +580,8 @@
       "categories": "Allowed categories",
       "publish": "Publish",
       "preview": "Preview",
-      "alsoOnNostr": "Also publish to Nostr network"
+      "alsoOnNostr": "Also publish to Nostr network",
+      "terms": "Terms"
     },
     "newTripHook": {
       "voice": "Voice input",
@@ -595,7 +596,13 @@
       "pastDate": "Date must be in the future",
       "capacity": "Capacity must be at least 0.5 kg",
       "capacityWarning": "Capacity above 15 kg is unusual for hand luggage — publish anyway?"
-    }
+    },
+    "pricePerKg": "Price per kg",
+    "minDealPrice": "Minimum deal",
+    "currency": "Currency",
+    "maxDeclaredValue": "Max declared value",
+    "priceOnRequest": "on request",
+    "termsHint": "Your baseline. A sender may still counter in chat."
   },
   "deals": {
     "title": "Deals",
