@@ -4,6 +4,7 @@ import { raiseCard } from '../api/terms'
 import {
   buildPayload,
   formsForRole,
+  kindKey,
   type CardField,
   type CardFormSpec,
   type DealRole,
@@ -122,7 +123,7 @@ export default function CardActions({ dealId, myRole, onDone }: Props) {
             onClick={() => start(spec)}
             className="px-3 py-1.5 rounded-full border border-navy/15 text-xs font-body text-navy/70 hover:border-cyan hover:text-cyan"
           >
-            {t(`cards.kind.${spec.kind}`, spec.kind)}
+            {t(kindKey(spec.kind), spec.kind)}
           </button>
         ))}
       </div>
@@ -135,7 +136,7 @@ export default function CardActions({ dealId, myRole, onDone }: Props) {
       className="rounded-2xl border border-navy/10 bg-surface p-4 mb-3"
     >
       <p className="text-sm font-display font-semibold text-navy mb-3">
-        {t(`cards.kind.${open.kind}`, open.kind)}
+        {t(kindKey(open.kind), open.kind)}
       </p>
       <div className="flex flex-wrap gap-3">{open.fields.map(field)}</div>
 

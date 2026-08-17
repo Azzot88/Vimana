@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ackCard, uploadAttachment, type VaultMessage } from '../api/dealvault'
-import { specForKind, type DealRole } from '../lib/cardForms'
+import { kindKey, specForKind, type DealRole } from '../lib/cardForms'
 import MonoText from '../components/MonoText'
 
 /** T3.36–T3.39 — one renderer for every card that is not the contract.
@@ -71,7 +71,7 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
     <div className={`rounded-2xl border p-4 max-w-md ${tone}`}>
       <div className="flex items-center gap-2 flex-wrap mb-2">
         <span className="text-sm font-display font-semibold text-navy">
-          {t(`cards.kind.${kind}`, kind)}
+          {t(kindKey(kind), kind)}
         </span>
         {msg.card_state && msg.card_state !== 'pending' && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-navy/10 text-navy/50">

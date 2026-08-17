@@ -143,6 +143,12 @@ export const CARD_FORMS: CardFormSpec[] = [
   },
 ]
 
+/** i18next splits keys on `.`, so `cards.kind.issue.reported` would look for a
+ *  four-level path that does not exist and silently fall back to the raw kind.
+ *  The label key uses underscores; this is the one place that knows it. */
+export const kindKey = (kind: string): string =>
+  `cards.kind.${kind.replace(/\./g, '_')}`
+
 export const formsForRole = (role: DealRole | null): CardFormSpec[] =>
   role ? CARD_FORMS.filter((f) => f.roles.includes(role)) : []
 
