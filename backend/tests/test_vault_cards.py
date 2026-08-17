@@ -67,13 +67,36 @@ def test_spec_for_rejects_unknown_string():
     assert spec_for("not.a.card") is None
 
 
-def test_only_declared_kinds_are_implemented():
-    """`implemented` has to mean something: exactly the kinds with a creation
-    path today. Address sharing is the one that shipped in T1.26."""
+def test_implemented_kinds_are_reachable():
+    """`implemented` has to mean something, and "exactly one kind" stopped
+    being that the moment T3.36–T3.39 landed. The property that survives: a
+    kind marked implemented must be producible by somebody — a role may raise
+    it, the server emits it as the other half of a two-sided step, or it has a
+    dedicated endpoint (terms and the shared address).
+    """
     from app.core.cards import CATALOGUE, CardKind
 
-    implemented = {k for k, s in CATALOGUE.items() if s.implemented}
-    assert implemented == {CardKind.address_shared}
+    emitted = {s.on_accept_emit for s in CATALOGUE.values() if s.on_accept_emit}
+    dedicated = {CardKind.address_shared} | {
+        k for k in CardKind if k.value.startswith("terms.")
+    }
+
+    for kind, spec in CATALOGUE.items():
+        if not spec.implemented:
+            continue
+        assert (
+            spec.creator_roles or kind in emitted or kind in dedicated
+        ), f"{kind} is marked implemented but nothing can produce it"
+
+
+def test_unimplemented_kinds_cannot_be_raised():
+    """The other direction: a kind nobody may create must not claim to be
+    implemented, or the catalogue starts describing wishes."""
+    from app.core.cards import CATALOGUE
+
+    for kind, spec in CATALOGUE.items():
+        if spec.creator_roles:
+            assert spec.implemented, f"{kind} is creatable but not marked implemented"
 
 
 # ── the type is a field now ───────────────────────────────────────────────
@@ -125,8 +148,11 @@ async def test_listing_exposes_the_envelope(client, sender_headers, seed_deal):
 async def test_ack_by_the_awaited_side_succeeds(
     client, carrier_headers, seed_deal, session_maker
 ):
+    # `pickup.proposed` on purpose: `handoff.declared` needs a photo before it
+    # can be confirmed (T3.37), and this test is about the answer, not the
+    # evidence.
     msg_id = await _make_card(
-        session_maker, seed_deal.id, kind="handoff.declared", ack_role="carrier"
+        session_maker, seed_deal.id, kind="pickup.proposed", ack_role="carrier"
     )
     r = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages/{msg_id}/ack",
@@ -175,7 +201,7 @@ async def test_second_ack_conflicts(
     client, carrier_headers, seed_deal, session_maker
 ):
     msg_id = await _make_card(
-        session_maker, seed_deal.id, kind="handoff.declared", ack_role="carrier"
+        session_maker, seed_deal.id, kind="pickup.proposed", ack_role="carrier"
     )
     first = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages/{msg_id}/ack",
