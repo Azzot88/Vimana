@@ -146,7 +146,13 @@ async def propose_terms(
         deal_id=deal.id,
         event_type=DealEventType.message_added,
         actor_id=current_user.id,
-        payload={"card_kind": kind.value, "message_id": str(msg.id)},
+        payload={
+            "message_id": str(msg.id),
+            "content_hash": content_hash_of(msg.text_ciphertext, msg.text_nonce),
+            "msg_event_id": msg.nostr_event_id,
+            "is_e2e": msg.is_e2e,
+            "card_kind": kind.value,
+        },
         author=current_user,
     )
     await db.commit()

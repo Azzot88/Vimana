@@ -432,8 +432,12 @@ async def test_chain_endpoint_reports_seal_and_coverage(
     body = resp.json()
     assert body["ok"] is True
     assert body["sealed_at"] is not None
-    assert body["total_messages"] == 1
-    assert body["chained_messages"] == 1
+    # T3.39 — two, not one: sealing now leaves a `deal.sealed` card in the vault
+    # so a party reading the chat sees the deal close instead of the
+    # conversation simply stopping. It is chained like any other message, which
+    # is the point — the closing row must be as tamper-evident as the rest.
+    assert body["total_messages"] == 2
+    assert body["chained_messages"] == 2
     assert body["total_files"] == 1
     assert body["chained_files"] == 1
     assert body["content_ok"] is True

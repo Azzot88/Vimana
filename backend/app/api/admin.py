@@ -102,13 +102,6 @@ async def open_dispute(
     # unseals the vault so evidence can be appended. The chain records both
     # the seal and this unseal — nothing is hidden.
     deal.sealed_at = None
-    from app.api.cards import record_card
-    from app.core.cards import CardKind
-
-    await record_card(
-        db, deal, CardKind.dispute_opened, current_user,
-        payload={"dispute_id": str(dispute.id)}
-    )
     await append_deal_event(
         db,
         deal_id=deal_id,
@@ -116,6 +109,19 @@ async def open_dispute(
         actor_id=current_user.id,
         payload={"reason": body.reason.strip()[:200]},
         author=current_user,
+    )
+
+    # T3.39 — the card comes **after** the unsealing event, not before it.
+    # `append_deal_event` re-reads `sealed_at` from the database under its
+    # advisory lock, so an in-memory `deal.sealed_at = None` that has not been
+    # flushed does not count: `dispute_opened` is the one type the seal guard
+    # admits, and `message_added` is refused until it has gone through.
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+
+    await record_card(
+        db, deal, CardKind.dispute_opened, current_user,
+        payload={"dispute_id": str(dispute.id)},
     )
 
     await db.commit()
@@ -249,12 +255,9 @@ async def resolve_dispute(
     current_user: User = Depends(require_perm(Permission.DISPUTE_RESOLVE)),
     db: AsyncSession = Depends(get_db),
 ):
-    # Whether the vault was sealed by *this* resolution — the seal card belongs
-    # in the record only when the seal actually happened here.
     from app.api.cards import record_card
     from app.core.cards import CardKind
 
-    sealed_here = False
     dispute = await db.get(Dispute, dispute_id)
     if not dispute:
         raise HTTPException(status_code=404, detail="Dispute not found")
@@ -275,10 +278,24 @@ async def resolve_dispute(
             payload={"verdict": body.verdict[:500]},
             author=current_user,
         )
+        # Emitted before the closing branch: a verdict that closes the deal
+        # seals the vault, and the chain refuses writes after that. The card
+        # saying how the dispute ended must not be the one that misses the door.
+        await record_card(
+            db,
+            deal,
+            CardKind.dispute_resolved,
+            current_user,
+            payload={"dispute_id": str(dispute.id), "verdict": body.verdict[:500]},
+        )
         if body.closes_deal:
             deal.status = DealStatus.closed
             # T3.7 — a closing verdict re-seals the vault (mirror of
             # confirm_deal): seal event first, then `sealed_at`.
+            # Before the counts, so the seal's tally includes this card
+            # rather than being short by one. See the note in `deals.confirm`.
+            await record_card(db, deal, CardKind.deal_sealed, current_user)
+
             message_count = (
                 await db.execute(
                     select(func.count())
@@ -308,20 +325,7 @@ async def resolve_dispute(
                 },
                 author=current_user,
             )
-            # Before `sealed_at`: `append_deal_event` refuses to write into a
-            # sealed vault, and this card has to be chained like any other.
-            await record_card(db, deal, CardKind.deal_sealed, current_user)
             deal.sealed_at = datetime.now(timezone.utc)
-            sealed_here = True
-
-    if deal is not None:
-        await record_card(
-            db,
-            deal,
-            CardKind.dispute_resolved,
-            current_user,
-            payload={"dispute_id": str(dispute.id), "outcome": dispute.status.value},
-        )
 
     await db.commit()
     await db.refresh(dispute)

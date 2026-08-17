@@ -233,6 +233,16 @@ async def confirm_deal(
     # T3.7 — closing seals the vault: one final chained entry recording what
     # the vault contained, then `sealed_at` blocks all further appends (except
     # `dispute_opened`, which unseals — see deal_chain._ALLOWED_WHEN_SEALED).
+    # T3.39 — the closing card goes in **first**, before the counts are taken.
+    # Emitted after them it would be a message the seal's own tally does not
+    # include, and a record that miscounts itself by one is worse than a record
+    # that simply stops. Before `sealed_at` for the same reason as the seal
+    # event: the chain refuses writes into a sealed vault.
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+
+    await record_card(db, deal, CardKind.deal_sealed, current_user)
+
     # The seal event is appended *before* `sealed_at` is set so the guard
     # doesn't refuse its own seal.
     message_count = (
@@ -257,20 +267,6 @@ async def confirm_deal(
         actor_id=current_user.id,
         payload={"message_count": message_count, "file_count": file_count},
         author=current_user,
-    )
-    # T3.39 — the last thing in the vault should say the vault is closed.
-    # Without it the record simply stops, which reads as an abandoned deal
-    # rather than a finished one. Emitted **before** `sealed_at`, because the
-    # chain refuses writes into a sealed vault and this card must be chained.
-    from app.api.cards import record_card
-    from app.core.cards import CardKind
-
-    await record_card(
-        db,
-        deal,
-        CardKind.deal_sealed,
-        current_user,
-        payload={"message_count": message_count, "file_count": file_count},
     )
     deal.sealed_at = datetime.now(timezone.utc)
 
