@@ -266,7 +266,11 @@ async def test_confirm_seals_the_vault(
 
     sealed_events = await _events_of(session_maker, deal_id, DealEventType.sealed)
     assert len(sealed_events) == 1
-    assert sealed_events[0].payload["message_count"] == 1
+    # T3.39 — two: the posted message and the `deal.sealed` card. The card is
+    # emitted *before* the tally on purpose. Counted after, the seal would
+    # report one message fewer than the vault holds, and a record that
+    # miscounts itself is worse than one that simply stops.
+    assert sealed_events[0].payload["message_count"] == 2
 
     async with session_maker() as db:
         deal = await db.get(Deal, uuidlib.UUID(str(deal_id)))
