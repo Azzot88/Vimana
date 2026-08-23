@@ -1502,6 +1502,34 @@ async def make_account(payload: dict) -> _MadeAccount:
         )
 
 
+@pytest.fixture(autouse=True)
+def restore_environ():
+    """Every test gets the same environment, whatever the last one did to it.
+
+    Several modules reach for `os.environ` directly rather than `monkeypatch`,
+    and clear up afterwards with `pop(...)` — which is not a restore. When the
+    variable was set to begin with (and in this container the production `.env`
+    sets plenty of them), popping does not put the old value back, it deletes
+    it. The suite then runs on a different environment from that point on.
+
+    Invisible while a run is one process from a clean start: everything before
+    the popping module sees the real value, everything after sees it missing,
+    and both were written against whichever they got. T_TEST.10 made it visible
+    — mutmut drives pytest in-process many times over, so run two begins where
+    run one left off. `test_idor_matrix` (i) sorts before `test_nostr_*` (n), so
+    it read `NOSTR_PUBLISH_ENABLED` as set, passed, and then failed on the
+    identical code in the next run with a 503 from a feature the earlier run had
+    switched off behind it.
+
+    Restoring wholesale rather than naming keys: the next module to reach for
+    `os.environ` should not have to remember to add itself here.
+    """
+    saved = os.environ.copy()
+    yield
+    os.environ.clear()
+    os.environ.update(saved)
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def override_db(session_maker):
     async def _get_test_db():
