@@ -268,18 +268,25 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-3">
                       <div className="w-7 h-7 rounded-full bg-ivory border border-navy/10 flex items-center justify-center">
                         <span className="text-xs font-display font-bold text-navy">
-                          {conn.display_name[0]?.toUpperCase()}
+                          {/* Optional chaining on the field, not only on the
+                              index. `undefined[0]` throws; `""[0]` does not,
+                              which is exactly why the old line looked safe. */}
+                          {conn.connected_user?.display_name?.[0]?.toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-body text-navy">{conn.display_name}</p>
+                        <p className="text-sm font-body text-navy">
+                          {conn.connected_user?.display_name}
+                        </p>
                         <p className="text-xs font-mono text-navy/40">
-                          {conn.is_carrier ? t('dashboard.carrier') : t('dashboard.sender')}
+                          {conn.connected_user?.active_mode === 'carrier'
+                            ? t('dashboard.carrier')
+                            : t('dashboard.sender')}
                         </p>
                       </div>
                     </div>
                     <MonoText className="text-xs text-navy/30">
-                      {new Date(conn.connected_at).toLocaleDateString(i18n.language)}
+                      {new Date(conn.created_at).toLocaleDateString(i18n.language)}
                     </MonoText>
                   </div>
                 ))}

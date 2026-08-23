@@ -8,12 +8,38 @@ export interface Invite {
   created_at: string
 }
 
-export interface Connection {
+/** The counterparty as `UserOut` describes them — a subset, and only fields the
+ *  contact list actually reads. */
+export interface ConnectedUser {
   id: string
   display_name: string
-  // Legacy field left for UI display; backend now returns `connected_user.active_mode`.
-  is_carrier?: boolean
-  connected_at: string
+  active_mode: string
+  can_carry: boolean
+  can_send: boolean
+}
+
+/**
+ * Shaped after `schemas/social.ConnectionOut`, which is not what this said
+ * before.
+ *
+ * It declared `display_name`, `is_carrier` and `connected_at` — flat fields the
+ * endpoint has never returned in this form. Of the four, only `id` was real.
+ * The contact list read `conn.display_name[0]`, got `undefined[0]`, and took
+ * the whole profile screen down with it for **any account with at least one
+ * contact**. It stayed invisible because an account with no contacts renders
+ * the empty state and never reaches the row.
+ *
+ * A hand-written interface is an assertion about somebody else's code, and
+ * TypeScript checks it against nothing. The comment that used to sit on
+ * `is_carrier` — "backend now returns `connected_user.active_mode`" — shows the
+ * drift was even noticed once, on one field, and the type was left describing
+ * the old shape anyway.
+ */
+export interface Connection {
+  id: string
+  connected_user_id: string
+  connected_user: ConnectedUser
+  created_at: string
 }
 
 export interface MyInvite {
