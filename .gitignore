@@ -24,6 +24,10 @@ dist/
 build/
 .mypy_cache/
 .pytest_cache/
+# T_TEST.10 — mutmut copies the project here and mutates the copy, so the
+# working tree stays clean even if a run is interrupted.
+backend/mutants/
+.mutmut-cache
 
 # Node
 node_modules/
