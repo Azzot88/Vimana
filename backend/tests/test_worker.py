@@ -96,3 +96,57 @@ def test_every_listed_module_is_actually_imported():
 
     missing = [m for m in _TASK_MODULES if m not in sys.modules]
     assert not missing, f"listed but never imported: {missing}"
+
+
+# ── T_TEST.8 — the suite's own account must survive the sweep ─────────────
+
+
+async def test_cleanup_keeps_the_configured_e2e_account(session_maker, monkeypatch):
+    """A long-lived sign-in account lives on the same domain the sweep prunes.
+
+    Deleting it is not cleanup: the next authenticated run fails with a 401 that
+    looks like a new problem rather than last night's scheduled one.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from app.core.config import settings
+    from app.models.user import User
+    from app.tasks.cleanup import E2E_EMAIL_SUFFIX, _kept_emails
+
+    keeper = f"e2e-fixed{E2E_EMAIL_SUFFIX}"
+    monkeypatch.setattr(settings, "E2E_KEEP_EMAILS", keeper, raising=False)
+    assert keeper in _kept_emails()
+
+    old = datetime.now(timezone.utc) - timedelta(days=30)
+    async with session_maker() as db:
+        for email in (keeper, f"e2e-throwaway{E2E_EMAIL_SUFFIX}"):
+            existing = (
+                await db.execute(select(User).where(User.email == email))
+            ).scalar_one_or_none()
+            if existing is None:
+                db.add(
+                    User(
+                        email=email,
+                        display_name="E2E",
+                        password_hash="x",
+                        created_at=old,
+                    )
+                )
+        await db.commit()
+
+    # The predicate is what the sweep uses; asserting on it keeps the test off
+    # the Celery runtime while still failing if the exclusion is dropped.
+    assert keeper in _kept_emails()
+    assert f"e2e-throwaway{E2E_EMAIL_SUFFIX}" not in _kept_emails()
+
+
+def test_kept_emails_is_empty_by_default():
+    """Nothing is excluded unless somebody says so — an exclusion list that
+    defaults to non-empty is a sweep that quietly stops sweeping."""
+    from app.core.config import settings
+    from app.tasks.cleanup import _kept_emails
+
+    if not settings.E2E_KEEP_EMAILS:
+        assert _kept_emails() == []

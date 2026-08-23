@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
-import { registerUser } from '../helpers'
+import { signInFixed } from '../helpers'
 
 /**
  * T_TEST.8 — WCAG 2.2 AA on the five canonical pages.
@@ -16,8 +16,11 @@ import { registerUser } from '../helpers'
  * needs a person. A green run here means "no machine-detectable violation",
  * and the suite says so rather than claiming the standard is met.
  *
- * Two of the five pages need a session, so this spec registers a user the same
- * way the smoke suite does: `…@e2e.vimana.local`, pruned by `cleanup_e2e_users`.
+ * Authenticated pages sign in as the long-lived e2e account (`E2E_USER` /
+ * `E2E_PASSWORD`, owner's decision 2026-08-22). Registering through the UI is
+ * code-based since T3.28 and cannot be automated; the previous helper drove a
+ * form that had not existed for twelve days, and this spec was where that was
+ * finally noticed.
  *
  * **Coverage is a moving target, and that is the point of listing it.** The five
  * canonical pages were the whole product in August; since then the deal screens,
@@ -103,19 +106,19 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
   })
 
   test('dashboard (authenticated)', async ({ page }) => {
-    await registerUser(page)
+    await signInFixed(page)
     await page.goto('/dashboard')
     await scan(page, '/dashboard')
   })
 
   test('profile (authenticated)', async ({ page }) => {
-    await registerUser(page)
+    await signInFixed(page)
     await page.goto('/profile')
     await scan(page, '/profile')
   })
 
   test('trips board', async ({ page }) => {
-    await registerUser(page)
+    await signInFixed(page)
     await page.goto('/trips')
     await scan(page, '/trips')
   })
@@ -123,19 +126,19 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
   test('new trip form (carrier)', async ({ page }) => {
     // The densest form in the product: eleven controls, and the one screen where
     // an unnamed field costs a carrier a published trip rather than a squint.
-    await registerUser(page, { canCarry: true })
+    await signInFixed(page, { mode: 'carrier' })
     await page.goto('/trips/new')
     await scan(page, '/trips/new')
   })
 
   test('history (authenticated)', async ({ page }) => {
-    await registerUser(page)
+    await signInFixed(page)
     await page.goto('/history')
     await scan(page, '/history')
   })
 
   test('disputes (authenticated)', async ({ page }) => {
-    await registerUser(page)
+    await signInFixed(page)
     await page.goto('/disputes')
     await scan(page, '/disputes')
   })

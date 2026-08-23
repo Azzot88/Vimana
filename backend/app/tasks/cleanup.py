@@ -60,6 +60,14 @@ E2E_EMAIL_SUFFIX = "@e2e.vimana.local"
 E2E_MAX_AGE_HOURS = 24
 
 
+def _kept_emails() -> list[str]:
+    """Addresses excluded from the sweep — see `Settings.E2E_KEEP_EMAILS`."""
+    from app.core.config import settings
+
+    raw = settings.E2E_KEEP_EMAILS or ""
+    return [e.strip().lower() for e in raw.split(",") if e.strip()]
+
+
 @celery_app.task(name="app.tasks.cleanup.cleanup_e2e_users")
 def cleanup_e2e_users() -> dict:
     cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=E2E_MAX_AGE_HOURS)
@@ -72,6 +80,10 @@ def cleanup_e2e_users() -> dict:
                 select(User.id).where(
                     User.email.like(f"%{E2E_EMAIL_SUFFIX}"),
                     User.created_at < cutoff,
+                    # T_TEST.8 — the suite's long-lived sign-in account lives on
+                    # this domain too. Deleting it is not cleanup, it is
+                    # breaking tomorrow's run.
+                    User.email.notin_(_kept_emails()),
                 )
             ).all()
         ]

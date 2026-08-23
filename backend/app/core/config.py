@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     # on startup if it is set.
     E2E_AUTO_VERIFY_EMAIL_DOMAINS: str = ""
 
+    # T_TEST.8, 2026-08-22 — addresses `cleanup_e2e_users` must NOT delete,
+    # comma-separated. The suite signs in as a long-lived account (registration
+    # is code-based since T3.28 and cannot be automated), and that account lives
+    # on the same `@e2e.vimana.local` domain the cleanup prunes after 24 hours.
+    # Without this it would vanish every night and the next run would fail with
+    # a 401 that looks like a new problem rather than the scheduled one.
+    E2E_KEEP_EMAILS: str = ""
+
     # T3.14 — WebAuthn. `RP_ID` must equal the site's domain (or a parent of
     # it), and `ORIGIN` must match the browser's origin exactly, scheme
     # included. Get either wrong and the browser aborts the ceremony on its own
