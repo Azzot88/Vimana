@@ -105,12 +105,25 @@ test.describe('passkeys', () => {
     const { password } = user
 
     await page.goto('/profile/keys')
-    await Promise.all([
+    await page.waitForLoadState('domcontentloaded')
+
+    const [registered] = await Promise.all([
       page.waitForResponse((r) =>
         r.url().includes('/api/auth/passkey/register/verify'),
       ),
       page.getByTestId('passkey-add').click(),
     ])
+    // Checked, the way the test above checks it. Without this the assertion
+    // below reports "expected 1, received 0" for a registration that never
+    // succeeded, and an empty list is also what a screen that crashed looks
+    // like — two very different failures wearing the same number.
+    if (!registered.ok()) {
+      const body = await registered.text().catch(() => '')
+      throw new Error(
+        `passkey register failed: HTTP ${registered.status()} — ${body.slice(0, 300)}`,
+      )
+    }
+    await expect(page.getByTestId('passkey-list')).toBeVisible()
     await expect(page.getByTestId('passkey-list').locator('li')).toHaveCount(1)
 
     // T3.15 — unlinking now asks for a fresh confirmation first: dropping every
