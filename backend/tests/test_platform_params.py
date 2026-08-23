@@ -11,6 +11,39 @@ import pytest
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
+@pytest.fixture(autouse=True)
+async def _empty_parameter_table(session_maker):
+    """Every test here starts with no rows.
+
+    `vimana_test` is seeded once and never wiped (ENVIRONMENT.md §8), so rows
+    written by a test outlive the run. That is harmless for tables keyed by a
+    unique email, and poison for this one: parameters are **versioned by
+    `effective_from`**, and resolution answers "what was in force at moment X"
+    by taking the newest row not later than X. Yesterday's leftovers are not
+    stale data to be ignored — they are a legitimate older version, and the
+    resolver is right to prefer them.
+
+    `test_resolve_at_past_moment_sees_past_value` is where it detonates. It
+    writes `7` at now−10d and `8` at now−1d, then asks for now−5d. A previous
+    run's `8` lands at now−1d **of that day**, which drifts left as the calendar
+    moves; once that run is more than four days old its `8` sits inside the
+    window and outranks today's `7`. So the test passes all week and starts
+    failing on its own, with nothing changed — which is exactly how it was
+    found, eight days after the last green suite.
+
+    Only this file writes parameters, so clearing the table cannot disturb
+    anyone else: everything outside falls back to the defaults in
+    `core.params.REGISTRY`.
+    """
+    from sqlalchemy import delete
+
+    from app.models.platform_params import PlatformParameter
+
+    async with session_maker() as db:
+        await db.execute(delete(PlatformParameter))
+        await db.commit()
+    yield
+
 
 async def _superuser_headers(client, session_maker) -> dict[str, str]:
     from sqlalchemy import select
