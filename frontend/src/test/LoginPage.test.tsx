@@ -1,7 +1,34 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import LoginPage, { safeReturnUrl } from '../pages/LoginPage'
 import { renderWithProviders } from './render'
+
+/** The page asks the server two questions, and neither is what this file is
+ *  about.
+ *
+ *  `contactChannels('')` fires on mount — "which channels work with nothing
+ *  typed yet". Unmocked in jsdom that becomes a real XHR to a host nobody is
+ *  listening on; the component's `.catch` swallows the rejection, so the tests
+ *  passed while every render printed a jsdom `AggregateError` to stderr. Six
+ *  renders, six errors, all of them noise that trained the eye to skip stderr.
+ *
+ *  Empty on purpose — the same answer the failing request produced, so nothing
+ *  about these assertions changes. Telegram would render an extra button and
+ *  quietly rewrite what four of these tests are looking at.
+ *
+ *  `loginMethods` is debounced behind a typed identifier and no test here types
+ *  one, but it is stubbed too: the next test that fills the field should not
+ *  have to rediscover why stderr went red. */
+vi.mock('../api/auth', async () => {
+  const actual = await vi.importActual<typeof import('../api/auth')>('../api/auth')
+  return {
+    ...actual,
+    contactChannels: vi.fn().mockResolvedValue({ data: { channels: [] } }),
+    loginMethods: vi
+      .fn()
+      .mockResolvedValue({ data: { methods: [], can_reset: false } }),
+  }
+})
 
 describe('LoginPage', () => {
   it('renders title, subtitle, and both inputs', () => {
