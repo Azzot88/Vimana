@@ -1012,7 +1012,8 @@
       "fees": "Opłaty",
       "bond": "Kaucja przewoźnika",
       "premium": "Premium"
-    }
+    },
+    "newValue": "Nowa wartość"
   },
   "terms": {
     "proposalTitle": "Proponowane warunki",

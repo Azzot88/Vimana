@@ -16,6 +16,9 @@ interface Props {
   onChange: (iata: string) => void
   placeholder?: string
   required?: boolean
+  /** T_TEST.8 — the caller owns the visible label, so it has to own the id the
+   *  label points at. Without this the control is a text field with no name. */
+  inputId?: string
 }
 
 function isoToFlag(iso: string): string {
@@ -30,7 +33,7 @@ interface CountryRow {
   count: number
 }
 
-export default function AirportSelect({ value, onChange, placeholder, required }: Props) {
+export default function AirportSelect({ value, onChange, placeholder, required, inputId }: Props) {
   const { t, i18n } = useTranslation()
   const [query, setQuery] = useState(value)
   const [countries, setCountries] = useState<CountryCount[]>([])
@@ -230,6 +233,7 @@ export default function AirportSelect({ value, onChange, placeholder, required }
 
       <div className="flex gap-1">
         <input
+          id={inputId}
           type="text"
           value={query}
           onChange={(e) => {

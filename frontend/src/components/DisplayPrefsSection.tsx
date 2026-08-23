@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { updateMe } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
@@ -20,6 +20,7 @@ export default function DisplayPrefsSection() {
   const [unit, setUnit] = useState<WeightUnit>((user?.unit_weight as WeightUnit) ?? 'kg')
   const [style, setStyle] = useState<DateStyle>((user?.date_format as DateStyle) ?? 'eu')
   const [rules, setRules] = useState(user?.carriage_rules ?? '')
+  const rulesId = useId()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -104,13 +105,17 @@ export default function DisplayPrefsSection() {
       </div>
 
       <div>
-        <p className="text-[11px] font-body text-navy/40 mb-1.5">
+        <label
+          htmlFor={rulesId}
+          className="block text-[11px] font-body text-navy/40 mb-1.5"
+        >
           {t('prefs.carriageRules')}
-        </p>
+        </label>
         <p className="text-[11px] font-body text-navy/40 mb-1.5">
           {t('prefs.carriageRulesHint')}
         </p>
         <textarea
+          id={rulesId}
           value={rules}
           onChange={(e) => setRules(e.target.value)}
           rows={4}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -25,6 +25,12 @@ const GROUP_ORDER = ['fees', 'bond', 'premium'] as const
 export default function AdminParamsPage() {
   const { t } = useTranslation()
   const me = useAuthStore((s) => s.user)
+  // T_TEST.8 — `useId`, not a fixed string: a label pointing at an id that
+  // exists twice on a page names the wrong field, which is worse than naming
+  // nothing.
+  const scopeId = useId()
+  const valueId = useId()
+  const commentId = useId()
 
   const [scope, setScope] = useState('global')
   const [scopeInput, setScopeInput] = useState('')
@@ -130,10 +136,14 @@ export default function AdminParamsPage() {
 
       <div className="mt-6 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs font-body font-medium text-navy/40 mb-1">
+          <label
+            htmlFor={scopeId}
+            className="block text-xs font-body font-medium text-navy/40 mb-1"
+          >
             {t('adminParams.scope')}
           </label>
           <input
+            id={scopeId}
             value={scopeInput}
             onChange={(e) => setScopeInput(e.target.value)}
             placeholder="AE->US"
@@ -189,12 +199,20 @@ export default function AdminParamsPage() {
 
                   {editing === p.key ? (
                     <div className="mt-3 flex flex-wrap gap-2 items-end">
+                      <label htmlFor={valueId} className="sr-only">
+                        {t('adminParams.newValue')}
+                      </label>
                       <input
+                        id={valueId}
                         value={draftValue}
                         onChange={(e) => setDraftValue(e.target.value)}
                         className="px-3 py-2 rounded-lg border border-navy/15 font-mono text-sm w-32"
                       />
+                      <label htmlFor={commentId} className="sr-only">
+                        {t('adminParams.reason')}
+                      </label>
                       <input
+                        id={commentId}
                         value={draftComment}
                         onChange={(e) => setDraftComment(e.target.value)}
                         placeholder={t('adminParams.reason')}

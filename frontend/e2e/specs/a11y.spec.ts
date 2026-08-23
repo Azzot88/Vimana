@@ -18,6 +18,22 @@ import { registerUser } from '../helpers'
  *
  * Two of the five pages need a session, so this spec registers a user the same
  * way the smoke suite does: `…@e2e.vimana.local`, pruned by `cleanup_e2e_users`.
+ *
+ * **Coverage is a moving target, and that is the point of listing it.** The five
+ * canonical pages were the whole product in August; since then the deal screens,
+ * the trip form and the panel were rebuilt, and the first run of this spec found
+ * its defects in exactly the places it happened to look. What it looks at now:
+ *
+ *   covered — `/`, `/login`, `/register`, `/dashboard`, `/profile`, `/trips`,
+ *             `/trips/new`, `/history`, `/disputes`
+ *   not covered, and why:
+ *     `/admin/params`  — needs a superuser, and this spec deliberately creates
+ *                        only ordinary accounts. Audited by reading instead.
+ *     `/carriers/:id`  — needs an existing carrier id; deriving one from the
+ *                        board makes the test depend on the board not being
+ *                        empty, which is a flaky test rather than a covered page.
+ *     deal screens     — need two accounts and a matched deal; that is the smoke
+ *                        suite's fixture, and sharing it here is its own task.
  */
 
 const rules = JSON.parse(
@@ -96,5 +112,31 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
     await registerUser(page)
     await page.goto('/profile')
     await scan(page, '/profile')
+  })
+
+  test('trips board', async ({ page }) => {
+    await registerUser(page)
+    await page.goto('/trips')
+    await scan(page, '/trips')
+  })
+
+  test('new trip form (carrier)', async ({ page }) => {
+    // The densest form in the product: eleven controls, and the one screen where
+    // an unnamed field costs a carrier a published trip rather than a squint.
+    await registerUser(page, { canCarry: true })
+    await page.goto('/trips/new')
+    await scan(page, '/trips/new')
+  })
+
+  test('history (authenticated)', async ({ page }) => {
+    await registerUser(page)
+    await page.goto('/history')
+    await scan(page, '/history')
+  })
+
+  test('disputes (authenticated)', async ({ page }) => {
+    await registerUser(page)
+    await page.goto('/disputes')
+    await scan(page, '/disputes')
   })
 })

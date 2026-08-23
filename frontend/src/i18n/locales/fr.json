@@ -1011,7 +1011,8 @@
       "fees": "Frais",
       "bond": "Caution du transporteur",
       "premium": "Premium"
-    }
+    },
+    "newValue": "Nouvelle valeur"
   },
   "terms": {
     "proposalTitle": "Conditions proposées",

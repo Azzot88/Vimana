@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ackCard, uploadAttachment, type VaultMessage } from '../api/dealvault'
 import { kindKey, specForKind, type DealRole } from '../lib/cardForms'
@@ -24,6 +24,9 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  // Many cards render on one screen; a shared id would point every label at the
+  // first card's input.
+  const photoId = useId()
 
   const kind = msg.card_kind ?? ''
   const spec = specForKind(kind)
@@ -124,10 +127,11 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
 
       {needsPhoto && mine && (
         <div className="mt-3">
-          <p className="text-xs font-body text-amber mb-1">
+          <label htmlFor={photoId} className="block text-xs font-body text-amber mb-1">
             {t('cards.photoRequired')}
-          </p>
+          </label>
           <input
+            id={photoId}
             ref={fileRef}
             type="file"
             accept="image/*"

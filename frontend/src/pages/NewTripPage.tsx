@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useId, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -60,6 +60,13 @@ const SCAN_ENABLED = false
 
 export default function NewTripPage() {
   const prefs = usePrefs()
+  // T_TEST.8 — labels that stand *next to* a field name nothing. Associated by
+  // id, generated per instance rather than fixed.
+  const originId = useId()
+  const destId = useId()
+  const departId = useId()
+  const capacityId = useId()
+  const rulesId = useId()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const user = useAuthStore((s) => s.user)
@@ -245,10 +252,14 @@ export default function NewTripPage() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
             <div>
-              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+              <label
+                htmlFor={originId}
+                className="block text-xs font-body font-medium text-navy/60 mb-1"
+              >
                 {t('trips.from')}
               </label>
               <AirportSelect
+                inputId={originId}
                 value={draft.origin}
                 onChange={(v) => patch({ origin: v })}
                 required
@@ -259,10 +270,14 @@ export default function NewTripPage() {
               →
             </MonoText>
             <div>
-              <label className="block text-xs font-body font-medium text-navy/60 mb-1">
+              <label
+                htmlFor={destId}
+                className="block text-xs font-body font-medium text-navy/60 mb-1"
+              >
                 {t('trips.to')}
               </label>
               <AirportSelect
+                inputId={destId}
                 value={draft.destination}
                 onChange={(v) => patch({ destination: v })}
                 required
@@ -274,10 +289,14 @@ export default function NewTripPage() {
 
         {/* Date cell 1x1 */}
         <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+          <label
+            htmlFor={departId}
+            className="block text-xs font-display font-semibold text-navy/50 uppercase tracking-wide"
+          >
             {t('trips.newTripCell.date')}
-          </p>
+          </label>
           <input
+            id={departId}
             type="datetime-local"
             value={draft.departAt}
             onChange={(e) => patch({ departAt: e.target.value })}
@@ -352,11 +371,15 @@ export default function NewTripPage() {
 
         {/* Capacity cell 1x1 */}
         <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+          <label
+            htmlFor={capacityId}
+            className="block text-xs font-display font-semibold text-navy/50 uppercase tracking-wide"
+          >
             {t('trips.newTripCell.capacity')}
-          </p>
+          </label>
           <div className="flex items-baseline gap-2">
             <input
+              id={capacityId}
               type="number"
               step="0.5"
               min="0.5"
@@ -397,7 +420,11 @@ export default function NewTripPage() {
             {t('trips.newTripCell.rules')}
           </p>
           <p className="text-[11px] font-body text-navy/40">{t('trips.rulesHint')}</p>
+          <label htmlFor={rulesId} className="sr-only">
+            {t('trips.newTripCell.rules')}
+          </label>
           <textarea
+            id={rulesId}
             value={draft.carriageRules}
             onChange={(e) => patch({ carriageRules: e.target.value })}
             rows={3}

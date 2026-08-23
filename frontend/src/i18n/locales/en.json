@@ -1057,7 +1057,8 @@
       "fees": "Fees",
       "bond": "Carrier bond",
       "premium": "Premium"
-    }
+    },
+    "newValue": "New value"
   },
   "terms": {
     "proposalTitle": "Proposed terms",
