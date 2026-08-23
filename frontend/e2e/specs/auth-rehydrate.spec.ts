@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { registerUser, uniqueEmail } from '../helpers'
+import { signInFixed } from '../helpers'
 
-/** Multi-context #2 — regression test for T_UX.3 pt.1. After registration
+/** Multi-context #2 — regression test for T_UX.3 pt.1. After signing in
  *  (Zustand fully populated), open a **second page** in the same context
  *  and hard-nav directly to a protected route. `<AuthBootstrap>` must
  *  rehydrate from localStorage.token → GET /api/auth/me → set user, and the
@@ -14,22 +14,19 @@ test('auth rehydrate: hard-nav to protected route in fresh page keeps session', 
   test.setTimeout(60_000)
 
   const context = await browser.newContext()
-  const registerPage = await context.newPage()
+  const firstPage = await context.newPage()
 
   try {
-    const user = await registerUser(registerPage, {
-      email: uniqueEmail('e2e-rh'),
-      displayName: 'E2E Rehydrate',
-    })
+    const user = await signInFixed(firstPage)
 
     // Confirm localStorage.token is set (Zustand persist).
-    const token = await registerPage.evaluate(() => localStorage.getItem('token'))
-    expect(token, 'no token in localStorage after register').toBeTruthy()
+    const token = await firstPage.evaluate(() => localStorage.getItem('token'))
+    expect(token, 'no token in localStorage after sign-in').toBeTruthy()
 
-    // Close registration page — force a completely fresh page load path
-    // (no in-memory Zustand state, no window carryover). Shared cookies +
+    // Close the first page — force a completely fresh page load path (no
+    // in-memory Zustand state, no window carryover). Shared cookies +
     // localStorage remain because it's the same context.
-    await registerPage.close()
+    await firstPage.close()
 
     const freshPage = await context.newPage()
 

@@ -1,60 +1,62 @@
-import { expect, type Page } from '@playwright/test'
-
-/** E2E helpers. Faster + louder: wait for real XHRs, fail with detail if
- *  register/login didn't actually succeed on the backend. */
-
-export function uniqueEmail(prefix = 'e2e'): string {
-  const rand = Math.random().toString(36).slice(2, 10)
-  const ts = Date.now().toString(36)
-  return `${prefix}-${ts}-${rand}@e2e.vimana.local`
-}
-
-export const TEST_PASSWORD = 'E2eSmoke!23'
-
-export interface RegisterOpts {
-  email?: string
-  displayName?: string
-  canCarry?: boolean
-}
-
+import { type Page } from '@playwright/test'
 
 /**
- * T_TEST.8 (2026-08-22) — sign in as the fixed e2e account.
+ * E2E helpers — signing in as one of the long-lived accounts.
  *
- * `registerUser` below drives the registration form, and that form stopped
- * existing on 2026-08-10: T3.28 reduced sign-in and sign-up to one field plus a
- * code, and `/register` now redirects to `/login`. A test cannot read the code,
- * so it cannot create an account at all — owner's decision 2026-08-22 is to use
- * a small number of long-lived accounts instead.
+ * There used to be a `registerUser` here that drove the sign-up form. That form
+ * stopped existing on 2026-08-10: T3.28 reduced sign-in and sign-up to one
+ * field plus a mailed code, and `/register` became a redirect to `/login`. A
+ * test cannot read the code, so it cannot create an account at all.
+ *
+ * It survived twelve days because the suite is run by hand — "broken" and "not
+ * run lately" look identical from outside. Removed in T_TEST.12 rather than
+ * repaired: there is nothing to repair, the flow it drove is gone.
  *
  * **Authentication happens through the API, not the form.** What broke was a
- * test driving a UI it was not testing; setup should not depend on markup that
- * belongs to somebody else's feature. The login *screen* still gets covered —
- * by the specs that are actually about signing in.
+ * test driving a UI it was not testing, and setup should not depend on markup
+ * that belongs to somebody else's feature. The login *screen* still gets
+ * covered — by the specs that are actually about signing in.
  *
- * Requires `E2E_USER` / `E2E_PASSWORD`. Missing values fail loudly rather than
- * timing out on a locator fifteen seconds later, which is how the last breakage
- * managed to look like six different problems.
+ * Account setup is in README.md. The password has to be set **on the account**,
+ * through the product's own step-up, because sign-up by code creates none.
  */
+
 export interface SignInOpts {
   /** Set `active_mode` after signing in. The panel and the nav differ by mode,
    *  so a spec that means "as a carrier" has to say so. */
   mode?: 'carrier' | 'sender'
+  /** Which long-lived account. `second` exists for the one thing a single
+   *  account cannot do — be two people at once. An invite has to be accepted by
+   *  somebody other than its author. */
+  as?: 'primary' | 'second'
 }
 
-export async function signInFixed(page: Page, opts: SignInOpts = {}) {
-  const login = process.env.E2E_USER
-  const password = process.env.E2E_PASSWORD
-  if (!login || !password) {
+export interface SignedIn {
+  email: string
+  password: string
+  token: string
+  displayName: string
+}
+
+export async function signInFixed(
+  page: Page,
+  opts: SignInOpts = {},
+): Promise<SignedIn> {
+  const second = opts.as === 'second'
+  const names = second ? 'E2E_USER2 / E2E_PASSWORD2' : 'E2E_USER / E2E_PASSWORD'
+  const email = second ? process.env.E2E_USER2 : process.env.E2E_USER
+  const password = second ? process.env.E2E_PASSWORD2 : process.env.E2E_PASSWORD
+
+  if (!email || !password) {
     throw new Error(
-      'E2E_USER / E2E_PASSWORD are not set. The suite signs in as a long-lived ' +
-        'account (owner\'s decision 2026-08-22): registration through the UI is ' +
-        'code-based since T3.28 and cannot be automated.',
+      `${names} are not set. The suite signs in as long-lived accounts ` +
+        "(owner's decision 2026-08-22): registration through the UI is " +
+        'code-based since T3.28 and cannot be automated. See e2e/README.md.',
     )
   }
 
   const res = await page.request.post('/api/auth/login', {
-    data: { login, password },
+    data: { login: email, password },
   })
   if (!res.ok()) {
     // A 401 here means one of two things and the API deliberately does not say
@@ -68,7 +70,7 @@ export async function signInFixed(page: Page, opts: SignInOpts = {}) {
           'by code does not create one. See e2e/README.md.'
         : ''
     throw new Error(
-      `login failed for ${login}: ${res.status()} ${await res.text()}${hint}`,
+      `login failed for ${email}: ${res.status()} ${await res.text()}${hint}`,
     )
   }
   const { access_token: token } = (await res.json()) as { access_token: string }
@@ -78,96 +80,79 @@ export async function signInFixed(page: Page, opts: SignInOpts = {}) {
   await page.goto('/')
   await page.evaluate((t) => localStorage.setItem('token', t), token)
 
+  const auth = { Authorization: `Bearer ${token}` }
+
   if (opts.mode) {
     const patch = await page.request.patch('/api/auth/me', {
       data: { active_mode: opts.mode },
-      headers: { Authorization: `Bearer ${token}` },
+      headers: auth,
     })
     if (!patch.ok()) {
       throw new Error(`could not switch to ${opts.mode}: ${patch.status()}`)
     }
   }
 
-  return { login, token }
-}
-
-/** @deprecated Broken since T3.28 (2026-08-10): `/register` redirects to
- *  `/login` and the three-field form is gone. Left in place because nine specs
- *  still call it and converting them is its own task — see T_TEST.8. New specs
- *  use `signInFixed`. */
-/** Register + auto-login. Fails loud if the backend didn't 201. */
-export async function registerUser(page: Page, opts: RegisterOpts = {}) {
-  const email = opts.email ?? uniqueEmail()
-  const displayName = opts.displayName ?? `E2E ${email.slice(0, 8)}`
-
-  await page.goto('/register')
-  await page.waitForLoadState('domcontentloaded')
-
-  await page.locator('input[type="text"]').first().fill(displayName)
-  await page.locator('input[type="email"]').first().fill(email)
-  await page.locator('input[type="password"]').first().fill(TEST_PASSWORD)
-
-  if (opts.canCarry) {
-    await page.locator('input[type="checkbox"]').first().check()
+  // Read rather than assume. The display name belongs to the account, and the
+  // one spec that asserts on it must not carry its own copy to drift the day
+  // somebody renames the account from the profile screen.
+  const me = await page.request.get('/api/auth/me', { headers: auth })
+  if (!me.ok()) {
+    throw new Error(`GET /api/auth/me failed: ${me.status()} ${await me.text()}`)
+  }
+  const { display_name: displayName } = (await me.json()) as {
+    display_name: string
   }
 
-  // RegisterPage chains 3 XHRs: POST /register → POST /login → GET /me →
-  // navigate('/'). Wait for all three, throw loud with URL+status if any fail.
-  // Otherwise a rate-limited login step just leaves the browser on /register
-  // with an amber error banner and the URL check below times out mysteriously.
-  const authResponses: Array<{ url: string; status: number }> = []
-  page.on('response', (r) => {
-    const u = r.url()
-    if (u.includes('/api/auth/register') || u.includes('/api/auth/login') || u.includes('/api/auth/me')) {
-      authResponses.push({ url: u, status: r.status() })
+  return { email, password, token, displayName }
+}
+
+/**
+ * T_TEST.12 — leave the account with no passkeys.
+ *
+ * Registered credentials live on the server, and the virtual authenticator does
+ * not know that: it is created fresh per test, so every run adds a credential
+ * and none of them ever leaves. With a throwaway account that was invisible —
+ * with a shared one, the second run finds two where the spec asserts one, and
+ * the failure reads as a WebAuthn regression.
+ *
+ * Removal needs step-up, the same as it does in the interface, so this walks
+ * the real endpoints: confirm with the password, then delete with the grant in
+ * a header. A fresh grant per credential because the token is scoped to one
+ * operation and cheap to reissue.
+ *
+ * Safe only because these accounts have a password: the server refuses to
+ * remove the last way in, and it is right to.
+ */
+export async function clearPasskeys(page: Page, signedIn: SignedIn) {
+  const auth = { Authorization: `Bearer ${signedIn.token}` }
+
+  const listed = await page.request.get('/api/auth/passkey/', { headers: auth })
+  if (!listed.ok()) {
+    throw new Error(`could not list passkeys: ${listed.status()}`)
+  }
+  const credentials = (await listed.json()) as Array<{ id: string }>
+
+  for (const credential of credentials) {
+    const stepUp = await page.request.post('/api/auth/step-up/verify', {
+      data: { scope: 'unlink_passkey', password: signedIn.password },
+      headers: auth,
+    })
+    if (!stepUp.ok()) {
+      throw new Error(
+        `step-up for unlink_passkey failed: ${stepUp.status()} ${await stepUp.text()}`,
+      )
     }
-  })
+    const { step_up_token: grant } = (await stepUp.json()) as {
+      step_up_token: string
+    }
 
-  const [regResp] = await Promise.all([
-    page.waitForResponse(
-      (r) => r.url().includes('/api/auth/register') && r.request().method() === 'POST',
-      { timeout: 10_000 },
-    ),
-    page
-      .getByRole('button', { name: /create account|создать|зарегистрироваться|создати|zarejestruj|créer|crear/i })
-      .first()
-      .click(),
-  ])
-  if (!regResp.ok()) {
-    const body = await regResp.text().catch(() => '')
-    throw new Error(`Register failed: HTTP ${regResp.status()} — ${body.slice(0, 200)}`)
+    const removed = await page.request.delete(`/api/auth/passkey/${credential.id}`, {
+      headers: { ...auth, 'X-Step-Up-Token': grant },
+    })
+    if (!removed.ok()) {
+      throw new Error(
+        `could not remove passkey ${credential.id}: ${removed.status()} ${await removed.text()}`,
+      )
+    }
   }
-
-  try {
-    await expect(page).not.toHaveURL(/\/register$/, { timeout: 8_000 })
-  } catch {
-    const trail = authResponses.map((r) => `${r.status} ${r.url.replace(/^https?:\/\/[^/]+/, '')}`).join(' | ')
-    const visible = (await page.locator('body').innerText().catch(() => '')).slice(0, 200)
-    throw new Error(
-      `Register chain stuck on /register. Auth XHR trail: [${trail}]. Visible: ${visible}`,
-    )
-  }
-  return { email, password: TEST_PASSWORD, displayName }
-}
-
-export async function login(page: Page, email: string, password = TEST_PASSWORD) {
-  await page.goto('/login')
-  await page.waitForLoadState('domcontentloaded')
-  await page.locator('input[type="text"], input[type="email"]').first().fill(email)
-  await page.locator('input[type="password"]').first().fill(password)
-  const [loginResp] = await Promise.all([
-    page.waitForResponse(
-      (r) => r.url().includes('/api/auth/login') && r.request().method() === 'POST',
-      { timeout: 10_000 },
-    ),
-    page
-      .getByRole('button', { name: /sign in|войти|увійти|zaloguj|connexion|iniciar/i })
-      .first()
-      .click(),
-  ])
-  if (!loginResp.ok()) {
-    const body = await loginResp.text().catch(() => '')
-    throw new Error(`Login failed: HTTP ${loginResp.status()} — ${body.slice(0, 200)}`)
-  }
-  await expect(page).not.toHaveURL(/\/login$/, { timeout: 8_000 })
 }

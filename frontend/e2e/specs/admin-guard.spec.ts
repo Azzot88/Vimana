@@ -1,14 +1,21 @@
 import { expect, test } from '@playwright/test'
-import { registerUser, uniqueEmail } from '../helpers'
+import { signInFixed } from '../helpers'
 
 /** Multi-context #3 — access control for admin routes.
  *
- *  A freshly-registered user has role='user' and must NOT reach any of the
- *  three admin pages. Each page guards with `<Navigate to="/dashboard" />`
- *  when the current user is not superuser (arbiter for /admin/disputes).
+ *  An ordinary user has role='user' and must NOT reach any of the three admin
+ *  pages. Each page guards with `<Navigate to="/dashboard" />` when the current
+ *  user is not superuser (arbiter for /admin/disputes).
  *
- *  Also verifies the AdminPanelSection Bento card on /profile is hidden
- *  for regular users — no discoverability leak. */
+ *  Also verifies the AdminPanelSection Bento card on /profile is hidden for
+ *  regular users — no discoverability leak.
+ *
+ *  **This spec is why the long-lived account must stay `role='user'`.** It read
+ *  as a free property when every run minted a new account; now it is a standing
+ *  requirement on shared state, and promoting the e2e account to arbiter or
+ *  superuser turns this test red. That failure is correct — it means the thing
+ *  being asserted stopped being true — but it will look like a guard regression,
+ *  so the cause is written here rather than rediscovered. */
 test('admin guard: regular user is redirected away from admin routes', async ({ browser }) => {
   test.setTimeout(75_000)
 
@@ -16,10 +23,7 @@ test('admin guard: regular user is redirected away from admin routes', async ({ 
   const page = await context.newPage()
 
   try {
-    const user = await registerUser(page, {
-      email: uniqueEmail('e2e-guard'),
-      displayName: 'E2E Guard',
-    })
+    const user = await signInFixed(page)
 
     // Regular user should see NO admin panel section on their profile.
     await page.goto('/profile')

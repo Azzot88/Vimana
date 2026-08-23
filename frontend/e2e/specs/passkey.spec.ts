@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test'
-import { registerUser } from '../helpers'
+import { clearPasskeys, signInFixed } from '../helpers'
 
 /**
  * T3.14 — passkeys against the real backend, with a virtual authenticator.
@@ -40,7 +40,8 @@ test.describe('passkeys', () => {
     test.setTimeout(90_000)
     await attachAuthenticator(page)
 
-    const user = await registerUser(page)
+    const user = await signInFixed(page)
+    await clearPasskeys(page, user)
 
     await page.goto('/profile/keys')
     await page.waitForLoadState('domcontentloaded')
@@ -97,7 +98,11 @@ test.describe('passkeys', () => {
      *  over-trigger, which would be just as broken as not triggering. */
     test.setTimeout(90_000)
     await attachAuthenticator(page)
-    const { password } = await registerUser(page)
+    const user = await signInFixed(page)
+    // "Its only passkey" is the premise of this test, not a detail: removing
+    // one of several proves nothing about a guard that only fires on the last.
+    await clearPasskeys(page, user)
+    const { password } = user
 
     await page.goto('/profile/keys')
     await Promise.all([

@@ -1,11 +1,18 @@
 import { expect, test } from '@playwright/test'
-import { registerUser, uniqueEmail } from '../helpers'
+import { signInFixed } from '../helpers'
 
 /** Multi-context #1 — invite copy-paste between two independent browser
  *  contexts (isolated cookies + localStorage). Alice creates an invite link,
- *  Bob (fresh session) opens it, connection is established both directions.
+ *  Bob (separate session) opens it, connection is established both directions.
  *
- *  Runs against prod. Test users are cleaned up daily by the Celery task. */
+ *  **The only spec that needs two accounts**, which is the whole reason a
+ *  second long-lived one exists: an invite cannot be accepted by its author,
+ *  and the endpoint says so with a 400.
+ *
+ *  Repeat runs are fine even though the connection persists — `accept_invite`
+ *  is idempotent per user, so the second acceptance is a no-op success and the
+ *  assertions below still describe the truth. The invite *token* is fresh every
+ *  run; it is the connection that is not, and re-using one is not an error. */
 test('invite flow: Alice creates → Bob accepts → connection visible', async ({ browser }) => {
   test.setTimeout(90_000)
 
@@ -15,14 +22,8 @@ test('invite flow: Alice creates → Bob accepts → connection visible', async 
   const bobPage = await bobContext.newPage()
 
   try {
-    const alice = await registerUser(alicePage, {
-      email: uniqueEmail('e2e-alice'),
-      displayName: 'E2E Alice',
-    })
-    const bob = await registerUser(bobPage, {
-      email: uniqueEmail('e2e-bob'),
-      displayName: 'E2E Bob',
-    })
+    const alice = await signInFixed(alicePage)
+    const bob = await signInFixed(bobPage, { as: 'second' })
 
     // Alice → /invite → click "Создать ссылку" → capture token from the XHR.
     await alicePage.goto('/invite')

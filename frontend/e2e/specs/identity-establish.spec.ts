@@ -1,5 +1,18 @@
-import { expect, test } from '@playwright/test'
-import { registerUser } from '../helpers'
+import { expect, test, type Page } from '@playwright/test'
+
+/** Stands where `registerUser` used to, and refuses.
+ *
+ *  Signing in as the shared account here would be worse than failing: the first
+ *  run would pass and irreversibly retire that account's service key, taking
+ *  every other spec with it. So the placeholder throws instead — unskipping is
+ *  only meaningful together with one of the two fixes in the note below. */
+async function needsAnAccountThatNeverEstablished(_page: Page): Promise<never> {
+  throw new Error(
+    'identity: establish needs an account that has never established, and the ' +
+      'suite can no longer create one (T3.28). Read the note at the top of ' +
+      'this file before unskipping — the shared account is not a substitute.',
+  )
+}
 
 /**
  * T3.12 — taking ownership of your identity, in a real browser.
@@ -14,18 +27,41 @@ import { registerUser } from '../helpers'
  * **A fresh account every run, always.** Establishing is irreversible: the
  * second attempt on the same account answers 409. A spec pinned to a fixed
  * login would pass once and then fail forever, and the failure would look like
- * a regression rather than a test defect. `registerUser` mints a unique
- * `@e2e.vimana.local` address, which the nightly cleanup prunes.
+ * a regression rather than a test defect.
  *
  * The NIP-07 branch is not covered here — a real extension needs a persistent
  * context (see T_TEST.3 notes). The browser-generated branch is the default
  * path and the one carrying the crypto risk.
+ *
+ * ── Why this is skipped (T_TEST.12, 2026-08-23) ─────────────────────────────
+ *
+ * The paragraph above was written as a note about test hygiene. It is now the
+ * blocker. Every other spec moved from `registerUser` to a long-lived account
+ * when T3.28 made sign-up code-based and unautomatable; this one cannot follow,
+ * because the thing it tests can only happen once per account. A fixed login
+ * would go green on its first run and red on every run after, permanently.
+ *
+ * Skipped rather than deleted or quietly rewritten to assert less. This is the
+ * only place the two BIP-340 implementations — `@noble/curves` in the browser,
+ * `coincurve` on the server — are proved to agree end to end, and a version
+ * that dropped that would keep the name while testing nothing.
+ *
+ * Unskipping needs **one** of:
+ *   - a way for a test to create an account (a test-only path past the mailed
+ *     code — an owner's decision, it trades safety for testability), or
+ *   - a way to return an account to `service` custody, which today is not a
+ *     thing the product can do to itself and probably should not be.
+ *
+ * Until then the coverage gap is real and stated: the serialization contract is
+ * still pinned by unit tests on both sides (`src/test/identity.test.ts`,
+ * `backend/tests/test_identity_proof_contract.py`); what is unproved is that
+ * the two libraries agree at runtime. See TASKS `T_TEST.12`.
  */
-test.describe('identity: establish', () => {
+test.describe.skip('identity: establish', () => {
   test('generates a key in the browser and the backend accepts it', async ({
     page,
   }) => {
-    await registerUser(page)
+    await needsAnAccountThatNeverEstablished(page)
 
     await page.goto('/profile/keys')
     await page.waitForLoadState('domcontentloaded')
@@ -76,7 +112,7 @@ test.describe('identity: establish', () => {
     /** The platform no longer holds a key for this user. Everything that does
      *  not need one must still behave — a transition that quietly breaks the
      *  session would be worse than one that fails outright. */
-    await registerUser(page)
+    await needsAnAccountThatNeverEstablished(page)
 
     await page.goto('/profile/keys')
     await page.getByTestId('identity-start').click()

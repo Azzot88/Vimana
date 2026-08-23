@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { registerUser, uniqueEmail } from '../helpers'
+import { signInFixed } from '../helpers'
 
 /** Multi-context #4 (T_UX.3 pt.3) — cross-tab logout sync.
  *
@@ -15,10 +15,7 @@ test('multi-tab logout: logout in tab A redirects tab B to /login', async ({ bro
   const context = await browser.newContext()
   try {
     const tabA = await context.newPage()
-    await registerUser(tabA, {
-      email: uniqueEmail('e2e-mt'),
-      displayName: 'E2E MultiTab',
-    })
+    await signInFixed(tabA)
 
     // Open second tab in the same context — inherits cookies + localStorage.
     const tabB = await context.newPage()

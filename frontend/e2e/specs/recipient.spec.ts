@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { registerUser, uniqueEmail } from '../helpers'
+import { signInFixed } from '../helpers'
 
 /** Smoke #3 — /join/deal/:token route wired.
  *
@@ -10,10 +10,7 @@ import { registerUser, uniqueEmail } from '../helpers'
  *  fights zustand-vs-page.goto state race and is fragile. */
 test('recipient join route handles unknown token gracefully', async ({ page }) => {
   test.setTimeout(30_000)
-  const user = await registerUser(page, {
-    email: uniqueEmail('e2e-r'),
-    displayName: 'E2E Recipient',
-  })
+  const user = await signInFixed(page)
 
   const startUrl = page.url()
   await page.goto('/join/deal/definitely-not-a-real-token-999')

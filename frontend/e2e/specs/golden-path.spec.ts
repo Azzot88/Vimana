@@ -1,18 +1,18 @@
 import { expect, test } from '@playwright/test'
-import { registerUser, uniqueEmail } from '../helpers'
+import { signInFixed } from '../helpers'
 
-/** Smoke #1 — register + walk through key logged-in routes.
- *  Loud on failure (helpers throw with HTTP status on non-2xx register). */
-test('golden path: register + navigate main routes without crash', async ({ page }) => {
+/** Smoke #1 — sign in and walk through key logged-in routes.
+ *
+ *  Carrier mode, and not incidentally: `/trips/new` is a carrier's screen, and
+ *  a sender is bounced off it. The old version got there by ticking a checkbox
+ *  on the sign-up form, which read as a detail of registration; it was the
+ *  whole reason the route rendered. */
+test('golden path: sign in + navigate main routes without crash', async ({ page }) => {
   test.setTimeout(60_000)
 
-  const user = await registerUser(page, {
-    email: uniqueEmail('e2e-c'),
-    displayName: 'E2E Golden',
-    canCarry: true,
-  })
+  const user = await signInFixed(page, { mode: 'carrier' })
 
-  // After register we should NOT be on login or register page.
+  // Signed in, so neither auth screen should hold us.
   await expect(page).not.toHaveURL(/\/(login|register)$/)
 
   // Trips + New-trip + Profile — each page must render actual content.
