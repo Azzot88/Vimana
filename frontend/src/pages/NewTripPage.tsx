@@ -66,6 +66,11 @@ export default function NewTripPage() {
   const destId = useId()
   const departId = useId()
   const capacityId = useId()
+  // T_TEST.8 — the slider is a second way into the same number, so it carries
+  // the same name rather than a made-up one of its own. Hiding it from screen
+  // readers was the other option and it is worse: dragging is the easier input
+  // for some motor impairments, and the field it duplicates stays reachable.
+  const capacityLabelId = useId()
   const rulesId = useId()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
@@ -372,6 +377,7 @@ export default function NewTripPage() {
         {/* Capacity cell 1x1 */}
         <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <label
+            id={capacityLabelId}
             htmlFor={capacityId}
             className="block text-xs font-display font-semibold text-navy/50 uppercase tracking-wide"
           >
@@ -394,6 +400,7 @@ export default function NewTripPage() {
           </div>
           <input
             type="range"
+            aria-labelledby={capacityLabelId}
             min="0.5"
             max="20"
             step="0.5"

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
@@ -16,6 +16,13 @@ import { usePersistedState } from '../hooks/usePersistedState'
 import { usePrefs } from '../hooks/usePrefs'
 
 export default function TripsPage() {
+  // T_TEST.8 — the search row had three visible labels and none of them was
+  // attached to anything. axe only reported the date, because its `label` rule
+  // accepts a non-empty placeholder as a last resort and the two airport fields
+  // have one. A placeholder is not a name: it disappears the moment you type.
+  const originId = useId()
+  const destId = useId()
+  const dateId = useId()
   const prefs = usePrefs()
   const user = useAuthStore((s) => s.user)
   const { t } = useTranslation()
@@ -95,16 +102,17 @@ export default function TripsPage() {
 
       <form onSubmit={handleSearch} className="bg-white rounded-card border border-navy/10 p-4 grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-3 md:items-end">
         <div className="md:flex-1 md:min-w-[160px]">
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
-          <AirportSelect value={origin} onChange={setOrigin} placeholder="DXB" />
+          <label htmlFor={originId} className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.from')}</label>
+          <AirportSelect value={origin} onChange={setOrigin} placeholder="DXB" inputId={originId} />
         </div>
         <div className="md:flex-1 md:min-w-[160px]">
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
-          <AirportSelect value={destination} onChange={setDestination} placeholder="JFK" />
+          <label htmlFor={destId} className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.to')}</label>
+          <AirportSelect value={destination} onChange={setDestination} placeholder="JFK" inputId={destId} />
         </div>
         <div className="md:flex-1 md:min-w-[140px]">
-          <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>
+          <label htmlFor={dateId} className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>
           <input
+            id={dateId}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
