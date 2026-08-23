@@ -16,6 +16,7 @@ with it off so fixtures can ask for dozens of codes; a module testing the
 limiter with the limiter disabled would be the exact failure `T_TEST.7` records,
 where five tests passed for a month because the feature was off underneath them.
 """
+import itertools
 import secrets
 
 import pytest
@@ -23,10 +24,34 @@ import pytest
 from tests.conftest import unique_email
 
 # Counters live in Redis for an hour, which outlives the suite. Fixed addresses
-# would mean the second run of the day inheriting the first run's spent budget
-# and failing for a reason that has nothing to do with the code — so each run
-# gets its own block of source addresses.
-_RUN = f"10.{secrets.randbelow(250)}.{secrets.randbelow(250)}"
+# would mean one run inheriting another's spent budget and failing for a reason
+# that has nothing to do with the code — so every test gets its own block of
+# source addresses.
+#
+# Per *test*, and handed out by a fixture, because a block chosen once at import
+# is not per-run at all. Under mutmut the suite is driven in-process and runs
+# many times over in a single interpreter: the module stays in `sys.modules`,
+# import-time state is computed once, and every later run reuses the first run's
+# addresses with their budgets already spent. It surfaces as a 429 on the very
+# first request of a test that has not made any yet — which reads like a broken
+# limiter and is nothing of the sort.
+#
+# The counter is monotonic and deliberately never reset; outliving the run is
+# the entire point. The random start is what keeps two separate *processes*
+# inside the same Redis hour from opening on the same block.
+_BLOCK_SPACE = 250 * 250
+_BLOCK_START = secrets.randbelow(_BLOCK_SPACE)
+_BLOCKS = itertools.count()
+
+_RUN = ""
+
+
+@pytest.fixture(autouse=True)
+def own_source_block():
+    global _RUN
+    n = (_BLOCK_START + next(_BLOCKS)) % _BLOCK_SPACE
+    _RUN = f"10.{n // 250}.{n % 250}"
+    yield
 
 
 @pytest.fixture(autouse=True)

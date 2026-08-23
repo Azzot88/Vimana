@@ -8,6 +8,7 @@ never sees.
 The suite drives all three legs — request, webhook, verify — rather than calling
 the helpers, because the thing worth pinning is that they agree about one row.
 """
+import itertools
 import secrets
 import uuid as uuidlib
 
@@ -19,14 +20,38 @@ from tests.conftest import SEED_PASSWORD, make_account, unique_email
 BOT = "vimana_test_bot"
 
 # A chat id is an account here, and accounts are never deleted from the test
-# database (conftest §8). Fixed ids would mean the second run of the day finding
-# the first run's account and reading `created: false` where the test says true
-# — a failure about yesterday, not about the code.
-_RUN = secrets.randbelow(10**6)
-CHAT_NEW = f"7{_RUN:06d}"
-CHAT_AGAIN = f"6{_RUN:06d}"
-CHAT_LEGACY = f"8{_RUN:06d}"
-CHAT_PROFILE = f"9{_RUN:06d}"
+# database (conftest §8). Fixed ids would mean a later run finding an earlier
+# run's account and reading `created: false` where the test says true — a
+# failure about yesterday, not about the code.
+#
+# Handed out per *test* by a fixture rather than fixed at import, because
+# import time happens once per interpreter and not once per run. mutmut drives
+# pytest in-process over and over in a single interpreter, so this module is
+# imported once and every run after the first would reuse ids whose accounts it
+# had already created.
+#
+# The counter is monotonic and never reset — outliving the run is the point.
+# The random start keeps two separate processes from opening on the same ids.
+_CHAT_SPACE = 10**6
+_CHAT_START = secrets.randbelow(_CHAT_SPACE)
+_CHATS = itertools.count()
+
+CHAT_NEW = ""
+CHAT_AGAIN = ""
+CHAT_LEGACY = ""
+CHAT_PROFILE = ""
+
+
+@pytest.fixture(autouse=True)
+def own_chat_ids():
+    global CHAT_NEW, CHAT_AGAIN, CHAT_LEGACY, CHAT_PROFILE
+
+    n = (_CHAT_START + next(_CHATS)) % _CHAT_SPACE
+    CHAT_NEW = f"7{n:06d}"
+    CHAT_AGAIN = f"6{n:06d}"
+    CHAT_LEGACY = f"8{n:06d}"
+    CHAT_PROFILE = f"9{n:06d}"
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +93,11 @@ async def _link(client):
     return resp.json()["nonce"]
 
 
-async def _start(client, nonce, chat_id=CHAT_NEW, first_name="Пётр"):
+async def _start(client, nonce, chat_id=None, first_name="Пётр"):
+    # Resolved on the call, not in the signature: a default is evaluated once
+    # at import, which would pin the first test's chat id into every later one.
+    if chat_id is None:
+        chat_id = CHAT_NEW
     return await client.post(
         "/api/telegram/webhook",
         json={
