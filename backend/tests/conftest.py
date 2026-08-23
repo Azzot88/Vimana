@@ -1105,6 +1105,22 @@ async def _ensure_display_prefs_columns(engine) -> None:
         )
 
 
+async def _ensure_carrier_notes_columns(engine) -> None:
+    """T_UX.21: mirrors migration 0053 for a pre-existing test DB.
+
+    A function per migration rather than a line added to the one above: the
+    docstring naming which migration is being mirrored is the only thing that
+    makes this file auditable against `alembic/versions`, and it stops being
+    true the moment two migrations share a helper.
+    """
+    async with engine.begin() as conn:
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS interaction_rules TEXT",
+            "ADD COLUMN IF NOT EXISTS payment_instructions TEXT",
+        ):
+            await conn.execute(text(f"ALTER TABLE users {ddl}"))
+
+
 async def _ensure_trip_terms_columns(engine) -> None:
     """T3.35: the carrier's baseline price on an existing `trips` table.
     Mirrors migration 0051."""
@@ -1409,6 +1425,7 @@ async def test_engine():
     await _ensure_platform_parameters(engine)
     await _ensure_trip_terms_columns(engine)
     await _ensure_display_prefs_columns(engine)
+    await _ensure_carrier_notes_columns(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

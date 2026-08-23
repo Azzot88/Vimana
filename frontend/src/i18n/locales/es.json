@@ -608,7 +608,7 @@
     "nav": {
       "label": "Secciones del perfil",
       "account": "Cuenta",
-      "activity": "Nivel de actividad",
+      "rules": "Mis reglas",
       "trust": "Círculos de confianza",
       "keys": "Acceso y claves",
       "prefs": "Región y formatos",
@@ -811,9 +811,7 @@
       "submit": "Continuar",
       "stepUpBody": "Confirma que eres tú — el código irá después a la nueva dirección.",
       "failed": "No se ha podido añadir la dirección."
-    },
-    "publishedTrips": "Viajes publicados",
-    "noPublishedTrips": "Nada publicado todavía."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FASE 1",
@@ -1136,6 +1134,22 @@
       "superseded": "reemplazado"
     }
   },
+  "rules": {
+    "carriage": {
+      "title": "Reglas de transporte",
+      "hint": "Se definen una vez y se copian en cada viaje nuevo. Editarlas no cambia los viajes ya publicados."
+    },
+    "interaction": {
+      "title": "Cómo trabajo",
+      "hint": "Notas para la otra parte: en cuánto tiempo respondes, qué enviar al chat de inmediato, qué no aceptas.",
+      "placeholder": "Respondo en unas horas. Antes de acordar nada, envía una foto del paquete y de su contenido. No llevo líquidos ni envíos precintados."
+    },
+    "payment": {
+      "title": "Cómo pagarme",
+      "hint": "Se envía a la otra parte en el chat cuando tú quieras. Vimana no verifica estos datos ni procesa pagos — os ponéis de acuerdo entre vosotros.",
+      "placeholder": "En efectivo en la entrega, o por transferencia — pídeme los datos en el chat."
+    }
+  },
   "prefs": {
     "title": "Visualización",
     "hint": "Se guarda en tu cuenta, no se deduce del navegador.",
@@ -1146,8 +1160,6 @@
     "european": "Europeo",
     "american": "Americano",
     "example": "Ejemplo",
-    "carriageRules": "Reglas de transporte",
-    "carriageRulesHint": "Se definen una vez y se copian en cada viaje nuevo. Editarlas no cambia los viajes ya publicados.",
     "save": "Guardar",
     "saved": "Guardado",
     "saveFailed": "No se pudo guardar"
@@ -1160,7 +1172,6 @@
   },
   "disputes": {
     "none": "No hay disputas abiertas.",
-    "mine": "Mis disputas",
-    "profileHint": "Casos abiertos y registro de arbitraje."
+    "mine": "Mis disputas"
   }
 }

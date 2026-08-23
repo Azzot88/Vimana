@@ -608,7 +608,7 @@
     "nav": {
       "label": "Sections du profil",
       "account": "Compte",
-      "activity": "Niveau d'activité",
+      "rules": "Mes règles",
       "trust": "Cercles de confiance",
       "keys": "Accès et clés",
       "prefs": "Région et formats",
@@ -811,9 +811,7 @@
       "submit": "Continuer",
       "stepUpBody": "Confirmez que c'est bien vous — le code partira ensuite vers la nouvelle adresse.",
       "failed": "Impossible d'ajouter l'adresse."
-    },
-    "publishedTrips": "Trajets publiés",
-    "noPublishedTrips": "Rien de publié pour l'instant."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
@@ -1136,6 +1134,22 @@
       "superseded": "remplacé"
     }
   },
+  "rules": {
+    "carriage": {
+      "title": "Règles de transport",
+      "hint": "Définies une fois et copiées dans chaque nouveau trajet. Les modifier ne change pas les trajets déjà publiés."
+    },
+    "interaction": {
+      "title": "Comment je travaille",
+      "hint": "Notes pour l'autre partie : votre délai de réponse, ce qu'il faut envoyer tout de suite dans le chat, ce que vous ne prenez pas.",
+      "placeholder": "Je réponds en quelques heures. Avant tout accord, envoyez une photo du colis et de son contenu. Je ne transporte ni liquides ni envois scellés."
+    },
+    "payment": {
+      "title": "Comment me régler",
+      "hint": "Envoyé à l'autre partie dans le chat quand vous le décidez. Vimana ne vérifie pas ces informations et ne traite aucun paiement — vous vous arrangez entre vous.",
+      "placeholder": "En espèces à la remise, ou par virement — demandez-moi les coordonnées dans le chat."
+    }
+  },
   "prefs": {
     "title": "Affichage",
     "hint": "Enregistré sur votre compte, pas deviné depuis le navigateur.",
@@ -1146,8 +1160,6 @@
     "european": "Européen",
     "american": "Américain",
     "example": "Exemple",
-    "carriageRules": "Règles de transport",
-    "carriageRulesHint": "Définies une fois et copiées dans chaque nouveau trajet. Les modifier ne change pas les trajets déjà publiés.",
     "save": "Enregistrer",
     "saved": "Enregistré",
     "saveFailed": "Échec de l'enregistrement"
@@ -1160,7 +1172,6 @@
   },
   "disputes": {
     "none": "Aucun litige en cours.",
-    "mine": "Mes litiges",
-    "profileHint": "Dossiers ouverts et historique d'arbitrage."
+    "mine": "Mes litiges"
   }
 }

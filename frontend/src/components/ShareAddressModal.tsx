@@ -46,7 +46,11 @@ export default function ShareAddressModal({ open, onClose, onShare }: Props) {
   const goAddAddress = () => {
     onClose()
     navigate(
-      `/profile?add_address=1&return_to=${encodeURIComponent(
+      // T_UX.21 — the addresses moved to «Мои правила». Pointing this at
+      // `/profile` after the move would have quietly restored the dead end the
+      // link was written to fix: the person lands on the showcase, finds no
+      // address form, and the chat's share button keeps answering 422.
+      `/profile/rules?return_to=${encodeURIComponent(
         location.pathname + location.search,
       )}`,
     )

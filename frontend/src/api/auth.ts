@@ -76,6 +76,11 @@ export interface User {
   date_format?: 'eu' | 'us'
   /** T_UX.15 — standing carriage rules, copied into each new trip. */
   carriage_rules?: string | null
+  /** T_UX.21 — the other two standing notes, and unlike the carriage rules
+   *  they are not copied anywhere: they describe the carrier, not the
+   *  shipment. Owner-only — `MeOut`, never `UserOut`. */
+  interaction_rules?: string | null
+  payment_instructions?: string | null
 }
 
 // ── T3.16 — recovery codes ───────────────────────────────────────────────────
@@ -241,6 +246,8 @@ export interface UserUpdate {
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
   carriage_rules?: string | null
+  interaction_rules?: string | null
+  payment_instructions?: string | null
   display_name?: string
   /** T3.25 — E.164 or the request is refused; the backend normalises and
    *  rejects anything unparseable rather than storing it as text. */

@@ -67,6 +67,12 @@ class UserUpdate(BaseModel):
     date_format: Literal["eu", "us"] | None = None
     # T_UX.15 — standing carriage rules, the template copied into new trips.
     carriage_rules: str | None = Field(default=None, max_length=4000)
+    # T_UX.21 — standing notes about the carrier rather than the shipment, so
+    # they are not copied anywhere. Same 4000 as the carriage rules: these three
+    # fields are edited in the same screen by the same person, and a limit that
+    # differs between neighbouring boxes is one somebody meets by surprise.
+    interaction_rules: str | None = Field(default=None, max_length=4000)
+    payment_instructions: str | None = Field(default=None, max_length=4000)
 
     @field_validator("locale")
     @classmethod
@@ -193,6 +199,12 @@ class MeOut(UserOut):
     unit_weight: str = "kg"
     date_format: str = "eu"
     carriage_rules: str | None = None
+    # T_UX.21 — owner-only, like the rest of `MeOut`. They are meant for a
+    # counterparty, but the carrier decides when to send them: putting them on
+    # the public `UserOut` would publish a bank account to anyone who opened a
+    # profile page.
+    interaction_rules: str | None = None
+    payment_instructions: str | None = None
 
     """Owner-only view. Receiving addresses moved to `receiving_addresses` and
     its own endpoints (T_UX.4); the single-address `receiving_*` fields were

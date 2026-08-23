@@ -1,10 +1,14 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { updateMe } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime, formatWeight, type DateStyle, type WeightUnit } from '../lib/format'
 
-/** T_UX.14 / T_UX.15 — units, date style and standing carriage rules.
+/** T_UX.14 — units and date style, and since T_UX.21 nothing else.
+ *
+ *  The carriage rules used to sit here too, which put the carrier's standing
+ *  terms — a thing they send to clients — in the same box as the clock format.
+ *  They moved to «Мои правила» with the rest of the operational text.
  *
  *  The preview under the switches is not decoration. "European" and "American"
  *  mean nothing until you see `17.08.2026, 14:30` next to `08/17/2026, 02:30 PM`
@@ -19,8 +23,6 @@ export default function DisplayPrefsSection() {
 
   const [unit, setUnit] = useState<WeightUnit>((user?.unit_weight as WeightUnit) ?? 'kg')
   const [style, setStyle] = useState<DateStyle>((user?.date_format as DateStyle) ?? 'eu')
-  const [rules, setRules] = useState(user?.carriage_rules ?? '')
-  const rulesId = useId()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -49,7 +51,12 @@ export default function DisplayPrefsSection() {
     <button
       type="button"
       onClick={() => onPick(value)}
-      className={`px-3 py-1.5 rounded-full text-xs font-body border ${
+      /* T_UX.21 — these switches were the only writers left once the rules
+         textarea moved out, and they save on click. Locking them for the
+         round-trip stops a double tap from racing two PATCHes whose order
+         decides the stored value. */
+      disabled={saving}
+      className={`px-3 py-1.5 rounded-full text-xs font-body border disabled:opacity-60 ${
         current === value
           ? 'border-cyan text-cyan bg-cyan/5'
           : 'border-navy/15 text-navy/60'
@@ -102,34 +109,6 @@ export default function DisplayPrefsSection() {
         <p className="mt-1.5 text-[11px] font-mono text-navy/40">
           {t('prefs.example')}: {formatDateTime(sample, style, i18n.language)}
         </p>
-      </div>
-
-      <div>
-        <label
-          htmlFor={rulesId}
-          className="block text-[11px] font-body text-navy/40 mb-1.5"
-        >
-          {t('prefs.carriageRules')}
-        </label>
-        <p className="text-[11px] font-body text-navy/40 mb-1.5">
-          {t('prefs.carriageRulesHint')}
-        </p>
-        <textarea
-          id={rulesId}
-          value={rules}
-          onChange={(e) => setRules(e.target.value)}
-          rows={4}
-          maxLength={4000}
-          className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-        />
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void save({ carriage_rules: rules })}
-          className="mt-2 px-4 py-2 rounded-field bg-navy text-white text-sm font-body disabled:opacity-50"
-        >
-          {saving ? '...' : t('prefs.save')}
-        </button>
       </div>
 
       {error && <p className="text-xs font-body text-danger">{error}</p>}

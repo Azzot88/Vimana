@@ -32,7 +32,10 @@ interface Section {
 
 const SECTIONS: Section[] = [
   { to: '/profile', labelKey: 'profile.nav.account', end: true },
-  { to: '/profile/activity', labelKey: 'profile.nav.activity' },
+  // T_UX.21 — second on purpose, above the circles: this is the section a
+  // working carrier reopens, and the ones below it are read once. Order lives
+  // here and nowhere else, so moving a section is moving a line.
+  { to: '/profile/rules', labelKey: 'profile.nav.rules' },
   { to: '/profile/trust', labelKey: 'profile.nav.trust' },
   { to: '/profile/keys', labelKey: 'profile.nav.keys', testId: 'profile-keys-link' },
   { to: '/profile/prefs', labelKey: 'profile.nav.prefs' },

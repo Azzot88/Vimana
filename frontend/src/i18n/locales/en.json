@@ -657,7 +657,7 @@
     "nav": {
       "label": "Profile sections",
       "account": "Account",
-      "activity": "Activity level",
+      "rules": "My rules",
       "trust": "Trust circles",
       "keys": "Access and keys",
       "prefs": "Region and formats",
@@ -864,9 +864,7 @@
       "submit": "Continue",
       "stepUpBody": "Confirm it is you — the code then goes to the new address.",
       "failed": "Could not add the address."
-    },
-    "publishedTrips": "Published trips",
-    "noPublishedTrips": "Nothing published yet."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
@@ -1182,6 +1180,22 @@
       "superseded": "superseded"
     }
   },
+  "rules": {
+    "carriage": {
+      "title": "Carriage rules",
+      "hint": "Written once and copied into each new trip. Editing them later does not change trips already published."
+    },
+    "interaction": {
+      "title": "How I work",
+      "hint": "Notes for the other party: how fast you answer, what to send in the chat straight away, what you do not take on.",
+      "placeholder": "I answer within a few hours. Send a photo of the parcel and its contents before we agree. I do not carry liquids or anything sealed."
+    },
+    "payment": {
+      "title": "How to settle with me",
+      "hint": "Sent to the other party in the chat when you choose to. Vimana neither checks nor processes these details — you agree between yourselves.",
+      "placeholder": "Cash on handover, or a transfer — ask me for the details in the chat."
+    }
+  },
   "prefs": {
     "title": "Display",
     "hint": "Stored on your account, not guessed from the browser.",
@@ -1192,8 +1206,6 @@
     "european": "European",
     "american": "American",
     "example": "Example",
-    "carriageRules": "Carriage rules",
-    "carriageRulesHint": "Written once and copied into each new trip. Editing them later does not change trips already published.",
     "save": "Save",
     "saved": "Saved",
     "saveFailed": "Could not save"
@@ -1206,7 +1218,6 @@
   },
   "disputes": {
     "none": "No open disputes.",
-    "mine": "My disputes",
-    "profileHint": "Open cases and the arbitration record."
+    "mine": "My disputes"
   }
 }

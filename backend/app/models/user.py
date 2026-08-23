@@ -127,6 +127,15 @@ class User(Base):
     # into each trip. Copied rather than referenced: a rule changed in March
     # must not silently rewrite what a sender agreed to in February.
     carriage_rules: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # T_UX.21 — the other two standing notes, and unlike `carriage_rules` they
+    # are **not** copied onto the trip: they describe the person, not the
+    # shipment, so the current text is the one that should read as current.
+    # `payment_instructions` is free text the carrier sends a client; the
+    # platform neither validates nor processes it, and no screen may say
+    # otherwise (DESIGNGUIDELINES §9.1). A method catalogue arrives with the
+    # payment phases, not before them.
+    interaction_rules: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payment_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
     notify_email: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     notify_telegram: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     notify_whatsapp: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

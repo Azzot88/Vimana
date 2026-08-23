@@ -30,7 +30,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const ProfileKeysPage = lazy(() => import('./pages/ProfileKeysPage'))
 const ProfileLayout = lazy(() => import('./pages/ProfileLayout'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
-const ProfileActivityPage = lazy(() => import('./pages/ProfileActivityPage'))
+const ProfileRulesPage = lazy(() => import('./pages/ProfileRulesPage'))
 const ProfileTrustPage = lazy(() => import('./pages/ProfileTrustPage'))
 const ProfilePrefsPage = lazy(() => import('./pages/ProfilePrefsPage'))
 const ProfileAdminPage = lazy(() => import('./pages/ProfileAdminPage'))
@@ -117,7 +117,13 @@ export default function App() {
                   unchanged here. */}
               <Route path="/profile" element={<ProfileLayout />}>
                 <Route index element={<ProfilePage />} />
-                <Route path="activity" element={<ProfileActivityPage />} />
+                <Route path="rules" element={<ProfileRulesPage />} />
+                {/* T_UX.21 — «Уровень активности» folded into the account, so
+                    the address retires rather than disappears. Cheap to keep:
+                    nothing outside the app links here (the section existed for
+                    a day and no letter mentions it), but a bookmark from that
+                    day should land on the score rather than on the 404. */}
+                <Route path="activity" element={<Navigate to="/profile" replace />} />
                 <Route path="trust" element={<ProfileTrustPage />} />
                 {/* T_UX.6 — its own path so banners, letters and the reader can
                     link straight to it. */}

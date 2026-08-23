@@ -609,7 +609,7 @@
     "nav": {
       "label": "Sekcje profilu",
       "account": "Konto",
-      "activity": "Poziom aktywności",
+      "rules": "Moje zasady",
       "trust": "Kręgi zaufania",
       "keys": "Dostęp i klucze",
       "prefs": "Region i formaty",
@@ -812,9 +812,7 @@
       "submit": "Dalej",
       "stepUpBody": "Potwierdź, że to Ty — kod pójdzie wtedy na nowy adres.",
       "failed": "Nie udało się dodać adresu."
-    },
-    "publishedTrips": "Opublikowane loty",
-    "noPublishedTrips": "Nic jeszcze nie opublikowano."
+    }
   },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FAZA 1",
@@ -1137,6 +1135,22 @@
       "superseded": "zastąpione"
     }
   },
+  "rules": {
+    "carriage": {
+      "title": "Zasady przewozu",
+      "hint": "Ustalane raz i kopiowane do każdego nowego lotu. Edycja nie zmienia lotów już opublikowanych."
+    },
+    "interaction": {
+      "title": "Jak pracuję",
+      "hint": "Notatki dla drugiej strony: jak szybko odpowiadasz, co przysłać na czat od razu, czego nie podejmujesz.",
+      "placeholder": "Odpowiadam w ciągu kilku godzin. Przed ustaleniami przyślij zdjęcie paczki i jej zawartości. Nie wożę płynów ani przesyłek zaplombowanych."
+    },
+    "payment": {
+      "title": "Jak się ze mną rozliczyć",
+      "hint": "Trafia do drugiej strony na czat, gdy sam tego zechcesz. Vimana nie sprawdza tych danych i nie przeprowadza płatności — umawiacie się między sobą.",
+      "placeholder": "Gotówką przy przekazaniu albo przelewem — o dane poproś na czacie."
+    }
+  },
   "prefs": {
     "title": "Wyświetlanie",
     "hint": "Zapisane na koncie, nie zgadywane z przeglądarki.",
@@ -1147,8 +1161,6 @@
     "european": "Europejski",
     "american": "Amerykański",
     "example": "Przykład",
-    "carriageRules": "Zasady przewozu",
-    "carriageRulesHint": "Ustalane raz i kopiowane do każdego nowego lotu. Edycja nie zmienia lotów już opublikowanych.",
     "save": "Zapisz",
     "saved": "Zapisano",
     "saveFailed": "Nie udało się zapisać"
@@ -1161,7 +1173,6 @@
   },
   "disputes": {
     "none": "Brak otwartych sporów.",
-    "mine": "Moje spory",
-    "profileHint": "Otwarte sprawy i zapis arbitrażu."
+    "mine": "Moje spory"
   }
 }
