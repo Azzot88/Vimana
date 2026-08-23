@@ -97,6 +97,19 @@ test.describe('passkeys', () => {
      *  password, so removal must succeed — this pins that the guard does not
      *  over-trigger, which would be just as broken as not triggering. */
     test.setTimeout(90_000)
+
+    // `passkey_zone` in nginx: 30r/m with burst=10, so ten requests go through
+    // at once and the bucket then refills one every two seconds. The test above
+    // spends roughly five (list, register ×2, login ×2) and this one another
+    // six (list, delete, register ×2, step-up delete ×2) — eleven inside a few
+    // seconds, against a person's four in a minute.
+    //
+    // So the suite waits rather than the limit moving. A rate limit that exists
+    // to slow down credential stuffing should not be loosened because the tests
+    // are faster than people; the previous shape hid this by spending fewer
+    // requests, not by being within budget.
+    await page.waitForTimeout(24_000)
+
     await attachAuthenticator(page)
     const user = await signInFixed(page)
     // "Its only passkey" is the premise of this test, not a detail: removing
