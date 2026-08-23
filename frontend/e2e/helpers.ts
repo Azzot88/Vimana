@@ -57,8 +57,18 @@ export async function signInFixed(page: Page, opts: SignInOpts = {}) {
     data: { login, password },
   })
   if (!res.ok()) {
+    // A 401 here means one of two things and the API deliberately does not say
+    // which — it must not reveal whether an address exists. The hint belongs on
+    // this side, where both possibilities are known: an account registered by
+    // code has **no password at all** until one is set, and `/login` refuses a
+    // null hash exactly the way it refuses a wrong one.
+    const hint =
+      res.status() === 401
+        ? '\n  Either the password is wrong, or this account has none: sign-up ' +
+          'by code does not create one. See e2e/README.md.'
+        : ''
     throw new Error(
-      `login failed for ${login}: ${res.status()} ${await res.text()}`,
+      `login failed for ${login}: ${res.status()} ${await res.text()}${hint}`,
     )
   }
   const { access_token: token } = (await res.json()) as { access_token: string }
