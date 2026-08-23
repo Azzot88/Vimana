@@ -398,7 +398,8 @@ def test_nip44_round_trip_both_directions():
     # payloads this backend rejects, and the failure would look like a key
     # problem rather than an arithmetic one.
     [(16, 32), (32, 32), (33, 64), (65, 96), (100, 128), (200, 224), (250, 256),
-     (320, 320), (383, 384), (384, 384), (400, 448), (515, 640), (1020, 1024)],
+     (256, 256), (257, 320), (320, 320), (383, 384), (384, 384), (400, 448),
+     (515, 640), (1020, 1024)],
 )
 def test_nip44_padding_schedule(unpadded, padded):
     from app.core.threshold import _nip44_padded_len
@@ -449,3 +450,278 @@ def test_nip44_rejects_the_wrong_reader():
 
     with pytest.raises(HTTPException):
         nip44_decrypt(nip44_encrypt(b"not for you", a_priv, b_pub), stranger_priv, a_pub)
+
+
+# ── T_TEST.10 — the paths that refuse ─────────────────────────────────────
+#
+# Mutation testing put 112 of this module's 144 survivors in three places:
+# `E2EPayload.__init__`, `nip44_decrypt`, and the padding pair. All three parse
+# bytes chosen by somebody else, and not one of their rejections was reachable
+# by the suite — everything above hands them well-formed input, so deleting a
+# check changed nothing any test noticed.
+#
+# For input an attacker supplies, the refusals are not error handling wrapped
+# around the feature. They are the feature.
+
+
+def _valid_blob() -> dict:
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_encrypt
+
+    priv, pub = generate_keypair()
+    share = nip44_encrypt(b"a share", priv, pub)
+    return {
+        "ciphertext": base64.b64encode(b"ciphertext").decode(),
+        "nonce": base64.b64encode(b"0" * 12).decode(),
+        "wrapped_shares": {"sender": share, "carrier": share, "arbiter": share},
+        "read_packages": {"sender": share, "carrier": share},
+    }
+
+
+def _drop(mapping: dict, key: str) -> dict:
+    return {k: v for k, v in mapping.items() if k != key}
+
+
+def _short_payload() -> str:
+    """Valid base64, correct version byte, one byte below the 97-byte floor."""
+    from app.core.threshold import NIP44_VERSION
+
+    return base64.b64encode(bytes([NIP44_VERSION]) + b"\x00" * 95).decode()
+
+
+def _wrong_version() -> str:
+    from app.core.threshold import NIP44_VERSION
+
+    return base64.b64encode(bytes([NIP44_VERSION + 1]) + b"\x00" * 100).decode()
+
+
+def test_e2e_payload_accepts_a_well_formed_blob():
+    from app.core.threshold import E2EPayload
+
+    E2EPayload(_valid_blob())
+
+
+@pytest.mark.parametrize(
+    "break_it",
+    [
+        pytest.param(lambda b: "a string, not an object", id="not-an-object"),
+        pytest.param(lambda b: _drop(b, "ciphertext"), id="no-ciphertext"),
+        pytest.param(lambda b: {**b, "nonce": 42}, id="nonce-not-a-string"),
+        pytest.param(lambda b: {**b, "wrapped_shares": []}, id="shares-not-an-object"),
+        pytest.param(
+            lambda b: {**b, "wrapped_shares": _drop(b["wrapped_shares"], "arbiter")},
+            id="no-share-for-the-arbiter",
+        ),
+        pytest.param(
+            lambda b: {**b, "wrapped_shares": {**b["wrapped_shares"], "spare": "x"}},
+            id="a-fourth-shareholder",
+        ),
+        pytest.param(
+            lambda b: {**b, "read_packages": _drop(b["read_packages"], "carrier")},
+            id="no-read-package-for-the-carrier",
+        ),
+        pytest.param(
+            lambda b: {**b, "wrapped_shares": {**b["wrapped_shares"], "sender": 1}},
+            id="share-not-a-string",
+        ),
+        pytest.param(
+            lambda b: {**b, "wrapped_shares": {**b["wrapped_shares"], "sender": "!!!!"}},
+            id="share-not-base64",
+        ),
+        pytest.param(
+            lambda b: {
+                **b,
+                "wrapped_shares": {**b["wrapped_shares"], "sender": _short_payload()},
+            },
+            id="share-too-short-to-be-nip44",
+        ),
+        pytest.param(
+            lambda b: {
+                **b,
+                "wrapped_shares": {**b["wrapped_shares"], "sender": _wrong_version()},
+            },
+            id="share-of-another-version",
+        ),
+    ],
+)
+def test_e2e_payload_refuses_one_thing_wrong(break_it):
+    """One malformed field at a time, so a passing case cannot hide behind
+    another. The shape is the only thing the server can judge — the contents
+    are sealed to everyone but the recipient — which makes these checks the
+    entire defence the endpoint has."""
+    from app.core.threshold import E2EPayload
+
+    with pytest.raises(HTTPException) as refused:
+        E2EPayload(break_it(_valid_blob()))
+    assert refused.value.status_code == 422
+
+
+def test_to_blob_refuses_base64_it_cannot_decode():
+    """`__init__` only asks whether these are strings; `to_blob` is where they
+    are read. A blob can therefore be accepted and still fail here."""
+    from app.core.threshold import E2EPayload
+
+    payload = E2EPayload({**_valid_blob(), "ciphertext": "abc"})
+    with pytest.raises(HTTPException) as refused:
+        payload.to_blob()
+    assert refused.value.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "payload,reason",
+    [
+        ("#anything", "a NIP-04 envelope, which this version cannot read"),
+        ("not base64 at all!", "not base64"),
+        ("", "empty"),
+    ],
+)
+def test_nip44_decrypt_refuses_malformed_input(payload, reason):
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_decrypt
+
+    priv, _ = generate_keypair()
+    _, pub = generate_keypair()
+    with pytest.raises(HTTPException) as refused:
+        nip44_decrypt(payload, priv, pub)
+    assert refused.value.status_code == 422, reason
+
+
+def test_nip44_decrypt_refuses_a_payload_below_the_floor():
+    """Version + nonce + mac is 97 bytes before a single byte of message. Below
+    that the slices still succeed — they just quietly overlap — so the length
+    has to be checked rather than inferred."""
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_decrypt
+
+    priv, _ = generate_keypair()
+    _, pub = generate_keypair()
+    with pytest.raises(HTTPException) as refused:
+        nip44_decrypt(_short_payload(), priv, pub)
+    assert refused.value.status_code == 422
+
+
+def test_nip44_decrypt_refuses_an_unknown_version():
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_decrypt
+
+    priv, _ = generate_keypair()
+    _, pub = generate_keypair()
+    with pytest.raises(HTTPException) as refused:
+        nip44_decrypt(_wrong_version(), priv, pub)
+    assert refused.value.status_code == 422
+
+
+# ── padding: the arithmetic on both sides ─────────────────────────────────
+
+
+@pytest.mark.parametrize("size", [1, 2, 31, 32, 33, 100, 1000, 65535])
+def test_pad_then_unpad_returns_the_message(size):
+    from app.core.threshold import _nip44_pad, _nip44_unpad
+
+    message = os.urandom(size)
+    assert _nip44_unpad(_nip44_pad(message)) == message
+
+
+@pytest.mark.parametrize("size", [0, 65536])
+def test_pad_refuses_lengths_outside_the_spec(size):
+    from app.core.threshold import _nip44_pad
+
+    with pytest.raises(HTTPException) as refused:
+        _nip44_pad(b"\x00" * size)
+    assert refused.value.status_code == 422
+
+
+def test_padded_output_carries_its_own_length():
+    from app.core.threshold import _nip44_pad, _nip44_padded_len
+
+    padded = _nip44_pad(b"seven!!")
+    assert int.from_bytes(padded[:2], "big") == 7
+    assert len(padded) == _nip44_padded_len(7) + 2
+
+
+@pytest.mark.parametrize(
+    "padded,reason",
+    [
+        (b"", "nothing at all"),
+        (b"\x00", "half a length prefix"),
+        (b"\x00\x00" + b"\x00" * 32, "a declared length of zero"),
+        (b"\x00\x40" + b"\x00" * 32, "declares more than it carries"),
+        (b"\x00\x07" + b"\x00" * 40, "right message, wrong bucket"),
+    ],
+)
+def test_unpad_refuses_padding_that_does_not_add_up(padded, reason):
+    """The declared length and the total both have to agree with the schedule.
+
+    Checking only the declaration would let a sender append bytes past the
+    message that survive the round trip unnoticed — padding is a fixed-size
+    envelope, so anything the schedule did not ask for is somebody's cargo.
+    """
+    from app.core.threshold import _nip44_unpad
+
+    with pytest.raises(HTTPException) as refused:
+        _nip44_unpad(padded)
+    assert refused.value.status_code == 422, reason
+
+
+# ── key derivation: what the round trip cannot see ────────────────────────
+
+
+def test_message_keys_are_a_fixed_split_of_the_expansion():
+    """Recomputed here from the spec rather than compared to itself.
+
+    The round-trip tests above cannot see this at all: encryption and
+    decryption call the same function, so a mutation that moves the boundary
+    between the ChaCha key and the MAC key moves it identically on both sides
+    and the message still comes back. What breaks is interoperability — our
+    payloads stop being readable by any other NIP-44 client, and the suite
+    stays green.
+    """
+    import hashlib
+    import hmac
+
+    from app.core.threshold import _nip44_message_keys
+
+    conversation_key = bytes(range(32))
+    nonce = bytes(range(32, 64))
+
+    okm = b""
+    block = b""
+    for counter in (1, 2, 3):
+        block = hmac.new(
+            conversation_key, block + nonce + bytes([counter]), hashlib.sha256
+        ).digest()
+        okm += block
+
+    assert _nip44_message_keys(conversation_key, nonce) == (
+        okm[0:32],
+        okm[32:44],
+        okm[44:76],
+    )
+
+
+def test_conversation_key_uses_the_spec_salt():
+    import hashlib
+    import hmac
+
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip04_shared_x, nip44_conversation_key
+
+    a_priv, _ = generate_keypair()
+    _, b_pub = generate_keypair()
+
+    expected = hmac.new(
+        b"nip44-v2", nip04_shared_x(a_priv, b_pub), hashlib.sha256
+    ).digest()
+    assert nip44_conversation_key(a_priv, b_pub) == expected
+
+
+def test_conversation_key_is_the_same_from_either_end():
+    """ECDH's defining property, and the reason neither side has to be told
+    which of them started the conversation."""
+    from app.core.keypair import generate_keypair
+    from app.core.threshold import nip44_conversation_key
+
+    a_priv, a_pub = generate_keypair()
+    b_priv, b_pub = generate_keypair()
+
+    assert nip44_conversation_key(a_priv, b_pub) == nip44_conversation_key(b_priv, a_pub)
