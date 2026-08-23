@@ -715,6 +715,44 @@ def test_conversation_key_uses_the_spec_salt():
     assert nip44_conversation_key(a_priv, b_pub) == expected
 
 
+def test_envelope_keeps_the_legacy_shape_readable():
+    """A bare string predates the dict and still sits in old rows, where the
+    sender was always the message author — so the caller supplies it."""
+    from app.core.threshold import envelope_parts
+
+    assert envelope_parts("bare ciphertext", "author-pubkey") == (
+        "bare ciphertext",
+        "author-pubkey",
+    )
+
+
+def test_envelope_dict_carries_its_own_sender():
+    from app.core.threshold import envelope_parts, make_envelope
+
+    assert envelope_parts(make_envelope("ct", "service-key"), "author") == (
+        "ct",
+        "service-key",
+    )
+
+
+def test_a_dict_without_a_sender_does_not_borrow_the_default():
+    """The default is for the legacy shape only. A dict that omits the sender is
+    malformed, and answering `None` says so; substituting the message author
+    would send the reader to complete an exchange with the wrong key."""
+    from app.core.threshold import envelope_parts
+
+    assert envelope_parts({"ct": "ct"}, "author") == ("ct", None)
+
+
+def test_a_dict_without_a_ciphertext_yields_an_empty_string():
+    """Empty rather than `None`, because the value is handed to base64 decoding
+    downstream: `""` decodes to nothing, `None` raises `TypeError` from inside
+    the crypto and arrives as a 500 instead of a refusal."""
+    from app.core.threshold import envelope_parts
+
+    assert envelope_parts({"sender_pubkey": "key"}, "author") == ("", "key")
+
+
 def test_conversation_key_is_the_same_from_either_end():
     """ECDH's defining property, and the reason neither side has to be told
     which of them started the conversation."""
