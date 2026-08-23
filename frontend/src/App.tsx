@@ -31,6 +31,7 @@ const ProfileKeysPage = lazy(() => import('./pages/ProfileKeysPage'))
 const ProfileLayout = lazy(() => import('./pages/ProfileLayout'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const ProfileRulesPage = lazy(() => import('./pages/ProfileRulesPage'))
+const ProfileHistoryPage = lazy(() => import('./pages/ProfileHistoryPage'))
 const ProfileTrustPage = lazy(() => import('./pages/ProfileTrustPage'))
 const ProfilePrefsPage = lazy(() => import('./pages/ProfilePrefsPage'))
 const ProfileAdminPage = lazy(() => import('./pages/ProfileAdminPage'))
@@ -128,6 +129,7 @@ export default function App() {
                 {/* T_UX.6 — its own path so banners, letters and the reader can
                     link straight to it. */}
                 <Route path="keys" element={<ProfileKeysPage />} />
+                <Route path="history" element={<ProfileHistoryPage />} />
                 <Route path="prefs" element={<ProfilePrefsPage />} />
                 {/* T3.32 — a path so a letter can say «change what reaches you»
                     and mean somewhere in particular. */}

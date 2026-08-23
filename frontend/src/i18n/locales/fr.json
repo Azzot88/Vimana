@@ -337,6 +337,10 @@
     "skipToContent": "Aller au contenu",
     "search": "Rechercher…",
     "copied": "Copié",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "notSet": "Pas encore rempli",
+    "delete": "Supprimer",
     "yes": "Oui",
     "no": "Non"
   },
@@ -610,13 +614,14 @@
       "account": "Compte",
       "rules": "Mes règles",
       "trust": "Cercles de confiance",
-      "keys": "Accès et clés",
+      "keys": "Accès et données",
+      "history": "Historique et litiges",
       "prefs": "Région et formats",
       "notifications": "Notifications",
       "admin": "Administration"
     },
     "keys": {
-      "title": "Accès et clés",
+      "title": "Accès et données",
       "hint": "Comment vous vous connectez et ce que possède ce compte : e-mail et mot de passe, appareils, codes de récupération, votre clé.",
       "open": "Ouvrir accès et clés"
     },
@@ -750,6 +755,10 @@
       "notePlaceholder": "3e étage, interphone 12, uniquement les week-ends"
     },
     "contacts": "Contacts",
+    "contactsDesc": "Les personnes avec qui vous avez déjà traité ou que vous avez invitées. C'est le premier cercle de votre graphe de confiance.",
+    "invitesDesc": "Un lien, une personne. Une invitation acceptée devient une relation des deux côtés.",
+    "historyDesc": "Tous les trajets et livraisons clôturés par ce compte, avec dates et statuts.",
+    "disputesDesc": "Les dossiers que vous avez ouverts ou dans lesquels vous êtes partie, et leur issue.",
     "invite": "+ Inviter",
     "noContacts": "Aucun contact",
     "notifications": "Notifications",
@@ -1135,31 +1144,36 @@
     }
   },
   "rules": {
-    "carriage": {
-      "title": "Règles de transport",
-      "hint": "Définies une fois et copiées dans chaque nouveau trajet. Les modifier ne change pas les trajets déjà publiés."
-    },
-    "interaction": {
-      "title": "Comment je travaille",
-      "hint": "Notes pour l'autre partie : votre délai de réponse, ce qu'il faut envoyer tout de suite dans le chat, ce que vous ne prenez pas.",
-      "placeholder": "Je réponds en quelques heures. Avant tout accord, envoyez une photo du colis et de son contenu. Je ne transporte ni liquides ni envois scellés."
+    "work": {
+      "title": "Règles de travail",
+      "desc": "Vos conditions et votre façon de travailler. Écrites une fois, puis envoyées au client dans le chat.",
+      "carriageLabel": "Règles de transport",
+      "carriageDesc": "Ce que vous transportez et à quelles conditions. Copiées dans chaque nouveau trajet ; les modifier ne change pas les trajets déjà publiés.",
+      "interactionLabel": "Comment je travaille",
+      "interactionDesc": "Votre délai de réponse, ce qu'il faut envoyer tout de suite dans le chat, ce que vous ne prenez pas. Toujours affiché dans sa version actuelle.",
+      "interactionPlaceholder": "Je réponds en quelques heures. Avant tout accord, envoyez une photo du colis et de son contenu. Je ne transporte ni liquides ni envois scellés."
     },
     "payment": {
       "title": "Comment me régler",
-      "hint": "Envoyé à l'autre partie dans le chat quand vous le décidez. Vimana ne vérifie pas ces informations et ne traite aucun paiement — vous vous arrangez entre vous.",
-      "placeholder": "En espèces à la remise, ou par virement — demandez-moi les coordonnées dans le chat."
+      "desc": "Envoyé à l'autre partie dans le chat quand vous le décidez. Vimana ne vérifie pas ces informations et ne traite aucun paiement — vous vous arrangez entre vous.",
+      "label": "Moyen et coordonnées",
+      "labelDesc": "Espèces à la remise, virement, portefeuille — comme vous préférez être payé.",
+      "placeholder": "En espèces à la remise, ou par virement — je donne les coordonnées dans le chat."
     }
   },
   "prefs": {
     "title": "Région et formats",
     "hint": "Enregistré sur votre compte, pas deviné depuis le navigateur.",
     "weight": "Poids",
+    "weightDesc": "S'applique à la capacité d'un trajet, au poids d'un colis et au prix unitaire — dans la liste, dans une transaction et dans les e-mails.",
     "kg": "Kilogrammes",
     "lb": "Livres",
     "dates": "Date et heure",
+    "datesDesc": "S'applique aux heures de départ, aux événements d'une transaction, aux messages du chat et aux e-mails. L'horloge suit le même réglage : européen sur 24 heures, américain sur 12 heures.",
     "european": "Européen",
     "american": "Américain",
     "example": "Exemple",
+    "storageNote": "Les deux réglages ne changent que votre affichage. Les poids sont stockés en kilogrammes et les heures en UTC, si bien que l'autre partie lit les mêmes valeurs dans son propre format.",
     "save": "Enregistrer",
     "saved": "Enregistré",
     "saveFailed": "Échec de l'enregistrement"

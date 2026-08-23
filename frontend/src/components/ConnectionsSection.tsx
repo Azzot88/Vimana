@@ -22,12 +22,16 @@ export default function ConnectionsSection() {
   }, [])
 
   return (
-    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display font-semibold text-base text-navy">
-          {t('profile.contacts')}
-        </h2>
-        <Link to="/invite" className="text-xs font-body text-cyan hover:underline">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4 h-full">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-display font-semibold text-base text-navy">
+            {t('profile.contacts')}
+          </h2>
+          {/* T_UX.22 — a line under every heading (DESIGNGUIDELINES §9b). */}
+          <p className="text-xs font-body text-navy/50 mt-0.5">{t('profile.contactsDesc')}</p>
+        </div>
+        <Link to="/invite" className="text-xs font-body text-cyan hover:underline shrink-0">
           {t('profile.invite')}
         </Link>
       </div>

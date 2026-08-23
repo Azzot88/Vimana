@@ -10,7 +10,11 @@ export default function TrustCirclesSection() {
   const [circles, setCircles] = useState<TrustCircles | null>(null)
   const [metrics, setMetrics] = useState<TrustMetrics | null>(null)
   const [loading, setLoading] = useState(true)
-  const [depth, setDepth] = useState(3)
+  // T_UX.22 — opens at 1: the first circle is the only one the person put there
+  // themselves, and it is the answer to "who do I actually know here". Starting
+  // at 3 showed a number built mostly of strangers-of-strangers before showing
+  // the ones that are yours, and a big first number is the one people believe.
+  const [depth, setDepth] = useState(1)
 
   useEffect(() => {
     if (!user) return
@@ -40,8 +44,8 @@ export default function TrustCirclesSection() {
   if (!user) return null
 
   return (
-    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4 h-full">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <h2 className="font-display font-semibold text-base text-navy">
           {t('trust.sectionTitle')}
         </h2>

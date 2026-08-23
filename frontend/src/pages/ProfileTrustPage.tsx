@@ -3,20 +3,26 @@ import InvitesSection from '../components/InvitesSection'
 import TrustCirclesSection from '../components/TrustCirclesSection'
 
 /**
- * T_UX.20 — «Круги доверия».
+ * T_UX.22 — «Круги доверия», in the order the graph is actually built.
  *
- * Three views of one thing, which is why they were worth collecting: the graph
- * outward (circles by hop), the graph as names (connections), and the way it
- * gets one person wider (invites). On the old profile the invite list sat four
- * cards below the circles, in the other column.
+ * Invites and contacts come first because they are the part a person makes:
+ * you send a link, somebody joins, the connection exists. The circles below are
+ * what that grows into, and they read as a consequence rather than a dashboard
+ * when they sit under their own cause.
+ *
+ * Bento sizing (DESIGNGUIDELINES §5): the two makers are 1×1 side by side and
+ * equal height — `items-stretch` plus `h-full` on the cards, so a long invite
+ * list does not leave the contacts card floating half-height next to it. The
+ * circles are 2×1, spanning both columns, because a row of hops is a wide thing
+ * and squeezing it into a half column would wrap every line.
  */
 export default function ProfileTrustPage() {
   return (
-    <div className="space-y-4">
-      <TrustCirclesSection />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <ConnectionsSection />
-        <InvitesSection />
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+      <InvitesSection />
+      <ConnectionsSection />
+      <div className="lg:col-span-2">
+        <TrustCirclesSection />
       </div>
     </div>
   )

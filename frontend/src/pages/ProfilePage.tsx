@@ -138,14 +138,9 @@ export default function ProfilePage() {
 
       <PublicPageSection />
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
-        <Link to="/history" className="text-sm font-body text-cyan hover:underline">
-          {t('nav.history')}
-        </Link>
-        <Link to="/disputes" className="text-sm font-body text-cyan hover:underline">
-          {t('nav.disputes')}
-        </Link>
-      </div>
+      {/* T_UX.22 — the history and disputes links left the footer: they now
+          have their own section in the nav, and a door in two places is a door
+          somebody maintains in one of them. */}
 
       <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
     </div>

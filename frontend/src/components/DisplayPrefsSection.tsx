@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { updateMe } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime, formatWeight, type DateStyle, type WeightUnit } from '../lib/format'
+import MonoText from './MonoText'
 
 /** T_UX.14 — units and date style, and since T_UX.21 nothing else.
  *
@@ -69,16 +70,20 @@ export default function DisplayPrefsSection() {
   const sample = new Date().toISOString()
 
   return (
-    <section className="bg-white rounded-card border border-navy/10 p-4 space-y-4">
+    <section className="bg-white rounded-card border border-navy/10 p-6 space-y-5">
       <div>
-        <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-          {t('prefs.title')}
-        </p>
-        <p className="text-[11px] font-body text-navy/40 mt-0.5">{t('prefs.hint')}</p>
+        <h2 className="font-display font-semibold text-base text-navy">{t('prefs.title')}</h2>
+        <p className="text-xs font-body text-navy/50 mt-0.5">{t('prefs.hint')}</p>
       </div>
 
-      <div>
-        <p className="text-[11px] font-body text-navy/40 mb-1.5">{t('prefs.weight')}</p>
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-body font-medium text-navy">{t('prefs.weight')}</p>
+          {/* T_UX.22 — the line that was missing: a setting nobody can see the
+              effect of is one nobody touches. Says where the choice shows up,
+              not just what it is called. */}
+          <p className="text-xs font-body text-navy/50 mt-0.5">{t('prefs.weightDesc')}</p>
+        </div>
         <div className="flex gap-2">
           {pick(unit, 'kg' as WeightUnit, t('prefs.kg'), (v) => {
             setUnit(v)
@@ -89,13 +94,20 @@ export default function DisplayPrefsSection() {
             void save({ unit_weight: v })
           })}
         </div>
-        <p className="mt-1.5 text-[11px] font-mono text-navy/40">
-          {t('prefs.example')}: {formatWeight(5, unit)}
-        </p>
+        {/* The example is the whole argument for the switch, so it is shown at
+            reading size on its own surface rather than as an 11px grey tail.
+            "European" and "American" mean nothing until the sample is legible. */}
+        <div className="rounded-field bg-ivory px-3 py-2">
+          <p className="text-[11px] font-body text-navy/50">{t('prefs.example')}</p>
+          <MonoText className="text-base text-navy">{formatWeight(5, unit)}</MonoText>
+        </div>
       </div>
 
-      <div>
-        <p className="text-[11px] font-body text-navy/40 mb-1.5">{t('prefs.dates')}</p>
+      <div className="space-y-2 pt-1 border-t border-navy/5">
+        <div className="pt-3">
+          <p className="text-sm font-body font-medium text-navy">{t('prefs.dates')}</p>
+          <p className="text-xs font-body text-navy/50 mt-0.5">{t('prefs.datesDesc')}</p>
+        </div>
         <div className="flex gap-2">
           {pick(style, 'eu' as DateStyle, t('prefs.european'), (v) => {
             setStyle(v)
@@ -106,10 +118,19 @@ export default function DisplayPrefsSection() {
             void save({ date_format: v })
           })}
         </div>
-        <p className="mt-1.5 text-[11px] font-mono text-navy/40">
-          {t('prefs.example')}: {formatDateTime(sample, style, i18n.language)}
-        </p>
+        <div className="rounded-field bg-ivory px-3 py-2">
+          <p className="text-[11px] font-body text-navy/50">{t('prefs.example')}</p>
+          <MonoText className="text-base text-navy">
+            {formatDateTime(sample, style, i18n.language)}
+          </MonoText>
+        </div>
       </div>
+
+      {/* Said once at the bottom rather than twice above: both switches are
+          display-only, and neither changes a stored value. */}
+      <p className="text-xs font-body text-navy/45 border-t border-navy/5 pt-3">
+        {t('prefs.storageNote')}
+      </p>
 
       {error && <p className="text-xs font-body text-danger">{error}</p>}
       {saved && !error && (

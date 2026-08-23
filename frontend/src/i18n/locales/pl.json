@@ -337,6 +337,10 @@
     "skipToContent": "Przejdź do treści",
     "search": "Szukaj…",
     "copied": "Skopiowano",
+    "edit": "Zmień",
+    "add": "Dodaj",
+    "notSet": "Jeszcze nie wypełnione",
+    "delete": "Usuń",
     "yes": "Tak",
     "no": "Nie"
   },
@@ -611,13 +615,14 @@
       "account": "Konto",
       "rules": "Moje zasady",
       "trust": "Kręgi zaufania",
-      "keys": "Dostęp i klucze",
+      "keys": "Dostęp i dane",
+      "history": "Historia i spory",
       "prefs": "Region i formaty",
       "notifications": "Powiadomienia",
       "admin": "Administracja"
     },
     "keys": {
-      "title": "Dostęp i klucze",
+      "title": "Dostęp i dane",
       "hint": "Czym się logujesz i co posiada konto: e-mail i hasło, urządzenia, kody odzyskiwania, Twój klucz.",
       "open": "Otwórz dostęp i klucze"
     },
@@ -751,6 +756,10 @@
       "notePlaceholder": "3 piętro, domofon 12, tylko w weekendy"
     },
     "contacts": "Kontakty",
+    "contactsDesc": "Osoby, z którymi już miałeś do czynienia lub które zaprosiłeś. To pierwszy krąg Twojego grafu zaufania.",
+    "invitesDesc": "Jeden link — jedna osoba. Przyjęte zaproszenie staje się połączeniem po obu stronach.",
+    "historyDesc": "Wszystkie loty i dostawy zamknięte przez to konto, z datami i statusami.",
+    "disputesDesc": "Sprawy, które otworzyłeś lub w których jesteś stroną, i jak każda się zakończyła.",
     "invite": "+ Zaproś",
     "noContacts": "Brak kontaktów",
     "notifications": "Powiadomienia",
@@ -1136,31 +1145,36 @@
     }
   },
   "rules": {
-    "carriage": {
-      "title": "Zasady przewozu",
-      "hint": "Ustalane raz i kopiowane do każdego nowego lotu. Edycja nie zmienia lotów już opublikowanych."
-    },
-    "interaction": {
-      "title": "Jak pracuję",
-      "hint": "Notatki dla drugiej strony: jak szybko odpowiadasz, co przysłać na czat od razu, czego nie podejmujesz.",
-      "placeholder": "Odpowiadam w ciągu kilku godzin. Przed ustaleniami przyślij zdjęcie paczki i jej zawartości. Nie wożę płynów ani przesyłek zaplombowanych."
+    "work": {
+      "title": "Zasady pracy",
+      "desc": "Twoje warunki i sposób pracy. Wpisywane raz, potem trafiają do klienta na czat.",
+      "carriageLabel": "Zasady przewozu",
+      "carriageDesc": "Co wozisz i na jakich warunkach. Kopiowane do każdego nowego lotu; edycja nie zmienia lotów już opublikowanych.",
+      "interactionLabel": "Jak pracuję",
+      "interactionDesc": "Jak szybko odpowiadasz, co przysłać na czat od razu, czego nie podejmujesz. Zawsze pokazywana jest aktualna wersja.",
+      "interactionPlaceholder": "Odpowiadam w ciągu kilku godzin. Przed ustaleniami przyślij zdjęcie paczki i jej zawartości. Nie wożę płynów ani przesyłek zaplombowanych."
     },
     "payment": {
       "title": "Jak się ze mną rozliczyć",
-      "hint": "Trafia do drugiej strony na czat, gdy sam tego zechcesz. Vimana nie sprawdza tych danych i nie przeprowadza płatności — umawiacie się między sobą.",
-      "placeholder": "Gotówką przy przekazaniu albo przelewem — o dane poproś na czacie."
+      "desc": "Trafia do drugiej strony na czat, gdy sam tego zechcesz. Vimana nie sprawdza tych danych i nie przeprowadza płatności — umawiacie się między sobą.",
+      "label": "Sposób i dane",
+      "labelDesc": "Gotówka przy przekazaniu, przelew, portfel — jak wolisz otrzymać pieniądze.",
+      "placeholder": "Gotówką przy przekazaniu albo przelewem — dane podam na czacie."
     }
   },
   "prefs": {
     "title": "Region i formaty",
     "hint": "Zapisane na koncie, nie zgadywane z przeglądarki.",
     "weight": "Waga",
+    "weightDesc": "Dotyczy pojemności lotu, wagi paczki i ceny za jednostkę — na liście, w transakcji i w listach.",
     "kg": "Kilogramy",
     "lb": "Funty",
     "dates": "Data i godzina",
+    "datesDesc": "Dotyczy godzin wylotu, zdarzeń transakcji, wiadomości na czacie i listów. Zegar idzie za tym samym przełącznikiem: europejski jest 24-godzinny, amerykański 12-godzinny.",
     "european": "Europejski",
     "american": "Amerykański",
     "example": "Przykład",
+    "storageNote": "Oba przełączniki zmieniają tylko to, co widzisz Ty. Wagi są przechowywane w kilogramach, a czas w UTC, więc druga strona czyta te same wartości we własnym formacie.",
     "save": "Zapisz",
     "saved": "Zapisano",
     "saveFailed": "Nie udało się zapisać"

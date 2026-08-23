@@ -353,6 +353,8 @@
     "search": "Search…",
     "copied": "Copied",
     "edit": "Edit",
+    "add": "Add",
+    "notSet": "Not filled in yet",
     "delete": "Delete",
     "yes": "Yes",
     "no": "No"
@@ -659,14 +661,15 @@
       "account": "Account",
       "rules": "My rules",
       "trust": "Trust circles",
-      "keys": "Access and keys",
+      "keys": "Access and data",
+      "history": "History and disputes",
       "prefs": "Region and formats",
       "notifications": "Notifications",
       "admin": "Administration"
     },
     "editButton": "Edit",
     "keys": {
-      "title": "Access and keys",
+      "title": "Access and data",
       "hint": "How you sign in, and what this account owns: email and password, devices, recovery codes, your key.",
       "open": "Open access and keys"
     },
@@ -804,6 +807,10 @@
       "notePlaceholder": "Floor 3, intercom 12, prefer weekends"
     },
     "contacts": "Contacts",
+    "contactsDesc": "People you have already dealt with or invited. They are the first circle of your trust graph.",
+    "invitesDesc": "One link, one person. An accepted invite becomes a connection on both sides.",
+    "historyDesc": "Every trip and delivery this account has closed, with dates and statuses.",
+    "disputesDesc": "Cases you have opened or been named in, and how each one ended.",
     "invite": "+ Invite",
     "noContacts": "No contacts",
     "notifications": "Notifications",
@@ -1181,31 +1188,36 @@
     }
   },
   "rules": {
-    "carriage": {
-      "title": "Carriage rules",
-      "hint": "Written once and copied into each new trip. Editing them later does not change trips already published."
-    },
-    "interaction": {
-      "title": "How I work",
-      "hint": "Notes for the other party: how fast you answer, what to send in the chat straight away, what you do not take on.",
-      "placeholder": "I answer within a few hours. Send a photo of the parcel and its contents before we agree. I do not carry liquids or anything sealed."
+    "work": {
+      "title": "Working rules",
+      "desc": "Your terms and how you work. Written once, then sent to a client in the chat.",
+      "carriageLabel": "Carriage rules",
+      "carriageDesc": "What you carry and on what terms. Copied into each new trip; editing them does not change trips already published.",
+      "interactionLabel": "How I work",
+      "interactionDesc": "How fast you answer, what to send in the chat straight away, what you do not take on. Always shown as the current version.",
+      "interactionPlaceholder": "I answer within a few hours. Send a photo of the parcel and its contents before we agree. I do not carry liquids or anything sealed."
     },
     "payment": {
       "title": "How to settle with me",
-      "hint": "Sent to the other party in the chat when you choose to. Vimana neither checks nor processes these details — you agree between yourselves.",
-      "placeholder": "Cash on handover, or a transfer — ask me for the details in the chat."
+      "desc": "Sent to the other party in the chat when you choose to. Vimana neither checks nor processes these details — you agree between yourselves.",
+      "label": "Method and details",
+      "labelDesc": "Cash on handover, a transfer, a wallet — however you prefer to be paid.",
+      "placeholder": "Cash on handover, or a transfer — I will send the details in the chat."
     }
   },
   "prefs": {
     "title": "Region and formats",
     "hint": "Stored on your account, not guessed from the browser.",
     "weight": "Weight",
+    "weightDesc": "Used for trip capacity, parcel weight and the price per unit — on the board, in a deal and in letters.",
     "kg": "Kilograms",
     "lb": "Pounds",
     "dates": "Dates and time",
+    "datesDesc": "Used for departure times, deal events, chat messages and letters. The clock follows the same switch: European is 24-hour, American is 12-hour.",
     "european": "European",
     "american": "American",
     "example": "Example",
+    "storageNote": "Both switches change only what you see. Weights are stored in kilograms and times in UTC, so the other party reads the same figures in their own format.",
     "save": "Save",
     "saved": "Saved",
     "saveFailed": "Could not save"

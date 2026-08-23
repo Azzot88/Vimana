@@ -38,6 +38,9 @@ const SECTIONS: Section[] = [
   { to: '/profile/rules', labelKey: 'profile.nav.rules' },
   { to: '/profile/trust', labelKey: 'profile.nav.trust' },
   { to: '/profile/keys', labelKey: 'profile.nav.keys', testId: 'profile-keys-link' },
+  // T_UX.22 — right after access, before the settings: what already happened,
+  // read rather than edited.
+  { to: '/profile/history', labelKey: 'profile.nav.history' },
   { to: '/profile/prefs', labelKey: 'profile.nav.prefs' },
   {
     to: '/profile/notifications',

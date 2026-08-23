@@ -44,23 +44,41 @@ export default function ProfileRulesPage() {
         </div>
       )}
 
+      {/* T_UX.22 — one card, two fields. To the reader the carriage rules and
+          "how I work" are the same answer to the same question, and they were
+          two cards with two Save buttons stacked on top of each other. They
+          stay two columns underneath, because they behave differently: the
+          carriage rules are copied into each trip (T_UX.15), the working notes
+          are not. */}
       <StandingNoteSection
-        field="carriage_rules"
-        titleKey="rules.carriage.title"
-        hintKey="rules.carriage.hint"
-      />
-      <StandingNoteSection
-        field="interaction_rules"
-        titleKey="rules.interaction.title"
-        hintKey="rules.interaction.hint"
-        placeholderKey="rules.interaction.placeholder"
+        titleKey="rules.work.title"
+        descKey="rules.work.desc"
+        fields={[
+          {
+            name: 'carriage_rules',
+            labelKey: 'rules.work.carriageLabel',
+            descKey: 'rules.work.carriageDesc',
+          },
+          {
+            name: 'interaction_rules',
+            labelKey: 'rules.work.interactionLabel',
+            descKey: 'rules.work.interactionDesc',
+            placeholderKey: 'rules.work.interactionPlaceholder',
+          },
+        ]}
       />
       <AddressesSection />
       <StandingNoteSection
-        field="payment_instructions"
         titleKey="rules.payment.title"
-        hintKey="rules.payment.hint"
-        placeholderKey="rules.payment.placeholder"
+        descKey="rules.payment.desc"
+        fields={[
+          {
+            name: 'payment_instructions',
+            labelKey: 'rules.payment.label',
+            descKey: 'rules.payment.labelDesc',
+            placeholderKey: 'rules.payment.placeholder',
+          },
+        ]}
       />
     </div>
   )

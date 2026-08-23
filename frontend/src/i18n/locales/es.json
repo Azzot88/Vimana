@@ -337,6 +337,10 @@
     "skipToContent": "Ir al contenido",
     "search": "Buscar…",
     "copied": "Copiado",
+    "edit": "Editar",
+    "add": "Añadir",
+    "notSet": "Aún sin completar",
+    "delete": "Eliminar",
     "yes": "Sí",
     "no": "No"
   },
@@ -610,13 +614,14 @@
       "account": "Cuenta",
       "rules": "Mis reglas",
       "trust": "Círculos de confianza",
-      "keys": "Acceso y claves",
+      "keys": "Acceso y datos",
+      "history": "Historial y disputas",
       "prefs": "Región y formatos",
       "notifications": "Notificaciones",
       "admin": "Administración"
     },
     "keys": {
-      "title": "Acceso y claves",
+      "title": "Acceso y datos",
       "hint": "Con qué entras y qué posee esta cuenta: correo y contraseña, dispositivos, códigos de recuperación, tu clave.",
       "open": "Abrir acceso y claves"
     },
@@ -750,6 +755,10 @@
       "notePlaceholder": "3ra planta, portero 12, sólo fines de semana"
     },
     "contacts": "Contactos",
+    "contactsDesc": "Personas con las que ya has tratado o a las que has invitado. Son el primer círculo de tu grafo de confianza.",
+    "invitesDesc": "Un enlace, una persona. Una invitación aceptada se convierte en una conexión por ambas partes.",
+    "historyDesc": "Todos los viajes y entregas que esta cuenta ha cerrado, con fechas y estados.",
+    "disputesDesc": "Casos que has abierto o en los que figuras como parte, y cómo terminó cada uno.",
     "invite": "+ Invitar",
     "noContacts": "Sin contactos",
     "notifications": "Notificaciones",
@@ -1135,31 +1144,36 @@
     }
   },
   "rules": {
-    "carriage": {
-      "title": "Reglas de transporte",
-      "hint": "Se definen una vez y se copian en cada viaje nuevo. Editarlas no cambia los viajes ya publicados."
-    },
-    "interaction": {
-      "title": "Cómo trabajo",
-      "hint": "Notas para la otra parte: en cuánto tiempo respondes, qué enviar al chat de inmediato, qué no aceptas.",
-      "placeholder": "Respondo en unas horas. Antes de acordar nada, envía una foto del paquete y de su contenido. No llevo líquidos ni envíos precintados."
+    "work": {
+      "title": "Reglas de trabajo",
+      "desc": "Tus condiciones y tu forma de trabajar. Se escriben una vez y luego se envían al cliente en el chat.",
+      "carriageLabel": "Reglas de transporte",
+      "carriageDesc": "Qué llevas y en qué condiciones. Se copian en cada viaje nuevo; editarlas no cambia los viajes ya publicados.",
+      "interactionLabel": "Cómo trabajo",
+      "interactionDesc": "En cuánto tiempo respondes, qué enviar al chat de inmediato, qué no aceptas. Siempre se muestra la versión actual.",
+      "interactionPlaceholder": "Respondo en unas horas. Antes de acordar nada, envía una foto del paquete y de su contenido. No llevo líquidos ni envíos precintados."
     },
     "payment": {
       "title": "Cómo pagarme",
-      "hint": "Se envía a la otra parte en el chat cuando tú quieras. Vimana no verifica estos datos ni procesa pagos — os ponéis de acuerdo entre vosotros.",
-      "placeholder": "En efectivo en la entrega, o por transferencia — pídeme los datos en el chat."
+      "desc": "Se envía a la otra parte en el chat cuando tú quieras. Vimana no verifica estos datos ni procesa pagos — os ponéis de acuerdo entre vosotros.",
+      "label": "Método y datos",
+      "labelDesc": "Efectivo en la entrega, transferencia, monedero — como prefieras cobrar.",
+      "placeholder": "En efectivo en la entrega, o por transferencia — te paso los datos en el chat."
     }
   },
   "prefs": {
     "title": "Región y formatos",
     "hint": "Se guarda en tu cuenta, no se deduce del navegador.",
     "weight": "Peso",
+    "weightDesc": "Se aplica a la capacidad del viaje, al peso del paquete y al precio por unidad — en el listado, en un acuerdo y en los correos.",
     "kg": "Kilogramos",
     "lb": "Libras",
     "dates": "Fecha y hora",
+    "datesDesc": "Se aplica a las horas de salida, a los eventos del acuerdo, a los mensajes del chat y a los correos. El reloj sigue el mismo interruptor: el europeo es de 24 horas, el americano de 12.",
     "european": "Europeo",
     "american": "Americano",
     "example": "Ejemplo",
+    "storageNote": "Ambos interruptores cambian solo lo que ves tú. Los pesos se guardan en kilogramos y las horas en UTC, así que la otra parte lee las mismas cifras en su propio formato.",
     "save": "Guardar",
     "saved": "Guardado",
     "saveFailed": "No se pudo guardar"
