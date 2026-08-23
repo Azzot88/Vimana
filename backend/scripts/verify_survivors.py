@@ -54,14 +54,20 @@ def verdict(mutant: str) -> tuple[bool, float]:
     """`(survived, seconds)` — survived meaning the suite did not notice."""
     env = dict(os.environ, MUTANT_UNDER_TEST=mutant)
     started = time.monotonic()
-    run = subprocess.run(
+    running = subprocess.Popen(
         [sys.executable, "-m", "pytest", "-x", "-q", "tests/"],
         cwd=MUTANTS_DIR,
         env=env,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
-    return run.returncode == 0, time.monotonic() - started
+    # A dot every fifteen seconds, because a surviving mutant means the suite
+    # runs to the end — eight silent minutes, which is indistinguishable from a
+    # hang. The honest reaction to a hang is Ctrl-C, and it costs the whole run.
+    while running.poll() is None:
+        time.sleep(15)
+        print(".", end="", flush=True)
+    return running.returncode == 0, time.monotonic() - started
 
 
 def main(only: list[str]) -> int:
