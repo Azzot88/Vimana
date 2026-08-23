@@ -28,7 +28,12 @@ const DealVaultPage = lazy(() => import('./pages/DealVaultPage'))
 const IdentityPage = lazy(() => import('./pages/IdentityPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const ProfileKeysPage = lazy(() => import('./pages/ProfileKeysPage'))
+const ProfileLayout = lazy(() => import('./pages/ProfileLayout'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const ProfileActivityPage = lazy(() => import('./pages/ProfileActivityPage'))
+const ProfileTrustPage = lazy(() => import('./pages/ProfileTrustPage'))
+const ProfilePrefsPage = lazy(() => import('./pages/ProfilePrefsPage'))
+const ProfileAdminPage = lazy(() => import('./pages/ProfileAdminPage'))
 const InvitePage = lazy(() => import('./pages/InvitePage'))
 const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage'))
 const AdminNoticesPage = lazy(() => import('./pages/AdminNoticesPage'))
@@ -104,13 +109,25 @@ export default function App() {
               <Route path="/carriers/:carrierId" element={<CarrierPage />} />
               <Route path="/deals/:dealId" element={<DealPage />} />
               <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              {/* T_UX.6 — its own path so banners, letters and the reader can
-                  link straight to it. */}
-              <Route path="/profile/keys" element={<ProfileKeysPage />} />
-              {/* T3.32 — a path so a letter can say «change what reaches you»
-                  and mean somewhere in particular. */}
-              <Route path="/profile/notifications" element={<NotificationsPage />} />
+              {/* T_UX.20 — the profile is seven sections behind one shell, and
+                  every one of them is a real path. Nesting rather than tabs is
+                  the whole point: `T_UX.6` and `T3.32` gave keys and
+                  notifications their own addresses because banners, letters and
+                  the reader link straight to them, and both addresses are
+                  unchanged here. */}
+              <Route path="/profile" element={<ProfileLayout />}>
+                <Route index element={<ProfilePage />} />
+                <Route path="activity" element={<ProfileActivityPage />} />
+                <Route path="trust" element={<ProfileTrustPage />} />
+                {/* T_UX.6 — its own path so banners, letters and the reader can
+                    link straight to it. */}
+                <Route path="keys" element={<ProfileKeysPage />} />
+                <Route path="prefs" element={<ProfilePrefsPage />} />
+                {/* T3.32 — a path so a letter can say «change what reaches you»
+                    and mean somewhere in particular. */}
+                <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="admin" element={<ProfileAdminPage />} />
+              </Route>
               <Route path="/invite" element={<InvitePage />} />
               {/* T_UX.19 — merged into `/disputes`; the old link keeps working. */}
               <Route path="/admin/disputes" element={<Navigate to="/disputes" replace />} />

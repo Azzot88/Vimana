@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { me, type User } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
@@ -42,17 +41,12 @@ export default function ProfileKeysPage() {
   }, [])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('profile.keys.title')}
-        </h1>
-        <Link to="/profile" className="text-sm font-body text-cyan hover:underline">
-          ← {t('profile.title')}
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+    <div className="space-y-4">
+      {/* T_UX.20 — the heading and the way back are the profile shell's job
+          now. Two columns from `lg`, not `md`: the nav takes 13rem out of the
+          width, and at 768px the halves left over are too narrow for a
+          passphrase field. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <div className="space-y-4">
           {user && <SecuritySection user={user} onChanged={refreshUser} />}
           <PasskeySection />

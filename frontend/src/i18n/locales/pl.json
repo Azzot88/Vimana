@@ -606,6 +606,16 @@
   },
   "profile": {
     "title": "Profil",
+    "nav": {
+      "label": "Sekcje profilu",
+      "account": "Konto",
+      "activity": "Poziom aktywności",
+      "trust": "Kręgi zaufania",
+      "keys": "Dostęp i klucze",
+      "prefs": "Region i formaty",
+      "notifications": "Powiadomienia",
+      "admin": "Administracja"
+    },
     "keys": {
       "title": "Dostęp i klucze",
       "hint": "Czym się logujesz i co posiada konto: e-mail i hasło, urządzenia, kody odzyskiwania, Twój klucz.",

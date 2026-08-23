@@ -654,6 +654,16 @@
   },
   "profile": {
     "title": "Profile",
+    "nav": {
+      "label": "Profile sections",
+      "account": "Account",
+      "activity": "Activity level",
+      "trust": "Trust circles",
+      "keys": "Access and keys",
+      "prefs": "Region and formats",
+      "notifications": "Notifications",
+      "admin": "Administration"
+    },
     "editButton": "Edit",
     "keys": {
       "title": "Access and keys",

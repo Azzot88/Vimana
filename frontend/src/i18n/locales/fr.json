@@ -605,6 +605,16 @@
   },
   "profile": {
     "title": "Profil",
+    "nav": {
+      "label": "Sections du profil",
+      "account": "Compte",
+      "activity": "Niveau d'activité",
+      "trust": "Cercles de confiance",
+      "keys": "Accès et clés",
+      "prefs": "Région et formats",
+      "notifications": "Notifications",
+      "admin": "Administration"
+    },
     "keys": {
       "title": "Accès et clés",
       "hint": "Comment vous vous connectez et ce que possède ce compte : e-mail et mot de passe, appareils, codes de récupération, votre clé.",

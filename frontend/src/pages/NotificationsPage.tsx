@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import ChannelsSection from '../components/ChannelsSection'
 import NotificationMatrix from '../components/NotificationMatrix'
@@ -27,22 +26,15 @@ export default function NotificationsPage() {
   const { t } = useTranslation()
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('profile.notifications')}
-        </h1>
-        <Link to="/profile" className="text-sm font-body text-cyan hover:underline">
-          ← {t('profile.title')}
-        </Link>
-      </div>
-
+    <div className="space-y-4">
       {/* Connections first, then what travels down them — the order somebody
-          reads this page in when nothing is arriving. Side by side on a
-          desktop, stacked on a phone, and neither stretched: the matrix is
-          three narrow columns, and across a full-width screen its checkboxes
-          drift so far from their labels that a row is hard to read across. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          reads this page in when nothing is arriving. Side by side on a wide
+          screen, stacked otherwise, and neither stretched: the matrix is three
+          narrow columns, and across a full-width screen its checkboxes drift so
+          far from their labels that a row is hard to read across.
+          T_UX.20 — `lg`, not `md`: the profile nav takes 13rem off the width,
+          and the heading and the way back are the shell's job now. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <ChannelsSection />
         <NotificationMatrix />
       </div>
