@@ -823,15 +823,137 @@
       "failed": "Nie udało się dodać adresu."
     }
   },
+  "audience": {
+    "carrier": {
+      "navLink": "Dla przewoźników",
+      "eyebrow": "Dla przewoźników · korytarz DXB ↔ JFK",
+      "title": "Zarabiaj na własnych podróżach",
+      "sub": "I tak lecisz. Wolne kilogramy w walizce to pieniądze, a nie powietrze. Opublikuj trasę, którą lecisz, i odbieraj zapytania od nadawców na niej.",
+      "ctaPrimary": "Zostań przewoźnikiem",
+      "ctaSecondary": "Chcę wysłać paczkę",
+      "flow": {
+        "1": "Trasa",
+        "2": "Wolne miejsce",
+        "3": "Zapytanie",
+        "4": "Zapłata"
+      },
+      "stepsLabel": "Jak to działa",
+      "stepsTitle": "Cztery kroki od opublikowanego lotu do pieniędzy",
+      "step": {
+        "1": {
+          "title": "Opublikuj lot",
+          "body": "Skąd, dokąd, data, ile kilogramów jest wolnych i co możesz zabrać. Zajmuje minutę i do niczego nie zobowiązuje."
+        },
+        "2": {
+          "title": "Odbierz zapytania",
+          "body": "Nadawcy na Twojej trasie piszą na czacie lotu. Odpowiadasz tym, którzy Ci pasują, a reszcie odmawiasz bez tłumaczenia się."
+        },
+        "3": {
+          "title": "Ustal warunki i odbierz",
+          "body": "Warunki zapisują się kartą na czacie: co wieziesz, za ile, na kiedy. Przekazanie ze zdjęciem, które zostaje w zapisie transakcji."
+        },
+        "4": {
+          "title": "Weź zapłatę",
+          "body": "Gotówką przy przekazaniu albo przelewem — jak się umówicie. Platforma nie miesza się do rozliczenia i nie trzyma pieniędzy."
+        }
+      },
+      "limitsLabel": "Granice",
+      "limitsTitle": "Czego platforma za Ciebie nie robi",
+      "limitsBody": "Vimana nie jest przewoźnikiem ani ubezpieczycielem. Nie płaci za Ciebie, nie sprawdza zawartości paczki i nie odpowiada za nią przed celnikami — ryzyko przewozu jest Twoje. Co robi: łączy Cię z nadawcami na Twojej trasie i prowadzi zapis transakcji, z którego widać, kto co przekazał i kiedy. Płatności na platformie dziś nie ma.",
+      "closingTitle": "I tak lecisz — nie leć pusty",
+      "closingBody": "Dostęp na razie z zaproszenia, korytarz jeden: ZEA ↔ USA. Zostaw adres, a napiszemy, gdy otworzymy Twoją trasę."
+    },
+    "sender": {
+      "navLink": "Dla nadawców",
+      "eyebrow": "Dla nadawców · korytarz DXB ↔ JFK",
+      "title": "Wyślij paczkę z kimś, kto już tam leci",
+      "sub": "Dokumenty, leki, część zamienna, prezent. Nie trzy tygodnie logistyki cargo, lecz podróżny z lotem na potrzebną datę — i zapis, z którego widać każdy krok.",
+      "ctaPrimary": "Znajdź dostawę",
+      "ctaSecondary": "Sam często latam",
+      "flow": {
+        "1": "Skąd",
+        "2": "Dokąd",
+        "3": "Paczka",
+        "4": "Szukaj"
+      },
+      "stepsLabel": "Jak to działa",
+      "stepsTitle": "Cztery kroki od zgłoszenia do potwierdzonego odbioru",
+      "step": {
+        "1": {
+          "title": "Podaj trasę",
+          "body": "Skąd, dokąd i na kiedy. Miasta i lotniska podpowiada baza — kodów nie trzeba pamiętać."
+        },
+        "2": {
+          "title": "Opisz paczkę",
+          "body": "Co jest w środku, waga, deklarowana wartość. Wartość jest istotna: liczy się od niej pokrycie i to ona jest pułapem w sporze."
+        },
+        "3": {
+          "title": "Wybierz przewoźnika",
+          "body": "Widać poziom aktywności, kręgi zaufania i przejście weryfikacji. Obcy przestaje być anonimowym imieniem na czacie."
+        },
+        "4": {
+          "title": "Potwierdź odbiór",
+          "body": "Zdjęcia przekazania i odbioru trafiają do zapisu transakcji. Nie da się ich usunąć ani podmienić — każda zmiana jest wykrywalna."
+        }
+      },
+      "limitsLabel": "Granice",
+      "limitsTitle": "Co tu jest prawdą, a czego jeszcze nie ma",
+      "limitsBody": "Zapisu transakcji nie da się zmienić niezauważenie: łańcuch przestaje się zgadzać, a sprawdzić to można niezależnie od nas. Czego nie ma: płatności na platformie, escrow i kaucji przewoźnika — rozliczacie się bezpośrednio, a ryzyko przewozu ponosi nadawca. Vimana nie jest firmą kurierską; łączy strony i przechowuje dowody.",
+      "closingTitle": "Znajdź kogoś, kto już leci Twoją trasą",
+      "closingBody": "Dostęp na razie z zaproszenia, korytarz jeden: ZEA ↔ USA. Zostaw adres, a napiszemy, gdy otworzymy Twój kierunek."
+    },
+    "business": {
+      "navLink": "Dla firm",
+      "eyebrow": "Dla firm · trudne kierunki",
+      "title": "Dostarczaj zamówienia tam, gdzie zwykłe firmy nie wożą",
+      "sub": "Zamknięte kierunki, niewygodne korytarze, terminy, których logistyka cargo nie daje. Twoje zamówienie wiezie człowiek, który i tak leci — trasą, której nie ma w żadnym cenniku.",
+      "ctaPrimary": "Omówić kierunek",
+      "ctaSecondary": "Zobacz, jak to działa",
+      "flow": {
+        "1": "Zamówienie",
+        "2": "Trasa",
+        "3": "Przewoźnik",
+        "4": "Twój klient"
+      },
+      "stepsLabel": "Model",
+      "stepsTitle": "Jak wygląda dostawa dla firmy",
+      "step": {
+        "1": {
+          "title": "Podajesz kierunek",
+          "body": "Kraj, miasto, wolumen i regularność. Sprawdzamy, czy na tym korytarzu są przewoźnicy i jak często latają."
+        },
+        "2": {
+          "title": "Trasa składa się z ludzi",
+          "body": "Nie taryfa, lecz konkretne loty konkretnych osób. Tam, gdzie zwykła firma odpowiada „nie dostarczamy”, to kwestia gęstości, a nie zakazu."
+        },
+        "3": {
+          "title": "Przewoźnik odpowiada zapisem",
+          "body": "Poziom aktywności, przejście weryfikacji, historia zamkniętych transakcji. Dobór według tych wskaźników pokazujesz swojemu klientowi."
+        },
+        "4": {
+          "title": "Klient odbiera i potwierdza",
+          "body": "Zdjęcia przekazania i odbioru wraz z czasem każdego kroku. To właśnie jest potwierdzenie dostawy, które można komuś okazać."
+        }
+      },
+      "limitsLabel": "Uczciwie o stanie",
+      "limitsTitle": "Co działa dziś, a czego jeszcze nie ma",
+      "limitsBody": "Działa: trasy, dobór przewoźnika, zapis transakcji ze zdjęciami i weryfikowalnym łańcuchem. Nie zbudowane: konto firmowe, faktury, tracking dla Twojego klienta, API i ceny wolumenowe — niczego z tego nie można dziś zaoferować i nie będziemy podawać terminów. Dlatego ta strona zaprasza na rozmowę, a nie do rejestracji: opowiedz o kierunku, a powiemy uczciwie, czy da się go dziś obsłużyć.",
+      "closingTitle": "Powiedz, dokąd potrzebujesz wozić",
+      "closingBody": "Zostaw adres i kilka słów o kierunku. Odpowiemy, co jest możliwe dziś, a co dopiero po płatnościach i escrow."
+    }
+  },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FAZA 1",
     "ctaInvite": "Poproś o zaproszenie",
     "ctaDashboard": "Otwórz panel",
-    "ctaBrowse": "Zobacz podróże",
+    "ctaCarrier": "Zostań przewoźnikiem",
+    "ctaSender": "Chcę wysłać paczkę",
     "ctaLogin": "Zaloguj się",
+    "modalTitleBusiness": "Powiedz, dokąd potrzebujesz wozić",
+    "modalSubBusiness": "Zostaw adres i kilka słów o kierunku. Odpowiemy, co jest możliwe dziś, a co dopiero po płatnościach i escrow.",
     "heroEyebrow": "Korytarz DXB ↔ JFK · tylko z zaproszeniem",
-    "heroTitle": "Twoją paczkę wiezie ktoś, kto i tak leci tym rejsem",
-    "heroSub": "Vimana nie jest firmą kurierską. To miejsce, gdzie nadawca i podróżny znajdują siebie nawzajem, a każdy krok transakcji zapisuje się tak, że podmianę widać.",
+    "heroTitle": "Zarabiaj na podróżach, które i tak planowałeś",
+    "heroSub": "Woź paczki na swoich trasach. Opublikuj lot, odbierz zapytania od nadawców, ustal warunki i weź zapłatę. A jeśli to Ty musisz coś wysłać — ludzie, którzy lecą, już tu są.",
     "boardingBrand": "Karta pokładowa transakcji",
     "boardingCarrier": "Przewoźnik",
     "boardingDeparts": "Wylot",

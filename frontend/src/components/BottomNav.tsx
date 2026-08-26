@@ -32,6 +32,14 @@ function IconProfile() {
 export default function BottomNav() {
   const isCarrierMode = useAuthStore((s) => s.user?.active_mode) === 'carrier'
   const { t } = useTranslation()
+  /** T_UX.23 — and this fixes a standing bug, not only the new split.
+   *
+   *  The home tab pointed at `/`, labelled «Панель». On a phone that is the
+   *  only way back to the panel, and it led to the public landing instead —
+   *  a signed-in person tapped "Панель" and got the marketing page with a
+   *  "go to the panel" button on it. Desktop never showed this because the
+   *  `Navbar` link has always pointed at `/dashboard`. */
+  const panelHref = isCarrierMode ? '/carrier' : '/send'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[3.5rem] text-[10px] font-body transition-colors ${
@@ -40,7 +48,7 @@ export default function BottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-nav bg-white border-t border-navy/10 flex pb-[env(safe-area-inset-bottom)]">
-      <NavLink to="/" end className={linkClass}>
+      <NavLink to={panelHref} end className={linkClass}>
         <IconHome />
         <span>{t('nav.dashboard')}</span>
       </NavLink>

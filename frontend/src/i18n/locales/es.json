@@ -822,15 +822,137 @@
       "failed": "No se ha podido añadir la dirección."
     }
   },
+  "audience": {
+    "carrier": {
+      "navLink": "Para transportistas",
+      "eyebrow": "Para transportistas · corredor DXB ↔ JFK",
+      "title": "Gana con tus propios viajes",
+      "sub": "Vas a volar de todos modos. Los kilos libres de tu maleta son dinero, no aire. Publica la ruta que vas a hacer y recibe solicitudes de los remitentes que van por ella.",
+      "ctaPrimary": "Ser transportista",
+      "ctaSecondary": "Necesito enviar un paquete",
+      "flow": {
+        "1": "Ruta",
+        "2": "Espacio libre",
+        "3": "Solicitud",
+        "4": "Cobro"
+      },
+      "stepsLabel": "Cómo funciona",
+      "stepsTitle": "Cuatro pasos desde un vuelo publicado hasta el dinero",
+      "step": {
+        "1": {
+          "title": "Publica un vuelo",
+          "body": "Desde dónde, adónde, la fecha, cuántos kilos llevas libres y qué aceptas. Lleva un minuto y no te compromete a nada."
+        },
+        "2": {
+          "title": "Recibe solicitudes",
+          "body": "Los remitentes de tu ruta escriben en el chat del vuelo. Respondes a quienes te encajan y rechazas al resto sin dar explicaciones."
+        },
+        "3": {
+          "title": "Acordad y recoge",
+          "body": "Las condiciones quedan fijadas en una tarjeta del chat: qué llevas, por cuánto y para cuándo. La entrega se fotografía y la foto queda en el registro."
+        },
+        "4": {
+          "title": "Cobra",
+          "body": "En efectivo al entregar o por transferencia — como acordéis. La plataforma no interviene en el pago ni retiene dinero."
+        }
+      },
+      "limitsLabel": "Límites",
+      "limitsTitle": "Lo que la plataforma no hace por ti",
+      "limitsBody": "Vimana no es transportista ni aseguradora. No paga por ti, no revisa el contenido de un paquete y no responde por él ante la aduana — el riesgo del transporte es tuyo. Lo que sí hace: te pone delante de los remitentes de tu ruta y lleva un registro del acuerdo que muestra quién entregó qué y cuándo. Hoy no hay pagos en la plataforma.",
+      "closingTitle": "Vas a volar igual — no vueles vacío",
+      "closingBody": "El acceso es por invitación de momento y hay un solo corredor: EAU ↔ EE. UU. Deja un correo y te escribiremos cuando abramos tu ruta."
+    },
+    "sender": {
+      "navLink": "Para remitentes",
+      "eyebrow": "Para remitentes · corredor DXB ↔ JFK",
+      "title": "Envía un paquete con alguien que ya vuela allí",
+      "sub": "Documentos, medicinas, una pieza, un regalo. No tres semanas de logística de carga, sino un viajero con vuelo en la fecha que necesitas — y un registro que muestra cada paso.",
+      "ctaPrimary": "Buscar una entrega",
+      "ctaSecondary": "Yo también vuelo a menudo",
+      "flow": {
+        "1": "Origen",
+        "2": "Destino",
+        "3": "Paquete",
+        "4": "Buscar"
+      },
+      "stepsLabel": "Cómo funciona",
+      "stepsTitle": "Cuatro pasos desde la solicitud hasta la recepción confirmada",
+      "step": {
+        "1": {
+          "title": "Indica la ruta",
+          "body": "Desde dónde, adónde y para cuándo. Las ciudades y los aeropuertos salen de una base — no hay códigos que memorizar."
+        },
+        "2": {
+          "title": "Describe el paquete",
+          "body": "Qué contiene, el peso, el valor declarado. El valor importa: de él se calcula la cobertura y es el techo en una disputa."
+        },
+        "3": {
+          "title": "Elige transportista",
+          "body": "Se ve su nivel de actividad, sus círculos de confianza y las verificaciones superadas. Un desconocido deja de ser un nombre anónimo en un chat."
+        },
+        "4": {
+          "title": "Confirma la recepción",
+          "body": "Las fotos de la entrega y de la recepción entran en el registro del acuerdo. No se pueden borrar ni sustituir — cualquier cambio se detecta."
+        }
+      },
+      "limitsLabel": "Límites",
+      "limitsTitle": "Qué es cierto aquí y qué todavía no",
+      "limitsBody": "El registro de un acuerdo no se puede alterar sin que se note: la cadena deja de cuadrar, y eso se comprueba con independencia de nosotros. Lo que no existe: pagos en la plataforma, depósito en garantía y fianza del transportista — os liquidáis directamente y el riesgo del transporte recae en el remitente. Vimana no es una mensajería; reúne a las partes y guarda las pruebas.",
+      "closingTitle": "Encuentra a quien ya vuela por tu ruta",
+      "closingBody": "El acceso es por invitación de momento y hay un solo corredor: EAU ↔ EE. UU. Deja un correo y te escribiremos cuando abramos tu destino."
+    },
+    "business": {
+      "navLink": "Para empresas",
+      "eyebrow": "Para empresas · destinos difíciles",
+      "title": "Entrega pedidos allí donde las empresas habituales no llegan",
+      "sub": "Destinos cerrados, corredores incómodos, plazos que la logística de carga no da. Tu pedido lo lleva una persona que va a volar igualmente — por una ruta que no está en ninguna tabla de tarifas.",
+      "ctaPrimary": "Hablar de un destino",
+      "ctaSecondary": "Ver cómo funciona",
+      "flow": {
+        "1": "Pedido",
+        "2": "Ruta",
+        "3": "Transportista",
+        "4": "Tu cliente"
+      },
+      "stepsLabel": "El modelo",
+      "stepsTitle": "Cómo funciona la entrega para una empresa",
+      "step": {
+        "1": {
+          "title": "Tú nombras el destino",
+          "body": "País, ciudad, volumen y regularidad. Miramos si ese corredor tiene transportistas y con qué frecuencia vuelan."
+        },
+        "2": {
+          "title": "La ruta está hecha de personas",
+          "body": "No es una tarifa, sino vuelos concretos de personas concretas. Donde una empresa normal responde «no entregamos ahí», esto es cuestión de densidad, no de prohibición."
+        },
+        "3": {
+          "title": "El transportista responde con un registro",
+          "body": "Nivel de actividad, verificaciones superadas, historial de acuerdos cerrados. Seleccionar por eso es lo que le enseñas a tu propio cliente."
+        },
+        "4": {
+          "title": "Tu cliente recibe y confirma",
+          "body": "Fotos de la entrega y de la recepción con la hora de cada paso. Eso es la prueba de entrega que puedes presentar."
+        }
+      },
+      "limitsLabel": "El estado real",
+      "limitsTitle": "Qué funciona hoy y qué todavía no existe",
+      "limitsBody": "Funciona: las rutas, la elección de transportista y el registro del acuerdo con fotos y una cadena verificable. Sin construir: cuenta de empresa, facturas, seguimiento para tu cliente, API y precios por volumen — nada de eso se puede ofrecer hoy, y no vamos a dar fechas. Por eso esta página invita a hablar y no a registrarse: cuéntanos el destino y diremos con honestidad si hoy es viable.",
+      "closingTitle": "Cuéntanos adónde necesitas enviar",
+      "closingBody": "Deja un correo y unas líneas sobre el destino. Responderemos qué es posible hoy y qué espera a los pagos y al depósito en garantía."
+    }
+  },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · FASE 1",
     "ctaInvite": "Pedir invitación",
     "ctaDashboard": "Abrir mi panel",
-    "ctaBrowse": "Ver viajes",
+    "ctaCarrier": "Ser transportista",
+    "ctaSender": "Necesito enviar un paquete",
     "ctaLogin": "Iniciar sesión",
+    "modalTitleBusiness": "Cuéntanos adónde necesitas enviar",
+    "modalSubBusiness": "Deja un correo y unas líneas sobre el destino. Responderemos qué es posible hoy y qué espera a los pagos y al depósito en garantía.",
     "heroEyebrow": "Corredor DXB ↔ JFK · solo por invitación",
-    "heroTitle": "Tu paquete viaja con alguien que ya tomaba ese vuelo",
-    "heroSub": "Vimana no es una empresa de mensajería. Es el lugar donde un remitente y un viajero se encuentran, y donde cada paso del acuerdo queda registrado de forma que un cambio se nota.",
+    "heroTitle": "Gana con los viajes que ya ibas a hacer",
+    "heroSub": "Lleva paquetes en tus propias rutas. Publica un vuelo, recibe solicitudes de remitentes, acordad las condiciones y cobra. Y si eres tú quien necesita enviar — los que vuelan ya están aquí.",
     "boardingBrand": "Tarjeta de embarque del acuerdo",
     "boardingCarrier": "Transportista",
     "boardingDeparts": "Sale",

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 
@@ -6,9 +7,19 @@ import { useAuthStore } from '../stores/auth'
  * T1.24 — explicit dual role switcher.
  * The button text always names the OPPOSITE mode (never the current one) —
  * current mode is derived from the surrounding UI (dashboard colors, CTAs).
+ *
+ * T_UX.23 — it now moves the address too. The panel lives at `/carrier` and
+ * `/send`, and `ModeHomePage` sends an address that disagrees with the mode
+ * back to the one that agrees. Switching without navigating would therefore
+ * bounce the user straight back and look like the button did nothing.
+ *
+ * This is also the **only** place the mode changes. Visiting an address does
+ * not change it — a bookmark or a link from a counterparty must not quietly
+ * rewrite `users.active_mode`, which decides what the whole panel shows.
  */
 export default function ModeSwitcher() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const switchMode = useAuthStore((s) => s.switchMode)
   const [busy, setBusy] = useState(false)
@@ -26,6 +37,9 @@ export default function ModeSwitcher() {
     setBusy(true)
     try {
       await switchMode()
+      // Navigate only after the store holds the new mode, or `ModeHomePage`
+      // reads the old one and redirects us back where we came from.
+      navigate(isCarrier ? '/send' : '/carrier')
     } finally {
       setBusy(false)
     }

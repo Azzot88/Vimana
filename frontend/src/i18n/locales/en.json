@@ -873,15 +873,137 @@
       "failed": "Could not add the address."
     }
   },
+  "audience": {
+    "carrier": {
+      "navLink": "For carriers",
+      "eyebrow": "For carriers · DXB ↔ JFK corridor",
+      "title": "Earn from your own trips",
+      "sub": "You are flying anyway. The free kilograms in your case are money, not air. Post the route you are taking and receive requests from senders on it.",
+      "ctaPrimary": "Become a carrier",
+      "ctaSecondary": "I need to send a parcel",
+      "flow": {
+        "1": "Route",
+        "2": "Free space",
+        "3": "Request",
+        "4": "Payment"
+      },
+      "stepsLabel": "How it works",
+      "stepsTitle": "Four steps from a posted trip to money",
+      "step": {
+        "1": {
+          "title": "Post a trip",
+          "body": "Where from, where to, the date, how many kilograms are free and what you will take. It takes a minute and commits you to nothing."
+        },
+        "2": {
+          "title": "Receive requests",
+          "body": "Senders on your route write into the trip's chat. You answer the ones that suit you and decline the rest without explaining yourself."
+        },
+        "3": {
+          "title": "Agree and collect",
+          "body": "The terms are fixed as a card in the chat: what you carry, for how much, by when. The handover is photographed, and the photo stays in the record."
+        },
+        "4": {
+          "title": "Get paid",
+          "body": "Cash at handover or a transfer — however you agree. The platform takes no part in the settlement and holds no money."
+        }
+      },
+      "limitsLabel": "Limits",
+      "limitsTitle": "What the platform does not do for you",
+      "limitsBody": "Vimana is not a carrier and not an insurer. It does not pay on your behalf, does not inspect what is inside a parcel and does not answer for it at customs — the risk of carrying is yours. What it does: puts you in front of senders on your route and keeps a record of the deal showing who handed over what, and when. There are no payments on the platform today.",
+      "closingTitle": "You are flying anyway — do not fly empty",
+      "closingBody": "Access is by invitation for now, and there is one corridor: UAE ↔ US. Leave an address and we will write when your route opens."
+    },
+    "sender": {
+      "navLink": "For senders",
+      "eyebrow": "For senders · DXB ↔ JFK corridor",
+      "title": "Send a parcel with someone who is already flying there",
+      "sub": "Documents, medicine, a spare part, a present. Not three weeks of freight logistics but a traveller on the date you need — and a record that shows every step.",
+      "ctaPrimary": "Find a delivery",
+      "ctaSecondary": "I fly often myself",
+      "flow": {
+        "1": "From",
+        "2": "To",
+        "3": "Parcel",
+        "4": "Search"
+      },
+      "stepsLabel": "How it works",
+      "stepsTitle": "Four steps from a request to a confirmed delivery",
+      "step": {
+        "1": {
+          "title": "Name the route",
+          "body": "Where from, where to, by when. Cities and airports come from a dataset, so there are no codes to memorise."
+        },
+        "2": {
+          "title": "Describe the parcel",
+          "body": "What is inside, the weight, the declared value. The value matters: cover is calculated from it, and it is the ceiling in a dispute."
+        },
+        "3": {
+          "title": "Choose a carrier",
+          "body": "You can see their activity level, their trust circles and which checks they have passed. A stranger stops being an anonymous name in a chat."
+        },
+        "4": {
+          "title": "Confirm receipt",
+          "body": "Photos of the handover and of the delivery go into the record of the deal. They cannot be removed or swapped — any change is detectable."
+        }
+      },
+      "limitsLabel": "Limits",
+      "limitsTitle": "What is true here, and what is not yet",
+      "limitsBody": "The record of a deal cannot be altered unnoticed: the chain stops adding up, and that is checkable independently of us. What does not exist: payments on the platform, escrow and carrier collateral — you settle directly, and the risk of carrying sits with the sender. Vimana is not a courier company; it introduces the two sides and keeps the evidence.",
+      "closingTitle": "Find the person already flying your route",
+      "closingBody": "Access is by invitation for now, and there is one corridor: UAE ↔ US. Leave an address and we will write when your direction opens."
+    },
+    "business": {
+      "navLink": "For business",
+      "eyebrow": "For business · difficult destinations",
+      "title": "Deliver orders where the usual carriers do not go",
+      "sub": "Closed directions, awkward corridors, deadlines freight logistics cannot meet. Your order travels with a person who is flying anyway — along a route that is not in anybody's tariff table.",
+      "ctaPrimary": "Discuss a route",
+      "ctaSecondary": "See how it works",
+      "flow": {
+        "1": "Order",
+        "2": "Route",
+        "3": "Carrier",
+        "4": "Your client"
+      },
+      "stepsLabel": "The model",
+      "stepsTitle": "How delivery works for a company",
+      "step": {
+        "1": {
+          "title": "You name the destination",
+          "body": "Country, city, volume and how often. We look at whether that corridor has carriers on it and how frequently they fly."
+        },
+        "2": {
+          "title": "The route is made of people",
+          "body": "Not a tariff but particular flights taken by particular people. Where an ordinary service answers \"we do not deliver there\", this is a question of density rather than of prohibition."
+        },
+        "3": {
+          "title": "The carrier answers with a record",
+          "body": "Activity level, passed checks, a history of closed deals. Selecting on those is what you show your own customer."
+        },
+        "4": {
+          "title": "Your client receives and confirms",
+          "body": "Photographs of the handover and of the delivery, with the time of each step. That is the proof of delivery you can put in front of somebody."
+        }
+      },
+      "limitsLabel": "Where this stands",
+      "limitsTitle": "What works today, and what does not exist yet",
+      "limitsBody": "Working: routes, carrier selection, and a record of the deal with photographs and a verifiable chain. Not built: a business account, invoices, tracking for your customer, an API and volume pricing — none of it can be offered today, and we will not name dates. That is why this page asks for a conversation rather than a signup: describe the route and we will say honestly whether it is solvable now.",
+      "closingTitle": "Tell us where you need to ship",
+      "closingBody": "Leave an address and a line about the destination. We will answer what is possible today and what waits on payments and escrow."
+    }
+  },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
     "ctaInvite": "Request an invite",
     "ctaDashboard": "Open my dashboard",
-    "ctaBrowse": "Browse trips",
+    "ctaCarrier": "Become a carrier",
+    "ctaSender": "I need to send a parcel",
     "ctaLogin": "Sign in",
+    "modalTitleBusiness": "Tell us where you need to ship",
+    "modalSubBusiness": "Leave an address and a line about the destination. We will answer what is possible today and what waits on payments and escrow.",
     "heroEyebrow": "DXB ↔ JFK corridor · invite only",
-    "heroTitle": "Your parcel flies with someone already taking that flight",
-    "heroSub": "Vimana is not a courier company. It is where a sender and a traveller find each other, and where every step of the deal is recorded so that a substitution shows.",
+    "heroTitle": "Earn from the trips you are already taking",
+    "heroSub": "Carry parcels along the routes you fly anyway. Post a trip, get requests from senders on it, agree the terms, get paid. And if it is you who needs something delivered — the people who fly are already here.",
     "boardingBrand": "Deal boarding pass",
     "boardingCarrier": "Carrier",
     "boardingDeparts": "Departs",

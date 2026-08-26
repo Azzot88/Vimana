@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import ArchiveNotice from './ArchiveNotice'
@@ -6,7 +7,14 @@ import EmailVerifyBanner from './EmailVerifyBanner'
 import Navbar from './Navbar'
 import PlatformNoticeBanner from './PlatformNoticeBanner'
 
-export default function Layout() {
+/** T_UX.23 — `children` in addition to `<Outlet/>`.
+ *
+ *  `/carrier` and `/send` are one address showing two different screens: the
+ *  landing to a guest, the panel to a signed-in account. The landing brings its
+ *  own header and footer, so the shell cannot be a parent route — the choice
+ *  happens inside the component, and the authenticated branch wraps itself.
+ *  Every existing nested route keeps using `<Outlet/>` untouched. */
+export default function Layout({ children }: { children?: ReactNode }) {
   const { t } = useTranslation()
   return (
     <div className="min-h-[100dvh] bg-ivory overflow-x-hidden">
@@ -27,7 +35,7 @@ export default function Layout() {
             server nothing, for an account whose key is alive. */}
         <ArchiveNotice />
         <EmailVerifyBanner />
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
       <BottomNav />
     </div>

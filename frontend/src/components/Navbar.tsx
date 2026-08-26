@@ -8,6 +8,11 @@ export default function Navbar() {
   const { user, logout } = useAuthStore()
   // Reactive, not `getState()`: the nav has to change the moment the mode does.
   const isCarrierMode = user?.active_mode === 'carrier'
+  // T_UX.23 — the panel lives at two addresses now. Pointing this at
+  // `/dashboard` would still work (it redirects), but the link would never
+  // light up as active, because the address it names is one nobody ever stays
+  // on.
+  const panelHref = isCarrierMode ? '/carrier' : '/send'
   const { t } = useTranslation()
   const navigate = useNavigate()
 
@@ -32,7 +37,7 @@ export default function Navbar() {
             Vimana
           </Link>
           <div className="hidden md:flex items-center gap-4">
-            <NavLink to="/dashboard" end className={linkClass}>
+            <NavLink to={panelHref} end className={linkClass}>
               {t('nav.dashboard')}
             </NavLink>
             {/* T_UX.18 — the two modes want different boards. A carrier's own

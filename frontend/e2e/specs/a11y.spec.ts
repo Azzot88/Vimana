@@ -95,6 +95,24 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
     await scan(page, '/')
   })
 
+  // T_UX.23 — the three audience pages are public surfaces of their own, found
+  // by their own searches. A landing that is scanned and two that are not is
+  // the same page in three states of repair.
+  test('carrier landing', async ({ page }) => {
+    await page.goto('/carrier')
+    await scan(page, '/carrier')
+  })
+
+  test('sender landing', async ({ page }) => {
+    await page.goto('/send')
+    await scan(page, '/send')
+  })
+
+  test('business landing', async ({ page }) => {
+    await page.goto('/business')
+    await scan(page, '/business')
+  })
+
   test('login', async ({ page }) => {
     await page.goto('/login')
     await scan(page, '/login')
@@ -108,7 +126,11 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
   test('dashboard (authenticated)', async ({ page }) => {
     await signInFixed(page)
     await page.goto('/dashboard')
-    await scan(page, '/dashboard')
+    // T_UX.23 — `/dashboard` is a redirect now: the panel lives at `/carrier`
+    // or `/send` depending on the account's mode. Waiting for the real address
+    // means axe scores the panel and not the instant before it.
+    await page.waitForURL(/\/(carrier|send)$/)
+    await scan(page, 'panel')
   })
 
   test('profile (authenticated)', async ({ page }) => {

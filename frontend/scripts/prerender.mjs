@@ -3,17 +3,21 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 /**
- * T_UX.7 pt.2 — write `dist/landing.html`: the app shell with the landing
- * already rendered into `#root`.
+ * T_UX.7 pt.2 — write the app shell with a page already rendered into `#root`.
+ * T_UX.23 — four public pages instead of one.
  *
  * Runs after both browser builds and after the SSR build. Reads the finished
  * `dist/index.html` (so it picks up whatever hashed asset names Vite just
  * produced) and injects the server-rendered markup into the empty root div.
  *
- * **A separate file, not `index.html` overwritten.** If the landing markup went
- * into `index.html`, every other route would ship it too and a visitor opening
- * `/login` would see the landing flash past before hydration replaced it. nginx
- * serves this file for `/` only; everything else keeps the empty shell.
+ * **Separate files, not `index.html` overwritten.** If landing markup went into
+ * `index.html`, every other route would ship it too and a visitor opening
+ * `/login` would see a landing flash past before hydration replaced it. nginx
+ * serves each file at its exact address; everything else keeps the empty shell.
+ *
+ * The path list comes from `entry-ssr` rather than being repeated here: a page
+ * added to the router and forgotten in the build script is invisible until
+ * somebody checks a crawler, which is to say never.
  *
  * Russian only, deliberately. `<html lang="ru">` and the primary corridor are
  * Russian-facing, and per-locale prerendering needs content negotiation in
@@ -25,7 +29,6 @@ const here = dirname(fileURLToPath(import.meta.url))
 const dist = resolve(here, '..', 'dist')
 const shellPath = resolve(dist, 'index.html')
 const ssrEntry = resolve(dist, 'ssr', 'entry-ssr.js')
-const outPath = resolve(dist, 'landing.html')
 
 if (!existsSync(shellPath)) {
   throw new Error(`prerender: ${shellPath} is missing — run the app build first`)
@@ -34,8 +37,7 @@ if (!existsSync(ssrEntry)) {
   throw new Error(`prerender: ${ssrEntry} is missing — run \`vite build --ssr\` first`)
 }
 
-const { render } = await import(pathToFileURL(ssrEntry).href)
-const html = render('ru')
+const { render, PRERENDER_PATHS } = await import(pathToFileURL(ssrEntry).href)
 
 const shell = readFileSync(shellPath, 'utf8')
 const marker = '<div id="root"></div>'
@@ -46,5 +48,15 @@ if (!shell.includes(marker)) {
   throw new Error(`prerender: could not find ${marker} in index.html`)
 }
 
-writeFileSync(outPath, shell.replace(marker, `<div id="root">${html}</div>`), 'utf8')
-console.log(`prerender: wrote ${outPath} (${html.length} chars of markup)`)
+/** `/` keeps the name `landing.html` it has had since T_UX.7: nginx, the
+ *  Dockerfile and anybody debugging a deploy all know it by that name, and
+ *  renaming it to `index-root.html` would buy tidiness at the price of a
+ *  silent 404 on the busiest address. */
+const fileFor = (path) => (path === '/' ? 'landing.html' : `${path.replace(/^\//, '')}.html`)
+
+for (const path of PRERENDER_PATHS) {
+  const html = render('ru', path)
+  const outPath = resolve(dist, fileFor(path))
+  writeFileSync(outPath, shell.replace(marker, `<div id="root">${html}</div>`), 'utf8')
+  console.log(`prerender: ${path} → ${outPath} (${html.length} chars of markup)`)
+}

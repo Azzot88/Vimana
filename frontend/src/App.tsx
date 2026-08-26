@@ -19,7 +19,11 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
-const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+/** T_UX.23 — `/carrier` and `/send` are one chunk each: a guest gets the
+ *  landing out of it, a signed-in account gets the panel. Splitting them would
+ *  mean a second request at the exact moment the answer is already known. */
+const ModeHomePage = lazy(() => import('./pages/ModeHomePage'))
+const BusinessLandingPage = lazy(() => import('./pages/BusinessLandingPage'))
 const TripsPage = lazy(() => import('./pages/TripsPage'))
 const NewTripPage = lazy(() => import('./pages/NewTripPage'))
 const DealsPage = lazy(() => import('./pages/DealsPage'))
@@ -55,6 +59,17 @@ function ProtectedRoute() {
   return <Outlet />
 }
 
+/** T_UX.23 — `/dashboard` kept as a redirect rather than deleted.
+ *
+ *  It is linked from letters, from the landing header, from `WelcomePage` and
+ *  from three years of muscle memory. A dead address is a worse answer than a
+ *  redirect, exactly as with `/register` above. */
+function DashboardRedirect() {
+  const user = useAuthStore((s) => s.user)
+  const to = user?.active_mode === 'carrier' && user.can_carry ? '/carrier' : '/send'
+  return <Navigate to={to} replace />
+}
+
 /** Deliberately quiet: a chunk fetch on a warm connection is over before a
  *  spinner would finish appearing, and a flashing spinner reads as a fault. */
 function RouteFallback() {
@@ -76,6 +91,14 @@ export default function App() {
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          {/* T_UX.23 — the three audiences. `/carrier` and `/send` sit outside
+              `ProtectedRoute` on purpose: to a guest they are marketing pages,
+              to a signed-in account they are the panel, and `ModeHomePage`
+              makes that call. `/business` has no panel behind it — there is no
+              business mode, only `carrier | sender`. */}
+          <Route path="/carrier" element={<ModeHomePage mode="carrier" />} />
+          <Route path="/send" element={<ModeHomePage mode="sender" />} />
+          <Route path="/business" element={<BusinessLandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           {/* T3.28 pt.3 — `/register` now goes to the same door. The
               password form is gone from the product: one field, a code, and an
@@ -96,8 +119,8 @@ export default function App() {
                 and is signed in, but a navigation bar around a single question
                 invites wandering off before answering it. */}
             <Route path="/welcome" element={<WelcomePage />} />
+            <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route element={<Layout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/trips" element={<TripsPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />

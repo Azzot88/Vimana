@@ -822,15 +822,137 @@
       "failed": "Impossible d'ajouter l'adresse."
     }
   },
+  "audience": {
+    "carrier": {
+      "navLink": "Pour les transporteurs",
+      "eyebrow": "Pour les transporteurs · corridor DXB ↔ JFK",
+      "title": "Gagnez sur vos propres voyages",
+      "sub": "Vous partez de toute façon. Les kilos libres dans votre valise sont de l'argent, pas de l'air. Publiez le trajet que vous prenez et recevez les demandes des expéditeurs qui y vont.",
+      "ctaPrimary": "Devenir transporteur",
+      "ctaSecondary": "J'ai un colis à envoyer",
+      "flow": {
+        "1": "Trajet",
+        "2": "Place libre",
+        "3": "Demande",
+        "4": "Paiement"
+      },
+      "stepsLabel": "Comment ça marche",
+      "stepsTitle": "Quatre étapes entre un trajet publié et l'argent",
+      "step": {
+        "1": {
+          "title": "Publiez un trajet",
+          "body": "D'où, vers où, la date, combien de kilos sont libres et ce que vous acceptez. Cela prend une minute et n'engage à rien."
+        },
+        "2": {
+          "title": "Recevez des demandes",
+          "body": "Les expéditeurs sur votre trajet écrivent dans le chat du vol. Vous répondez à ceux qui vous conviennent et refusez les autres sans vous justifier."
+        },
+        "3": {
+          "title": "Convenez et récupérez",
+          "body": "Les conditions se figent dans une carte du chat : ce que vous portez, pour combien, pour quand. La remise se photographie, et la photo reste dans le dossier."
+        },
+        "4": {
+          "title": "Encaissez",
+          "body": "En espèces à la remise ou par virement — comme vous convenez. La plateforme ne se mêle pas du règlement et ne détient pas d'argent."
+        }
+      },
+      "limitsLabel": "Limites",
+      "limitsTitle": "Ce que la plateforme ne fait pas à votre place",
+      "limitsBody": "Vimana n'est ni transporteur ni assureur. Elle ne paie pas à votre place, n'inspecte pas le contenu d'un colis et n'en répond pas devant la douane — le risque du transport est le vôtre. Ce qu'elle fait : vous met en face des expéditeurs de votre trajet et tient un dossier montrant qui a remis quoi, et quand. Il n'y a pas de paiements sur la plateforme aujourd'hui.",
+      "closingTitle": "Vous partez de toute façon — ne partez pas à vide",
+      "closingBody": "L'accès se fait sur invitation pour l'instant, et il y a un seul corridor : EAU ↔ États-Unis. Laissez une adresse, nous écrirons quand votre trajet ouvrira."
+    },
+    "sender": {
+      "navLink": "Pour les expéditeurs",
+      "eyebrow": "Pour les expéditeurs · corridor DXB ↔ JFK",
+      "title": "Envoyez un colis avec quelqu'un qui part déjà là-bas",
+      "sub": "Documents, médicaments, une pièce, un cadeau. Pas trois semaines de fret, mais un voyageur avec un vol à la date qu'il vous faut — et un dossier qui montre chaque étape.",
+      "ctaPrimary": "Trouver une livraison",
+      "ctaSecondary": "Je voyage souvent moi-même",
+      "flow": {
+        "1": "Départ",
+        "2": "Arrivée",
+        "3": "Colis",
+        "4": "Recherche"
+      },
+      "stepsLabel": "Comment ça marche",
+      "stepsTitle": "Quatre étapes entre une demande et une réception confirmée",
+      "step": {
+        "1": {
+          "title": "Indiquez le trajet",
+          "body": "D'où, vers où, pour quand. Les villes et les aéroports viennent d'une base — aucun code à retenir."
+        },
+        "2": {
+          "title": "Décrivez le colis",
+          "body": "Ce qu'il contient, le poids, la valeur déclarée. La valeur compte : la couverture s'en déduit, et c'est le plafond en cas de litige."
+        },
+        "3": {
+          "title": "Choisissez un transporteur",
+          "body": "Vous voyez son niveau d'activité, ses cercles de confiance et les vérifications passées. L'inconnu cesse d'être un nom anonyme dans un chat."
+        },
+        "4": {
+          "title": "Confirmez la réception",
+          "body": "Les photos de la remise et de la livraison entrent dans le dossier. Impossible de les supprimer ou de les remplacer — tout changement se détecte."
+        }
+      },
+      "limitsLabel": "Limites",
+      "limitsTitle": "Ce qui est vrai ici, et ce qui ne l'est pas encore",
+      "limitsBody": "Le dossier d'un accord ne peut pas être modifié sans que cela se voie : la chaîne cesse de concorder, et cela se vérifie indépendamment de nous. Ce qui n'existe pas : les paiements sur la plateforme, l'entiercement et la caution du transporteur — vous réglez directement, et le risque du transport revient à l'expéditeur. Vimana n'est pas un service de messagerie ; elle réunit les parties et conserve les preuves.",
+      "closingTitle": "Trouvez celui qui prend déjà votre trajet",
+      "closingBody": "L'accès se fait sur invitation pour l'instant, et il y a un seul corridor : EAU ↔ États-Unis. Laissez une adresse, nous écrirons quand votre direction ouvrira."
+    },
+    "business": {
+      "navLink": "Pour les entreprises",
+      "eyebrow": "Pour les entreprises · destinations difficiles",
+      "title": "Livrez vos commandes là où les transporteurs habituels ne vont pas",
+      "sub": "Destinations fermées, corridors compliqués, délais que le fret ne tient pas. Votre commande voyage avec une personne qui part de toute façon — par une route qui ne figure dans aucune grille tarifaire.",
+      "ctaPrimary": "Discuter d'une destination",
+      "ctaSecondary": "Voir comment ça marche",
+      "flow": {
+        "1": "Commande",
+        "2": "Trajet",
+        "3": "Transporteur",
+        "4": "Votre client"
+      },
+      "stepsLabel": "Le modèle",
+      "stepsTitle": "Comment la livraison fonctionne pour une entreprise",
+      "step": {
+        "1": {
+          "title": "Vous nommez la destination",
+          "body": "Pays, ville, volume et régularité. Nous regardons si ce corridor a des transporteurs et à quelle fréquence ils volent."
+        },
+        "2": {
+          "title": "Le trajet est fait de personnes",
+          "body": "Pas un tarif, mais des vols précis pris par des personnes précises. Là où un service ordinaire répond « nous ne livrons pas », c'est une question de densité et non d'interdiction."
+        },
+        "3": {
+          "title": "Le transporteur répond par un dossier",
+          "body": "Niveau d'activité, vérifications passées, historique d'accords clos. Sélectionner là-dessus, c'est ce que vous montrez à votre propre client."
+        },
+        "4": {
+          "title": "Votre client reçoit et confirme",
+          "body": "Photos de la remise et de la livraison, avec l'heure de chaque étape. C'est la preuve de livraison que vous pouvez présenter."
+        }
+      },
+      "limitsLabel": "L'état réel",
+      "limitsTitle": "Ce qui fonctionne aujourd'hui, et ce qui n'existe pas encore",
+      "limitsBody": "Fonctionne : les trajets, le choix du transporteur, le dossier d'accord avec photos et chaîne vérifiable. Pas construit : compte entreprise, factures, suivi pour votre client, API et tarifs au volume — rien de tout cela ne peut être proposé aujourd'hui, et nous ne donnerons pas de dates. C'est pourquoi cette page invite à une conversation plutôt qu'à une inscription : décrivez la destination et nous dirons honnêtement si elle est faisable maintenant.",
+      "closingTitle": "Dites-nous où vous devez livrer",
+      "closingBody": "Laissez une adresse et un mot sur la destination. Nous répondrons ce qui est possible aujourd'hui et ce qui attend les paiements et l'entiercement."
+    }
+  },
   "landing": {
     "navTag": "SACRED LOGISTICS · v{{version}} · PHASE 1",
     "ctaInvite": "Demander une invitation",
     "ctaDashboard": "Ouvrir mon tableau de bord",
-    "ctaBrowse": "Voir les trajets",
+    "ctaCarrier": "Devenir transporteur",
+    "ctaSender": "J'ai un colis à envoyer",
     "ctaLogin": "Se connecter",
+    "modalTitleBusiness": "Dites-nous où vous devez livrer",
+    "modalSubBusiness": "Laissez une adresse et un mot sur la destination. Nous répondrons ce qui est possible aujourd'hui et ce qui attend les paiements et l'entiercement.",
     "heroEyebrow": "Corridor DXB ↔ JFK · sur invitation",
-    "heroTitle": "Votre colis voyage avec quelqu'un qui prenait déjà ce vol",
-    "heroSub": "Vimana n'est pas un transporteur. C'est l'endroit où un expéditeur et un voyageur se trouvent, et où chaque étape de l'accord est enregistrée de façon qu'une substitution se voie.",
+    "heroTitle": "Gagnez sur les voyages que vous faisiez déjà",
+    "heroSub": "Transportez des colis sur vos propres trajets. Publiez un vol, recevez les demandes des expéditeurs, convenez des conditions, encaissez. Et si c'est vous qui devez envoyer — ceux qui volent sont déjà là.",
     "boardingBrand": "Carte d'embarquement de l'accord",
     "boardingCarrier": "Transporteur",
     "boardingDeparts": "Départ",
