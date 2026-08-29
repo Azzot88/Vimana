@@ -1433,6 +1433,7 @@
     "toReview": "Send to review",
     "backToDraft": "Back to draft",
     "publish": "Publish",
+    "publishBlocked": "Cannot publish yet",
     "retire": "Retire",
     "deleteDraft": "Delete draft",
     "frozenHint": "This set is frozen: what people read stays what they read. Publish a new version instead of editing it.",

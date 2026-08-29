@@ -1384,6 +1384,7 @@
     "toReview": "Enviar a revisión",
     "backToDraft": "Volver a borrador",
     "publish": "Publicar",
+    "publishBlocked": "Todavía no se puede publicar",
     "retire": "Retirar",
     "deleteDraft": "Eliminar borrador",
     "frozenHint": "Este conjunto está congelado: lo que la gente leyó sigue siendo lo que leyó. Publica una versión nueva en lugar de editarlo.",

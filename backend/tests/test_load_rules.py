@@ -236,6 +236,42 @@ async def test_loading_twice_is_refused_without_replace(session_maker, corridor)
     assert "--replace" in str(exc.value)
 
 
+async def test_a_set_already_in_review_is_replaced_too(session_maker, corridor):
+    """Matching only drafts had a failure that looked like a broken button.
+
+    A corpus already sent to review was left alone, a second set was created
+    beside it, and the editor went on looking at the old one — publishing
+    blocked by placeholders they had just removed from the file. `--replace`
+    means "this file is the corpus now", and a set waiting for review is a set
+    this file supersedes.
+    """
+    code, category = corridor
+    async with session_maker() as db:
+        await load(db, _corpus(code, category), replace=False)
+        rule_set = (
+            await db.execute(select(RuleSet).where(RuleSet.jurisdiction_code == code))
+        ).scalar_one()
+        rule_set.status = RuleStatus.review
+        await db.commit()
+
+    # Without the flag it now refuses and names the status, instead of quietly
+    # building a second set.
+    async with session_maker() as db:
+        with pytest.raises(CorpusError) as exc:
+            await load(db, _corpus(code, category), replace=False)
+    assert "review" in str(exc.value)
+
+    async with session_maker() as db:
+        await load(db, _corpus(code, category, title="Second pass"), replace=True)
+        rows = (
+            await db.execute(select(RuleSet).where(RuleSet.jurisdiction_code == code))
+        ).scalars().all()
+
+    assert len(rows) == 1
+    assert rows[0].title == "Second pass"
+    assert rows[0].status is RuleStatus.draft
+
+
 async def test_replace_discards_the_previous_draft(session_maker, corridor):
     code, category = corridor
     async with session_maker() as db:

@@ -186,19 +186,29 @@ async def load(db, corpus: dict, replace: bool) -> dict:
                 f"or fix the code"
             )
 
+        # Both unpublished states, not `draft` alone.
+        #
+        # Matching only drafts had a failure that looked like a broken button:
+        # a corpus already sent to review was left alone, a *second* set was
+        # created beside it, and the editor went on looking at the old one —
+        # publishing blocked by placeholders they had just removed from the
+        # file. `--replace` means "this file is the corpus now", and a set
+        # waiting for review is still a set this file supersedes.
         existing = (
             await db.execute(
                 select(RuleSet).where(
                     RuleSet.direction == direction,
                     RuleSet.jurisdiction_code == code,
                     RuleSet.category_key == category,
-                    RuleSet.status == RuleStatus.draft,
+                    RuleSet.status.in_((RuleStatus.draft, RuleStatus.review)),
                 )
             )
         ).scalars().all()
         if existing and not replace:
+            statuses = ", ".join(sorted({s.status.value for s in existing}))
             raise CorpusError(
-                f"a draft already exists for {category}/{direction.value}/{code}. "
+                f"an unpublished set already exists for "
+                f"{category}/{direction.value}/{code} ({statuses}). "
                 f"Re-run with --replace to discard it, or publish it first."
             )
         for old in existing:
@@ -343,7 +353,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--replace",
         action="store_true",
-        help="discard an existing draft for the same corridor and load again",
+        help="discard an existing draft or set on review for the same corridor and load again",
     )
     parser.add_argument(
         "--dry-run",

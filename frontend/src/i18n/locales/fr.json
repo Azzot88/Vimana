@@ -1384,6 +1384,7 @@
     "toReview": "Envoyer en relecture",
     "backToDraft": "Revenir au brouillon",
     "publish": "Publier",
+    "publishBlocked": "Publication impossible",
     "retire": "Retirer",
     "deleteDraft": "Supprimer le brouillon",
     "frozenHint": "Ce jeu est figé : ce que les gens ont lu reste ce qu’ils ont lu. Publiez une nouvelle version plutôt que de le modifier.",

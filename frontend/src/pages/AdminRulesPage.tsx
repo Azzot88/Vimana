@@ -414,9 +414,20 @@ export default function AdminRulesPage() {
                           })
                         }
                         disabled={busy || detail.blockers.length > 0}
+                        title={
+                          detail.blockers.length > 0
+                            ? (t('adminRules.publishBlocked') as string)
+                            : undefined
+                        }
                         className={`${btn} bg-amber text-white hover:opacity-90`}
                       >
-                        {t('adminRules.publish')}
+                        {/* A disabled button that does not say why is a button
+                            people press twice and then report as broken — which
+                            is exactly what happened. The blockers are listed
+                            above, but the label is where the eye is. */}
+                        {detail.blockers.length > 0
+                          ? t('adminRules.publishBlocked')
+                          : t('adminRules.publish')}
                       </button>
                     )}
                   </>
