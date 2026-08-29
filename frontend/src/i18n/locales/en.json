@@ -1415,6 +1415,7 @@
     "retire": "Retire",
     "deleteDraft": "Delete draft",
     "frozenHint": "This set is frozen: what people read stays what they read. Publish a new version instead of editing it.",
+    "publishDelayHint": "The page is live for readers now. Search engines see it after the next deploy — the pages are built, not rendered on request.",
     "sectionsTitle": "Sections",
     "sectionsHint": "Each section carries its own citation. One without a source cannot be published — the quotation is what makes the claim checkable.",
     "noSource": "No source yet — this section blocks publication.",

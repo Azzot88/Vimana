@@ -1366,6 +1366,7 @@
     "retire": "Retirar",
     "deleteDraft": "Eliminar borrador",
     "frozenHint": "Este conjunto está congelado: lo que la gente leyó sigue siendo lo que leyó. Publica una versión nueva en lugar de editarlo.",
+    "publishDelayHint": "La página ya está disponible para los lectores. Los buscadores la verán tras el próximo despliegue — las páginas se compilan, no se renderizan bajo petición.",
     "sectionsTitle": "Secciones",
     "sectionsHint": "Cada sección lleva su propia cita. Una sección sin fuente no puede publicarse — la cita es lo que hace la afirmación comprobable.",
     "noSource": "Sin fuente todavía — esta sección bloquea la publicación.",

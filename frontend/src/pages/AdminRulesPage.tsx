@@ -374,6 +374,17 @@ export default function AdminRulesPage() {
                   {t('adminRules.frozenHint')}
                 </p>
               )}
+
+              {/* T3.11.03 / T_OPS.2 — said here rather than only in the PRD.
+                  The page is live for a reader the moment it is published; it
+                  reaches a search engine after the next deploy, because the
+                  prerender runs at build time. An editor who does not know this
+                  will report it as a bug, and be right to. */}
+              {detail.status === 'published' && (
+                <p className="text-xs font-body text-navy/50">
+                  {t('adminRules.publishDelayHint')}
+                </p>
+              )}
             </div>
 
             {/* ── sections ────────────────────────────────────────────── */}
