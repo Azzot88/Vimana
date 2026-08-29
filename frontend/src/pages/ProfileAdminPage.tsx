@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import AdminPanelSection from '../components/AdminPanelSection'
-import { isArbiter } from '../lib/permissions'
+import { isStaff } from '../lib/permissions'
 import { useAuthStore } from '../stores/auth'
 
 /**
@@ -16,7 +16,10 @@ import { useAuthStore } from '../stores/auth'
 export default function ProfileAdminPage() {
   const user = useAuthStore((s) => s.user)
 
-  if (!isArbiter(user)) {
+  // T3.11.02 — staff, not arbiters: an editor holds neither of the two roles
+  // this used to name, and would have been redirected away from the section
+  // that exists for them.
+  if (!isStaff(user)) {
     return <Navigate to="/profile" replace />
   }
 

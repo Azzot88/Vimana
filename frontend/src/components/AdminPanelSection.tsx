@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getScanQueue, type ScanQueue } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
-import { hasRole, isArbiter, isSuperuser } from '../lib/permissions'
+import { hasRole, isStaff, isSuperuser } from '../lib/permissions'
+import type { UserRole } from '../api/auth'
 import MonoText from './MonoText'
 
 interface AdminLink {
   to: string
   labelKey: string
   descKey: string
-  roles: Array<'arbiter' | 'superuser'>
+  roles: UserRole[]
   icon: string
 }
 
@@ -32,11 +33,20 @@ const LINKS: AdminLink[] = [
   {
     // T3.42 — next to Users on purpose: it answers the question that screen
     // raises and cannot answer, namely which of those offers is still waiting.
-    to: '/admin/roles',
+    to: '/admin/role-offers',
     labelKey: 'admin.roles',
     descKey: 'admin.rolesDesc',
     roles: ['superuser'],
     icon: '🎫',
+  },
+  {
+    // T3.11.02 — the only entry an editor without superuser can reach, which is
+    // why the role list here is not `['superuser']`.
+    to: '/admin/rules',
+    labelKey: 'admin.rules',
+    descKey: 'admin.rulesDesc',
+    roles: ['compliance_editor', 'superuser'],
+    icon: '📋',
   },
   {
     to: '/admin/notices',
@@ -84,7 +94,9 @@ export default function AdminPanelSection() {
       .catch(() => {})
   }, [isSuper])
 
-  if (!isArbiter(user)) return null
+  // T3.11.02 — staff, not arbiters: a rules editor is neither an arbiter nor a
+  // superuser, and the link list below already says who sees what.
+  if (!isStaff(user)) return null
 
   const visible = LINKS.filter((l) => l.roles.some((r) => hasRole(user, r)))
   if (visible.length === 0) return null

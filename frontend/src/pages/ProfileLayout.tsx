@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { hasRole } from '../lib/permissions'
+import type { UserRole } from '../api/auth'
 import { useBentoLayout } from '../hooks/useBentoLayout'
 import MonoText from '../components/MonoText'
 import { APP_VERSION } from '../version'
@@ -28,7 +29,7 @@ interface Section {
   /** Only the index needs it: `/profile` prefix-matches every other section. */
   end?: boolean
   testId?: string
-  roles?: Array<'arbiter' | 'superuser'>
+  roles?: UserRole[]
 }
 
 const SECTIONS: Section[] = [
@@ -51,7 +52,7 @@ const SECTIONS: Section[] = [
   {
     to: '/profile/admin',
     labelKey: 'profile.nav.admin',
-    roles: ['arbiter', 'superuser'],
+    roles: ['arbiter', 'compliance_editor', 'superuser'],
   },
 ]
 

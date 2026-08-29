@@ -57,6 +57,18 @@ export function isArbiter(user: User | null | undefined): boolean {
   return hasRole(user, 'arbiter') || isSuperuser(user)
 }
 
+/** T3.11.02 — holds any role at all.
+ *
+ *  The admin panel used to ask `isArbiter`, which was the same question while
+ *  `arbiter` was the only non-superuser role. `compliance_editor` broke that:
+ *  an editor is not an arbiter and would have found the whole panel missing,
+ *  including the one screen they exist to use. What the panel actually asks is
+ *  "is this person staff", and staff is exactly "was given something".
+ */
+export function isStaff(user: User | null | undefined): boolean {
+  return (user?.roles?.length ?? 0) > 0
+}
+
 export function permsOf(user: User | null | undefined): Set<Permission> {
   if (!user) return new Set()
   // The union over every role held — mirrors `core/permissions.perms_of`.
