@@ -308,3 +308,42 @@ class DocumentRequirement(Base):
         """
         validate_condition(value)
         return value
+
+
+class RuleStatusEvent(Base):
+    """T3.11.02 — who moved a rule set to which status, and when.
+
+    Append-only, same shape and same reason as `RoleGrant` (T3.42): a published
+    rule is a **checkable statement the platform makes about somebody else's
+    law**, and "who stood behind this" has to be answerable from the table
+    rather than from memory. The status column alone says where a set is now
+    and is silent about how it got there.
+
+    Not folded into columns on `RuleSet` (`published_at`, `published_by`): a set
+    goes `draft → review → published` and can be sent back, so a column pair
+    holds only the last move and quietly overwrites the one before it.
+
+    `note` is free text from the editor — why it went to review, why it was sent
+    back. Optional here, unlike the reason on a role withdrawal: sending a draft
+    onward is not an action taken against anybody.
+    """
+
+    __tablename__ = "rule_status_events"
+    __table_args__ = (
+        Index("ix_rule_status_events_set", "rule_set_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    rule_set_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rule_sets.id"))
+    # Null for the row that records creation: there was no status before it.
+    from_status: Mapped[RuleStatus | None] = mapped_column(
+        SAEnum(RuleStatus, name="rulestatus"), nullable=True
+    )
+    to_status: Mapped[RuleStatus] = mapped_column(SAEnum(RuleStatus, name="rulestatus"))
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

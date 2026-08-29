@@ -217,6 +217,41 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED, "same as accept — nothing to answer", also_ok=(400,)
     ),
     ("DELETE", "/api/admin/users/{user_id}"): Case(DENIED, "superuser-only"),
+    # ---- rules editor (T3.11.02) ---------------------------------------
+    #
+    # All thirteen are gated by `rules:edit` before a single row is read, so a
+    # stranger is refused without the object needing to exist. The ids in the
+    # victim fixture are therefore random UUIDs: creating a real set here would
+    # test the fixture, not the guard.
+    ("GET", "/api/admin/rules/{set_id}"): Case(DENIED, "rules:edit only"),
+    ("PATCH", "/api/admin/rules/{set_id}"): Case(
+        DENIED, "rules:edit only", json={"title": "idor probe"}
+    ),
+    ("DELETE", "/api/admin/rules/{set_id}"): Case(DENIED, "rules:edit only"),
+    ("POST", "/api/admin/rules/{set_id}/status"): Case(
+        DENIED, "publishing somebody else's claim about the law", json={"to": "review"}
+    ),
+    ("GET", "/api/admin/rules/{set_id}/history"): Case(DENIED, "rules:edit only"),
+    ("POST", "/api/admin/rules/{set_id}/sections"): Case(
+        DENIED, "rules:edit only", json={"anchor": "probe"}
+    ),
+    ("PATCH", "/api/admin/rules/sections/{section_id}"): Case(
+        DENIED, "rules:edit only", json={"anchor": "probe"}
+    ),
+    ("DELETE", "/api/admin/rules/sections/{section_id}"): Case(DENIED, "rules:edit only"),
+    ("POST", "/api/admin/rules/sections/{section_id}/sources"): Case(
+        DENIED,
+        "rules:edit only",
+        json={"authority": "a", "document_title": "b", "quote": "c"},
+    ),
+    ("DELETE", "/api/admin/rules/sources/{source_id}"): Case(DENIED, "rules:edit only"),
+    ("POST", "/api/admin/rules/{set_id}/requirements"): Case(
+        DENIED, "rules:edit only", json={"code": "probe", "title": "Probe"}
+    ),
+    ("PATCH", "/api/admin/rules/requirements/{req_id}"): Case(
+        DENIED, "rules:edit only", json={"code": "probe", "title": "Probe"}
+    ),
+    ("DELETE", "/api/admin/rules/requirements/{req_id}"): Case(DENIED, "rules:edit only"),
     # ---- platform parameters (T3.40) -----------------------------------
     ("GET", "/api/admin/params/{key}/history"): Case(
         DENIED, "who changed the fee and when is superuser-only"
@@ -518,6 +553,14 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         # T3.42 — a role name, not an object id: these paths address a role of
         # the caller's own, and the stranger has none of it either way.
         "role": "arbiter",
+        # T3.11.02 — random on purpose. Every rules-editor route refuses on the
+        # permission before it looks anything up, so a real set would prove
+        # nothing the guard does not already prove, and building one here would
+        # make this fixture the thing under test.
+        "set_id": str(uuidlib.uuid4()),
+        "section_id": str(uuidlib.uuid4()),
+        "source_id": str(uuidlib.uuid4()),
+        "req_id": str(uuidlib.uuid4()),
         # Only the capability rows use this, and they want an unknown one.
         "token": uuidlib.uuid4().hex,
     }
