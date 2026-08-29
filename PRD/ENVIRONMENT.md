@@ -192,7 +192,7 @@ TEST_DATABASE_URL=postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test
 
 ### Запуск
 ```bash
-docker compose exec -w /app backend pytest -v
+docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v
 ```
 
 ### Запрещено в тестах
@@ -208,8 +208,14 @@ docker compose exec -w /app backend pytest -v
 git clone <repo-url> vimana && cd vimana
 cp .env.example .env   # заполнить .env
 docker compose -f docker-compose.dev.yml up -d --build
-docker compose exec backend alembic upgrade head
+docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
 ```
+
+> ⚠️ **`-f docker-compose.dev.yml` обязателен в каждой команде.** Безымянного
+> `docker-compose.yml` в репозитории нет, и `docker compose` без флага отвечает
+> `no configuration file provided: not found`. Два примера в этом файле стояли
+> без флага и были неработающими командами в документе, который для команд и
+> существует — исправлено 2026-08-29 после того, как деплой на них споткнулся.
 
 ## 9. Правила инкрементального деплоя (dev/prod)
 
