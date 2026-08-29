@@ -60,6 +60,10 @@
     "offerRole": "Offer {{role}}",
     "revokeRole": "Revoke {{role}}",
     "roles": "Roles and offers",
+    "roleFilterAll": "Any role",
+    "roleFilterLabel": "Filter by role",
+    "revokeReasonPrompt": "Why is this role being withdrawn? The person will be told, and it goes into the journal.",
+    "revokeReasonRequired": "A reason is required — it is sent to the person.",
     "rolesDesc": "Who has been offered a role and has not answered yet.",
     "arbiterOffered": "offered",
     "status": {
@@ -1362,6 +1366,8 @@
     "description": "Offers waiting for an answer. Answered and withdrawn ones live in each account's journal, not here.",
     "empty": "Nobody is waiting on an answer.",
     "withdraw": "Withdraw",
+    "withdrawReasonPrompt": "Why is this offer being withdrawn? It goes into the journal.",
+    "withdrawReasonRequired": "A reason is required.",
     "loadFailed": "Could not load the offers",
     "withdrawFailed": "Could not withdraw the offer",
     "col": {

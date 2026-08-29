@@ -43,6 +43,8 @@ export const listAllUsers = (params?: {
   after?: string
   limit?: number
   email_contains?: string
+  /** T3.42 — only accounts holding this role. A filter, not a sort. */
+  role?: string
 }) => api.get<Page<User>>('/api/admin/users', { params })
 
 /** T3.42 — propose a role. Grants nothing: the account keeps exactly the
@@ -51,8 +53,11 @@ export const listAllUsers = (params?: {
 export const offerRole = (userId: string, role: string, reason = '') =>
   api.post<RoleGrant>(`/api/admin/users/${userId}/roles`, { role, reason })
 
-/** Take back a live role, or an offer nobody answered. Both are journalled. */
-export const revokeRole = (userId: string, role: string, reason = '') =>
+/** Take back a live role, or an offer nobody answered. Both are journalled.
+ *
+ *  `reason` is required by the API: it lands in the journal and in the letter
+ *  the person receives. */
+export const revokeRole = (userId: string, role: string, reason: string) =>
   api.delete<RoleGrant>(`/api/admin/users/${userId}/roles/${role}`, {
     data: { reason },
   })

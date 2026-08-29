@@ -51,6 +51,10 @@
     "offerRole": "Proposer : {{role}}",
     "revokeRole": "Retirer : {{role}}",
     "roles": "Rôles et propositions",
+    "roleFilterAll": "Tous les rôles",
+    "roleFilterLabel": "Filtrer par rôle",
+    "revokeReasonPrompt": "Pourquoi ce rôle est-il retiré ? La personne en sera informée et le motif ira au journal.",
+    "revokeReasonRequired": "Un motif est requis — il est envoyé à la personne.",
     "rolesDesc": "À qui un rôle a été proposé et qui n’a pas encore répondu.",
     "arbiterOffered": "proposé",
     "status": {
@@ -1318,6 +1322,8 @@
     "description": "Propositions en attente de réponse. Celles qui ont reçu une réponse ou ont été retirées figurent dans le journal de chaque compte, pas ici.",
     "empty": "Personne n’attend de réponse.",
     "withdraw": "Retirer",
+    "withdrawReasonPrompt": "Pourquoi cette proposition est-elle retirée ? Le motif ira au journal.",
+    "withdrawReasonRequired": "Un motif est requis.",
     "loadFailed": "Impossible de charger les propositions",
     "withdrawFailed": "Impossible de retirer la proposition",
     "col": {

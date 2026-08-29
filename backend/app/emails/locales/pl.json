@@ -142,6 +142,30 @@
     "cta": "Sprawdź sposoby logowania",
     "note": "Miejsce jest przybliżone i często błędne: sieci komórkowe i VPN przesuwają je o setki kilometrów. Ten list nie jest subskrypcją i nie da się go wyłączyć."
   },
+  "role_granted": {
+    "subject": "Vimana · Rola weszła w życie",
+    "preheader": "Przyjąłeś ją, więc zaczęła obowiązywać",
+    "heading": "Rola weszła w życie",
+    "body": [
+      "Przyjąłeś rolę i zaczęła obowiązywać. Od teraz Twoje konto może robić to, na co ona pozwala.",
+      "Jeśli to nie Ty ją przyjąłeś, natychmiast zmień sposób logowania — pod linkiem niżej są hasło, klucze urządzeń i kody odzyskiwania."
+    ],
+    "facts_role": "rola",
+    "cta": "Sprawdź, jak się loguję",
+    "note": "Ten list dotyczy dostępu do cudzych danych, więc nie jest subskrypcją i nie da się go wyłączyć."
+  },
+  "role_revoked": {
+    "subject": "Vimana · Rola została cofnięta",
+    "preheader": "Rola już nie obowiązuje na Twoim koncie",
+    "heading": "Rola została cofnięta",
+    "body": [
+      "Poniższa rola już nie obowiązuje na Twoim koncie. Podana przyczyna jest tutaj.",
+      "Reszta konta pozostaje bez zmian: transakcje, tożsamość i sposoby logowania są nietknięte."
+    ],
+    "facts_role": "rola",
+    "facts_reason": "przyczyna",
+    "note": "Cofnięcie i jego przyczyna są zapisane w dzienniku platformy. Ten list nie jest subskrypcją i nie da się go wyłączyć."
+  },
   "role_offered": {
     "subject": "Vimana · Zaproponowano Ci rolę",
     "preheader": "Nic się jeszcze nie zmieniło — czekamy na Twoją odpowiedź",

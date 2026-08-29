@@ -142,6 +142,30 @@
     "cta": "Check how you sign in",
     "note": "The location is approximate and often wrong: mobile networks and VPNs can place a sign-in hundreds of kilometres away. This letter is not a subscription and cannot be turned off."
   },
+  "role_granted": {
+    "subject": "Vimana · The role now applies to your account",
+    "preheader": "You accepted it, so it has taken effect",
+    "heading": "The role now applies",
+    "body": [
+      "You accepted the role, and it has taken effect. From now on your account can do what the role allows.",
+      "If it was not you who accepted it, change the way you get in straight away — the link below leads to your password, your passkeys and your recovery codes."
+    ],
+    "facts_role": "role",
+    "cta": "Check how you sign in",
+    "note": "This letter concerns access to other people's data, so it is not a subscription and cannot be turned off."
+  },
+  "role_revoked": {
+    "subject": "Vimana · A role has been withdrawn",
+    "preheader": "The role no longer applies to your account",
+    "heading": "A role has been withdrawn",
+    "body": [
+      "The role below no longer applies to your account. The reason given is stated here.",
+      "Everything else about your account is unchanged: your deals, your identity and the way you sign in are untouched."
+    ],
+    "facts_role": "role",
+    "facts_reason": "reason",
+    "note": "Withdrawal and the reason for it are recorded in the platform's journal. This letter is not a subscription and cannot be turned off."
+  },
   "role_offered": {
     "subject": "Vimana · A role has been offered to you",
     "preheader": "Nothing has changed yet — it is waiting for your answer",

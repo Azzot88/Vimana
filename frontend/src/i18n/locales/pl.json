@@ -51,6 +51,10 @@
     "offerRole": "Zaproponuj: {{role}}",
     "revokeRole": "Cofnij: {{role}}",
     "roles": "Role i propozycje",
+    "roleFilterAll": "Dowolna rola",
+    "roleFilterLabel": "Filtr według roli",
+    "revokeReasonPrompt": "Dlaczego rola jest cofana? Osoba zostanie o tym powiadomiona, a powód trafi do dziennika.",
+    "revokeReasonRequired": "Powód jest wymagany — zostanie wysłany tej osobie.",
     "rolesDesc": "Komu zaproponowano rolę i kto jeszcze nie odpowiedział.",
     "arbiterOffered": "zaproponowano",
     "status": {
@@ -1319,6 +1323,8 @@
     "description": "Propozycje czekające na odpowiedź. Odpowiedziane i cofnięte są w dzienniku każdego konta, nie tutaj.",
     "empty": "Nikt nie czeka na odpowiedź.",
     "withdraw": "Cofnij",
+    "withdrawReasonPrompt": "Dlaczego propozycja jest cofana? Powód trafi do dziennika.",
+    "withdrawReasonRequired": "Powód jest wymagany.",
     "loadFailed": "Nie udało się wczytać propozycji",
     "withdrawFailed": "Nie udało się cofnąć propozycji",
     "col": {

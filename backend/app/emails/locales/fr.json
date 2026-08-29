@@ -142,6 +142,30 @@
     "cta": "Vérifier vos moyens de connexion",
     "note": "Le lieu est approximatif et souvent faux : les réseaux mobiles et les VPN peuvent le déplacer de plusieurs centaines de kilomètres. Ce message n'est pas un abonnement et ne peut pas être désactivé."
   },
+  "role_granted": {
+    "subject": "Vimana · Le rôle est entré en vigueur",
+    "preheader": "Vous l'avez accepté, il s'applique désormais",
+    "heading": "Le rôle est entré en vigueur",
+    "body": [
+      "Vous avez accepté le rôle et il s'applique désormais. À partir de maintenant, votre compte peut faire ce que ce rôle permet.",
+      "Si ce n'est pas vous qui l'avez accepté, changez immédiatement votre façon de vous connecter : le lien ci-dessous mène à votre mot de passe, vos clés d'appareil et vos codes de récupération."
+    ],
+    "facts_role": "rôle",
+    "cta": "Vérifier ma connexion",
+    "note": "Ce message concerne l'accès aux données d'autrui ; ce n'est pas un abonnement et il ne peut pas être désactivé."
+  },
+  "role_revoked": {
+    "subject": "Vimana · Un rôle a été retiré",
+    "preheader": "Le rôle ne s'applique plus à votre compte",
+    "heading": "Un rôle a été retiré",
+    "body": [
+      "Le rôle ci-dessous ne s'applique plus à votre compte. Le motif indiqué figure ici même.",
+      "Le reste de votre compte est inchangé : vos transactions, votre identité et vos moyens de connexion ne sont pas touchés."
+    ],
+    "facts_role": "rôle",
+    "facts_reason": "motif",
+    "note": "Le retrait et son motif sont consignés dans le journal de la plateforme. Ce message n'est pas un abonnement et ne peut pas être désactivé."
+  },
   "role_offered": {
     "subject": "Vimana · Un rôle vous est proposé",
     "preheader": "Rien n'a encore changé — nous attendons votre réponse",

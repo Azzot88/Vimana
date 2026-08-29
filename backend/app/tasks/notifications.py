@@ -568,6 +568,66 @@ def send_role_offered(user_id: str, role: str, offered_by: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_role_granted")
+def send_role_granted(user_id: str, role: str) -> None:
+    """T3.42 — the role the person accepted has taken effect.
+
+    They pressed the button a second ago, so the letter looks redundant — and is
+    not, for the same reason `send_password_changed` goes to somebody who just
+    changed their password: **if it was not them**, this is the only thing that
+    says the account gained power over other people's data. A session taken over
+    can accept an offer; it cannot empty the owner's mailbox.
+
+    Called by: `api/roles.accept_offer`.
+    """
+    import os
+
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        _send(
+            user,
+            user.email,
+            "role_granted",
+            role=role,
+            # To the page holding password, passkeys and recovery codes — the
+            # remedy the letter names, rather than leaving the reader to find it.
+            cta_url=f"{base}/profile/keys",
+        )
+
+
+@celery_app.task(name="app.tasks.notifications.send_role_revoked")
+def send_role_revoked(user_id: str, role: str, reason: str) -> None:
+    """T3.42 — the role was taken away, and why.
+
+    The half that was missing until the owner asked for it: an offer sent a
+    letter and a withdrawal said nothing, so somebody who lost access to other
+    people's vaults found out by opening the cabinet. That is the asymmetry this
+    closes.
+
+    `reason` is required all the way from the admin screen — a withdrawal
+    without one is a log entry rather than an explanation, and the person losing
+    the access is exactly who needs the explanation.
+
+    Called by: `api/roles.revoke_role`.
+    """
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            return
+        # No CTA: there is nothing for the reader to do here. A button would
+        # have to lead somewhere, and every candidate page would imply the
+        # decision can be argued with from the interface.
+        _send(user, user.email, "role_revoked", role=role, reason=reason)
+
+
 @celery_app.task(name="app.tasks.notifications.send_channel_code")
 def send_channel_code(channel: str, value: str, code: str, locale: str | None) -> None:
     """T3.26 — deliver a confirmation code over whichever channel was chosen.

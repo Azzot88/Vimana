@@ -51,6 +51,10 @@
     "offerRole": "Proponer: {{role}}",
     "revokeRole": "Retirar: {{role}}",
     "roles": "Roles y propuestas",
+    "roleFilterAll": "Cualquier rol",
+    "roleFilterLabel": "Filtrar por rol",
+    "revokeReasonPrompt": "¿Por qué se retira este rol? Se informará a la persona y el motivo irá al diario.",
+    "revokeReasonRequired": "El motivo es obligatorio — se envía a la persona.",
     "rolesDesc": "A quién se le ha propuesto un rol y quién no ha respondido aún.",
     "arbiterOffered": "propuesto",
     "status": {
@@ -1318,6 +1322,8 @@
     "description": "Propuestas pendientes de respuesta. Las respondidas y retiradas están en el diario de cada cuenta, no aquí.",
     "empty": "Nadie está esperando respuesta.",
     "withdraw": "Retirar",
+    "withdrawReasonPrompt": "¿Por qué se retira esta propuesta? El motivo irá al diario.",
+    "withdrawReasonRequired": "El motivo es obligatorio.",
     "loadFailed": "No se pudieron cargar las propuestas",
     "withdrawFailed": "No se pudo retirar la propuesta",
     "col": {

@@ -66,6 +66,14 @@ _LETTERS: dict[str, dict[str, Any]] = {
     # and says nothing that implies the power has already arrived, because it
     # has not: `users.roles` is untouched until the person accepts (§9.1).
     "role_offered": {"cta": True, "facts": ["role", "offered_by"]},
+    # T3.42 pt.2 — the two ends of the same lifecycle. `role_granted` goes out
+    # when the person accepts: they just clicked it, but if it was not them,
+    # this letter is the only thing that says access changed — the same
+    # argument that sends `password_changed` to somebody who just changed it.
+    "role_granted": {"cta": True, "facts": ["role"]},
+    # `reason` is a fact and not prose: a withdrawal without one is a log entry,
+    # not an explanation, and the person losing access is the one who needs it.
+    "role_revoked": {"facts": ["role", "reason"]},
     "deal_status": {},
     "deadline_reminder": {},
 }
@@ -145,6 +153,14 @@ def sample_context(kind: str) -> dict[str, Any]:
             "role": "arbiter",
             "offered_by": "Alan Cherkasov — Дубай",
             "cta_url": "https://vimana.dealvault.club/profile/keys",
+        },
+        "role_granted": {
+            "role": "arbiter",
+            "cta_url": "https://vimana.dealvault.club/profile/keys",
+        },
+        "role_revoked": {
+            "role": "arbiter",
+            "reason": "Больше не в графике дежурств по спорам",
         },
         "deal_status": {"status": "in_transit"},
         "deadline_reminder": {},

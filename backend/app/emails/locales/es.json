@@ -142,6 +142,30 @@
     "cta": "Revisar cómo accedes",
     "note": "El lugar es aproximado y a menudo erróneo: las redes móviles y las VPN lo desplazan cientos de kilómetros. Este mensaje no es una suscripción y no se puede desactivar."
   },
+  "role_granted": {
+    "subject": "Vimana · El rol ya está en vigor",
+    "preheader": "Lo aceptaste, así que ha entrado en vigor",
+    "heading": "El rol ya está en vigor",
+    "body": [
+      "Aceptaste el rol y ya está en vigor. Desde ahora tu cuenta puede hacer lo que ese rol permite.",
+      "Si no fuiste tú quien lo aceptó, cambia de inmediato tu forma de entrar: el enlace de abajo lleva a tu contraseña, tus claves de dispositivo y tus códigos de recuperación."
+    ],
+    "facts_role": "rol",
+    "cta": "Revisar cómo entro",
+    "note": "Este mensaje se refiere al acceso a datos de otras personas, por lo que no es una suscripción y no se puede desactivar."
+  },
+  "role_revoked": {
+    "subject": "Vimana · Se ha retirado un rol",
+    "preheader": "El rol ya no se aplica a tu cuenta",
+    "heading": "Se ha retirado un rol",
+    "body": [
+      "El rol de abajo ya no se aplica a tu cuenta. El motivo indicado figura aquí mismo.",
+      "El resto de tu cuenta no cambia: tus tratos, tu identidad y tus formas de entrar quedan intactos."
+    ],
+    "facts_role": "rol",
+    "facts_reason": "motivo",
+    "note": "La retirada y su motivo quedan registrados en el diario de la plataforma. Este mensaje no es una suscripción y no se puede desactivar."
+  },
   "role_offered": {
     "subject": "Vimana · Se te ha propuesto un rol",
     "preheader": "Todavía no ha cambiado nada: esperamos tu respuesta",

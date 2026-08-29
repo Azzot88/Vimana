@@ -440,13 +440,28 @@ async def list_users(
         default=None,
         description="Optional substring filter on email. Case-insensitive.",
     ),
+    role: str | None = Query(
+        default=None,
+        description="Only accounts holding this role — `arbiter`, "
+        "`compliance_editor`, `superuser`.",
+    ),
 ):
     """T_TEST.3 — `email_contains` lets superuser find e2e test users
     (`@e2e.vimana.local`) or otherwise scope the list without pulling
-    thousands of rows."""
+    thousands of rows.
+
+    T3.42 — `role` answers "show me the arbiters". A **filter and not a sort**,
+    because `roles` is multi-valued: an account holding two roles has no place
+    in an ordering by role, and any rule invented for it ("the first one",
+    "the strongest") would be a fact about the sort, not about the account.
+    """
     base = select(User)
     if email_contains:
         base = base.where(User.email.ilike(f"%{email_contains}%"))
+    if role:
+        # `'arbiter' = ANY(users.roles)` — one operator on the array, no join,
+        # no unnesting.
+        base = base.where(User.roles.any(role))
     items, next_cursor = await paginate_desc(db, base, User, after, clamp_limit(limit))
     return Page(items=items, next_cursor=next_cursor)
 

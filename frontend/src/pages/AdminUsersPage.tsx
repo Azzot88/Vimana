@@ -21,6 +21,10 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('')
   const [showTestOnly, setShowTestOnly] = useState(false)
   const [emailFilter, setEmailFilter] = useState('')
+  /** T3.42 — «показать арбитров». A filter and not a sort: `roles` is
+   *  multi-valued, so an account holding two has no place in an ordering by
+   *  role. Empty string means every account. */
+  const [roleFilter, setRoleFilter] = useState<'' | UserRole>('')
   /** Offers made during this visit, per account. Deliberately not persisted:
    *  it reports what just happened and does not claim to be the account's
    *  state. The durable answer to "who has been offered what and has not
@@ -37,6 +41,7 @@ export default function AdminUsersPage() {
       const { data } = await listAllUsers({
         limit: 100,
         email_contains: showTestOnly ? E2E_MARKER : emailFilter || undefined,
+        role: roleFilter || undefined,
       })
       setUsers(data.items)
     } catch {
@@ -48,7 +53,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     load()
-  }, [showTestOnly])
+  }, [showTestOnly, roleFilter])
 
   /** T3.42 — offering and revoking are no longer one toggle.
    *
@@ -78,10 +83,30 @@ export default function AdminUsersPage() {
     }
   }
 
+  /** The reason is asked for, not optional: it goes into the journal and into
+   *  the letter the person receives, and the API refuses without one.
+   *
+   *  `prompt` deliberately, for now — the same shortcut the delete button on
+   *  this screen already takes with `confirm`. This is a superuser-only action
+   *  that happens a handful of times a year; a modal for it is polish, and the
+   *  owner asked for the mechanism first. */
+  const askReason = (): string | null => {
+    const reason = window.prompt(t('admin.revokeReasonPrompt') as string)
+    if (reason === null) return null
+    const trimmed = reason.trim()
+    if (!trimmed) {
+      setError(t('admin.revokeReasonRequired'))
+      return null
+    }
+    return trimmed
+  }
+
   const handleRevoke = async (userId: string, role: UserRole) => {
     setError('')
+    const reason = askReason()
+    if (reason === null) return
     try {
-      await revokeRole(userId, role)
+      await revokeRole(userId, role, reason)
       // Only this role comes off the row. Rebuilding it as `[]` would repeat
       // in the interface the exact bug the model change removed.
       setUsers((prev) =>
@@ -163,6 +188,22 @@ export default function AdminUsersPage() {
             </button>
           </>
         )}
+        {/* «Показать арбитров». Reloads on change rather than filtering the
+            page in hand: the list is paginated, so filtering client-side would
+            search only what happened to be fetched. */}
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value as '' | UserRole)}
+          aria-label={t('admin.roleFilterLabel') as string}
+          className="border border-navy/20 rounded-field px-3 py-1.5 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+        >
+          <option value="">{t('admin.roleFilterAll')}</option>
+          {[...OFFERABLE, 'superuser' as UserRole].map((r) => (
+            <option key={r} value={r}>
+              {t(`roles.names.${r}`)}
+            </option>
+          ))}
+        </select>
       </div>
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}

@@ -102,6 +102,8 @@ EVENT_CLASSES: tuple[EventClass, ...] = (
             # T3.42 — a change of what somebody may do with other people's data
             # cannot depend on a notification toggle.
             "role_offered",
+            "role_granted",
+            "role_revoked",
         ),
         mandatory=True,
     ),

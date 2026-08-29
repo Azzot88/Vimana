@@ -49,10 +49,19 @@ export default function AdminRolesPage() {
   }, [])
 
   const withdraw = async (offer: PendingOffer) => {
-    setBusy(offer.id)
     setError('')
+    // Same shortcut as the sibling screen, and the same reason: the API needs a
+    // reason, this happens a few times a year, and a modal for it is polish.
+    const raw = window.prompt(t('adminRoles.withdrawReasonPrompt') as string)
+    if (raw === null) return
+    const reason = raw.trim()
+    if (!reason) {
+      setError(t('adminRoles.withdrawReasonRequired') as string)
+      return
+    }
+    setBusy(offer.id)
     try {
-      await revokeRole(offer.subject_id, offer.role)
+      await revokeRole(offer.subject_id, offer.role, reason)
       await load()
     } catch {
       setError(t('adminRoles.withdrawFailed') as string)

@@ -10,13 +10,26 @@ Wording follows DESIGNGUIDELINES §9.1: until the answer comes back the API says
 from outside, because an account with an open offer is refused by every
 endpoint the role guards.
 
+Three letters, one per step, all in the mandatory security class: `role_offered`
+when it is proposed, `role_granted` when the person accepts, `role_revoked` —
+with the reason — when it is taken away. The third existed only after the owner
+asked for it, and its absence was the asymmetry worth naming: an offer wrote to
+the mailbox and a withdrawal said nothing, so losing access to other people's
+vaults was something you found out by opening the cabinet.
+
 Endpoints:
 - `POST   /api/admin/users/{user_id}/roles`          — offer
 - `DELETE /api/admin/users/{user_id}/roles/{role}`   — revoke a role or an offer
 - `GET    /api/admin/users/{user_id}/roles`          — the journal for one account
-- `GET    /api/me/roles`                             — my role and my open offers
+- `GET    /api/admin/role-offers`                    — every unanswered offer
+- `GET    /api/me/roles`                             — my roles and my open offers
 - `POST   /api/me/roles/{role}/accept`
 - `POST   /api/me/roles/{role}/decline`
+
+There is no endpoint listing the offerable roles. One existed and is gone: a
+role is **assigned, not requested**, so a route a member could read as "what can
+I ask for" is a wrong idea with a right implementation. The admin screen keeps
+the short list itself.
 """
 from __future__ import annotations
 
@@ -32,7 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core import roles as roles_core
 from app.core.database import get_db
-from app.core.permissions import OFFERABLE_ROLES, Permission, require_perm
+from app.core.permissions import Permission, require_perm
 from app.models.role_grant import RoleGrant, RoleGrantEvent
 from app.models.user import User
 
@@ -47,7 +60,11 @@ class OfferBody(BaseModel):
 
 
 class RevokeBody(BaseModel):
-    reason: str = Field(default="", max_length=2000)
+    # Required, and that is the point: the reason travels into the journal *and*
+    # into the letter the person receives. An audit entry without one is a log,
+    # and a letter that says "your access was withdrawn" with nothing after it
+    # is worse than no letter — it raises the question it refuses to answer.
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 class RoleGrantOut(BaseModel):
@@ -151,7 +168,7 @@ async def offer_role(
 async def revoke_role(
     user_id: uuid.UUID,
     role: str,
-    body: RevokeBody | None = None,
+    body: RevokeBody,
     actor: User = Depends(require_perm(Permission.ROLE_OFFER)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -159,15 +176,28 @@ async def revoke_role(
     if subject is None:
         raise HTTPException(status_code=404, detail="User not found")
 
+    was_held = role in (subject.roles or [])
+
     try:
-        grant = await roles_core.revoke(
-            db, subject, role, actor, body.reason if body else ""
-        )
+        grant = await roles_core.revoke(db, subject, role, actor, body.reason)
     except roles_core.RoleError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     await db.commit()
     await db.refresh(grant)
+
+    # Only when something was actually taken away. Withdrawing an offer nobody
+    # answered is not a loss of access, and a letter saying "a role has been
+    # withdrawn" to somebody who never held one would be a lie with a reason
+    # attached.
+    if was_held:
+        try:
+            from app.tasks.notifications import send_role_revoked
+
+            send_role_revoked.delay(str(subject.id), role, body.reason)
+        except Exception:
+            logger.exception("could not queue role-revoked letter for %s", subject.id)
+
     return (await _with_actor_names(db, [grant]))[0]
 
 
@@ -296,6 +326,14 @@ async def accept_offer(
 
     await db.commit()
     await db.refresh(grant)
+
+    try:
+        from app.tasks.notifications import send_role_granted
+
+        send_role_granted.delay(str(user.id), role)
+    except Exception:
+        logger.exception("could not queue role-granted letter for %s", user.id)
+
     return (await _with_actor_names(db, [grant]))[0]
 
 
@@ -313,16 +351,3 @@ async def decline_offer(
     await db.commit()
     await db.refresh(grant)
     return (await _with_actor_names(db, [grant]))[0]
-
-
-@router.get("/roles/offerable", response_model=list[str])
-async def offerable_roles(
-    _: User = Depends(require_perm(Permission.ROLE_OFFER)),
-):
-    """Which roles the admin screen may propose.
-
-    Served rather than duplicated in the frontend: a second copy of this list
-    would be wrong on the day a role is added, and wrong in the direction that
-    shows a role the backend then refuses.
-    """
-    return list(OFFERABLE_ROLES)

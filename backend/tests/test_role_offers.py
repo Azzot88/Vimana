@@ -202,6 +202,7 @@ async def test_withdrawing_an_unanswered_offer_does_not_clear_another_role(
         "DELETE",
         f"/api/admin/users/{user_id}/roles/compliance_editor",
         headers=superuser_headers,
+        json={"reason": "not needed after all"},
     )
 
     me = await client.get("/api/auth/me", headers=headers)
@@ -254,6 +255,7 @@ async def test_revoking_one_role_leaves_the_other(client, superuser_headers, sub
         "DELETE",
         f"/api/admin/users/{user_id}/roles/compliance_editor",
         headers=superuser_headers,
+        json={"reason": "moved off rules"},
     )
 
     mine = (await client.get("/api/me/roles", headers=headers)).json()
@@ -310,6 +312,44 @@ async def test_open_offers_are_listed_for_the_admin(client, superuser_headers, s
     await client.post("/api/me/roles/arbiter/accept", headers=headers)
     after = await client.get("/api/admin/role-offers", headers=superuser_headers)
     assert all(r["subject_id"] != str(user_id) for r in after.json())
+
+
+async def test_admin_can_list_only_the_arbiters(client, superuser_headers, subject):
+    """«Показать арбитров» — a filter, not a sort.
+
+    `roles` is multi-valued: an account holding two roles has no place in an
+    ordering by role, and any rule invented for it would be a fact about the
+    sort rather than about the account.
+    """
+    user_id, headers = subject
+    await client.post(
+        f"/api/admin/users/{user_id}/roles",
+        headers=superuser_headers,
+        json={"role": "arbiter"},
+    )
+
+    listed = await client.get(
+        "/api/admin/users", params={"role": "arbiter", "limit": 100},
+        headers=superuser_headers,
+    )
+    assert listed.status_code == 200
+    # The offer alone must not put anybody in the list — the filter reads the
+    # roles actually held, which is the same distinction the whole task is about.
+    assert all(str(user_id) != u["id"] for u in listed.json()["items"])
+
+    await client.post("/api/me/roles/arbiter/accept", headers=headers)
+    listed = await client.get(
+        "/api/admin/users", params={"role": "arbiter", "limit": 100},
+        headers=superuser_headers,
+    )
+    row = next(u for u in listed.json()["items"] if u["id"] == str(user_id))
+    assert "arbiter" in row["roles"]
+
+    other = await client.get(
+        "/api/admin/users", params={"role": "compliance_editor", "limit": 100},
+        headers=superuser_headers,
+    )
+    assert all(str(user_id) != u["id"] for u in other.json()["items"])
 
 
 async def test_open_offers_are_not_public(client, subject):
@@ -478,6 +518,62 @@ async def test_letter_goes_out_with_every_toggle_off(
     assert "assigned" not in lowered
 
 
+async def test_revoking_without_a_reason_is_refused(client, superuser_headers, subject):
+    """The reason travels into the journal **and** into the letter.
+
+    An audit entry without one is a log, and a letter saying "your access was
+    withdrawn" with nothing after it is worse than no letter: it raises the
+    question it then refuses to answer.
+    """
+    user_id, headers = subject
+    await client.post(
+        f"/api/admin/users/{user_id}/roles",
+        headers=superuser_headers,
+        json={"role": "arbiter"},
+    )
+    await client.post("/api/me/roles/arbiter/accept", headers=headers)
+
+    for body in ({}, {"reason": ""}):
+        resp = await client.request(
+            "DELETE",
+            f"/api/admin/users/{user_id}/roles/arbiter",
+            headers=superuser_headers,
+            json=body,
+        )
+        assert resp.status_code == 422, resp.text
+
+    # And the role is still there — a refused request must change nothing.
+    mine = (await client.get("/api/me/roles", headers=headers)).json()
+    assert mine["roles"] == ["arbiter"]
+
+
+async def test_all_three_letters_render_in_every_locale():
+    """`role_offered`, `role_granted`, `role_revoked` — one per step.
+
+    The third is the one that did not exist until the owner asked: an offer
+    wrote to the mailbox and a withdrawal said nothing, so losing access to
+    other people's vaults was something you found out by opening the cabinet.
+    """
+    from app.core.email_templates import available_locales, render
+
+    for locale in available_locales():
+        granted = render("role_granted", locale, role="arbiter", cta_url="https://x.test")
+        revoked = render(
+            "role_revoked", locale, role="arbiter", reason="No longer on the rota"
+        )
+        assert granted.subject and granted.text
+        assert revoked.subject and revoked.text
+        # The reason is not decoration — it has to survive into what is read.
+        assert "No longer on the rota" in revoked.text
+
+
+async def test_all_three_letters_are_mandatory_security():
+    from app.core.notification_prefs import class_of
+
+    for kind in ("role_offered", "role_granted", "role_revoked"):
+        assert class_of(kind) == "security", kind
+
+
 async def test_letter_is_registered_in_every_catalogue():
     """`test_email_templates` enforces this for all letters; asserted here too
     because a security letter that renders in English for a Russian-speaking
@@ -517,7 +613,10 @@ async def test_every_role_change_left_a_row(client, superuser_headers, subject, 
     )
     await client.post("/api/me/roles/arbiter/accept", headers=headers)
     await client.request(
-        "DELETE", f"/api/admin/users/{user_id}/roles/arbiter", headers=superuser_headers
+        "DELETE",
+        f"/api/admin/users/{user_id}/roles/arbiter",
+        headers=superuser_headers,
+        json={"reason": "cycle complete"},
     )
 
     async with session_maker() as db:
