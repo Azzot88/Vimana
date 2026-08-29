@@ -460,11 +460,19 @@ async def test_cannot_accept_what_was_never_offered(client, subject):
     assert (await client.get("/api/admin/disputes", headers=headers)).status_code == 403
 
 
-async def test_offerable_roles_are_served_not_guessed(client, superuser_headers):
-    resp = await client.get("/api/roles/offerable", headers=superuser_headers)
-    assert resp.status_code == 200
-    assert set(resp.json()) == {"arbiter", "compliance_editor"}
-    assert "superuser" not in resp.json()
+async def test_a_role_cannot_be_asked_for(client, subject):
+    """There is no route a member could read as "what can I request".
+
+    `GET /api/roles/offerable` existed and is gone (owner's decision
+    2026-08-29): a role is **assigned, not requested**, and an endpoint that
+    lists what one might be given describes a flow this product does not have.
+    The list of two lives on the admin screen instead.
+
+    Asserted rather than merely deleted, because the difference between "we
+    removed it" and "it must not come back" is the whole point of the decision.
+    """
+    _, headers = subject
+    assert (await client.get("/api/roles/offerable", headers=headers)).status_code == 404
 
 
 # --- the letter -------------------------------------------------------------
