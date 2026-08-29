@@ -21,7 +21,7 @@ async def _make_keyless(session_maker, *, role: str = "user") -> str:
             email=f"keyless-{uuid.uuid4().hex[:8]}@vimana.test",
             password_hash=None,
             display_name="Keyless",
-            role=role,
+            roles=[] if role == "user" else [role],
         )
         db.add(user)
         await db.commit()

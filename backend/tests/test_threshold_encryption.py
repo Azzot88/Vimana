@@ -101,7 +101,7 @@ async def _e2e_deal(client, session_maker):
             email=unique_email("arb"),
             password_hash=hash_password(SEED_PASSWORD),
             display_name="Arb",
-            role="arbiter",
+            roles=["arbiter"],
             nostr_pubkey=arb_npub,
             nsec_encrypted=arb_ct,
             nsec_nonce=arb_nonce,

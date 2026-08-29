@@ -73,7 +73,7 @@ async def _open_dispute(client, session_maker):
             email=unique_email("g-arb"),
             password_hash=hash_password(SEED_PASSWORD),
             display_name="GArb",
-            role="arbiter",
+            roles=["arbiter"],
         )
         db.add(arb)
         await db.commit()

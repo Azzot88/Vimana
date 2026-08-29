@@ -31,7 +31,14 @@ from app.core.permissions import (
 def _make_user(role: str = "user", can_carry: bool = True, can_send: bool = True):
     from types import SimpleNamespace
 
-    return SimpleNamespace(role=role, can_carry=can_carry, can_send=can_send)
+    # T3.42 — `perms_of` reads `roles`. The `role=` argument stays as the call
+    # sites' shorthand: each of them names exactly one role, and an unknown one
+    # must still land in the list so the fallback path is exercised.
+    return SimpleNamespace(
+        roles=[] if role == "user" else [role],
+        can_carry=can_carry,
+        can_send=can_send,
+    )
 
 
 def test_base_user_gets_capability_permissions():

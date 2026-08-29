@@ -8,7 +8,7 @@ proposed it.
 
 The long-lived seed accounts are deliberately not used as subjects here — each
 test makes its own account. `e2e/specs/admin-guard.spec.ts` asserts that the
-shared account stays `role='user'`, and a test that borrows it and crashes
+shared account holds no role, and a test that borrows it and crashes
 half-way would turn that spec red for reasons no one would find.
 """
 from __future__ import annotations
@@ -178,9 +178,9 @@ async def test_revoking_a_live_role_is_journalled_like_granting_it(
 async def test_withdrawing_an_unanswered_offer_does_not_clear_another_role(
     client, superuser_headers, subject
 ):
-    """A withdrawn offer must not touch `users.role`.
+    """A withdrawn offer must not touch `users.roles`.
 
-    The account may already hold a different role, and clearing the column here
+    The account may already hold a different role, and clearing the list here
     would revoke that one silently — a bug that looks like nothing at all until
     somebody loses access they never gave up.
     """

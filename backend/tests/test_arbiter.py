@@ -209,7 +209,7 @@ async def test_offering_a_role_is_superuser_only(client, superuser_headers, send
 
     The shape of the check is the same as before — a non-superuser must not get
     near it — but the outcome is not: an offer grants nothing, so the assertion
-    that used to read `role == "arbiter"` now reads `role == "user"`, and stays
+    that used to read `role == "arbiter"` now reads `roles == []`, and stays
     that way until somebody accepts. Acceptance itself is exercised in
     `test_role_offers.py`; the seed account is left untouched here on purpose,
     because `e2e/specs/admin-guard.spec.ts` depends on its role.
