@@ -2,6 +2,7 @@ import api from './client'
 import type { Page } from './pagination'
 import type { User } from './auth'
 import type { VaultMessage } from './dealvault'
+import type { RoleGrant } from './roles'
 
 export type DisputeStatus = 'open' | 'claimed' | 'resolved'
 
@@ -44,10 +45,21 @@ export const listAllUsers = (params?: {
   email_contains?: string
 }) => api.get<Page<User>>('/api/admin/users', { params })
 
-export const promoteArbiter = (userId: string, isArbiter: boolean) =>
-  api.post<User>(`/api/admin/users/${userId}/promote-arbiter`, {
-    is_arbiter: isArbiter,
+/** T3.42 — propose a role. Grants nothing: the account keeps exactly the
+ *  rights it had until the person accepts, so the caller must not paint the
+ *  new role onto the row. */
+export const offerRole = (userId: string, role: string, reason = '') =>
+  api.post<RoleGrant>(`/api/admin/users/${userId}/roles`, { role, reason })
+
+/** Take back a live role, or an offer nobody answered. Both are journalled. */
+export const revokeRole = (userId: string, role: string, reason = '') =>
+  api.delete<RoleGrant>(`/api/admin/users/${userId}/roles/${role}`, {
+    data: { reason },
   })
+
+/** Every event for one account, newest first — where the role in force came from. */
+export const roleJournal = (userId: string) =>
+  api.get<RoleGrant[]>(`/api/admin/users/${userId}/roles`)
 
 /** T_TEST.3 — superuser hard-delete for e2e/junk cleanup. Cascade. */
 export const deleteUser = (userId: string) =>

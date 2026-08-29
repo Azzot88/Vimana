@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
-import { deleteUser, listAllUsers, promoteArbiter } from '../api/admin'
+import { deleteUser, listAllUsers, offerRole, revokeRole } from '../api/admin'
 import type { User } from '../api/auth'
 import MonoText from '../components/MonoText'
 
@@ -16,6 +16,11 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('')
   const [showTestOnly, setShowTestOnly] = useState(false)
   const [emailFilter, setEmailFilter] = useState('')
+  /** Offers made during this visit. Deliberately not persisted and not
+   *  reloaded: it reports what just happened, and does not claim to be the
+   *  account's state — that lives in the journal, which the row does not
+   *  fetch. A chip that survived a reload would be a claim, not a receipt. */
+  const [offered, setOffered] = useState<Set<string>>(new Set())
 
   if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
 
@@ -38,17 +43,42 @@ export default function AdminUsersPage() {
     load()
   }, [showTestOnly])
 
-  const handleToggle = async (userId: string, current: boolean) => {
+  /** T3.42 — offering and revoking are no longer one toggle.
+   *
+   *  They stopped being symmetrical: a revocation takes effect immediately,
+   *  while an offer takes effect only if the person accepts. Painting the new
+   *  role onto the row after an offer — which the old toggle did — would state
+   *  something the backend has not done, and the row would go back on reload.
+   *  So an offer changes nothing here except a note saying it is waiting.
+   */
+  const handleOffer = async (userId: string) => {
     setError('')
     try {
-      await promoteArbiter(userId, !current)
+      await offerRole(userId, 'arbiter')
+      setOffered((prev) => new Set(prev).add(userId))
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('admin.promoteError'))
+    }
+  }
+
+  const handleRevoke = async (userId: string) => {
+    setError('')
+    try {
+      await revokeRole(userId, 'arbiter')
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, role: current ? 'user' : 'arbiter' } : u,
-        ),
+        prev.map((u) => (u.id === userId ? { ...u, role: 'user' } : u)),
       )
-    } catch {
-      setError(t('admin.promoteError'))
+      setOffered((prev) => {
+        const next = new Set(prev)
+        next.delete(userId)
+        return next
+      })
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('admin.promoteError'))
     }
   }
 
@@ -173,6 +203,11 @@ export default function AdminUsersPage() {
                             carrier
                           </span>
                         )}
+                        {offered.has(u.id) && u.role !== 'arbiter' && (
+                          <span className="text-xs font-mono border border-amber/50 text-amber px-2 py-0.5 rounded">
+                            {t('admin.arbiterOffered')}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -180,9 +215,12 @@ export default function AdminUsersPage() {
                         {u.id !== me.id && u.role !== 'superuser' && (
                           <button
                             onClick={() =>
-                              handleToggle(u.id, u.role === 'arbiter')
+                              u.role === 'arbiter'
+                                ? handleRevoke(u.id)
+                                : handleOffer(u.id)
                             }
-                            className={`text-xs font-display font-medium px-3 py-1 rounded-field ${
+                            disabled={offered.has(u.id) && u.role !== 'arbiter'}
+                            className={`text-xs font-display font-medium px-3 py-1 rounded-field disabled:opacity-50 ${
                               u.role === 'arbiter'
                                 ? 'bg-navy/10 text-navy hover:bg-navy/20'
                                 : 'bg-amber text-white hover:opacity-90'
@@ -190,7 +228,7 @@ export default function AdminUsersPage() {
                           >
                             {u.role === 'arbiter'
                               ? t('admin.revokeArbiter')
-                              : t('admin.makeArbiter')}
+                              : t('admin.offerArbiter')}
                           </button>
                         )}
                         {u.id !== me.id && u.role !== 'superuser' && (

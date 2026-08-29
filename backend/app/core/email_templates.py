@@ -62,6 +62,10 @@ _LETTERS: dict[str, dict[str, Any]] = {
     # values, so a letter without geolocation is simply a shorter letter rather
     # than one with a blank line where the place should be.
     "new_device": {"cta": True, "facts": ["device", "place", "when"]},
+    # T3.42. The letter names the role, who proposed it and where to answer —
+    # and says nothing that implies the power has already arrived, because it
+    # has not: `users.role` is untouched until the person accepts (§9.1).
+    "role_offered": {"cta": True, "facts": ["role", "offered_by"]},
     "deal_status": {},
     "deadline_reminder": {},
 }
@@ -135,6 +139,11 @@ def sample_context(kind: str) -> dict[str, Any]:
             "device": "Chrome on macOS",
             "place": "Dubai, United Arab Emirates",
             "when": "2026-08-08 20:28 UTC",
+            "cta_url": "https://vimana.dealvault.club/profile/keys",
+        },
+        "role_offered": {
+            "role": "arbiter",
+            "offered_by": "Alan Cherkasov — Дубай",
             "cta_url": "https://vimana.dealvault.club/profile/keys",
         },
         "deal_status": {"status": "in_transit"},

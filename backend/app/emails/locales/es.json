@@ -141,5 +141,18 @@
     "facts_when": "hora (UTC)",
     "cta": "Revisar cómo accedes",
     "note": "El lugar es aproximado y a menudo erróneo: las redes móviles y las VPN lo desplazan cientos de kilómetros. Este mensaje no es una suscripción y no se puede desactivar."
+  },
+  "role_offered": {
+    "subject": "Vimana · Se te ha propuesto un rol",
+    "preheader": "Todavía no ha cambiado nada: esperamos tu respuesta",
+    "heading": "Se te ha propuesto un rol",
+    "body": [
+      "Alguien en la plataforma te ha propuesto un rol. En tu cuenta no ha cambiado nada: el rol solo empieza a aplicarse si lo aceptas, y hasta entonces tienes exactamente los mismos permisos que antes.",
+      "Abre tu cuenta para ver qué permite el rol, quién lo ha propuesto, y aceptarlo o rechazarlo."
+    ],
+    "facts_role": "rol",
+    "facts_offered_by": "propuesto por",
+    "cta": "Ver la propuesta",
+    "note": "Si no lo esperabas, recházalo: rechazar no cambia nada y no requiere explicación. Este mensaje se refiere al acceso a datos de otras personas, por lo que no es una suscripción y no se puede desactivar."
   }
 }

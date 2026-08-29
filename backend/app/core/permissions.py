@@ -43,9 +43,20 @@ class Permission(str, enum.Enum):
     NOSTR_REPUBLISH = "nostr:republish"  # T3.5 pt.2 — superuser force republish
     NOTICES_MANAGE = "notices:manage"  # T_UX.2 pt.2 — CRUD RouteNote/PlatformNotice
 
+    # T3.11.02 — corridor rules. Writing and publishing are separate powers:
+    # a published rule is a checkable statement the platform makes about
+    # somebody else's law, and the person drafting it is not automatically the
+    # person who should stand behind it.
+    RULES_EDIT = "rules:edit"
+    RULES_PUBLISH = "rules:publish"
+
     # Superuser surface — User Zero only
     USERS_MANAGE = "users:manage"
-    ARBITER_ASSIGN = "arbiter:assign"
+    # T3.42 — offering *any* role, not just the arbiter's. Renamed from
+    # `arbiter:assign` with the endpoint it guarded: the old name described one
+    # role and one verb, and by the time a second role existed it would have
+    # been guarding something it did not say.
+    ROLE_OFFER = "role:offer"
     # T3.40 — business-logic parameters. Deliberately NOT in the arbiter bundle:
     # resolving a dispute and setting the fee everyone pays are different powers.
     PARAMS_MANAGE = "params:manage"
@@ -66,7 +77,21 @@ class Permission(str, enum.Enum):
 class Role(str, enum.Enum):
     USER = "user"
     ARBITER = "arbiter"
+    # T3.42 — declared here rather than in T3.11.02, which is the task that
+    # actually uses it. Deliberate: that task would otherwise have had to hand
+    # the role out the old way — silently, by writing the column — and a second
+    # role granted through the hole this task exists to close is two holes.
+    COMPLIANCE_EDITOR = "compliance_editor"
     SUPERUSER = "superuser"
+
+
+#: Roles a superuser may offer. `USER` is absent because it is not a role that
+#: gets offered — it is what an account is when it holds none, and "offering"
+#: it would be a revocation wearing the wrong word.
+OFFERABLE_ROLES: tuple[str, ...] = (
+    Role.ARBITER.value,
+    Role.COMPLIANCE_EDITOR.value,
+)
 
 
 _ARBITER_PERMS: frozenset[Permission] = frozenset({
@@ -81,9 +106,18 @@ _ARBITER_PERMS: frozenset[Permission] = frozenset({
 
 _SUPERUSER_PERMS: frozenset[Permission] = frozenset(Permission)  # all
 
+# T3.11.02 — drafts rules and sends them to review. `RULES_PUBLISH` is
+# deliberately absent: publishing is what turns a draft into a claim the
+# platform makes, and it stays with the superuser until somebody decides
+# otherwise.
+_COMPLIANCE_EDITOR_PERMS: frozenset[Permission] = frozenset({
+    Permission.RULES_EDIT,
+})
+
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.USER: frozenset(),
     Role.ARBITER: _ARBITER_PERMS,
+    Role.COMPLIANCE_EDITOR: _COMPLIANCE_EDITOR_PERMS,
     Role.SUPERUSER: _SUPERUSER_PERMS,
 }
 

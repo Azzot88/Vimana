@@ -44,3 +44,4 @@ from app.models.rules import (  # noqa: F401,E402
     DocumentRequirement, Jurisdiction, JurisdictionKind, ObtainedBy,
     RuleDirection, RuleSection, RuleSet, RuleSource, RuleStatus,
 )
+from app.models.role_grant import RoleGrant, RoleGrantEvent  # noqa: F401,E402

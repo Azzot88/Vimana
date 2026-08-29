@@ -48,7 +48,8 @@
     "backToDisputes": "Volver a disputas",
     "arbiterAudit": "Cada apertura queda registrada en el chat para ambas partes.",
     "systemMessage": "sistema",
-    "makeArbiter": "Nombrar árbitro",
+    "offerArbiter": "Proponer el rol de árbitro",
+    "arbiterOffered": "propuesto",
     "revokeArbiter": "Revocar árbitro",
     "status": {
       "open": "Abierta",
@@ -1309,5 +1310,26 @@
   "disputes": {
     "none": "No hay disputas abiertas.",
     "mine": "Mis disputas"
+  },
+  "roles": {
+    "title": "Roles",
+    "description": "Un rol da acceso a datos de otras personas, por eso se propone en lugar de asignarse: hasta que lo aceptes, en tu cuenta no cambia nada. Cada propuesta, respuesta y retirada queda registrada en un diario.",
+    "current": "Tu rol:",
+    "offeredTitle": "Se te ha propuesto el rol de {{role}}",
+    "offeredBy": "Propuesto por {{name}}",
+    "notYet": "Todavía no ha cambiado nada. El rol solo empieza a aplicarse cuando lo aceptas.",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "loadFailed": "No se pudieron cargar tus roles",
+    "answerFailed": "No se pudo enviar tu respuesta",
+    "names": {
+      "arbiter": "árbitro",
+      "compliance_editor": "editor de reglas",
+      "user": "miembro"
+    },
+    "what": {
+      "arbiter": "Resuelve disputas y, cuando una parte le da acceso, lee la caja fuerte de ese trato. Cada lectura queda escrita en la cadena del trato y se anuncia en su chat.",
+      "compliance_editor": "Redacta las reglas del corredor y las envía a revisión. Publicar una regla es un permiso aparte y no está incluido."
+    }
   }
 }

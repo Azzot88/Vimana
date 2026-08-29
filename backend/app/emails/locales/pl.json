@@ -141,5 +141,18 @@
     "facts_when": "czas (UTC)",
     "cta": "Sprawdź sposoby logowania",
     "note": "Miejsce jest przybliżone i często błędne: sieci komórkowe i VPN przesuwają je o setki kilometrów. Ten list nie jest subskrypcją i nie da się go wyłączyć."
+  },
+  "role_offered": {
+    "subject": "Vimana · Zaproponowano Ci rolę",
+    "preheader": "Nic się jeszcze nie zmieniło — czekamy na Twoją odpowiedź",
+    "heading": "Zaproponowano Ci rolę",
+    "body": [
+      "Ktoś na platformie zaproponował Ci rolę. W Twoim koncie nic się nie zmieniło: rola zacznie obowiązywać dopiero wtedy, gdy ją przyjmiesz, a do tego czasu masz dokładnie te same uprawnienia co wcześniej.",
+      "Otwórz swoje konto, aby zobaczyć, co daje ta rola i kto ją zaproponował, oraz przyjąć ją lub odrzucić."
+    ],
+    "facts_role": "rola",
+    "facts_offered_by": "zaproponował",
+    "cta": "Zobacz propozycję",
+    "note": "Jeśli się tego nie spodziewałeś — odrzuć: odrzucenie niczego nie zmienia i nie wymaga wyjaśnień. Ten list dotyczy dostępu do cudzych danych, więc nie jest subskrypcją i nie da się go wyłączyć."
   }
 }

@@ -57,7 +57,8 @@
     "backToDisputes": "Back to disputes",
     "arbiterAudit": "Every read is logged and announced in the chat to both parties.",
     "systemMessage": "system",
-    "makeArbiter": "Make arbiter",
+    "offerArbiter": "Offer arbiter",
+    "arbiterOffered": "offered",
     "revokeArbiter": "Revoke arbiter",
     "status": {
       "open": "Open",
@@ -1353,5 +1354,26 @@
   "disputes": {
     "none": "No open disputes.",
     "mine": "My disputes"
+  },
+  "roles": {
+    "title": "Roles",
+    "description": "A role gives access to other people's data, so it is proposed rather than assigned: nothing changes for your account until you accept. Every offer, answer and withdrawal is written into a journal.",
+    "current": "Your role:",
+    "offeredTitle": "You have been offered the role of {{role}}",
+    "offeredBy": "Proposed by {{name}}",
+    "notYet": "Nothing has changed yet. The role starts applying only when you accept it.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "loadFailed": "Could not load your roles",
+    "answerFailed": "Could not send your answer",
+    "names": {
+      "arbiter": "arbiter",
+      "compliance_editor": "rules editor",
+      "user": "member"
+    },
+    "what": {
+      "arbiter": "Resolves disputes and, when a party opens it, reads the vault of that deal. Every such read is written into the deal's chain and announced in its chat.",
+      "compliance_editor": "Drafts corridor rules and sends them to review. Publishing a rule is a separate power and is not included."
+    }
   }
 }

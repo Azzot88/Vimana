@@ -99,6 +99,9 @@ EVENT_CLASSES: tuple[EventClass, ...] = (
             "new_device",
             "platform_copy_deleted",
             "archive_window_opened",
+            # T3.42 — a change of what somebody may do with other people's data
+            # cannot depend on a notification toggle.
+            "role_offered",
         ),
         mandatory=True,
     ),

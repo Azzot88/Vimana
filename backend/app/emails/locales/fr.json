@@ -141,5 +141,18 @@
     "facts_when": "heure (UTC)",
     "cta": "Vérifier vos moyens de connexion",
     "note": "Le lieu est approximatif et souvent faux : les réseaux mobiles et les VPN peuvent le déplacer de plusieurs centaines de kilomètres. Ce message n'est pas un abonnement et ne peut pas être désactivé."
+  },
+  "role_offered": {
+    "subject": "Vimana · Un rôle vous est proposé",
+    "preheader": "Rien n'a encore changé — nous attendons votre réponse",
+    "heading": "Un rôle vous est proposé",
+    "body": [
+      "Quelqu'un sur la plateforme vous propose un rôle. Rien n'a changé dans votre compte : le rôle ne prend effet que si vous l'acceptez, et d'ici là vous avez exactement les mêmes droits qu'avant.",
+      "Ouvrez votre compte pour voir ce que le rôle permet, qui l'a proposé, et l'accepter ou le refuser."
+    ],
+    "facts_role": "rôle",
+    "facts_offered_by": "proposé par",
+    "cta": "Voir la proposition",
+    "note": "Si vous ne vous y attendiez pas, refusez : un refus ne change rien et n'a pas à être justifié. Ce message concerne l'accès aux données d'autrui ; ce n'est pas un abonnement et il ne peut pas être désactivé."
   }
 }

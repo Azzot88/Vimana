@@ -11,7 +11,12 @@ export interface TokenResponse {
   token_type: string
 }
 
-export type UserRole = 'user' | 'arbiter' | 'superuser'
+// T3.42 — `compliance_editor` joins the set. The type is a statement about what
+// the backend can return, so leaving it out would not have been "one fewer
+// role to handle": it would have been a lie the compiler enforces, and every
+// `role === 'arbiter'` branch would keep compiling while a real account fell
+// through all of them.
+export type UserRole = 'user' | 'arbiter' | 'compliance_editor' | 'superuser'
 
 /** T3.32 — event class → channel → wanted. Keys are not enumerated on purpose:
  *  the server decides which classes are shown and which channels are live, and

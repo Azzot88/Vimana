@@ -9,7 +9,11 @@ export const Permission = {
   VAULT_READ_AS_ARBITER: 'vault:read_as_arbiter',
   DISPUTE_LIST_ADMIN: 'dispute:list_admin',
   USERS_MANAGE: 'users:manage',
-  ARBITER_ASSIGN: 'arbiter:assign',
+  // T3.42 — renamed with the endpoint it guards: the power is offering *any*
+  // role, and the old name described one role and one verb.
+  ROLE_OFFER: 'role:offer',
+  RULES_EDIT: 'rules:edit',
+  RULES_PUBLISH: 'rules:publish',
 } as const
 
 export type Permission = (typeof Permission)[keyof typeof Permission]
@@ -24,6 +28,7 @@ const ARBITER_PERMS: readonly Permission[] = [
 const ROLE_PERMS: Record<UserRole, readonly Permission[]> = {
   user: [],
   arbiter: ARBITER_PERMS,
+  compliance_editor: [Permission.RULES_EDIT],
   superuser: Object.values(Permission),
 }
 

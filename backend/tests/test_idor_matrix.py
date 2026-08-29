@@ -197,9 +197,16 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("GET", "/api/admin/deals/{deal_id}/vault"): Case(
         DENIED, "the whole point of T3.2: reading a vault as staff is gated"
     ),
-    ("POST", "/api/admin/users/{user_id}/promote-arbiter"): Case(
+    # T3.42 — offering, revoking and reading the role journal. All three are
+    # superuser-only, and the journal deliberately so: who granted somebody
+    # power over other people's data is not public.
+    ("POST", "/api/admin/users/{user_id}/roles"): Case(
+        DENIED, "superuser-only", json={"role": "arbiter"}
+    ),
+    ("DELETE", "/api/admin/users/{user_id}/roles/arbiter"): Case(
         DENIED, "superuser-only"
     ),
+    ("GET", "/api/admin/users/{user_id}/roles"): Case(DENIED, "superuser-only"),
     ("DELETE", "/api/admin/users/{user_id}"): Case(DENIED, "superuser-only"),
     # ---- platform parameters (T3.40) -----------------------------------
     ("GET", "/api/admin/params/{key}/history"): Case(

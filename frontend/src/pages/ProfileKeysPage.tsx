@@ -4,6 +4,7 @@ import { me, type User } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import KeypairSection from '../components/KeypairSection'
 import PasskeySection from '../components/PasskeySection'
+import RoleOfferSection from '../components/RoleOfferSection'
 import SecuritySection from '../components/SecuritySection'
 
 /**
@@ -48,6 +49,11 @@ export default function ProfileKeysPage() {
           passphrase field. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <div className="space-y-4">
+          {/* T3.42 — first in the column, and only when there is something to
+              answer: an open offer is a question addressed to this person, and
+              a question does not belong below the passphrase field. The section
+              renders nothing when there is no offer and no role. */}
+          <RoleOfferSection />
           {user && <SecuritySection user={user} onChanged={refreshUser} />}
           <PasskeySection />
         </div>

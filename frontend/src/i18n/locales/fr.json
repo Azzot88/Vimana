@@ -48,7 +48,8 @@
     "backToDisputes": "Retour aux litiges",
     "arbiterAudit": "Chaque ouverture est enregistrée dans le chat des deux parties.",
     "systemMessage": "système",
-    "makeArbiter": "Nommer arbitre",
+    "offerArbiter": "Proposer le rôle d’arbitre",
+    "arbiterOffered": "proposé",
     "revokeArbiter": "Révoquer l'arbitre",
     "status": {
       "open": "Ouvert",
@@ -1309,5 +1310,26 @@
   "disputes": {
     "none": "Aucun litige en cours.",
     "mine": "Mes litiges"
+  },
+  "roles": {
+    "title": "Rôles",
+    "description": "Un rôle donne accès aux données d'autrui : il est donc proposé et non attribué. Tant que vous ne l'acceptez pas, rien ne change dans votre compte. Chaque proposition, réponse et retrait est inscrit dans un journal.",
+    "current": "Votre rôle :",
+    "offeredTitle": "Le rôle de {{role}} vous est proposé",
+    "offeredBy": "Proposé par {{name}}",
+    "notYet": "Rien n'a encore changé. Le rôle ne prend effet qu'une fois que vous l'avez accepté.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "loadFailed": "Impossible de charger vos rôles",
+    "answerFailed": "Impossible d'envoyer votre réponse",
+    "names": {
+      "arbiter": "arbitre",
+      "compliance_editor": "rédacteur des règles",
+      "user": "membre"
+    },
+    "what": {
+      "arbiter": "Tranche les litiges et, lorsqu'une partie y donne accès, lit le coffre de cette transaction. Chaque lecture est inscrite dans la chaîne de la transaction et annoncée dans son fil de discussion.",
+      "compliance_editor": "Rédige les règles du corridor et les envoie en relecture. Publier une règle est un pouvoir distinct, non inclus ici."
+    }
   }
 }

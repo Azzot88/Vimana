@@ -204,31 +204,44 @@ async def test_admin_users_lists_all_for_superuser(client, superuser_headers):
     assert "items" in resp.json()
 
 
-async def test_promote_arbiter_only_by_superuser(client, superuser_headers, sender_headers):
-    # Sender (non-superuser) tries to promote arbitrary user → 403
+async def test_offering_a_role_is_superuser_only(client, superuser_headers, sender_headers):
+    """T3.42 replaced `promote-arbiter` with an offer.
+
+    The shape of the check is the same as before — a non-superuser must not get
+    near it — but the outcome is not: an offer grants nothing, so the assertion
+    that used to read `role == "arbiter"` now reads `role == "user"`, and stays
+    that way until somebody accepts. Acceptance itself is exercised in
+    `test_role_offers.py`; the seed account is left untouched here on purpose,
+    because `e2e/specs/admin-guard.spec.ts` depends on its role.
+    """
     me_r = await client.get("/api/auth/me", headers=sender_headers)
     target_id = me_r.json()["id"]
+
     forbidden = await client.post(
-        f"/api/admin/users/{target_id}/promote-arbiter",
+        f"/api/admin/users/{target_id}/roles",
         headers=sender_headers,
-        json={"is_arbiter": True},
+        json={"role": "arbiter"},
     )
     assert forbidden.status_code == 403
 
-    # Superuser can toggle it
-    ok = await client.post(
-        f"/api/admin/users/{target_id}/promote-arbiter",
+    offered = await client.post(
+        f"/api/admin/users/{target_id}/roles",
         headers=superuser_headers,
-        json={"is_arbiter": True},
+        json={"role": "arbiter", "reason": "test"},
     )
-    assert ok.status_code == 200
-    assert ok.json()["role"] == "arbiter"
+    assert offered.status_code == 201
+    assert offered.json()["event"] == "offered"
 
-    # Revert
-    revert = await client.post(
-        f"/api/admin/users/{target_id}/promote-arbiter",
+    # The offer did not move the account.
+    still = await client.get("/api/auth/me", headers=sender_headers)
+    assert still.json()["role"] == "user"
+
+    # Take it back, so the seed account ends the test as it started.
+    revoked = await client.request(
+        "DELETE",
+        f"/api/admin/users/{target_id}/roles/arbiter",
         headers=superuser_headers,
-        json={"is_arbiter": False},
+        json={"reason": "test cleanup"},
     )
-    assert revert.status_code == 200
-    assert revert.json()["role"] == "user"
+    assert revoked.status_code == 200
+    assert revoked.json()["event"] == "revoked"

@@ -48,7 +48,8 @@
     "backToDisputes": "Do sporów",
     "arbiterAudit": "Każde otwarcie jest odnotowane w czacie dla obu stron.",
     "systemMessage": "system",
-    "makeArbiter": "Uczyń arbitrem",
+    "offerArbiter": "Zaproponuj rolę arbitra",
+    "arbiterOffered": "zaproponowano",
     "revokeArbiter": "Odbierz arbitra",
     "status": {
       "open": "Otwarty",
@@ -1310,5 +1311,26 @@
   "disputes": {
     "none": "Brak otwartych sporów.",
     "mine": "Moje spory"
+  },
+  "roles": {
+    "title": "Role",
+    "description": "Rola daje dostęp do cudzych danych, dlatego jest proponowana, a nie przydzielana: dopóki jej nie przyjmiesz, w Twoim koncie nic się nie zmienia. Każda propozycja, odpowiedź i cofnięcie trafiają do dziennika.",
+    "current": "Twoja rola:",
+    "offeredTitle": "Zaproponowano Ci rolę: {{role}}",
+    "offeredBy": "Zaproponował {{name}}",
+    "notYet": "Nic się jeszcze nie zmieniło. Rola zacznie obowiązywać dopiero wtedy, gdy ją przyjmiesz.",
+    "accept": "Przyjmij",
+    "decline": "Odrzuć",
+    "loadFailed": "Nie udało się wczytać Twoich ról",
+    "answerFailed": "Nie udało się wysłać odpowiedzi",
+    "names": {
+      "arbiter": "arbiter",
+      "compliance_editor": "redaktor zasad",
+      "user": "uczestnik"
+    },
+    "what": {
+      "arbiter": "Rozstrzyga spory i — gdy strona otworzy dostęp — czyta sejf tej transakcji. Każdy taki odczyt trafia do łańcucha transakcji i jest ogłaszany na jej czacie.",
+      "compliance_editor": "Pisze zasady korytarza i kieruje je do przeglądu. Publikacja zasady to osobne uprawnienie i nie jest tu zawarta."
+    }
   }
 }

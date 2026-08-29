@@ -451,26 +451,11 @@ async def list_users(
     return Page(items=items, next_cursor=next_cursor)
 
 
-class PromoteBody(BaseModel):
-    is_arbiter: bool
-
-
-@router.post("/admin/users/{user_id}/promote-arbiter", response_model=UserOut)
-async def promote_arbiter(
-    user_id: uuid.UUID,
-    body: PromoteBody,
-    _: User = Depends(require_perm(Permission.ARBITER_ASSIGN)),
-    db: AsyncSession = Depends(get_db),
-):
-    user = await db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.role == "superuser":
-        raise HTTPException(status_code=400, detail="Cannot demote superuser")
-    user.role = "arbiter" if body.is_arbiter else "user"
-    await db.commit()
-    await db.refresh(user)
-    return user
+# T3.42 — `POST /admin/users/{id}/promote-arbiter` lived here and wrote
+# `user.role` directly. It is gone rather than deprecated: it was the only way
+# a role could change without leaving a trace, and leaving it beside the new
+# path would have kept exactly that way open. Offering, accepting and revoking
+# now live in `api/roles.py`.
 
 
 @router.delete("/admin/users/{user_id}", status_code=204)

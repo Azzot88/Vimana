@@ -520,6 +520,54 @@ def send_new_device(user_id: str, device: str, ip: str, when_iso: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_role_offered")
+def send_role_offered(user_id: str, role: str, offered_by: str) -> None:
+    """T3.42 — tell somebody a role has been proposed to them.
+
+    Security class, and not by analogy: the letter is about what a person may
+    do with **other people's** data. An arbiter reads the vault of a deal they
+    are not party to, and a rules editor writes statements the platform makes
+    about somebody's law. A change of that magnitude cannot sit behind a
+    notification toggle, so this goes through `_send` — the same path every
+    other security letter takes, which never consults preferences at all.
+
+    **The letter says "proposed", never "assigned"** (DESIGNGUIDELINES §9.1),
+    and that wording is true rather than careful: `users.role` is untouched
+    until the person accepts, so at the moment this letter is written they hold
+    exactly the rights they held before.
+
+    `offered_by` is the offerer's display name, passed in rather than looked up:
+    the caller has the object in hand, and a second query here would answer the
+    same question with an extra chance of answering it differently.
+
+    Called by: `api/roles.offer_role`.
+    """
+    import os
+
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user or not user.email:
+            # A Nostr or passkey identity with no address has nowhere to be
+            # told. The offer still stands and is visible in the account — the
+            # letter is a courtesy, not the mechanism.
+            return
+        _send(
+            user,
+            user.email,
+            "role_offered",
+            role=role,
+            offered_by=offered_by,
+            # Straight to "Доступ и данные", where the offer is answered. A
+            # letter that describes a decision without a way to make it ends in
+            # a shrug.
+            cta_url=f"{base}/profile/keys",
+        )
+
+
 @celery_app.task(name="app.tasks.notifications.send_channel_code")
 def send_channel_code(channel: str, value: str, code: str, locale: str | None) -> None:
     """T3.26 — deliver a confirmation code over whichever channel was chosen.
