@@ -1121,6 +1121,38 @@ async def _ensure_carrier_notes_columns(engine) -> None:
             await conn.execute(text(f"ALTER TABLE users {ddl}"))
 
 
+async def _seed_jurisdictions(engine) -> None:
+    """T3.11.01 — the founding corridor's nodes. Mirrors the seed in 0054.
+
+    `create_all` builds tables and seeds nothing, so a migration that inserts
+    rows needs a twin here just as an altered column does. This is the third
+    shape of the same trap and worth naming next to the other two:
+
+      * a **new table** → migration only; `create_all` builds it;
+      * a **changed existing table** → migration **and** an `_ensure_*` helper;
+      * **seed data written by a migration** → migration **and** a seeder here.
+
+    Idempotent by primary key, like `_seed_default_categories`.
+    """
+    async with engine.begin() as conn:
+        for code, kind, name in (
+            ("RU", "country", "Russia"),
+            ("US", "country", "United States"),
+            ("TR-IST", "transit_point", "Istanbul (transit)"),
+            ("AE-DXB", "transit_point", "Dubai (transit)"),
+        ):
+            await conn.execute(
+                text(
+                    "INSERT INTO jurisdictions (code, kind, parent_code, name, created_at) "
+                    # Cast for the same reason 0054 needs one: asyncpg sends a
+                    # bound parameter as VARCHAR and Postgres will not coerce it
+                    # into an enum column on its own.
+                    "VALUES (:code, CAST(:kind AS jurisdictionkind), NULL, :name, now()) "
+                    "ON CONFLICT (code) DO NOTHING"
+                ).bindparams(code=code, kind=kind, name=name)
+            )
+
+
 async def _ensure_user_roles_column(engine) -> None:
     """T3.42: `users.role` (one string) becomes `users.roles` (an array).
     Mirrors migration 0056 for a pre-existing test DB.
@@ -1468,6 +1500,7 @@ async def test_engine():
     await _ensure_carrier_notes_columns(engine)
     await _ensure_user_roles_column(engine)
     await _seed_default_categories(engine)
+    await _seed_jurisdictions(engine)
     yield engine
     await engine.dispose()
 
