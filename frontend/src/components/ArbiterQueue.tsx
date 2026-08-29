@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
+import { isSuperuser } from '../lib/permissions'
 import {
   claimDispute,
   listDisputes,
@@ -92,7 +93,7 @@ export default function ArbiterQueue() {
           {disputes.map((d) => {
             const mine = d.arbiter_id === user?.id
             const canClaim = d.status === 'open'
-            const canResolve = d.status === 'claimed' && (mine || user?.role === 'superuser')
+            const canResolve = d.status === 'claimed' && (mine || isSuperuser(user))
             return (
               <div
                 key={d.id}

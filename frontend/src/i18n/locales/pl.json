@@ -48,9 +48,11 @@
     "backToDisputes": "Do sporów",
     "arbiterAudit": "Każde otwarcie jest odnotowane w czacie dla obu stron.",
     "systemMessage": "system",
-    "offerArbiter": "Zaproponuj rolę arbitra",
+    "offerRole": "Zaproponuj: {{role}}",
+    "revokeRole": "Cofnij: {{role}}",
+    "roles": "Role i propozycje",
+    "rolesDesc": "Komu zaproponowano rolę i kto jeszcze nie odpowiedział.",
     "arbiterOffered": "zaproponowano",
-    "revokeArbiter": "Odbierz arbitra",
     "status": {
       "open": "Otwarty",
       "claimed": "Przejęty",
@@ -1311,6 +1313,21 @@
   "disputes": {
     "none": "Brak otwartych sporów.",
     "mine": "Moje spory"
+  },
+  "adminRoles": {
+    "title": "Role i propozycje",
+    "description": "Propozycje czekające na odpowiedź. Odpowiedziane i cofnięte są w dzienniku każdego konta, nie tutaj.",
+    "empty": "Nikt nie czeka na odpowiedź.",
+    "withdraw": "Cofnij",
+    "loadFailed": "Nie udało się wczytać propozycji",
+    "withdrawFailed": "Nie udało się cofnąć propozycji",
+    "col": {
+      "who": "Komu zaproponowano",
+      "role": "Rola",
+      "offeredBy": "Zaproponował",
+      "when": "Kiedy",
+      "actions": "Akcje"
+    }
   },
   "roles": {
     "title": "Role",

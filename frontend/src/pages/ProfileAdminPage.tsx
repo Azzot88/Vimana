@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import AdminPanelSection from '../components/AdminPanelSection'
+import { isArbiter } from '../lib/permissions'
 import { useAuthStore } from '../stores/auth'
 
 /**
@@ -13,9 +14,9 @@ import { useAuthStore } from '../stores/auth'
  * this only decides what the profile shows.
  */
 export default function ProfileAdminPage() {
-  const role = useAuthStore((s) => s.user?.role)
+  const user = useAuthStore((s) => s.user)
 
-  if (role !== 'arbiter' && role !== 'superuser') {
+  if (!isArbiter(user)) {
     return <Navigate to="/profile" replace />
   }
 

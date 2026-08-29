@@ -3,7 +3,7 @@
 Design:
 - `Permission` is the unit of authorization. Every protected action names one.
 - `Role` is a named bundle of permissions (`ROLE_PERMISSIONS`).
-- `User.role` holds a single role.
+- `User.roles` holds every role granted; permissions are their union (T3.42).
 - Self-service capabilities (`can_carry`, `can_send`) contribute permissions on
   top of the role — a base user opts into publishing trips or creating orders.
 
@@ -131,9 +131,35 @@ def _base_perms_for(role_value: str) -> frozenset[Permission]:
     return ROLE_PERMISSIONS[role]
 
 
+def roles_of(user: User) -> tuple[str, ...]:
+    """The roles this account holds. Empty for an ordinary member.
+
+    One reader for the column, so that "does this person hold X" is asked the
+    same way everywhere. `getattr` guards the objects that stand in for a user
+    in tests and in the preview console.
+    """
+    return tuple(getattr(user, "roles", None) or ())
+
+
+def has_role(user: User, role: Role | str) -> bool:
+    return (role.value if isinstance(role, Role) else role) in roles_of(user)
+
+
+def is_superuser(user: User) -> bool:
+    return has_role(user, Role.SUPERUSER)
+
+
 def perms_of(user: User) -> frozenset[Permission]:
-    """All permissions this user currently has."""
-    perms: set[Permission] = set(_base_perms_for(user.role or Role.USER.value))
+    """All permissions this user currently has.
+
+    T3.42 — the union over **every** role held, not the bundle of one. Roles add
+    up: somebody who arbitrates disputes and also drafts corridor rules holds
+    both, and the previous single-column model made the second grant erase the
+    first without saying so.
+    """
+    perms: set[Permission] = set()
+    for role_value in roles_of(user):
+        perms |= _base_perms_for(role_value)
     if user.can_carry:
         perms.add(Permission.TRIP_PUBLISH)
     if user.can_send:
@@ -193,7 +219,7 @@ def visible_to(subject: User, viewer: User | None) -> str:
     The owner always sees themselves in full; so does a superuser, whose whole
     job is looking at accounts. Everyone else gets what the account chose.
     """
-    if viewer is not None and (viewer.id == subject.id or viewer.role == "superuser"):
+    if viewer is not None and (viewer.id == subject.id or is_superuser(viewer)):
         return "full"
     # T3.19 — a closed archive outranks the ordinary setting. It is the same
     # word ('hidden') but a different decision: the account below is retired and

@@ -61,6 +61,19 @@ export const revokeRole = (userId: string, role: string, reason = '') =>
 export const roleJournal = (userId: string) =>
   api.get<RoleGrant[]>(`/api/admin/users/${userId}/roles`)
 
+/** T3.42 — offers nobody has answered yet, across all accounts.
+ *
+ *  Without this the only trace of an unanswered offer was the letter, sitting
+ *  in the recipient's mailbox where the person who sent it cannot look. */
+export interface PendingOffer extends RoleGrant {
+  subject_id: string
+  subject_name: string
+  subject_contact: string | null
+}
+
+export const openRoleOffers = () =>
+  api.get<PendingOffer[]>('/api/admin/role-offers')
+
 /** T_TEST.3 — superuser hard-delete for e2e/junk cleanup. Cascade. */
 export const deleteUser = (userId: string) =>
   api.delete<void>(`/api/admin/users/${userId}`)

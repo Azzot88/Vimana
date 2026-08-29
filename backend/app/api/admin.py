@@ -477,7 +477,7 @@ async def delete_user(
     # apply (admin trying to delete themselves).
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
-    if user.role == "superuser":
+    if "superuser" in (user.roles or []):
         raise HTTPException(status_code=400, detail="Cannot delete a superuser")
 
     # Async cascade — mirrors the sync cleanup in `app/tasks/cleanup.py`.

@@ -127,7 +127,7 @@ async def _create_user_direct(session_maker, prefix: str, role: str = "user") ->
             nsec_encrypted=nsec_ct,
             nsec_nonce=nsec_nonce,
             key_self_custody=False,
-            role=role,
+            roles=[] if role == "user" else [role],
         )
         db.add(user)
         await db.commit()

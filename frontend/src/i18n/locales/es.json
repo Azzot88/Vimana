@@ -48,9 +48,11 @@
     "backToDisputes": "Volver a disputas",
     "arbiterAudit": "Cada apertura queda registrada en el chat para ambas partes.",
     "systemMessage": "sistema",
-    "offerArbiter": "Proponer el rol de árbitro",
+    "offerRole": "Proponer: {{role}}",
+    "revokeRole": "Retirar: {{role}}",
+    "roles": "Roles y propuestas",
+    "rolesDesc": "A quién se le ha propuesto un rol y quién no ha respondido aún.",
     "arbiterOffered": "propuesto",
-    "revokeArbiter": "Revocar árbitro",
     "status": {
       "open": "Abierta",
       "claimed": "En trámite",
@@ -1310,6 +1312,21 @@
   "disputes": {
     "none": "No hay disputas abiertas.",
     "mine": "Mis disputas"
+  },
+  "adminRoles": {
+    "title": "Roles y propuestas",
+    "description": "Propuestas pendientes de respuesta. Las respondidas y retiradas están en el diario de cada cuenta, no aquí.",
+    "empty": "Nadie está esperando respuesta.",
+    "withdraw": "Retirar",
+    "loadFailed": "No se pudieron cargar las propuestas",
+    "withdrawFailed": "No se pudo retirar la propuesta",
+    "col": {
+      "who": "Propuesto a",
+      "role": "Rol",
+      "offeredBy": "Propuesto por",
+      "when": "Cuándo",
+      "actions": "Acciones"
+    }
   },
   "roles": {
     "title": "Roles",

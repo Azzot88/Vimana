@@ -15,7 +15,7 @@ async def superuser_headers(client, session_maker, seed_carrier):
     """Promote seed_carrier to superuser for the scope of these tests."""
     async with session_maker() as db:
         u = await db.get(User, seed_carrier.id)
-        u.role = "superuser"
+        u.roles = ["superuser"]
         await db.commit()
     try:
         from tests.conftest import _login
@@ -24,7 +24,7 @@ async def superuser_headers(client, session_maker, seed_carrier):
     finally:
         async with session_maker() as db:
             u = await db.get(User, seed_carrier.id)
-            u.role = "user"
+            u.roles = []
             await db.commit()
 
 
@@ -40,7 +40,7 @@ async def arbiter_user(client, session_maker):
 
     async with session_maker() as db:
         u = await db.get(User, user_id)
-        u.role = "arbiter"
+        u.roles = ["arbiter"]
         await db.commit()
 
     token = await _login(client, email)
@@ -171,7 +171,7 @@ async def test_arbiter_cannot_claim_own_deal(client, carrier_headers, sender_hea
     sender_id = uuidlib.UUID(me.json()["id"])
     async with session_maker() as db:
         u = await db.get(User, sender_id)
-        u.role = "arbiter"
+        u.roles = ["arbiter"]
         await db.commit()
 
     try:
@@ -189,7 +189,7 @@ async def test_arbiter_cannot_claim_own_deal(client, carrier_headers, sender_hea
     finally:
         async with session_maker() as db:
             u = await db.get(User, sender_id)
-            u.role = "user"
+            u.roles = []
             await db.commit()
 
 
@@ -234,7 +234,7 @@ async def test_offering_a_role_is_superuser_only(client, superuser_headers, send
 
     # The offer did not move the account.
     still = await client.get("/api/auth/me", headers=sender_headers)
-    assert still.json()["role"] == "user"
+    assert still.json()["roles"] == []
 
     # Take it back, so the seed account ends the test as it started.
     revoked = await client.request(

@@ -177,7 +177,8 @@ class UserOut(BaseModel):
     can_carry: bool = True
     can_send: bool = True
     active_mode: str = "sender"
-    role: str = "user"
+    # T3.42 — every role held, not one. Empty list = ordinary member.
+    roles: list[str] = []
     nostr_pubkey: str | None
     # T3.12 — visible to counterparties on purpose: an account whose identity
     # key is gone can no longer sign, and must not read as a live one.

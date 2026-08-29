@@ -48,9 +48,11 @@
     "backToDisputes": "Retour aux litiges",
     "arbiterAudit": "Chaque ouverture est enregistrée dans le chat des deux parties.",
     "systemMessage": "système",
-    "offerArbiter": "Proposer le rôle d’arbitre",
+    "offerRole": "Proposer : {{role}}",
+    "revokeRole": "Retirer : {{role}}",
+    "roles": "Rôles et propositions",
+    "rolesDesc": "À qui un rôle a été proposé et qui n’a pas encore répondu.",
     "arbiterOffered": "proposé",
-    "revokeArbiter": "Révoquer l'arbitre",
     "status": {
       "open": "Ouvert",
       "claimed": "Pris en charge",
@@ -1310,6 +1312,21 @@
   "disputes": {
     "none": "Aucun litige en cours.",
     "mine": "Mes litiges"
+  },
+  "adminRoles": {
+    "title": "Rôles et propositions",
+    "description": "Propositions en attente de réponse. Celles qui ont reçu une réponse ou ont été retirées figurent dans le journal de chaque compte, pas ici.",
+    "empty": "Personne n’attend de réponse.",
+    "withdraw": "Retirer",
+    "loadFailed": "Impossible de charger les propositions",
+    "withdrawFailed": "Impossible de retirer la proposition",
+    "col": {
+      "who": "Proposé à",
+      "role": "Rôle",
+      "offeredBy": "Proposé par",
+      "when": "Quand",
+      "actions": "Actions"
+    }
   },
   "roles": {
     "title": "Rôles",

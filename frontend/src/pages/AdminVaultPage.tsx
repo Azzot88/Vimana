@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
+import { isArbiter } from '../lib/permissions'
 import { readVaultAsArbiter } from '../api/admin'
 import type { VaultMessage } from '../api/dealvault'
 import MonoText from '../components/MonoText'
@@ -14,7 +15,7 @@ export default function AdminVaultPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  if (user?.role !== 'arbiter' && user?.role !== 'superuser') {
+  if (!isArbiter(user)) {
     return <Navigate to="/dashboard" replace />
   }
 

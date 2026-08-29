@@ -61,10 +61,23 @@ class RoleGrantOut(BaseModel):
 
 
 class MyRolesOut(BaseModel):
-    #: What this account may actually do right now.
-    role: str
+    #: Every role this account actually holds. Empty for an ordinary member.
+    roles: list[str]
     #: Roles proposed and not yet answered. An entry here grants nothing.
     offers: list[RoleGrantOut]
+
+
+class PendingOfferOut(RoleGrantOut):
+    """An open offer, with enough about the subject to be actionable.
+
+    The admin list answers "who has been offered what and is not replying".
+    Without the subject's name and address that is a page of UUIDs, and the
+    person reading it would have to look each one up in another screen.
+    """
+
+    subject_id: uuid.UUID
+    subject_name: str
+    subject_contact: str | None
 
 
 async def _with_actor_names(
@@ -176,6 +189,62 @@ async def role_journal(
 
 # ─────────────────────────── subject's side ───────────────────────────
 
+@router.get("/admin/role-offers", response_model=list[PendingOfferOut])
+async def open_offers(
+    _: User = Depends(require_perm(Permission.ROLE_OFFER)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Every offer nobody has answered yet, newest first.
+
+    The screen this feeds exists because an offer is a request for a decision
+    that somebody else has to make, and a request nobody can see is a request
+    that quietly never happened. Before this, the only trace of an unanswered
+    offer was the letter — in the recipient's mailbox, where the person who
+    sent it cannot look.
+
+    Read as the latest event per (subject, role) pair rather than by selecting
+    `event = 'offered'`: an offer that was later declined or withdrawn still has
+    its `offered` row, and filtering on the event alone would list answers that
+    already came back as if they were still pending.
+    """
+    from sqlalchemy import desc
+
+    from app.models.role_grant import RoleGrant as RG
+
+    rows = (
+        await db.execute(select(RG).order_by(desc(RG.created_at), desc(RG.id)))
+    ).scalars().all()
+
+    latest: dict[tuple[uuid.UUID, str], RG] = {}
+    for row in rows:
+        latest.setdefault((row.subject_id, row.role), row)
+    pending = [g for g in latest.values() if g.event is RoleGrantEvent.offered]
+    pending.sort(key=lambda g: g.created_at, reverse=True)
+
+    enriched = await _with_actor_names(db, pending)
+    subject_ids = {g.subject_id for g in pending}
+    subjects: dict[uuid.UUID, tuple[str, str | None]] = {}
+    if subject_ids:
+        srows = (
+            await db.execute(
+                select(User.id, User.display_name, User.email).where(
+                    User.id.in_(subject_ids)
+                )
+            )
+        ).all()
+        subjects = {r[0]: (r[1] or "", r[2]) for r in srows}
+
+    return [
+        PendingOfferOut(
+            **base.model_dump(),
+            subject_id=grant.subject_id,
+            subject_name=subjects.get(grant.subject_id, ("", None))[0],
+            subject_contact=subjects.get(grant.subject_id, ("", None))[1],
+        )
+        for grant, base in zip(pending, enriched)
+    ]
+
+
 @router.get("/me/roles", response_model=MyRolesOut)
 async def my_roles(
     user: User = Depends(get_current_user),
@@ -183,7 +252,7 @@ async def my_roles(
 ):
     offers = await roles_core.pending_offers(db, user.id)
     return MyRolesOut(
-        role=user.role or "user",
+        roles=list(user.roles or []),
         offers=await _with_actor_names(db, offers),
     )
 

@@ -332,7 +332,7 @@ async def test_republish_requires_superuser(client, session_maker):
                     User.nostr_pubkey.isnot(None)
                 ).order_by(User.created_at.desc()).limit(1)
             )).scalar_one()
-            me.role = "superuser"
+            me.roles = ["superuser"]
             await db.commit()
 
         resp2 = await client.post(

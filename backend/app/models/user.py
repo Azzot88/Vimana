@@ -14,7 +14,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -151,9 +151,26 @@ class User(Base):
     telegram_link_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     whatsapp_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
-    # T1.24 pt.1 — single role column, permissions derived via app.core.permissions.
-    # Values: 'user' | 'arbiter' | 'superuser'. Superuser = User Zero.
-    role: Mapped[str] = mapped_column(String(20), default="user", server_default="user")
+    # T3.42 — roles **add up**. Was a single `role` column, which made every
+    # grant a replacement: accepting a second role silently took the first one
+    # away, and nothing anywhere said so. One person is routinely both an
+    # arbiter and a rules editor, and those are different jobs, not a ladder.
+    #
+    # An ordinary account holds `[]`, not `["user"]`: "member" is what you are
+    # when you hold no role, and putting it in the list would make "has this
+    # account been given anything" a question about the list's contents rather
+    # than its length.
+    #
+    # A Postgres array rather than JSON: the queries this column exists for are
+    # membership and overlap (`'superuser' = ANY(roles)`, "any staff role"), and
+    # both are one operator on an array and an awkward function call on JSON.
+    #
+    # Written **only** by `core/roles.py` and `core/superuser.py`, each of which
+    # appends a `RoleGrant` row in the same transaction. That pairing is the
+    # whole reason the origin of a role is answerable at all.
+    roles: Mapped[list[str]] = mapped_column(
+        ARRAY(String(32)), default=list, server_default="{}"
+    )
 
     # T2.1 — denormalized highest active VerificationBadge.level for fast reads.
     # Refreshed by app/core/verification.refresh_highest_level() after INSERT/revoke.

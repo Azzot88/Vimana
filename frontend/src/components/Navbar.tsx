@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
+import { isSuperuser } from '../lib/permissions'
 import LanguageSwitcher from './LanguageSwitcher'
 import ModeSwitcher from './ModeSwitcher'
 
@@ -52,7 +53,7 @@ export default function Navbar() {
             <NavLink to="/profile" className={linkClass}>
               {t('nav.profile')}
             </NavLink>
-            {user?.role === 'superuser' && (
+            {isSuperuser(user) && (
               <>
                 <NavLink to="/admin/users" className={linkClass}>
                   {t('nav.users')}

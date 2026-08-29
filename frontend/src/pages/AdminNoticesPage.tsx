@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
+import { isSuperuser } from '../lib/permissions'
 import {
   createPlatformNotice,
   createRouteNote,
@@ -37,7 +38,7 @@ export default function AdminNoticesPage() {
   const [pnHeadline, setPnHeadline] = useState('')
   const [pnBody, setPnBody] = useState('')
 
-  if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
+  if (!isSuperuser(me)) return <Navigate to="/dashboard" replace />
 
   const reload = async () => {
     setError('')

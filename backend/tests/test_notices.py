@@ -198,7 +198,7 @@ async def _register_and_promote_superuser(client, session_maker) -> dict:
     )
     async with session_maker() as db:
         u = (await db.execute(select(User).where(User.email == email))).scalar_one()
-        u.role = "superuser"
+        u.roles = ["superuser"]
         await db.commit()
     login = await client.post(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}

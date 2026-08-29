@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
+import { isSuperuser } from '../lib/permissions'
 import {
   listParams,
   paramHistory,
@@ -63,12 +64,12 @@ export default function AdminParamsPage() {
     // page fires an admin request on behalf of somebody it is about to turn
     // away. The server answers 403 either way — this keeps the request from
     // being made at all.
-    if (me?.role !== 'superuser') return
+    if (!isSuperuser(me)) return
     void reload(scope)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, me?.role])
+  }, [scope, me?.roles])
 
-  if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
+  if (!isSuperuser(me)) return <Navigate to="/dashboard" replace />
 
   const applyScope = () => {
     const next = scopeInput.trim().toUpperCase()

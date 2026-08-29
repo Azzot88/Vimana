@@ -203,10 +203,19 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/admin/users/{user_id}/roles"): Case(
         DENIED, "superuser-only", json={"role": "arbiter"}
     ),
-    ("DELETE", "/api/admin/users/{user_id}/roles/arbiter"): Case(
+    ("DELETE", "/api/admin/users/{user_id}/roles/{role}"): Case(
         DENIED, "superuser-only"
     ),
     ("GET", "/api/admin/users/{user_id}/roles"): Case(DENIED, "superuser-only"),
+    ("POST", "/api/me/roles/{role}/accept"): Case(
+        DENIED,
+        "T3.42 — the path names a role, not somebody else's object: a stranger "
+        "can only ever accept an offer made to themselves, and there is none",
+        also_ok=(400,),
+    ),
+    ("POST", "/api/me/roles/{role}/decline"): Case(
+        DENIED, "same as accept — nothing to answer", also_ok=(400,)
+    ),
     ("DELETE", "/api/admin/users/{user_id}"): Case(DENIED, "superuser-only"),
     # ---- platform parameters (T3.40) -----------------------------------
     ("GET", "/api/admin/params/{key}/history"): Case(
@@ -506,6 +515,9 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         # T3.40 — a real parameter name: the row asserts that a stranger is
         # refused, not that an unknown key is a 404.
         "key": "carrier_fee_percent",
+        # T3.42 — a role name, not an object id: these paths address a role of
+        # the caller's own, and the stranger has none of it either way.
+        "role": "arbiter",
         # Only the capability rows use this, and they want an unknown one.
         "token": uuidlib.uuid4().hex,
     }
@@ -721,7 +733,7 @@ async def arbiter(client, session_maker) -> dict:
     who = await _register(client, "idor-arbiter")
     async with session_maker() as db:
         u = await db.get(User, who["id"])
-        u.role = "arbiter"
+        u.roles = ["arbiter"]
         await db.commit()
     # Re-login so the token is minted after the promotion.
     from tests.conftest import _login

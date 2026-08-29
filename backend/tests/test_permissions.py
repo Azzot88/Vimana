@@ -84,11 +84,14 @@ def test_unknown_role_falls_back_to_user():
 
 
 def _identity(uid=1, role="user", public_profile="full", archive_choice=None):
+    """T3.42 — the stub grows a `roles` list, because `visible_to` now asks
+    `is_superuser`, which reads the array. The `role=` argument is kept as the
+    call sites' shorthand: every one of them names exactly one role."""
     from types import SimpleNamespace
 
     return SimpleNamespace(
         id=uid,
-        role=role,
+        roles=[] if role == "user" else [role],
         public_profile=public_profile,
         archive_choice=archive_choice,
     )

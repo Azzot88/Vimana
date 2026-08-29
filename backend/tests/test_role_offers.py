@@ -33,7 +33,7 @@ async def superuser_headers(client, session_maker, seed_carrier):
     """
     async with session_maker() as db:
         u = await db.get(User, seed_carrier.id)
-        u.role = "superuser"
+        u.roles = ["superuser"]
         await db.commit()
     try:
         from tests.conftest import _login
@@ -43,7 +43,7 @@ async def superuser_headers(client, session_maker, seed_carrier):
     finally:
         async with session_maker() as db:
             u = await db.get(User, seed_carrier.id)
-            u.role = "user"
+            u.roles = []
             await db.commit()
 
 
@@ -102,7 +102,7 @@ async def test_open_offer_grants_no_permission(client, superuser_headers, subjec
     assert after.status_code == 403, "an unaccepted offer must grant nothing"
 
     me = await client.get("/api/auth/me", headers=headers)
-    assert me.json()["role"] == "user"
+    assert me.json()["roles"] == []
 
 
 async def test_accepting_is_what_starts_the_role(client, superuser_headers, subject):
@@ -136,7 +136,7 @@ async def test_declining_leaves_the_account_untouched(client, superuser_headers,
     assert declined.json()["event"] == "declined"
 
     me = await client.get("/api/auth/me", headers=headers)
-    assert me.json()["role"] == "user"
+    assert me.json()["roles"] == []
     assert (await client.get("/api/admin/disputes", headers=headers)).status_code == 403
 
 
@@ -205,7 +205,117 @@ async def test_withdrawing_an_unanswered_offer_does_not_clear_another_role(
     )
 
     me = await client.get("/api/auth/me", headers=headers)
-    assert me.json()["role"] == "arbiter", "the live role survived an unrelated withdrawal"
+    assert me.json()["roles"] == ["arbiter"], "the live role survived an unrelated withdrawal"
+
+
+# --- roles add up -----------------------------------------------------------
+
+async def test_two_roles_are_held_at_once(client, superuser_headers, subject):
+    """The whole reason `users.role` became `users.roles`.
+
+    One person is routinely both an arbiter and a rules editor — different jobs,
+    not a ladder. Under the single column the second grant silently took the
+    first away, and neither the interface nor the journal said so. Asserted
+    through the endpoints rather than the column, because the column being right
+    while the permission union is wrong is exactly the failure that would slip
+    through.
+    """
+    user_id, headers = subject
+
+    for role in ("arbiter", "compliance_editor"):
+        offered = await client.post(
+            f"/api/admin/users/{user_id}/roles",
+            headers=superuser_headers,
+            json={"role": role},
+        )
+        assert offered.status_code == 201
+        accepted = await client.post(f"/api/me/roles/{role}/accept", headers=headers)
+        assert accepted.status_code == 200
+
+    mine = (await client.get("/api/me/roles", headers=headers)).json()
+    assert set(mine["roles"]) == {"arbiter", "compliance_editor"}
+
+    # The arbiter half still works after the second role arrived — that is the
+    # regression the old model produced.
+    assert (await client.get("/api/admin/disputes", headers=headers)).status_code == 200
+
+
+async def test_revoking_one_role_leaves_the_other(client, superuser_headers, subject):
+    user_id, headers = subject
+    for role in ("arbiter", "compliance_editor"):
+        await client.post(
+            f"/api/admin/users/{user_id}/roles",
+            headers=superuser_headers,
+            json={"role": role},
+        )
+        await client.post(f"/api/me/roles/{role}/accept", headers=headers)
+
+    await client.request(
+        "DELETE",
+        f"/api/admin/users/{user_id}/roles/compliance_editor",
+        headers=superuser_headers,
+    )
+
+    mine = (await client.get("/api/me/roles", headers=headers)).json()
+    assert mine["roles"] == ["arbiter"]
+    assert (await client.get("/api/admin/disputes", headers=headers)).status_code == 200
+
+
+async def test_permissions_are_the_union_of_every_role_held(session_maker, subject):
+    """Checked at the permission layer directly, one level below the endpoints.
+
+    `perms_of` is the function the whole authorisation model funnels through,
+    and a union that silently returned only the first role's bundle would look
+    correct on any endpoint guarded by that first role.
+    """
+    from app.core.permissions import Permission, perms_of
+    from app.models.user import User
+
+    user_id, _ = subject
+    async with session_maker() as db:
+        user = await db.get(User, user_id)
+        user.roles = ["arbiter", "compliance_editor"]
+        await db.commit()
+        await db.refresh(user)
+
+        have = perms_of(user)
+
+    assert Permission.DISPUTE_RESOLVE in have      # from arbiter
+    assert Permission.RULES_EDIT in have           # from compliance_editor
+    assert Permission.RULES_PUBLISH not in have    # neither bundle carries it
+    assert Permission.USERS_MANAGE not in have     # superuser only
+
+
+# --- offers are visible to the person who made them ------------------------
+
+async def test_open_offers_are_listed_for_the_admin(client, superuser_headers, subject):
+    """An offer is a request for somebody else's decision, and before this
+    endpoint the only trace of an unanswered one was the letter — sitting in
+    the recipient's mailbox, where the sender cannot look."""
+    user_id, headers = subject
+    await client.post(
+        f"/api/admin/users/{user_id}/roles",
+        headers=superuser_headers,
+        json={"role": "arbiter", "reason": "covering August"},
+    )
+
+    listed = await client.get("/api/admin/role-offers", headers=superuser_headers)
+    assert listed.status_code == 200
+    row = next(r for r in listed.json() if r["subject_id"] == str(user_id))
+    assert row["role"] == "arbiter"
+    assert row["subject_name"]
+    assert row["reason"] == "covering August"
+
+    # Answered offers leave the list — the point is what is still waiting.
+    await client.post("/api/me/roles/arbiter/accept", headers=headers)
+    after = await client.get("/api/admin/role-offers", headers=superuser_headers)
+    assert all(r["subject_id"] != str(user_id) for r in after.json())
+
+
+async def test_open_offers_are_not_public(client, subject):
+    _, headers = subject
+    resp = await client.get("/api/admin/role-offers", headers=headers)
+    assert resp.status_code == 403
 
 
 # --- the journal answers "where did this come from" ------------------------
@@ -243,7 +353,7 @@ async def test_subject_sees_their_own_offers_and_current_role(
 ):
     user_id, headers = subject
     mine = (await client.get("/api/me/roles", headers=headers)).json()
-    assert mine["role"] == "user" and mine["offers"] == []
+    assert mine["roles"] == [] and mine["offers"] == []
 
     await client.post(
         f"/api/admin/users/{user_id}/roles",
@@ -251,12 +361,12 @@ async def test_subject_sees_their_own_offers_and_current_role(
         json={"role": "arbiter"},
     )
     mine = (await client.get("/api/me/roles", headers=headers)).json()
-    assert mine["role"] == "user", "the offer is not the role"
+    assert mine["roles"] == [], "the offer is not the role"
     assert [o["role"] for o in mine["offers"]] == ["arbiter"]
 
     await client.post("/api/me/roles/arbiter/accept", headers=headers)
     mine = (await client.get("/api/me/roles", headers=headers)).json()
-    assert mine["role"] == "arbiter" and mine["offers"] == []
+    assert mine["roles"] == ["arbiter"] and mine["offers"] == []
 
 
 # --- refusals ---------------------------------------------------------------
@@ -425,4 +535,4 @@ async def test_every_role_change_left_a_row(client, superuser_headers, subject, 
         RoleGrantEvent.accepted,
         RoleGrantEvent.revoked,
     ]
-    assert user.role == "user"
+    assert user.roles == []

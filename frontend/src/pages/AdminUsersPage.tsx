@@ -3,10 +3,15 @@ import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { deleteUser, listAllUsers, offerRole, revokeRole } from '../api/admin'
-import type { User } from '../api/auth'
+import type { User, UserRole } from '../api/auth'
+import { isSuperuser } from '../lib/permissions'
 import MonoText from '../components/MonoText'
 
 const E2E_MARKER = '@e2e.vimana.local'
+
+/** Mirrors `core.permissions.OFFERABLE_ROLES`. `superuser` is absent: it comes
+ *  from the address in the environment, not from anybody's decision. */
+const OFFERABLE: UserRole[] = ['arbiter', 'compliance_editor']
 
 export default function AdminUsersPage() {
   const { t } = useTranslation()
@@ -16,13 +21,13 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('')
   const [showTestOnly, setShowTestOnly] = useState(false)
   const [emailFilter, setEmailFilter] = useState('')
-  /** Offers made during this visit. Deliberately not persisted and not
-   *  reloaded: it reports what just happened, and does not claim to be the
-   *  account's state — that lives in the journal, which the row does not
-   *  fetch. A chip that survived a reload would be a claim, not a receipt. */
-  const [offered, setOffered] = useState<Set<string>>(new Set())
+  /** Offers made during this visit, per account. Deliberately not persisted:
+   *  it reports what just happened and does not claim to be the account's
+   *  state. The durable answer to "who has been offered what and has not
+   *  replied" is the Roles screen, which reads `/api/admin/role-offers`. */
+  const [offered, setOffered] = useState<Map<string, Set<UserRole>>>(new Map())
 
-  if (me?.role !== 'superuser') return <Navigate to="/dashboard" replace />
+  if (!isSuperuser(me)) return <Navigate to="/dashboard" replace />
 
   const load = async () => {
     setLoading(true)
@@ -51,34 +56,48 @@ export default function AdminUsersPage() {
    *  something the backend has not done, and the row would go back on reload.
    *  So an offer changes nothing here except a note saying it is waiting.
    */
-  const handleOffer = async (userId: string) => {
-    setError('')
-    try {
-      await offerRole(userId, 'arbiter')
-      setOffered((prev) => new Set(prev).add(userId))
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : t('admin.promoteError'))
-    }
+  const failWith = (err: unknown) => {
+    const detail = (err as { response?: { data?: { detail?: string } } })
+      ?.response?.data?.detail
+    setError(typeof detail === 'string' ? detail : t('admin.promoteError'))
   }
 
-  const handleRevoke = async (userId: string) => {
+  const handleOffer = async (userId: string, role: UserRole) => {
     setError('')
     try {
-      await revokeRole(userId, 'arbiter')
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: 'user' } : u)),
-      )
+      await offerRole(userId, role)
       setOffered((prev) => {
-        const next = new Set(prev)
-        next.delete(userId)
+        const next = new Map(prev)
+        next.set(userId, new Set(next.get(userId)).add(role))
         return next
       })
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : t('admin.promoteError'))
+      failWith(err)
+    }
+  }
+
+  const handleRevoke = async (userId: string, role: UserRole) => {
+    setError('')
+    try {
+      await revokeRole(userId, role)
+      // Only this role comes off the row. Rebuilding it as `[]` would repeat
+      // in the interface the exact bug the model change removed.
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId
+            ? { ...u, roles: (u.roles ?? []).filter((r) => r !== role) }
+            : u,
+        ),
+      )
+      setOffered((prev) => {
+        const next = new Map(prev)
+        const roles = new Set(next.get(userId))
+        roles.delete(role)
+        roles.size ? next.set(userId, roles) : next.delete(userId)
+        return next
+      })
+    } catch (err: unknown) {
+      failWith(err)
     }
   }
 
@@ -188,50 +207,67 @@ export default function AdminUsersPage() {
                             test
                           </span>
                         )}
-                        {u.role === 'superuser' && (
-                          <span className="text-xs font-mono bg-navy text-ivory px-2 py-0.5 rounded">
-                            superuser
+                        {/* T3.42 — every role held, not the one that fitted in
+                            a column. Two chips side by side is the whole point
+                            of the change: an account can arbitrate and edit
+                            rules at the same time. */}
+                        {(u.roles ?? []).map((r) => (
+                          <span
+                            key={r}
+                            className={`text-xs font-mono px-2 py-0.5 rounded ${
+                              r === 'superuser'
+                                ? 'bg-navy text-ivory'
+                                : 'bg-amber/20 text-amber'
+                            }`}
+                          >
+                            {t(`roles.names.${r}`)}
                           </span>
-                        )}
-                        {u.role === 'arbiter' && (
-                          <span className="text-xs font-mono bg-amber/20 text-amber px-2 py-0.5 rounded">
-                            arbiter
-                          </span>
-                        )}
+                        ))}
                         {u.can_carry && (
                           <span className="text-xs font-mono bg-cyan/20 text-navy px-2 py-0.5 rounded">
                             carrier
                           </span>
                         )}
-                        {offered.has(u.id) && u.role !== 'arbiter' && (
-                          <span className="text-xs font-mono border border-amber/50 text-amber px-2 py-0.5 rounded">
-                            {t('admin.arbiterOffered')}
+                        {[...(offered.get(u.id) ?? [])].map((r) => (
+                          <span
+                            key={`offered-${r}`}
+                            className="text-xs font-mono border border-amber/50 text-amber px-2 py-0.5 rounded"
+                          >
+                            {t(`roles.names.${r}`)} · {t('admin.arbiterOffered')}
                           </span>
-                        )}
+                        ))}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="inline-flex gap-2">
-                        {u.id !== me.id && u.role !== 'superuser' && (
-                          <button
-                            onClick={() =>
-                              u.role === 'arbiter'
-                                ? handleRevoke(u.id)
-                                : handleOffer(u.id)
-                            }
-                            disabled={offered.has(u.id) && u.role !== 'arbiter'}
-                            className={`text-xs font-display font-medium px-3 py-1 rounded-field disabled:opacity-50 ${
-                              u.role === 'arbiter'
-                                ? 'bg-navy/10 text-navy hover:bg-navy/20'
-                                : 'bg-amber text-white hover:opacity-90'
-                            }`}
-                          >
-                            {u.role === 'arbiter'
-                              ? t('admin.revokeArbiter')
-                              : t('admin.offerArbiter')}
-                          </button>
-                        )}
-                        {u.id !== me.id && u.role !== 'superuser' && (
+                        {/* One button per offerable role, because they are
+                            independent: offering the second must not take the
+                            first away, and a single toggle cannot say that. */}
+                        {u.id !== me.id &&
+                          !(u.roles ?? []).includes('superuser') &&
+                          OFFERABLE.map((r) => {
+                            const held = (u.roles ?? []).includes(r)
+                            const waiting = offered.get(u.id)?.has(r) ?? false
+                            return (
+                              <button
+                                key={r}
+                                onClick={() =>
+                                  held ? handleRevoke(u.id, r) : handleOffer(u.id, r)
+                                }
+                                disabled={waiting && !held}
+                                className={`text-xs font-display font-medium px-3 py-1 rounded-field disabled:opacity-50 ${
+                                  held
+                                    ? 'bg-navy/10 text-navy hover:bg-navy/20'
+                                    : 'bg-amber text-white hover:opacity-90'
+                                }`}
+                              >
+                                {held
+                                  ? t('admin.revokeRole', { role: t(`roles.names.${r}`) })
+                                  : t('admin.offerRole', { role: t(`roles.names.${r}`) })}
+                              </button>
+                            )
+                          })}
+                        {u.id !== me.id && !(u.roles ?? []).includes('superuser') && (
                           <button
                             onClick={() => handleDelete(u)}
                             className="text-xs font-display font-medium px-3 py-1 rounded-field bg-danger/10 text-danger hover:bg-danger/15"

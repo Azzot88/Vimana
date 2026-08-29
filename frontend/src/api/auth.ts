@@ -31,7 +31,11 @@ export interface User {
   can_carry: boolean
   can_send: boolean
   active_mode: 'sender' | 'carrier'
-  role: UserRole
+  /** T3.42 — every role held; roles add up. Empty for an ordinary member.
+   *  Read it through `hasRole` / `isSuperuser` in `lib/permissions`, not by
+   *  hand: a bare `.includes()` scattered across twenty screens is how one of
+   *  them ends up checking the wrong string. */
+  roles: UserRole[]
   nostr_pubkey: string | null
   business_activity_level: number | null
   notify_email: boolean

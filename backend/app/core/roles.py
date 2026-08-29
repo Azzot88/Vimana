@@ -1,11 +1,19 @@
 """T3.42 — offering, accepting and withdrawing a role, with the journal as truth.
 
-The one rule this module exists to hold: **`users.role` is written here and
+The one rule this module exists to hold: **`users.roles` is written here and
 nowhere else, and every write appends a `RoleGrant` row in the same
 transaction.** Where a role came from stops being answerable the moment that
-pairing is broken somewhere else in the codebase.
+pairing is broken somewhere else in the codebase. (`core/superuser.py` is the
+single exception, and it says why in place: User Zero's role is not granted by
+anybody.)
 
-An offer deliberately changes nothing. `users.role` stays whatever it was until
+**Roles add up.** `accept` appends and `revoke` removes one element — neither
+replaces the list. The column was a single string until T3.42, which made every
+grant a silent revocation of the previous one: somebody who arbitrates disputes
+*and* drafts corridor rules would have lost the first job on taking the second,
+and nothing in the interface or the journal would have said so.
+
+An offer deliberately changes nothing. `users.roles` stays whatever it was until
 `accept`, so the permission layer needs no notion of "pending" at all — an
 unaccepted offer is invisible to `perms_of` because there is nothing for it to
 find. That is what makes the acceptance criterion checkable from outside: call
@@ -70,7 +78,7 @@ async def offer(
 ) -> RoleGrant:
     """Propose a role. Grants nothing until the subject answers."""
     _check_offerable(role)
-    if subject.role == Role.SUPERUSER.value:
+    if Role.SUPERUSER.value in (subject.roles or []):
         raise RoleError("A superuser already holds every power")
     if subject.id == actor.id:
         # Not paranoia about privilege escalation — the offerer is already a
@@ -109,7 +117,12 @@ async def accept(db: AsyncSession, subject: User, role: str) -> RoleGrant:
         reason="",
     )
     db.add(grant)
-    subject.role = role
+    # Append, never replace. A new list rather than `.append()`: SQLAlchemy
+    # tracks a plain Python list by identity, so mutating it in place leaves the
+    # attribute unchanged as far as the session is concerned and the UPDATE is
+    # never emitted. The grant would be journalled and the role would not exist.
+    if role not in (subject.roles or []):
+        subject.roles = [*(subject.roles or []), role]
     return grant
 
 
@@ -146,11 +159,11 @@ async def revoke(
         reason=reason,
     )
     db.add(grant)
-    # Only a role that had actually started applying gets taken off the column.
-    # Withdrawing an unanswered offer must not touch it: the account may hold a
-    # different role, and clearing it here would revoke that one silently.
-    if current is RoleGrantEvent.accepted and subject.role == role:
-        subject.role = Role.USER.value
+    # Only a role that had actually started applying comes off the list, and
+    # only that one element: withdrawing an unanswered offer must leave the
+    # other roles alone, and so must revoking a live one.
+    if current is RoleGrantEvent.accepted:
+        subject.roles = [r for r in (subject.roles or []) if r != role]
     return grant
 
 

@@ -16,7 +16,7 @@ import { acceptRole, declineRole, myRoles, type RoleGrant } from '../api/roles'
  */
 export default function RoleOfferSection() {
   const { t } = useTranslation()
-  const [role, setRole] = useState<string>('user')
+  const [roles, setRoles] = useState<string[]>([])
   const [offers, setOffers] = useState<RoleGrant[] | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
@@ -24,7 +24,7 @@ export default function RoleOfferSection() {
   const load = async () => {
     try {
       const { data } = await myRoles()
-      setRole(data.role)
+      setRoles(data.roles)
       setOffers(data.offers)
       setError('')
     } catch {
@@ -54,7 +54,7 @@ export default function RoleOfferSection() {
   }
 
   const hasOffers = (offers?.length ?? 0) > 0
-  if (offers !== null && !hasOffers && role === 'user' && !error) return null
+  if (offers !== null && !hasOffers && roles.length === 0 && !error) return null
 
   return (
     <div className="bg-white rounded-card border border-navy/10 p-5 space-y-3">
@@ -66,10 +66,14 @@ export default function RoleOfferSection() {
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
-      {role !== 'user' && (
+      {roles.length > 0 && (
         <p className="text-sm font-body text-navy">
           {t('roles.current')}{' '}
-          <span className="font-mono text-navy">{t(`roles.names.${role}`)}</span>
+          {/* Every role held, comma-separated: they add up, and showing one of
+              two would be the same lie the single column used to tell. */}
+          <span className="font-mono text-navy">
+            {roles.map((r) => t(`roles.names.${r}`)).join(', ')}
+          </span>
         </p>
       )}
 

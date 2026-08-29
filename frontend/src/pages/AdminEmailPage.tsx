@@ -10,6 +10,7 @@ import {
   type MailStatus,
 } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
+import { isSuperuser } from '../lib/permissions'
 import MonoText from '../components/MonoText'
 
 const LOCALE_NAMES: Record<string, string> = {
@@ -103,7 +104,7 @@ export default function AdminEmailPage() {
   const [testResult, setTestResult] = useState('')
   const [sending, setSending] = useState(false)
 
-  const isSuper = user?.role === 'superuser'
+  const isSuper = isSuperuser(user)
 
   useEffect(() => {
     if (!isSuper) return

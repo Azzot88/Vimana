@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
+import { hasRole } from '../lib/permissions'
 import { useBentoLayout } from '../hooks/useBentoLayout'
 import MonoText from '../components/MonoText'
 import { APP_VERSION } from '../version'
@@ -67,9 +68,11 @@ export default function ProfileLayout() {
   const layout = useBentoLayout()
   const isPhone = layout === 'phone'
 
-  const role = user?.role
+  // T3.42 — a section shows when the account holds **any** of the roles it
+  // names. The old test compared one string against the section's list, which
+  // stops being a question once a person can hold two roles at once.
   const visible = SECTIONS.filter(
-    (s) => !s.roles || ((role === 'arbiter' || role === 'superuser') && s.roles.includes(role)),
+    (s) => !s.roles || s.roles.some((r) => hasRole(user, r)),
   )
 
   const isIndex = pathname === '/profile'

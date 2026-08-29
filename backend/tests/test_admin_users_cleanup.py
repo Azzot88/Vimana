@@ -29,7 +29,7 @@ async def _promote_to_superuser(session_maker, email: str):
         u = (
             await db.execute(select(User).where(User.email == email))
         ).scalar_one()
-        u.role = "superuser"
+        u.roles = ["superuser"]
         await db.commit()
 
 

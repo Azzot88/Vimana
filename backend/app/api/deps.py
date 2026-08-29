@@ -83,8 +83,17 @@ def _issued_after_cutoff(user: User, iat) -> bool:
 
 
 def is_superuser(user: User) -> bool:
-    """Convenience helper — superuser bypasses most role-scoped checks."""
-    return user.role == "superuser"
+    """Convenience helper — superuser bypasses most role-scoped checks.
+
+    T3.42 — delegates to `core.permissions`, which owns the one reader of
+    `users.roles`. Imported inside the function and under a different name:
+    `permissions` imports `get_current_user` from this module, so a top-level
+    import would close the cycle, and an import bound to the same name as the
+    function reads like recursion to everyone who meets it later.
+    """
+    from app.core.permissions import is_superuser as _is_superuser
+
+    return _is_superuser(user)
 
 
 _optional_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)

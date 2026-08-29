@@ -57,9 +57,11 @@
     "backToDisputes": "Back to disputes",
     "arbiterAudit": "Every read is logged and announced in the chat to both parties.",
     "systemMessage": "system",
-    "offerArbiter": "Offer arbiter",
+    "offerRole": "Offer {{role}}",
+    "revokeRole": "Revoke {{role}}",
+    "roles": "Roles and offers",
+    "rolesDesc": "Who has been offered a role and has not answered yet.",
     "arbiterOffered": "offered",
-    "revokeArbiter": "Revoke arbiter",
     "status": {
       "open": "Open",
       "claimed": "Claimed",
@@ -1354,6 +1356,21 @@
   "disputes": {
     "none": "No open disputes.",
     "mine": "My disputes"
+  },
+  "adminRoles": {
+    "title": "Roles and offers",
+    "description": "Offers waiting for an answer. Answered and withdrawn ones live in each account's journal, not here.",
+    "empty": "Nobody is waiting on an answer.",
+    "withdraw": "Withdraw",
+    "loadFailed": "Could not load the offers",
+    "withdrawFailed": "Could not withdraw the offer",
+    "col": {
+      "who": "Offered to",
+      "role": "Role",
+      "offeredBy": "Proposed by",
+      "when": "When",
+      "actions": "Actions"
+    }
   },
   "roles": {
     "title": "Roles",

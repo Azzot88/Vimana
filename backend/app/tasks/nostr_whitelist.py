@@ -43,7 +43,8 @@ def refresh_allowed_pubkeys() -> dict:
         extra_rows = db.execute(
             select(User.nostr_pubkey).where(
                 User.nostr_pubkey.isnot(None),
-                User.role.in_(("arbiter", "superuser")),
+                # T3.42 — overlap, not equality: an account can hold both.
+                User.roles.overlap(["arbiter", "superuser"]),
             )
         ).all()
         pubkeys.update(r[0] for r in extra_rows if r[0])

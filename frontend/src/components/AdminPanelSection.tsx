@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getScanQueue, type ScanQueue } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
+import { hasRole, isArbiter, isSuperuser } from '../lib/permissions'
 import MonoText from './MonoText'
 
 interface AdminLink {
@@ -27,6 +28,15 @@ const LINKS: AdminLink[] = [
     descKey: 'admin.usersDesc',
     roles: ['superuser'],
     icon: '👥',
+  },
+  {
+    // T3.42 — next to Users on purpose: it answers the question that screen
+    // raises and cannot answer, namely which of those offers is still waiting.
+    to: '/admin/roles',
+    labelKey: 'admin.roles',
+    descKey: 'admin.rolesDesc',
+    roles: ['superuser'],
+    icon: '🎫',
   },
   {
     to: '/admin/notices',
@@ -58,8 +68,12 @@ export default function AdminPanelSection() {
   const { t } = useTranslation()
   const [queue, setQueue] = useState<ScanQueue | null>(null)
 
-  const role = user?.role
-  const isSuper = role === 'superuser'
+  // T3.42 — roles add up, so a link is visible when the account holds **any**
+  // of the roles it names. The old `.includes(role)` asked whether one string
+  // was in the link's list, which stops being a question once a person can
+  // hold two.
+  const isSuper = isSuperuser(user)
+
 
   // T3.8 — only the superuser. `scan-queue` is behind `USERS_MANAGE`, so
   // asking as an arbiter would spend a request to be told 403.
@@ -70,9 +84,9 @@ export default function AdminPanelSection() {
       .catch(() => {})
   }, [isSuper])
 
-  if (role !== 'arbiter' && role !== 'superuser') return null
+  if (!isArbiter(user)) return null
 
-  const visible = LINKS.filter((l) => l.roles.includes(role))
+  const visible = LINKS.filter((l) => l.roles.some((r) => hasRole(user, r)))
   if (visible.length === 0) return null
 
   return (

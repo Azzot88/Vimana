@@ -44,6 +44,7 @@ const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage'))
 const AdminNoticesPage = lazy(() => import('./pages/AdminNoticesPage'))
 const AdminEmailPage = lazy(() => import('./pages/AdminEmailPage'))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
+const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const CarrierPage = lazy(() => import('./pages/CarrierPage'))
@@ -163,6 +164,7 @@ export default function App() {
               {/* T_UX.19 — merged into `/disputes`; the old link keeps working. */}
               <Route path="/admin/disputes" element={<Navigate to="/disputes" replace />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/roles" element={<AdminRolesPage />} />
               <Route path="/admin/notices" element={<AdminNoticesPage />} />
               <Route path="/admin/email" element={<AdminEmailPage />} />
               <Route path="/admin/params" element={<AdminParamsPage />} />

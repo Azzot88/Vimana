@@ -7,6 +7,7 @@ import MonoText from '../components/MonoText'
 import StatusBadge from '../components/StatusBadge'
 import ArbiterQueue from '../components/ArbiterQueue'
 import { useAuthStore } from '../stores/auth'
+import { isArbiter } from '../lib/permissions'
 
 /** T_UX.18 — open disputes, on their own screen.
  *
@@ -23,7 +24,7 @@ export default function DisputesPage() {
   // T_UX.19 — one entry, not two. An arbiter's queue is *more* of this screen,
   // not a different screen: a separate "Arbitration" tab listed the same word
   // twice and left the reader to guess which one held their own case.
-  const isArbiter = me?.role === 'arbiter' || me?.role === 'superuser'
+  const canArbitrate = isArbiter(me)
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -71,7 +72,7 @@ export default function DisputesPage() {
         ))}
       </div>
 
-      {isArbiter && <ArbiterQueue />}
+      {canArbitrate && <ArbiterQueue />}
     </div>
   )
 }
