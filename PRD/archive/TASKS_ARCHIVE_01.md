@@ -1,11 +1,11 @@
 # Vimana — Sacred Logistics · TASKS_ARCHIVE_01.md
 
 > Диапазон: T0.1 … T3.5 pt.2 (Фазы 0, 1, 2, 3, 3.5 — все ✅ MVP закрыто)
-> Активный лог: [TASKS.md](TASKS.md)
-> Полные MILESTONE-описания: [CHANGELOG.md](CHANGELOG.md) + [CHANGELOG_ARCHIVE_01.md](CHANGELOG_ARCHIVE_01.md)
-> Правила ротации: [PROJECT.md §6.4](PROJECT.md)
+> Активный лог: [TASKS.md](../TASKS.md)
+> Полные MILESTONE-описания: [CHANGELOG.md](../CHANGELOG.md) + [CHANGELOG_ARCHIVE_01.md](CHANGELOG_ARCHIVE_01.md)
+> Правила ротации: [PROJECT.md §6.4](../PROJECT.md)
 
-Все задачи ниже закрыты (✅ MVP). Открытые follow-up'ы для них живут в активном [TASKS.md](TASKS.md) как отдельные строки-стабы или новые задачи.
+Все задачи ниже закрыты (✅ MVP). Открытые follow-up'ы для них живут в активном [TASKS.md](../TASKS.md) как отдельные строки-стабы или новые задачи.
 
 ## ⚙️ ЭТАП 0 — Инфраструктура / DevOps
 

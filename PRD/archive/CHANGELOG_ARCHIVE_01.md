@@ -1,8 +1,8 @@
 # Vimana — Sacred Logistics · CHANGELOG_ARCHIVE_01.md
 
 > Диапазон: 2026-06-27 … 2026-07-14
-> Активный лог: [CHANGELOG.md](CHANGELOG.md)
-> Правила ротации: [PROJECT.md §6.4](PROJECT.md)
+> Активный лог: [CHANGELOG.md](../CHANGELOG.md)
+> Правила ротации: [PROJECT.md §6.4](../PROJECT.md)
 
 - **2026-07-14 · INFRA** · **Nginx custom warming-up page + healthcheck-based startup + build chunk splitting**. Проблема: после reboot сервера ~30 сек nginx отдавал bare `502 Bad Gateway` пока backend/frontend прогревались. Fix: (1) `nginx/_error.html` — красивая карточка ✈️ «Vimana starting…» с `<meta http-equiv="refresh" content="3">` для 502/503/504; `error_page` в конфиге. (2) `proxy_next_upstream error timeout http_502 http_503 http_504` с `proxy_next_upstream_tries 3` — 3 попытки before 502. (3) `docker-compose.dev.yml` healthchecks на backend (`python -c urllib /health`) и frontend (`wget /`), nginx `depends_on: condition: service_healthy`. Frontend build: `"type": "module"` в package.json + `manualChunks` в vite.config.ts разделяет vendor-react/i18n/phone от main. Main bundle 564 → 228 kB, оба warning'а исчезли · `nginx/{_error.html,default.conf}`, `docker-compose.dev.yml`, `frontend/{package.json,vite.config.ts}`.
 
