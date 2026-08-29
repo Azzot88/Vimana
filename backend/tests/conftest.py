@@ -1552,7 +1552,13 @@ async def make_account(payload: dict) -> _MadeAccount:
                 "email": user.email,
                 "phone": user.phone,
                 "display_name": user.display_name,
-                "role": user.role,
+                # T3.42 — mirrors `UserOut`: every role held, empty for an
+                # ordinary member. Nothing reads it out of this payload today
+                # (the `["role"]` assertions elsewhere are deal-participant
+                # roles, a different thing), but a stub that answers in a shape
+                # the real endpoint does not use is a trap for whoever writes
+                # the next test against it.
+                "roles": list(user.roles or []),
                 "active_mode": user.active_mode,
                 "can_carry": user.can_carry,
                 "can_send": user.can_send,

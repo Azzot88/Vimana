@@ -34,8 +34,8 @@ async def test_admin_users_endpoint_does_not_leak_addresses(
 
     async with session_maker() as db:
         u = await db.get(User, seed_sender.id)
-        original_role = u.role
-        u.role = "superuser"
+        original_roles = list(u.roles or [])
+        u.roles = ["superuser"]
         await db.commit()
 
     try:
@@ -48,7 +48,7 @@ async def test_admin_users_endpoint_does_not_leak_addresses(
     finally:
         async with session_maker() as db:
             u = await db.get(User, seed_sender.id)
-            u.role = original_role
+            u.roles = original_roles
             await db.commit()
 
 

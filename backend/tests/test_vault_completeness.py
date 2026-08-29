@@ -97,7 +97,7 @@ async def arbiter_user(client, session_maker):
     user_id = uuidlib.UUID(reg.json()["id"])
     async with session_maker() as db:
         u = await db.get(User, user_id)
-        u.role = "arbiter"
+        u.roles = ["arbiter"]
         await db.commit()
     token = await _login(client, email)
     return {"id": user_id, "headers": {"Authorization": f"Bearer {token}"}}

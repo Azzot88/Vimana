@@ -54,7 +54,7 @@ async def _promote_to_superuser(session_maker, email: str):
 
     async with session_maker() as db:
         user = (await db.execute(select(User).where(User.email == email))).scalar_one()
-        user.role = "superuser"
+        user.roles = ["superuser"]
         await db.commit()
 
 
