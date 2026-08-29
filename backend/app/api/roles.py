@@ -1,7 +1,7 @@
 """T3.42 — role offers: the superuser's side and the subject's side.
 
 Two surfaces, deliberately separate. The superuser offers and revokes; the
-subject accepts or declines. Nothing here writes `users.role` — that happens in
+subject accepts or declines. Nothing here writes `users.roles` — that happens in
 `core/roles`, which is also where the journal row is appended, so the two cannot
 come apart.
 

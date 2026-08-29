@@ -1,6 +1,6 @@
 """T3.42 — where a role came from, kept as a journal rather than a column.
 
-`users.role` said what somebody may do and never said why. For an arbiter that
+The role column said what somebody may do and never said why. For an arbiter that
 gap is the sharp one: the arbiter opens a deal's vault through an
 `OperatorAccessGrant` (T3.2), and **every one of those reads is written into the
 chain** — so the record of the power being *used* is immutable, while the record
@@ -18,15 +18,15 @@ that gets lost: an appointment is remembered, a withdrawal is not. A journal
 that records only grants describes a platform where nobody's power ever ends.
 
 **The offer is not the role.** An `offered` row changes nothing about what the
-account may do — `users.role` is untouched until the person accepts. That is why
+account may do — `users.roles` is untouched until the person accepts. That is why
 the permission layer needs no new logic at all: an unaccepted offer is invisible
 to `perms_of` because there is nothing there to see. The alternative — a role
 column plus an `is_confirmed` flag — makes acceptance a decoration painted over
 access that was already granted.
 
-`users.role` therefore stays the single answer to "what may this account do",
+`users.roles` therefore stays the single answer to "what may this account do",
 and this table is the single answer to "how did it come to be that way". The
-invariant tying them together: **every change of `users.role` writes a row
+invariant tying them together: **every change of `users.roles` writes a row
 here**, and nothing else may write that column.
 """
 from __future__ import annotations
@@ -70,7 +70,7 @@ class RoleGrant(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
-    # The role value as it appears in `users.role` — `arbiter`,
+    # The role value as it appears in `users.roles` — `arbiter`,
     # `compliance_editor`. A string rather than an enum column because the set
     # of roles lives in `core.permissions.Role` and is validated there; two
     # declarations of the same list drift, and the one in the database is the

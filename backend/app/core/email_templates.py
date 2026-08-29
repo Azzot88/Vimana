@@ -64,7 +64,7 @@ _LETTERS: dict[str, dict[str, Any]] = {
     "new_device": {"cta": True, "facts": ["device", "place", "when"]},
     # T3.42. The letter names the role, who proposed it and where to answer —
     # and says nothing that implies the power has already arrived, because it
-    # has not: `users.role` is untouched until the person accepts (§9.1).
+    # has not: `users.roles` is untouched until the person accepts (§9.1).
     "role_offered": {"cta": True, "facts": ["role", "offered_by"]},
     "deal_status": {},
     "deadline_reminder": {},

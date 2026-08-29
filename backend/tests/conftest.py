@@ -1121,6 +1121,46 @@ async def _ensure_carrier_notes_columns(engine) -> None:
             await conn.execute(text(f"ALTER TABLE users {ddl}"))
 
 
+async def _ensure_user_roles_column(engine) -> None:
+    """T3.42: `users.role` (one string) becomes `users.roles` (an array).
+    Mirrors migration 0056 for a pre-existing test DB.
+
+    Needed for exactly the reason this whole block of helpers exists, and this
+    time it took down the suite rather than one file: `create_all` builds tables
+    that are missing and never alters ones that are already there. `users` has
+    existed in `vimana_test` since the first run, so the new column simply never
+    appeared, and every query the ORM writes names it — which is why the failure
+    was 340 tests and 682 errors from a single missing column rather than
+    something localised.
+
+    The drop is part of the mirror on purpose: leaving `role` behind would let a
+    test pass here against a shape production does not have, which is worse than
+    the divergence it looks like it is avoiding.
+    """
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS roles VARCHAR(32)[] "
+                 "NOT NULL DEFAULT '{}'")
+        )
+        has_role = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='users' AND column_name='role'"
+                )
+            )
+        ).fetchone()
+        if has_role:
+            await conn.execute(
+                text(
+                    "UPDATE users SET roles = ARRAY[role]::varchar[] "
+                    "WHERE role IS NOT NULL AND role <> 'user' "
+                    "AND cardinality(roles) = 0"
+                )
+            )
+            await conn.execute(text("ALTER TABLE users DROP COLUMN role"))
+
+
 async def _ensure_trip_terms_columns(engine) -> None:
     """T3.35: the carrier's baseline price on an existing `trips` table.
     Mirrors migration 0051."""
@@ -1426,6 +1466,7 @@ async def test_engine():
     await _ensure_trip_terms_columns(engine)
     await _ensure_display_prefs_columns(engine)
     await _ensure_carrier_notes_columns(engine)
+    await _ensure_user_roles_column(engine)
     await _seed_default_categories(engine)
     yield engine
     await engine.dispose()

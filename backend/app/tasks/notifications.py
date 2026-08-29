@@ -532,7 +532,7 @@ def send_role_offered(user_id: str, role: str, offered_by: str) -> None:
     other security letter takes, which never consults preferences at all.
 
     **The letter says "proposed", never "assigned"** (DESIGNGUIDELINES §9.1),
-    and that wording is true rather than careful: `users.role` is untouched
+    and that wording is true rather than careful: `users.roles` is untouched
     until the person accepts, so at the moment this letter is written they hold
     exactly the rights they held before.
 

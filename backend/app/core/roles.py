@@ -127,7 +127,7 @@ async def accept(db: AsyncSession, subject: User, role: str) -> RoleGrant:
 
 
 async def decline(db: AsyncSession, subject: User, role: str) -> RoleGrant:
-    """The subject says no. `users.role` is not touched — it never changed."""
+    """The subject says no. `users.roles` is not touched — it never changed."""
     if await state_of(db, subject.id, role) is not RoleGrantEvent.offered:
         raise RoleError("There is no open offer of this role")
 
