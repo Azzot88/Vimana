@@ -250,6 +250,11 @@ MATRIX: dict[tuple[str, str], Case] = {
         "rules:edit only",
         json={"authority": "a", "document_title": "b", "quote": "c"},
     ),
+    ("PATCH", "/api/admin/rules/sources/{source_id}"): Case(
+        DENIED,
+        "rules:edit only — editing somebody else's citation",
+        json={"authority": "a", "document_title": "b", "quote": "c"},
+    ),
     ("DELETE", "/api/admin/rules/sources/{source_id}"): Case(DENIED, "rules:edit only"),
     ("POST", "/api/admin/rules/{set_id}/requirements"): Case(
         DENIED, "rules:edit only", json={"code": "probe", "title": "Probe"}
