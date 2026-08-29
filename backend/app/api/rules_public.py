@@ -27,7 +27,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -165,7 +165,18 @@ async def read_rule(
             select(RuleSet).where(
                 RuleSet.category_key == category,
                 RuleSet.direction == direction,
-                RuleSet.jurisdiction_code == country.upper(),
+                # Case-insensitive on both sides, not `country.upper()` against
+                # the stored value. This is a **public URL**: people type it
+                # lowercase, crawlers normalise it, and links arrive from places
+                # that lowercase paths as a matter of policy. Uppercasing only
+                # the request assumed every stored code is already uppercase —
+                # an assumption about editor input, made in the one place that
+                # must not depend on it.
+                #
+                # It costs the index on this column. The table holds a handful
+                # of rows per corridor and will not outgrow a scan before
+                # `T_OPS.2` rewrites this path anyway.
+                func.upper(RuleSet.jurisdiction_code) == country.upper(),
                 RuleSet.status == RuleStatus.published,
             )
         )
