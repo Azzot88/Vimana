@@ -88,7 +88,9 @@
 | Публичные страницы по аудиториям + панель по адресу режима | — | 🟨 в работе (T_UX.23, 2026-08-25) → [детали](archive/TECHSTATE_ARCHIVE_01.md#S63) |
 | Профиль: витрина и операционка | — | ✅ MVP (T_UX.21, T_UX.22, 2026-08-23) → [детали](archive/TECHSTATE_ARCHIVE_01.md#S64) |
 | Профиль: боковая навигация по разделам | — | ✅ MVP (T_UX.20, 2026-08-23) → [детали](archive/TECHSTATE_ARCHIVE_01.md#S65) |
-| Карточка создания рейса: переработка | 3.10 | ⬜ ждёт данных владельца (T3.41, T1.25, 2026-08-23) → [детали](archive/TECHSTATE_ARCHIVE_01.md#S66) |
+| Правила коридора: модель, юрисдикции, предикаты | 3.11 | ✅ MVP (T3.11.01, 2026-08-29) |
+| Правила коридора: редактор, справочник, корпуса, чеклист, пакет | 3.11 | ⬜ не начато (T3.11.02 … T3.11.13) |
+| Карточка создания рейса: переработка | 3.10 | ➡️ перенесена в T3.11.07 (T3.41, T1.25, 2026-08-23) → [детали](archive/TECHSTATE_ARCHIVE_01.md#S66) |
 | Роль как предложение: принятие и журнал | 3.10 | ⬜ не начато (T3.42, 2026-08-23) → [детали](archive/TECHSTATE_ARCHIVE_01.md#S67) |
 | Карточные платежи | 4 | ⬜ не начато (T4.2) |
 | Эскроу BTC + Залог | 5 | ⬜ не начато |
@@ -187,6 +189,9 @@
 
 | Механика | Где реализовано (файлы) |
 |---|---|
+| **Правило коридора вычисляется, а не читается (T3.11.01, 2026-08-29).** Юрисдикция — дерево (`US → US-NY → US-NY-NYC`), коридор — цепочка; условие документа хранится предикатом `{attr, op, value}` с одним уровнем `all` / `any` и разбирается интерпретатором на конечном списке операций — без `eval`. Валидация стоит на модели, а не на эндпоинте, и незаполненный атрибут даёт исключение, а не `false`. | `models/rules.py`, `core/rule_conditions.py`, `alembic/versions/0054_corridor_rules.py`, `models/marketplace.py` (категория `art`), `models/__init__.py`, `tests/test_rules_model.py` |
+| **Одна опубликованная версия правила на тройку — партиальным индексом (T3.11.01).** `uq_rule_sets_published` покрывает только `status='published'`, поэтому старые версии остаются в таблице: две опубликованные — это два ответа на один вопрос, а без архива нельзя ответить, что правило говорило в марте. | `models/rules.py` (`RuleSet.__table_args__`), `alembic/versions/0054_corridor_rules.py` |
+| **Enum-колонку нельзя засеять связанным параметром (T3.11.01).** asyncpg шлёт bind-параметр как `VARCHAR`, и Postgres не приводит его к enum сам — литерал привёл бы, параметр нет. Посев требует `CAST(:x AS <enumtype>)`. Касается любого будущего посева `direction` и `obtained_by`. | `alembic/versions/0054_corridor_rules.py` |
 | **Один адрес — два экрана, и почему это не таб (T_UX.23, 2026-08-25).** | `pages/ModeHomePage.tsx`, `components/landing/{LandingShell,AudienceLanding,FlowStrip}.tsx`, `pages/{Carrier,Sender,Business}LandingPage.tsx`, `entry-ssr.tsx`, `scripts/prerender.mjs`, `nginx.conf` → [детали](archive/TECHSTATE_ARCHIVE_01.md#L001) |
 | **Один способ правки на все параметры профиля (T_UX.22, 2026-08-23).** | `components/StandingNoteSection.tsx`, `components/DisplayPrefsSection.tsx`, `components/{Connections,Invites}Section.tsx`, `pages/Profile{Rules,Trust,History}Page.tsx` → [детали](archive/TECHSTATE_ARCHIVE_01.md#L002) |
 | **Стоячие заметки перевозчика: три текста, два поведения (T_UX.21, 2026-08-23).** | `models/user.py`, `schemas/user.py`, `alembic/versions/0053_*.py`, `tests/test_carrier_notes.py`, `components/StandingNoteSection.tsx`, `pages/ProfileRulesPage.tsx` → [детали](archive/TECHSTATE_ARCHIVE_01.md#L003) |
@@ -414,6 +419,7 @@
 
 | Файл | Функция | Что это и почему важно |
 |---|---|---|
+| `backend/app/core/rule_conditions.py` | `evaluate`, `required_attributes` | **Оставлены намеренно (T3.11.01, 2026-08-29), вызывающего пока нет.** Это объявленная поверхность для `T3.11.06` (сборка чеклиста) и `T3.11.12` (инструмент MCP) — обе следующие задачи той же фазы. В отличие от строк ниже, обе покрыты тестами: `tests/test_rules_model.py` исполняет и ветки отказа, и обе формы группировки. Если фаза остановится до `T3.11.06` — перепроверить сигнатуры перед использованием, как и всё в этом списке |
 | `backend/app/core/trust.py` | `revoke_edge` | **Не остаток, а недоделанная фича.** У `TrustEdge` есть колонка `revoked_at` и готовая функция её проставить, но вызывающего нет — значит связь доверия сегодня **невозможно отозвать** ни одним эндпоинтом. Прежде чем строить что-либо на отзыве доверия, начинать отсюда |
 | `backend/app/core/signing.py` | `build_vault_message_event_skeleton` | Мост для подписи сообщений сейфа через NIP-07 на стороне клиента: возвращает форму события, которую собрал бы клиент. Фронт этим не пользуется. Возможный задел для Фазы 6 (портативность) — но непроверенный |
 | `backend/app/core/signing.py` | `_b64` | приватный хелпер |

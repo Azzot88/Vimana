@@ -113,19 +113,19 @@
 >
 > Коридор — **цепочка юрисдикций** `RU → транзит → US → штат`, а не пара стран: прямых рейсов нет, а породные и городские запреты живут ниже уровня страны.
 
-### T3.11.01 — Модель правил и юрисдикций ⬜
+### T3.11.01 — Модель правил и юрисдикций ✅ MVP (2026-08-29)
 
-- [ ] `Jurisdiction(code, kind ∈ {country, subdivision, city, transit_point}, parent_code)` — иерархия обязательна: правило городского уровня не выражается привязкой к стране.
-- [ ] `RuleSet(direction ∈ {export, import, transit}, jurisdiction_code, category_key, version, status ∈ {draft, review, published, outdated}, effective_from, reviewed_at, reviewed_by, checked_at, needs_review)`. Частичный уникальный индекс: **одна `published` версия** на `(direction, jurisdiction, category)`.
-- [ ] `RuleSection(rule_set_id, anchor, order, title, body, locale)` — перевод построчно. JSONB не даёт состояния «переведено наполовину», а оно понадобится в `T3.11.13`.
-- [ ] `RuleSource(section_id, authority, document_title, document_date, url, quote)`.
-- [ ] `DocumentRequirement(rule_set_id, code, title, issuer, obtained_by, is_mandatory, condition, valid_for_days, lead_time_days, cost_estimate, notes)`. `issuer` — отдельным полем, к нему привязывается партнёр на ступени 1.
-- [ ] **`condition` — предикат, а не текст:** лист `{"attr","op","value"}` плюс **один уровень** группировки `all` / `any` из листьев, не более восьми. Вложенность глубже отвергается. Интерпретатор на конечном списке операций, ни одного пути, где предикат исполняется как выражение. Незаполненный атрибут — исключение, а не `false`. Валидация на модели, не на эндпоинте.
-- [ ] Список атрибутов закрыт и объявлен в коде: `age_years`, `declared_value`, `author_known`, `species`, `breed`, `generation`, `purpose ∈ {personal, resale}`, `count`. Валидация при сохранении — атрибут вне списка не сохраняется.
-- [ ] **`DEFAULT_CATEGORIES` расширяется значением `art`** (`models/marketplace.py`) — второй корпус целиком про него, а категории такой нет.
-- [ ] Миграция alembic + тесты модели, включая отказ второй `published` версии и отказ неизвестного атрибута.
+- [x] `Jurisdiction(code, kind ∈ {country, subdivision, city, transit_point}, parent_code)` — иерархия обязательна: правило городского уровня не выражается привязкой к стране.
+- [x] `RuleSet(direction ∈ {export, import, transit}, jurisdiction_code, category_key, version, status ∈ {draft, review, published, outdated}, effective_from, reviewed_at, reviewed_by, checked_at, needs_review)`. Частичный уникальный индекс: **одна `published` версия** на `(direction, jurisdiction, category)`.
+- [x] `RuleSection(rule_set_id, anchor, order, title, body, locale)` — перевод построчно. JSONB не даёт состояния «переведено наполовину», а оно понадобится в `T3.11.13`.
+- [x] `RuleSource(section_id, authority, document_title, document_date, url, quote)`.
+- [x] `DocumentRequirement(rule_set_id, code, title, issuer, obtained_by, is_mandatory, condition, valid_for_days, lead_time_days, cost_estimate, notes)`. `issuer` — отдельным полем, к нему привязывается партнёр на ступени 1.
+- [x] **`condition` — предикат, а не текст:** лист `{"attr","op","value"}` плюс **один уровень** группировки `all` / `any` из листьев, не более восьми. Вложенность глубже отвергается. Интерпретатор на конечном списке операций, ни одного пути, где предикат исполняется как выражение. Незаполненный атрибут — исключение, а не `false`. Валидация на модели, не на эндпоинте.
+- [x] Список атрибутов закрыт и объявлен в коде: `age_years`, `declared_value`, `author_known`, `species`, `breed`, `generation`, `purpose ∈ {personal, resale}`, `count`. Валидация при сохранении — атрибут вне списка не сохраняется.
+- [x] **`DEFAULT_CATEGORIES` расширяется значением `art`** (`models/marketplace.py`) — второй корпус целиком про него, а категории такой нет.
+- [x] Миграция alembic + тесты модели, включая отказ второй `published` версии и отказ неизвестного атрибута.
 
-**Acceptance:** две `published` версии на одну тройку невозможны · предикат с неизвестным атрибутом не сохраняется · `art` в списке категорий · сьют зелёный.
+**Acceptance ✅:** две `published` версии на одну тройку невозможны · предикат с неизвестным атрибутом не сохраняется · `art` в списке категорий · сьют зелёный.
 
 ### T3.11.02 — Редактор правил в админке ⬜
 
