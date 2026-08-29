@@ -1389,6 +1389,7 @@
     "inLocale": "на {{locale}}",
     "openSource": "Открыть документ",
     "whatChanged": "Что изменилось:",
+    "downloadMd": "Скачать в .md",
     "documentsTitle": "Какие документы понадобятся",
     "documentsHint": "Важнее всего срок изготовления: часть из них делается неделями, и вылет через десять дней — неподходящий момент это узнать.",
     "issuerUnknown": "кто выдаёт — не указано",
@@ -1459,7 +1460,8 @@
     "historyTitle": "История",
     "publishNoteLabel": "Что изменилось",
     "publishNotePlaceholder": "Одна строка для того, кто вернулся, — необязательно",
-    "reqNotesPlaceholder": "Примечание"
+    "reqNotesPlaceholder": "Примечание",
+    "md": { "bold": "жирный", "italic": "курсив", "heading": "заголовок", "list": "список", "quote": "цитата", "link": "ссылка", "preview": "предпросмотр", "edit": "исходник" }
   },
   "adminRoles": {
     "title": "Роли и предложения",

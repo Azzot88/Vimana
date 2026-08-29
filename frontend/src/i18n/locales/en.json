@@ -1388,6 +1388,7 @@
     "inLocale": "in {{locale}}",
     "openSource": "Open the document",
     "whatChanged": "What changed:",
+    "downloadMd": "Download as .md",
     "documentsTitle": "Documents you will need",
     "documentsHint": "The time to obtain is what matters most: some of these take weeks, and a flight in ten days is the wrong moment to find that out.",
     "issuerUnknown": "issuer not stated",
@@ -1458,7 +1459,8 @@
     "historyTitle": "History",
     "publishNoteLabel": "What changed",
     "publishNotePlaceholder": "One line for the reader who came back — optional",
-    "reqNotesPlaceholder": "Notes"
+    "reqNotesPlaceholder": "Notes",
+    "md": { "bold": "bold", "italic": "italic", "heading": "heading", "list": "list", "quote": "quote", "link": "link", "preview": "preview", "edit": "source" }
   },
   "adminRoles": {
     "title": "Roles and offers",

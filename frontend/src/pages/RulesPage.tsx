@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { readRule, type PublicRuleSet } from '../api/rulesPublic'
 import { usePrefs } from '../hooks/usePrefs'
+import { renderMarkdown } from '../lib/markdown'
 import LandingShell from '../components/landing/LandingShell'
 import MonoText from '../components/MonoText'
 
@@ -130,9 +131,15 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
                 </span>
               )}
             </h2>
-            <p className="text-sm font-body text-navy/80 whitespace-pre-wrap leading-relaxed">
-              {s.body}
-            </p>
+            {/* `body` is Markdown, rendered with raw HTML disabled — see
+                `lib/markdown`. `dangerouslySetInnerHTML` is safe here for a
+                reason that is checkable rather than assumed: the renderer
+                cannot emit a tag the source did not spell in Markdown, and
+                Markdown has no syntax for a script. */}
+            <div
+              className="rules-prose text-sm font-body text-navy/80 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(s.body) }}
+            />
 
             {/* The citation is the page's spine, not an appendix. */}
             {s.sources.map((src, i) => (
@@ -195,6 +202,19 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
             </ul>
           </section>
         )}
+
+        {/* The same corridor as a file. `body` is stored as Markdown, so this
+            is the text itself rather than a conversion of it — which is why
+            the format was chosen (owner's decision 2026-08-29).
+
+            A plain link, not a script-driven save: the URL is real, works with
+            `curl`, and survives being pasted to somebody else. */}
+        <a
+          href={`/api/rules/${data.category_key}/${data.direction}/${data.jurisdiction_code}/markdown?locale=${data.locale}`}
+          className="inline-block text-sm font-body text-cyan hover:underline"
+        >
+          {t('rulesPage.downloadMd')}
+        </a>
 
         {/* §9.1 — what this page is and is not. Said once, plainly, at the end:
             the platform is not a broker and does not issue any of these. */}

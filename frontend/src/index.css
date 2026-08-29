@@ -64,3 +64,33 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* T3.11.03 pt.3 — typography for rendered rule text.
+ *
+ * Scoped to `.rules-prose` rather than global element styles: the app resets
+ * headings and lists everywhere else on purpose, and un-resetting them
+ * globally to serve one page would change twenty screens to fix one.
+ *
+ * Deliberately short. The renderer emits a small, closed set of tags (see
+ * `lib/markdown`), so this list is that set and nothing more — a rule for a tag
+ * the renderer cannot produce is a rule nobody can check. */
+.rules-prose > * + * { margin-top: 0.75rem; }
+.rules-prose h2 { font-size: 1.125rem; font-weight: 600; color: #0A1626; margin-top: 1.5rem; }
+.rules-prose h3 { font-size: 1rem; font-weight: 600; color: #0A1626; margin-top: 1.25rem; }
+.rules-prose ul { list-style: disc; padding-left: 1.25rem; }
+.rules-prose ol { list-style: decimal; padding-left: 1.25rem; }
+.rules-prose li + li { margin-top: 0.25rem; }
+.rules-prose a { color: #58B0D9; text-decoration: underline; }
+.rules-prose strong { font-weight: 600; color: #0A1626; }
+.rules-prose blockquote {
+  border-left: 2px solid rgba(10, 22, 38, 0.15);
+  padding-left: 0.75rem;
+  color: rgba(10, 22, 38, 0.65);
+}
+.rules-prose code {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.85em;
+  background: rgba(10, 22, 38, 0.05);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}

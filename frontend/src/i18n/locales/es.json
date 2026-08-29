@@ -1344,6 +1344,7 @@
     "inLocale": "en {{locale}}",
     "openSource": "Abrir el documento",
     "whatChanged": "Qué ha cambiado:",
+    "downloadMd": "Descargar en .md",
     "documentsTitle": "Documentos que necesitarás",
     "documentsHint": "Lo que más importa es el plazo de obtención: algunos tardan semanas, y un vuelo dentro de diez días es un mal momento para enterarse.",
     "issuerUnknown": "emisor no indicado",
@@ -1409,7 +1410,8 @@
     "historyTitle": "Historial",
     "publishNoteLabel": "Qué ha cambiado",
     "publishNotePlaceholder": "Una línea para quien vuelve — opcional",
-    "reqNotesPlaceholder": "Notas"
+    "reqNotesPlaceholder": "Notas",
+    "md": { "bold": "negrita", "italic": "cursiva", "heading": "título", "list": "lista", "quote": "cita", "link": "enlace", "preview": "vista previa", "edit": "fuente" }
   },
   "adminRoles": {
     "title": "Roles y propuestas",

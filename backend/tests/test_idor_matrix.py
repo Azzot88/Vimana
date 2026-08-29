@@ -229,6 +229,9 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("GET", "/api/rules/{category}/{direction}/{country}"): Case(
         PUBLIC, "the free half of stream D — text nobody can read is text nobody reads"
     ),
+    ("GET", "/api/rules/{category}/{direction}/{country}/markdown"): Case(
+        PUBLIC, "the same corridor as a file; public for the same reason"
+    ),
     ("GET", "/api/admin/rules/{set_id}"): Case(DENIED, "rules:edit only"),
     ("PATCH", "/api/admin/rules/{set_id}"): Case(
         DENIED, "rules:edit only", json={"title": "idor probe"}

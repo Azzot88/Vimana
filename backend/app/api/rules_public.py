@@ -26,6 +26,7 @@ import uuid
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -155,6 +156,108 @@ async def index(db: AsyncSession = Depends(get_db)):
         )
         for rs, name in rows
     ]
+
+
+def _as_markdown(data: "RuleSetOut") -> str:
+    """The same corridor as a `.md` file.
+
+    Built from the assembled response rather than from the rows, so the file and
+    the page can never disagree about which locale was served or which sections
+    fell back to English.
+
+    `body` is already Markdown — that is why it is stored that way (owner's
+    decision 2026-08-29) — so this is assembly, not conversion. Nothing here can
+    be lossy, which is the whole reason the format was chosen over HTML.
+    """
+    out: list[str] = [f"# {data.title or data.category_key}", ""]
+    out.append(
+        f"**{data.direction.value} · {data.jurisdiction_name} "
+        f"({data.jurisdiction_code}) · {data.category_key} · v{data.version}**"
+    )
+    out.append("")
+    if data.reviewed_at:
+        out.append(f"Checked against the sources: {data.reviewed_at:%Y-%m-%d}")
+    else:
+        out.append("Not yet checked against the sources.")
+    if data.needs_review:
+        out.append("")
+        out.append("> A source has changed and this text has not been re-read.")
+    if data.published_note:
+        out.append("")
+        out.append(f"What changed: {data.published_note}")
+    out.append("")
+
+    for section in data.sections:
+        out.append(f"## {section.title or section.anchor}")
+        if section.locale != data.locale:
+            out.append("")
+            out.append(f"*(in {section.locale.upper()} — not translated yet)*")
+        out.append("")
+        out.append(section.body)
+        out.append("")
+        for src in section.sources:
+            # The citation as a quotation block: it is the part that makes the
+            # claim above it checkable, and a file that dropped it would be a
+            # file that reads like an opinion.
+            out.append(f"> «{src.quote}»")
+            out.append(">")
+            line = f"> — {src.authority}, {src.document_title}"
+            if src.document_date:
+                line += f", {src.document_date:%Y-%m-%d}"
+            out.append(line)
+            if src.url:
+                out.append(f"> {src.url}")
+            out.append("")
+
+    if data.requirements:
+        out.append("## Documents")
+        out.append("")
+        for req in data.requirements:
+            bits = [f"**{req.title}**"]
+            if req.issuer:
+                bits.append(req.issuer)
+            if req.lead_time_days is not None:
+                bits.append(f"{req.lead_time_days} days to obtain")
+            if req.valid_for_days is not None:
+                bits.append(f"valid {req.valid_for_days} days")
+            if not req.is_mandatory:
+                bits.append("conditional")
+            out.append(f"- {' · '.join(bits)}")
+            if req.notes:
+                out.append(f"  {req.notes}")
+        out.append("")
+
+    out.append("---")
+    out.append("")
+    out.append(
+        "Vimana is not a customs broker and issues none of these documents. "
+        "Every claim above is quoted from its source so it can be checked."
+    )
+    return "\n".join(out)
+
+
+@router.get("/rules/{category}/{direction}/{country}/markdown", response_class=PlainTextResponse)
+async def read_rule_markdown(
+    category: str,
+    direction: RuleDirection,
+    country: str,
+    db: AsyncSession = Depends(get_db),
+    locale: str = Query(default=FALLBACK_LOCALE, max_length=5),
+):
+    """The corridor as a downloadable `.md`.
+
+    Calls the page endpoint rather than re-querying: two assemblers of the same
+    corridor would answer differently the first time one of them learned a rule
+    the other did not — about locale fallback, most likely, since that is the
+    part with a decision in it.
+    """
+    data = await read_rule(category, direction, country, db, locale)
+    filename = f"{category}-{direction.value}-{country.lower()}.md"
+    return PlainTextResponse(
+        _as_markdown(data),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/rules/{category}/{direction}/{country}", response_model=RuleSetOut)

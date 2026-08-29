@@ -10,6 +10,7 @@ import {
   type RuleSource,
 } from '../api/rules'
 import MonoText from './MonoText'
+import { renderMarkdown } from '../lib/markdown'
 
 const FIELD =
   'w-full border border-navy/20 rounded-field px-3 py-1.5 text-sm font-body text-navy focus:outline-none focus:border-cyan'
@@ -51,6 +52,7 @@ export default function RuleSectionCard({
   const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(section)
+  const [preview, setPreview] = useState(false)
   const [addingSource, setAddingSource] = useState(false)
   const [editingSource, setEditingSource] = useState<string | null>(null)
   const [srcDraft, setSrcDraft] = useState<Partial<RuleSource>>({})
@@ -218,13 +220,56 @@ export default function RuleSectionCard({
             placeholder={t('adminRules.sectionTitlePlaceholder') as string}
             className={FIELD}
           />
-          <textarea
-            value={draft.body}
-            onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-            placeholder={t('adminRules.sectionBodyPlaceholder') as string}
-            rows={8}
-            className={FIELD}
-          />
+          {/* T3.11.03 pt.3 — Markdown, edited as Markdown.
+              No WYSIWYG layer on purpose (owner's decision 2026-08-29): a
+              round-trip through a rich editor rewrites what a corpus file
+              spelled by hand — `*` becomes `-`, links get inlined — and the
+              corpus is reviewed in a git diff. What is typed is what is
+              stored. The preview beside it uses the very renderer the public
+              page uses, so "looks right here" and "is right there" are the
+              same statement. */}
+          <div className="flex flex-wrap gap-1">
+            {(
+              [
+                ['**', '**', 'bold'],
+                ['*', '*', 'italic'],
+                ['## ', '', 'heading'],
+                ['- ', '', 'list'],
+                ['> ', '', 'quote'],
+                ['[', '](https://)', 'link'],
+              ] as const
+            ).map(([before, after, key]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setDraft({ ...draft, body: `${draft.body}${before}${after}` })}
+                className="text-[11px] font-mono border border-navy/15 rounded px-2 py-0.5 text-navy/70 hover:bg-ivory"
+              >
+                {t(`adminRules.md.${key}`)}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPreview(!preview)}
+              className="text-[11px] font-mono border border-navy/15 rounded px-2 py-0.5 text-navy/70 hover:bg-ivory ml-auto"
+            >
+              {preview ? t('adminRules.md.edit') : t('adminRules.md.preview')}
+            </button>
+          </div>
+          {preview ? (
+            <div
+              className="rules-prose rounded-field border border-navy/15 bg-ivory p-3 text-sm font-body text-navy/80"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(draft.body) }}
+            />
+          ) : (
+            <textarea
+              value={draft.body}
+              onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+              placeholder={t('adminRules.sectionBodyPlaceholder') as string}
+              rows={12}
+              className={`${FIELD} font-mono text-xs`}
+            />
+          )}
           <div className="flex gap-2">
             <button
               onClick={() =>
@@ -255,9 +300,13 @@ export default function RuleSectionCard({
       ) : (
         <>
           <p className="text-sm font-body text-navy">{section.title || '—'}</p>
-          <p className="text-xs font-body text-navy/60 whitespace-pre-wrap">
-            {section.body}
-          </p>
+          {/* Rendered, not raw: the editor should read the section the way the
+              reader will, and Markdown source is the thing you look at while
+              writing it, not while checking it. */}
+          <div
+            className="rules-prose text-xs font-body text-navy/60"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(section.body) }}
+          />
         </>
       )}
 

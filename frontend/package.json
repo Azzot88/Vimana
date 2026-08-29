@@ -20,6 +20,7 @@
     "framer-motion": "^11.11.0",
     "i18next": "^23.16.4",
     "libphonenumber-js": "^1.11.15",
+    "markdown-it": "^14.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^15.1.0",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
+    "@types/markdown-it": "^14.1.2",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.11",

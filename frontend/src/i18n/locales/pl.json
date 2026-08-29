@@ -1345,6 +1345,7 @@
     "inLocale": "w {{locale}}",
     "openSource": "Otwórz dokument",
     "whatChanged": "Co się zmieniło:",
+    "downloadMd": "Pobierz jako .md",
     "documentsTitle": "Potrzebne dokumenty",
     "documentsHint": "Najważniejszy jest czas oczekiwania: część z nich powstaje tygodniami, a lot za dziesięć dni to zły moment, by się o tym dowiedzieć.",
     "issuerUnknown": "wystawca nie podany",
@@ -1410,7 +1411,8 @@
     "historyTitle": "Historia",
     "publishNoteLabel": "Co się zmieniło",
     "publishNotePlaceholder": "Jedno zdanie dla tego, kto wrócił — opcjonalnie",
-    "reqNotesPlaceholder": "Uwagi"
+    "reqNotesPlaceholder": "Uwagi",
+    "md": { "bold": "pogrubienie", "italic": "kursywa", "heading": "nagłówek", "list": "lista", "quote": "cytat", "link": "link", "preview": "podgląd", "edit": "źródło" }
   },
   "adminRoles": {
     "title": "Role i propozycje",

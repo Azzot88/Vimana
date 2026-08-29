@@ -1344,6 +1344,7 @@
     "inLocale": "en {{locale}}",
     "openSource": "Ouvrir le document",
     "whatChanged": "Ce qui a changé :",
+    "downloadMd": "Télécharger en .md",
     "documentsTitle": "Documents nécessaires",
     "documentsHint": "Le délai d'obtention est ce qui compte le plus : certains prennent des semaines, et un vol dans dix jours est un mauvais moment pour l'apprendre.",
     "issuerUnknown": "émetteur non précisé",
@@ -1409,7 +1410,8 @@
     "historyTitle": "Historique",
     "publishNoteLabel": "Ce qui a changé",
     "publishNotePlaceholder": "Une phrase pour qui revient — facultatif",
-    "reqNotesPlaceholder": "Remarques"
+    "reqNotesPlaceholder": "Remarques",
+    "md": { "bold": "gras", "italic": "italique", "heading": "titre", "list": "liste", "quote": "citation", "link": "lien", "preview": "aperçu", "edit": "source" }
   },
   "adminRoles": {
     "title": "Rôles et propositions",

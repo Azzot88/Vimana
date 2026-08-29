@@ -217,6 +217,69 @@ async def test_requirements_come_with_their_lead_time(client, published):
     assert req["lead_time_days"] == 21
 
 
+async def test_the_corridor_downloads_as_markdown(client, published):
+    """`body` is stored as Markdown, so the file is the text rather than a
+    conversion of it — which is why the format was chosen over HTML."""
+    code, cat_key = published
+    resp = await client.get(f"/api/rules/{cat_key}/export/{code}/markdown")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert ".md" in resp.headers["content-disposition"]
+
+    text = resp.text
+    assert "# Taking things out of Testland" in text
+    assert "## Overview" in text
+    # The citation travels with the claim. A file that dropped it would read
+    # like an opinion, which is the one thing this corpus must not do.
+    assert "A verbatim quotation." in text
+    assert "Test Authority" in text
+    # And the document list, with the number nobody can look up themselves.
+    assert "21 days to obtain" in text
+
+
+async def test_markdown_download_follows_the_locale(client, published):
+    code, cat_key = published
+    ru = (
+        await client.get(
+            f"/api/rules/{cat_key}/export/{code}/markdown", params={"locale": "ru"}
+        )
+    ).text
+    assert "Русский текст" in ru
+    # The untranslated section says so in the file too, not only on the page.
+    assert "not translated yet" in ru
+
+
+async def test_a_script_in_the_body_never_becomes_markup(client, session_maker, published):
+    """The security property of storing Markdown, asserted rather than assumed.
+
+    Rendering happens on the client with raw HTML disabled, so the guarantee
+    that matters here is at the boundary: whatever an editor typed comes back
+    from the API as the characters they typed. If the API ever started helping
+    by emitting markup, this test is where that would show.
+    """
+    from sqlalchemy import select as sa_select
+
+    from app.models.rules import RuleSection as RS
+
+    code, cat_key = published
+    payload = '<script>alert(1)</script> and <img src=x onerror=alert(1)>'
+
+    async with session_maker() as db:
+        section = (
+            await db.execute(sa_select(RS).where(RS.anchor == "deadlines"))
+        ).scalars().first()
+        section.body = payload
+        await db.commit()
+
+    body = (await client.get(f"/api/rules/{cat_key}/export/{code}")).json()
+    served = next(s for s in body["sections"] if s["anchor"] == "deadlines")["body"]
+    assert served == payload
+
+    text = (await client.get(f"/api/rules/{cat_key}/export/{code}/markdown")).text
+    assert payload in text
+
+
 async def test_unknown_corridor_is_a_plain_404(client):
     resp = await client.get("/api/rules/nosuch/export/ZZ")
     assert resp.status_code == 404

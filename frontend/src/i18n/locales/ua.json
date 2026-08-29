@@ -1358,6 +1358,7 @@
     "inLocale": "мовою {{locale}}",
     "openSource": "Відкрити документ",
     "whatChanged": "Що змінилося:",
+    "downloadMd": "Завантажити в .md",
     "documentsTitle": "Які документи знадобляться",
     "documentsHint": "Найважливіше — строк виготовлення: частина з них робиться тижнями, а виліт за десять днів невдалий момент про це дізнатися.",
     "issuerUnknown": "хто видає — не вказано",
@@ -1423,7 +1424,8 @@
     "historyTitle": "Історія",
     "publishNoteLabel": "Що змінилося",
     "publishNotePlaceholder": "Один рядок для того, хто повернувся, — необовʼязково",
-    "reqNotesPlaceholder": "Примітка"
+    "reqNotesPlaceholder": "Примітка",
+    "md": { "bold": "жирний", "italic": "курсив", "heading": "заголовок", "list": "список", "quote": "цитата", "link": "посилання", "preview": "перегляд", "edit": "джерело" }
   },
   "adminRoles": {
     "title": "Ролі та пропозиції",
