@@ -26,6 +26,7 @@ from app.api.inquiries import router as inquiries_router
 from app.api.platform_params import router as platform_params_router
 from app.api.roles import router as roles_router
 from app.api.rules_admin import router as rules_admin_router
+from app.api.rules_public import router as rules_public_router
 from app.api.cards import router as cards_router
 from app.api.terms import router as terms_router
 from app.api.keypair import router as keypair_router
@@ -262,6 +263,7 @@ app.include_router(inquiries_router, prefix="/api", tags=["inquiries"])
 app.include_router(platform_params_router, prefix="/api", tags=["admin"])
 app.include_router(roles_router, prefix="/api", tags=["roles"])
 app.include_router(rules_admin_router, prefix="/api", tags=["admin"])
+app.include_router(rules_public_router, prefix="/api", tags=["rules"])
 app.include_router(terms_router, prefix="/api/deals", tags=["terms"])
 app.include_router(cards_router, prefix="/api/deals", tags=["cards"])
 

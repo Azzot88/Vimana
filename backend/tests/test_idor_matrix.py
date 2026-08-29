@@ -223,6 +223,12 @@ MATRIX: dict[tuple[str, str], Case] = {
     # stranger is refused without the object needing to exist. The ids in the
     # victim fixture are therefore random UUIDs: creating a real set here would
     # test the fixture, not the guard.
+    # T3.11.03 — the public directory, and public is the whole point: free,
+    # open and indexable (MASTERPLAN §4.1). Only `published` sets are served,
+    # so a stranger reaching this reaches exactly what it is for.
+    ("GET", "/api/rules/{category}/{direction}/{country}"): Case(
+        PUBLIC, "the free half of stream D — text nobody can read is text nobody reads"
+    ),
     ("GET", "/api/admin/rules/{set_id}"): Case(DENIED, "rules:edit only"),
     ("PATCH", "/api/admin/rules/{set_id}"): Case(
         DENIED, "rules:edit only", json={"title": "idor probe"}
@@ -557,6 +563,12 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         # permission before it looks anything up, so a real set would prove
         # nothing the guard does not already prove, and building one here would
         # make this fixture the thing under test.
+        # T3.11.03 — the public directory's path. Nothing is published for this
+        # corridor, so the honest answer is 404, which `PUBLIC` accepts: the
+        # row asserts "does not break", not "returns a page".
+        "category": "art",
+        "direction": "export",
+        "country": "RU",
         "set_id": str(uuidlib.uuid4()),
         "section_id": str(uuidlib.uuid4()),
         "source_id": str(uuidlib.uuid4()),
