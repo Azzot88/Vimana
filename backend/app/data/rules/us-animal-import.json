@@ -102,8 +102,40 @@
           "anchor": "hybrid-breeds",
           "locale": "ru",
           "order": 4,
-          "title": "Гибридные породы кошек: чего здесь пока нет",
-          "placeholder": true
+          "title": "Гибридные породы: правило четырёх поколений",
+          "body": "Породы, выведенные скрещиванием домашней кошки с диким видом — бенгальская, саванна и другие, — попадают под отдельный контур, не связанный ни с APHIS, ни с CDC. Он включается, если дикий предок относится к виду из приложений CITES.\n\nПравило считает поколения. «Недавняя линия» — это четыре последних поколения прямого родства. Если в них есть особь вида из приложения CITES, гибрид рассматривается так же, как сам этот вид. Освобождение возможно только в обратном случае: когда в предыдущих четырёх поколениях нет чистокровных особей вида из приложений — и **бремя доказательства лежит на ввозящем**: линию нужно задокументировать.\n\nОтсюда практический вывод, который чаще всего узнают поздно: неизвестная родословная — это не «скорее всего можно», а невозможность воспользоваться освобождением. Документов на четыре поколения либо нет, либо есть.\n\nОтдельно: ввоз дикой фауны сопровождается декларацией по форме 3-177, и определение «wildlife» прямо охватывает особей, рождённых в неволе.\n\n**Чего этот раздел не решает.** В каком приложении CITES числится конкретный дикий предок и подпадает ли под правило конкретное животное — определяет USFWS, а не платформа и не эта страница. Здесь сказано, по какому правилу это считается и какие документы понадобятся, если оно применимо.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "50 CFR 23.43 — Wildlife hybrids (недавняя линия)",
+              "url": "https://www.law.cornell.edu/cfr/text/50/23.43",
+              "quote": "the last four generations of a specimen's ancestry (direct line of descent)"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "50 CFR 23.43 — Wildlife hybrids (освобождение)",
+              "url": "https://www.law.cornell.edu/cfr/text/50/23.43",
+              "quote": "there are no purebred CITES species in the previous four generations of the specimen's ancestry"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "50 CFR 23.5 — Definitions (hybrid)",
+              "url": "https://www.law.cornell.edu/cfr/text/50/23.5",
+              "quote": "Hybrid means any wildlife or plant that results from a cross of genetic material between two separate taxa when one or both are listed in Appendix I, II, or III."
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "50 CFR 14.61 — Declaration for importation or exportation",
+              "url": "https://www.law.cornell.edu/cfr/text/50/14.61",
+              "quote": "importers or their agents must file with the Service a completed Declaration for Importation or Exportation of Fish or Wildlife (Form 3-177), signed by the importer or the importer's agent, upon the importation of any wildlife"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "50 CFR 10.12 — Definitions (fish or wildlife)",
+              "url": "https://www.law.cornell.edu/cfr/text/50/10.12",
+              "quote": "any wild animal, whether alive or dead, including without limitation any wild mammal, bird, reptile, amphibian, fish, mollusk, crustacean, arthropod, coelenterate, or other invertebrate, whether or not bred, hatched, or born in captivity, and including any part, product, egg, or offspring thereof"
+            }
+          ]
         },
         {
           "anchor": "state-and-city",
@@ -164,6 +196,32 @@
           "obtained_by": "recipient",
           "is_mandatory": true,
           "notes": "Требование CDC, действует для любой собаки независимо от цели ввоза."
+        },
+        {
+          "code": "lineage_documents_4gen",
+          "title": "Документы на четыре поколения родословной",
+          "issuer": "Заводчик или питомник",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": {
+            "attr": "generation",
+            "op": "in",
+            "value": ["F1", "F2", "F3", "F4", "unknown"]
+          },
+          "notes": "Освобождение от требований CITES возможно, только если в предыдущих четырёх поколениях нет чистокровных особей вида из приложений — и доказать это должен ввозящий. Поколение «unknown» включено в условие намеренно: неизвестная линия не позволяет воспользоваться освобождением."
+        },
+        {
+          "code": "usfws_declaration_3_177",
+          "title": "Декларация USFWS по форме 3-177",
+          "issuer": "Подаёт импортёр или его агент в U.S. Fish and Wildlife Service",
+          "obtained_by": "recipient",
+          "is_mandatory": true,
+          "condition": {
+            "attr": "generation",
+            "op": "in",
+            "value": ["F1", "F2", "F3", "F4", "unknown"]
+          },
+          "notes": "Требуется при ввозе дикой фауны; определение охватывает особей, рождённых в неволе. Применимость к конкретному животному определяет USFWS."
         }
       ]
     }

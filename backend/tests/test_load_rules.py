@@ -275,8 +275,21 @@ def test_the_shipped_animal_corpus_is_loadable():
     corpus = json.loads(path.read_text(encoding="utf-8"))
     assert validate(corpus) == []
 
-    section_anchors = {s["anchor"] for s in corpus["sets"][0]["sections"]}
-    # The three layers nobody has sourced yet are present as admitted gaps
-    # rather than absent — an absent section is indistinguishable from a
-    # complete corpus.
-    assert {"hybrid-breeds", "state-and-city", "transit"} <= section_anchors
+    sections = corpus["sets"][0]["sections"]
+    gaps = {s["anchor"] for s in sections if s.get("placeholder")}
+
+    # The layers nobody has sourced yet are present as admitted gaps rather
+    # than absent — an absent section is indistinguishable from a complete
+    # corpus. State law defeated web research (primary sources answer 403,
+    # secondary ones contradict each other) and transit depends on the
+    # transit country and the airline rather than on one citable rule.
+    assert gaps == {"state-and-city", "transit"}
+
+    # Everything else carries a verbatim quotation, which is what the
+    # publication gate will demand and what makes the page checkable.
+    for section in sections:
+        if section.get("placeholder"):
+            continue
+        assert section["sources"], section["anchor"]
+        for source in section["sources"]:
+            assert source["quote"].strip(), section["anchor"]
