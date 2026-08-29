@@ -66,7 +66,13 @@ export interface RuleIndexEntry {
   jurisdiction_code: string
   jurisdiction_name: string
   title: string
+  version: number
+  /** Set at publication, so for the directory this is the date the version
+   *  went live — what the chronological order sorts by. */
   reviewed_at: string | null
+  /** "What changed". Makes the entry read as an entry rather than a menu item;
+   *  empty for a first version, which is silence and not a gap. */
+  published_note: string
   /** Served by the API, never assembled here: the prerender step writes one
    *  file per path, and a path built in two places differs in one of them. */
   path: string

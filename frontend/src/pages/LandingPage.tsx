@@ -273,6 +273,30 @@ export default function LandingPage() {
             </Reveal>
           </section>
 
+          {/* ── Corridor rules ───────────────────────────────────────────
+              T3.11.03 — the free half of stream D, and the one thing on this
+              page a stranger can use before deciding anything. It sits above
+              the problem statement on purpose: somebody who arrived holding a
+              painting and a deadline is not reading an argument, they are
+              looking for an answer. */}
+          <section className="border-b border-navy/10 py-14">
+            <Reveal>
+              <LandingLabel>{t('landing.rulesLabel')}</LandingLabel>
+              <h2 className="mt-4 font-display text-2xl font-bold tracking-tight md:text-3xl">
+                {t('landing.rulesTitle')}
+              </h2>
+              <p className="mt-3 max-w-2xl font-body text-[15px] leading-relaxed text-navy/70">
+                {t('landing.rulesBody')}
+              </p>
+              <Link
+                to="/rules"
+                className="mt-5 inline-block rounded-field bg-navy px-5 py-2.5 font-display text-sm font-medium text-ivory transition-opacity hover:opacity-90"
+              >
+                {t('landing.rulesCta')}
+              </Link>
+            </Reveal>
+          </section>
+
           {/* ── Problem ──────────────────────────────────────────────────── */}
           <section className="grid gap-8 border-b border-navy/10 py-14 md:grid-cols-[0.9fr_1.1fr]">
             <Reveal>

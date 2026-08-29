@@ -4,6 +4,7 @@
     "trips": "Trips",
     "deals": "Deals",
     "profile": "Profile",
+    "rules": "Rules",
     "disputes": "Disputes",
     "users": "Users",
     "notices": "Notices",
@@ -1025,6 +1026,10 @@
     "boardingStatusValue": "Confirmed",
     "boardingConfirmed": "Receipt confirmed by both sides",
     "factsLabel": "What works today",
+    "rulesLabel": "Corridor rules",
+    "rulesTitle": "Will it be let through the border?",
+    "rulesBody": "The question that kills a delivery earlier than any other — and the one nobody answers before you are at the desk. We write the rules per corridor, in both directions, with the quotation from the source next to every claim and the date a person last checked it. Free to read.",
+    "rulesCta": "Open the rules",
     "fact": {
       "chain": {
         "value": "Chain",
@@ -1370,6 +1375,8 @@
     "lede": "What a thing needs in order to be let through — written per corridor, with the quotation from the source next to every claim, and the date a person last checked it. Free to read. What we sell is the collected packet of documents, not the knowledge.",
     "reviewedAt": "checked {{when}}",
     "neverReviewed": "not yet checked against the sources",
+    "sortLabel": "Order:",
+    "sort": { "chronological": "by change", "category": "by category" },
     "emptyTitle": "Nothing published yet",
     "emptyBody": "The corridors written next are the ones people ask about. Tell us which direction you need.",
     "failed": "Could not load the list. Reload the page — this is not the same as there being nothing here.",

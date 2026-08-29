@@ -4,6 +4,7 @@
     "trips": "Vuelos",
     "deals": "Acuerdos",
     "profile": "Perfil",
+    "rules": "Reglas",
     "disputes": "Disputas",
     "users": "Usuarios",
     "logout": "Cerrar sesión",
@@ -974,6 +975,10 @@
     "boardingStatusValue": "Confirmado",
     "boardingConfirmed": "Recepción confirmada por ambas partes",
     "factsLabel": "Lo que funciona hoy",
+    "rulesLabel": "Reglas de los corredores",
+    "rulesTitle": "¿Dejarán pasar la cosa por la frontera?",
+    "rulesBody": "La pregunta que mata un envío antes que ninguna otra — y a la que nadie responde hasta que estás en el mostrador. Escribimos las reglas por corredor, en ambos sentidos, con la cita de la fuente junto a cada afirmación y la fecha de la última comprobación por una persona. Leer es gratis.",
+    "rulesCta": "Abrir las reglas",
     "fact": {
       "chain": {
         "value": "Cadena",
@@ -1326,6 +1331,8 @@
     "lede": "Lo que una cosa necesita para que la dejen pasar — por corredor, con la cita de la fuente junto a cada afirmación y la fecha de la última comprobación por una persona. Leer es gratis: lo que vendemos es el expediente reunido, no el conocimiento.",
     "reviewedAt": "comprobado {{when}}",
     "neverReviewed": "todavía no comprobado con las fuentes",
+    "sortLabel": "Orden:",
+    "sort": { "chronological": "por cambios", "category": "por categoría" },
     "emptyTitle": "Todavía no hay nada publicado",
     "emptyBody": "Los siguientes corredores que se escriben son los que la gente pide. Dinos qué dirección necesitas.",
     "failed": "No se pudo cargar la lista. Recarga la página — no es lo mismo que no haya nada aquí.",

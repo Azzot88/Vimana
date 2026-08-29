@@ -4,6 +4,7 @@
     "trips": "Vols",
     "deals": "Transactions",
     "profile": "Profil",
+    "rules": "Règles",
     "disputes": "Litiges",
     "users": "Utilisateurs",
     "logout": "Déconnexion",
@@ -974,6 +975,10 @@
     "boardingStatusValue": "Confirmé",
     "boardingConfirmed": "Réception confirmée par les deux parties",
     "factsLabel": "Ce qui fonctionne aujourd'hui",
+    "rulesLabel": "Règles des corridors",
+    "rulesTitle": "La chose passera-t-elle la frontière ?",
+    "rulesBody": "La question qui tue une livraison avant toutes les autres — et à laquelle personne ne répond tant que vous n'êtes pas au comptoir. Nous écrivons les règles par corridor, dans les deux sens, avec la citation de la source à côté de chaque affirmation et la date de la dernière vérification humaine. Lecture gratuite.",
+    "rulesCta": "Ouvrir les règles",
     "fact": {
       "chain": {
         "value": "Chaîne",
@@ -1326,6 +1331,8 @@
     "lede": "Ce qu'il faut à une chose pour être laissée passer — par corridor, avec la citation de la source à côté de chaque affirmation et la date de la dernière vérification humaine. La lecture est gratuite : ce que nous vendons, c'est le dossier réuni, pas le savoir.",
     "reviewedAt": "vérifié le {{when}}",
     "neverReviewed": "pas encore vérifié auprès des sources",
+    "sortLabel": "Ordre :",
+    "sort": { "chronological": "par modification", "category": "par catégorie" },
     "emptyTitle": "Rien n'est encore publié",
     "emptyBody": "Les corridors écrits ensuite sont ceux qu'on nous demande. Dites-nous quelle direction vous intéresse.",
     "failed": "Impossible de charger la liste. Rechargez la page — ce n'est pas la même chose qu'un rayon vide.",

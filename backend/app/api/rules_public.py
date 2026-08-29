@@ -90,7 +90,14 @@ class RuleIndexOut(BaseModel):
     jurisdiction_code: str
     jurisdiction_name: str
     title: str
+    version: int
+    #: Set at publication, so for the directory it is the date this version
+    #: went live — which is what makes a chronological list of rule changes
+    #: possible without a second timestamp meaning almost the same thing.
     reviewed_at: datetime | None
+    #: "What changed", so the list reads as entries rather than as a menu.
+    #: Empty for a first version, which is silence and not a gap.
+    published_note: str
     #: The address this set is served at. Sent rather than assembled by the
     #: caller: the prerender step writes one file per path, and a path built in
     #: two places is a path that differs in one of them.
@@ -136,14 +143,41 @@ def path_for(category: str, direction: RuleDirection, country: str) -> str:
 
 @router.get("/rules", response_model=list[RuleIndexOut])
 async def index(db: AsyncSession = Depends(get_db)):
+    """Everything published, **newest change first**.
+
+    Chronological is the server's order, not a client's option, because it is
+    the only one the client cannot reconstruct: grouping by category is a
+    `reduce` over the list, ordering by publication needs the dates, and those
+    are here. So the API answers the harder question and the page rearranges.
+
+    `nulls_last` matters and is not defensive: a set can be published without a
+    review date only if something wrote the status without going through
+    `core/rule_status`, and such a row belongs at the bottom of a chronology
+    rather than at the top of it.
+    """
     rows = (
         await db.execute(
             select(RuleSet, Jurisdiction.name)
             .join(Jurisdiction, Jurisdiction.code == RuleSet.jurisdiction_code)
             .where(RuleSet.status == RuleStatus.published)
-            .order_by(RuleSet.category_key, RuleSet.direction)
+            .order_by(RuleSet.reviewed_at.desc().nulls_last(), RuleSet.category_key)
         )
     ).all()
+
+    notes = {
+        rule_set_id: note
+        for rule_set_id, note in (
+            await db.execute(
+                select(RuleStatusEvent.rule_set_id, RuleStatusEvent.note)
+                .where(
+                    RuleStatusEvent.rule_set_id.in_([rs.id for rs, _ in rows] or [uuid.uuid4()]),
+                    RuleStatusEvent.to_status == RuleStatus.published,
+                )
+                .order_by(RuleStatusEvent.created_at)
+            )
+        ).all()
+    }
+
     return [
         RuleIndexOut(
             category_key=rs.category_key,
@@ -151,7 +185,12 @@ async def index(db: AsyncSession = Depends(get_db)):
             jurisdiction_code=rs.jurisdiction_code,
             jurisdiction_name=name or rs.jurisdiction_code,
             title=rs.title,
+            version=rs.version,
             reviewed_at=rs.reviewed_at,
+            # Ascending order above means the last write wins — the newest
+            # publication note for each set, which is the one that describes
+            # the version being served.
+            published_note=notes.get(rs.id) or "",
             path=path_for(rs.category_key, rs.direction, rs.jurisdiction_code),
         )
         for rs, name in rows

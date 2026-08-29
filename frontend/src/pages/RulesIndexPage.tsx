@@ -11,23 +11,26 @@ import MonoText from '../components/MonoText'
  *
  * The corridor pages existed before this one and were reachable only by typing
  * their exact address: a directory built as the top of the funnel that nothing
- * pointed at. This is the page a link from the landing lands on, and the page a
- * crawler follows to find the rest.
+ * pointed at.
  *
- * **Grouped by category, not by country**, for the same reason the address puts
- * the category first: people arrive with a thing, not with a border. Somebody
- * holding a painting looks for paintings; the direction and the country narrow
- * it afterwards.
+ * **Chronological by default** (owner's decision 2026-08-29). A rule that
+ * changed last week is news; the same rule six months untouched is reference.
+ * The default order answers "what moved", and that is what a returning reader
+ * comes back for. Grouping by category is the other question — "where do I
+ * look" — and it is one click away rather than the front door.
  *
- * The date a person last checked each corridor is on the card. A directory that
- * lists twelve corridors without saying which of them was read this year is a
- * directory that ages invisibly.
+ * The order itself comes from the API, not from a sort here: grouping is a
+ * `reduce` over any list, but ordering by publication needs the dates to be
+ * right, and the server is where they are.
  */
+type Sort = 'chronological' | 'category'
+
 export default function RulesIndexPage() {
   const { t } = useTranslation()
   const prefs = usePrefs()
   const [entries, setEntries] = useState<RuleIndexEntry[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [sort, setSort] = useState<Sort>('chronological')
 
   useEffect(() => {
     rulesIndex()
@@ -40,13 +43,60 @@ export default function RulesIndexPage() {
       })
   }, [])
 
-  const byCategory = (entries ?? []).reduce<Record<string, RuleIndexEntry[]>>(
-    (acc, entry) => {
+  const card = (entry: RuleIndexEntry) => (
+    <Link
+      to={entry.path}
+      className="block rounded-card border border-navy/10 bg-white p-4 hover:border-cyan transition-colors"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-display font-medium text-navy">
+          {t(`rulesPage.dir.${entry.direction}`)} {entry.jurisdiction_name}
+        </p>
+        <MonoText className="text-xs text-navy/45">
+          {entry.reviewed_at
+            ? t('rulesIndex.reviewedAt', { when: prefs.date(entry.reviewed_at) })
+            : t('rulesIndex.neverReviewed')}
+        </MonoText>
+      </div>
+      {entry.title && (
+        <p className="text-sm font-body text-navy/60">{entry.title}</p>
+      )}
+      {/* What makes an entry an entry rather than a menu item. A reader who
+          has been here before scans these lines and nothing else. */}
+      {entry.published_note && (
+        <p className="mt-1 text-sm font-body text-navy/70 border-l-2 border-cyan/40 pl-3">
+          {entry.published_note}
+        </p>
+      )}
+    </Link>
+  )
+
+  const chronological = (rows: RuleIndexEntry[]) => (
+    <ul className="space-y-2">
+      {rows.map((entry) => (
+        <li key={entry.path}>{card(entry)}</li>
+      ))}
+    </ul>
+  )
+
+  const byCategory = (rows: RuleIndexEntry[]) => {
+    const grouped = rows.reduce<Record<string, RuleIndexEntry[]>>((acc, entry) => {
       ;(acc[entry.category_key] ??= []).push(entry)
       return acc
-    },
-    {},
-  )
+    }, {})
+    return Object.entries(grouped).map(([category, group]) => (
+      <section key={category} className="space-y-3">
+        <h2 className="font-display font-semibold text-xl text-navy">
+          {t(`categories.${category}`, { defaultValue: category })}
+        </h2>
+        <ul className="space-y-2">
+          {group.map((entry) => (
+            <li key={entry.path}>{card(entry)}</li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
 
   return (
     <LandingShell source="sender">
@@ -65,6 +115,28 @@ export default function RulesIndexPage() {
             <p className="text-xs font-mono text-danger">{t('rulesIndex.failed')}</p>
           )}
 
+          {entries !== null && entries.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-body text-navy/50">
+                {t('rulesIndex.sortLabel')}
+              </span>
+              {(['chronological', 'category'] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setSort(option)}
+                  aria-pressed={sort === option}
+                  className={`text-xs font-display font-medium px-3 py-1 rounded-field transition-colors ${
+                    sort === option
+                      ? 'bg-navy text-ivory'
+                      : 'border border-navy/20 text-navy/70 hover:bg-ivory'
+                  }`}
+                >
+                  {t(`rulesIndex.sort.${option}`)}
+                </button>
+              ))}
+            </div>
+          )}
+
           {entries === null ? (
             <p className="text-sm font-body text-navy/40">{t('common.loading')}</p>
           ) : entries.length === 0 ? (
@@ -78,39 +150,10 @@ export default function RulesIndexPage() {
                 {t('rulesIndex.emptyBody')}
               </p>
             </div>
+          ) : sort === 'chronological' ? (
+            chronological(entries)
           ) : (
-            Object.entries(byCategory).map(([category, rows]) => (
-              <section key={category} className="space-y-3">
-                <h2 className="font-display font-semibold text-xl text-navy">
-                  {t(`categories.${category}`, { defaultValue: category })}
-                </h2>
-                <ul className="space-y-2">
-                  {rows.map((entry) => (
-                    <li key={entry.path}>
-                      <Link
-                        to={entry.path}
-                        className="block rounded-card border border-navy/10 bg-white p-4 hover:border-cyan transition-colors"
-                      >
-                        <p className="font-display font-medium text-navy">
-                          {t(`rulesPage.dir.${entry.direction}`)}{' '}
-                          {entry.jurisdiction_name}
-                        </p>
-                        {entry.title && (
-                          <p className="text-sm font-body text-navy/60">{entry.title}</p>
-                        )}
-                        <MonoText className="text-xs text-navy/45">
-                          {entry.reviewed_at
-                            ? t('rulesIndex.reviewedAt', {
-                                when: prefs.date(entry.reviewed_at),
-                              })
-                            : t('rulesIndex.neverReviewed')}
-                        </MonoText>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))
+            <div className="space-y-8">{byCategory(entries)}</div>
           )}
 
           <p className="text-xs font-body text-navy/50 border-t border-navy/10 pt-4">

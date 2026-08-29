@@ -4,6 +4,7 @@
     "trips": "Loty",
     "deals": "Transakcje",
     "profile": "Profil",
+    "rules": "Zasady",
     "disputes": "Spory",
     "users": "Użytkownicy",
     "logout": "Wyloguj",
@@ -975,6 +976,10 @@
     "boardingStatusValue": "Potwierdzone",
     "boardingConfirmed": "Odbiór potwierdzony przez obie strony",
     "factsLabel": "Co działa dzisiaj",
+    "rulesLabel": "Zasady korytarzy",
+    "rulesTitle": "Czy rzecz przepuszczą przez granicę?",
+    "rulesBody": "Pytanie, które zabija dostawę wcześniej niż jakiekolwiek inne — i na które nikt nie odpowiada, dopóki nie stoisz przy stanowisku. Piszemy zasady dla korytarzy, z obu stron, z cytatem ze źródła przy każdym twierdzeniu i datą ostatniego sprawdzenia przez człowieka. Czytanie jest bezpłatne.",
+    "rulesCta": "Otwórz zasady",
     "fact": {
       "chain": {
         "value": "Łańcuch",
@@ -1327,6 +1332,8 @@
     "lede": "Czego rzecz potrzebuje, by ją przepuszczono — według korytarzy, z cytatem ze źródła przy każdym twierdzeniu i datą ostatniego sprawdzenia przez człowieka. Czytanie jest bezpłatne. Sprzedajemy zebrany komplet dokumentów, a nie wiedzę.",
     "reviewedAt": "sprawdzono {{when}}",
     "neverReviewed": "jeszcze nie sprawdzono ze źródłami",
+    "sortLabel": "Kolejność:",
+    "sort": { "chronological": "według zmian", "category": "według kategorii" },
     "emptyTitle": "Nic jeszcze nie opublikowano",
     "emptyBody": "Kolejne powstają te korytarze, o które ludzie pytają. Napisz, jakiego kierunku potrzebujesz.",
     "failed": "Nie udało się wczytać listy. Odśwież stronę — to nie to samo, co „nic tu nie ma”.",

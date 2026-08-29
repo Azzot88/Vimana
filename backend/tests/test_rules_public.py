@@ -154,6 +154,25 @@ async def test_the_index_lists_only_published_sets_with_their_paths(client, publ
     # one file per path, and a path built in two places differs in one of them.
     assert mine[0]["path"] == f"/rules/{cat_key}/export/{code}/"
     assert mine[0]["jurisdiction_name"] == "Testland"
+    # The directory reads as entries, not as a menu: each row carries what
+    # changed and when, which is what the chronological default sorts by.
+    assert "published_note" in mine[0]
+    assert "version" in mine[0]
+
+
+async def test_the_index_is_ordered_by_when_the_rule_last_changed(client, published):
+    """Chronological is the server's order, not a client's option: grouping is
+    a `reduce` over any list, ordering by publication needs the dates."""
+    rows = (await client.get("/api/rules")).json()
+    dated = [r["reviewed_at"] for r in rows if r["reviewed_at"]]
+    assert dated == sorted(dated, reverse=True)
+    # A published row without a review date could only come from something
+    # writing the status outside `core/rule_status`; it belongs at the bottom
+    # of a chronology rather than the top.
+    undated_first = next(
+        (i for i, r in enumerate(rows) if not r["reviewed_at"]), len(rows)
+    )
+    assert all(not r["reviewed_at"] for r in rows[undated_first:])
 
 
 async def test_russian_gets_russian_where_it_exists(client, published):

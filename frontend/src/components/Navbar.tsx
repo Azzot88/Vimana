@@ -50,6 +50,13 @@ export default function Navbar() {
                 {t('nav.trips')}
               </NavLink>
             )}
+            {/* T3.11.03 — the directory belongs in the signed-in nav as much
+                as on the landing: the question "what do I need to get this
+                through" arrives while somebody is already arranging a
+                shipment, not before they have an account. */}
+            <NavLink to="/rules" className={linkClass}>
+              {t('nav.rules')}
+            </NavLink>
             <NavLink to="/profile" className={linkClass}>
               {t('nav.profile')}
             </NavLink>
