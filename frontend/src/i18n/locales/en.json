@@ -1451,14 +1451,14 @@
     "reqLeadPlaceholder": "days to obtain",
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — leave empty if always required",
     "leadDays": "{{days}} days to obtain",
-    "badJson": "The condition is not valid JSON."
+    "badJson": "The condition is not valid JSON.",
     "moveUp": "Move up",
     "moveDown": "Move down",
     "showHistory": "Show the history",
     "historyTitle": "History",
     "publishNoteLabel": "What changed",
     "publishNotePlaceholder": "One line for the reader who came back — optional",
-    "reqNotesPlaceholder": "Notes",
+    "reqNotesPlaceholder": "Notes"
   },
   "adminRoles": {
     "title": "Roles and offers",

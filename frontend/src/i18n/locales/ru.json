@@ -1452,14 +1452,14 @@
     "reqLeadPlaceholder": "дней на получение",
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — пусто, если нужен всегда",
     "leadDays": "{{days}} дней на получение",
-    "badJson": "Условие — невалидный JSON."
+    "badJson": "Условие — невалидный JSON.",
     "moveUp": "Выше",
     "moveDown": "Ниже",
     "showHistory": "Показать историю",
     "historyTitle": "История",
     "publishNoteLabel": "Что изменилось",
     "publishNotePlaceholder": "Одна строка для того, кто вернулся, — необязательно",
-    "reqNotesPlaceholder": "Примечание",
+    "reqNotesPlaceholder": "Примечание"
   },
   "adminRoles": {
     "title": "Роли и предложения",

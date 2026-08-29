@@ -1416,14 +1416,14 @@
     "reqLeadPlaceholder": "днів на отримання",
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — порожньо, якщо потрібен завжди",
     "leadDays": "{{days}} днів на отримання",
-    "badJson": "Умова — невалідний JSON."
+    "badJson": "Умова — невалідний JSON.",
     "moveUp": "Вище",
     "moveDown": "Нижче",
     "showHistory": "Показати історію",
     "historyTitle": "Історія",
     "publishNoteLabel": "Що змінилося",
     "publishNotePlaceholder": "Один рядок для того, хто повернувся, — необовʼязково",
-    "reqNotesPlaceholder": "Примітка",
+    "reqNotesPlaceholder": "Примітка"
   },
   "adminRoles": {
     "title": "Ролі та пропозиції",

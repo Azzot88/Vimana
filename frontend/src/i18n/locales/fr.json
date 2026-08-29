@@ -1402,14 +1402,14 @@
     "reqLeadPlaceholder": "jours pour l'obtenir",
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — vide si toujours requis",
     "leadDays": "{{days}} jours pour l'obtenir",
-    "badJson": "La condition n'est pas un JSON valide."
+    "badJson": "La condition n'est pas un JSON valide.",
     "moveUp": "Monter",
     "moveDown": "Descendre",
     "showHistory": "Afficher l’historique",
     "historyTitle": "Historique",
     "publishNoteLabel": "Ce qui a changé",
     "publishNotePlaceholder": "Une phrase pour qui revient — facultatif",
-    "reqNotesPlaceholder": "Remarques",
+    "reqNotesPlaceholder": "Remarques"
   },
   "adminRoles": {
     "title": "Rôles et propositions",
