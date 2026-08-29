@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { openRoleOffers, revokeRole, type PendingOffer } from '../api/admin'
 import { isSuperuser } from '../lib/permissions'
+import { usePrefs } from '../hooks/usePrefs'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
 
@@ -23,6 +24,7 @@ import MonoText from '../components/MonoText'
 export default function AdminRolesPage() {
   const { t } = useTranslation()
   const me = useAuthStore((s) => s.user)
+  const prefs = usePrefs()
   const [offers, setOffers] = useState<PendingOffer[] | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
@@ -120,8 +122,11 @@ export default function AdminRolesPage() {
                     {o.actor_name || '—'}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
+                    {/* T_UX.14 — dates follow the account's setting, not the
+                        browser and not ISO. A screen that formats its own is
+                        the reason that setting reads as not applying anywhere. */}
                     <MonoText className="text-xs text-navy/50">
-                      {new Date(o.created_at).toISOString().slice(0, 16).replace('T', ' ')}
+                      {prefs.dateTime(o.created_at)}
                     </MonoText>
                   </td>
                   <td className="px-4 py-3 text-right">

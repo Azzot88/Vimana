@@ -206,20 +206,46 @@ async def open_offers(
     `event = 'offered'`: an offer that was later declined or withdrawn still has
     its `offered` row, and filtering on the event alone would list answers that
     already came back as if they were still pending.
+
+    That "latest per pair" is picked in the database, not by a dictionary in
+    Python. The first version read **every row of the journal** into memory to
+    render a page that usually holds nothing: correct, and wrong in the way that
+    only shows up once the table has years in it. The journal is append-only, so
+    it never shrinks — it is the last table that should be scanned whole to
+    answer a question about the present.
+
+    `row_number()` rather than `DISTINCT ON`, which says the same thing more
+    briefly: passing expressions to `Select.distinct()` is deprecated in
+    SQLAlchemy 2.0 and goes away in 2.1, and nothing else in this codebase uses
+    it. A window function is the same one pass over the index and has no expiry
+    date on it.
     """
-    from sqlalchemy import desc
+    from sqlalchemy import desc, func
+    from sqlalchemy.orm import aliased
 
     from app.models.role_grant import RoleGrant as RG
 
-    rows = (
-        await db.execute(select(RG).order_by(desc(RG.created_at), desc(RG.id)))
-    ).scalars().all()
-
-    latest: dict[tuple[uuid.UUID, str], RG] = {}
-    for row in rows:
-        latest.setdefault((row.subject_id, row.role), row)
-    pending = [g for g in latest.values() if g.event is RoleGrantEvent.offered]
-    pending.sort(key=lambda g: g.created_at, reverse=True)
+    # One row per (subject, role): the newest event for that pair. `id` breaks a
+    # tie between two events written inside the same transaction timestamp.
+    ranked = select(
+        RG,
+        func.row_number()
+        .over(
+            partition_by=(RG.subject_id, RG.role),
+            order_by=(desc(RG.created_at), desc(RG.id)),
+        )
+        .label("rn"),
+    ).subquery()
+    Latest = aliased(RG, ranked)
+    pending = list(
+        (
+            await db.execute(
+                select(Latest)
+                .where(ranked.c.rn == 1, Latest.event == RoleGrantEvent.offered)
+                .order_by(desc(Latest.created_at))
+            )
+        ).scalars().all()
+    )
 
     enriched = await _with_actor_names(db, pending)
     subject_ids = {g.subject_id for g in pending}

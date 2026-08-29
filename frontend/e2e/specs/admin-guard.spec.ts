@@ -3,14 +3,14 @@ import { signInFixed } from '../helpers'
 
 /** Multi-context #3 — access control for admin routes.
  *
- *  An ordinary user has role='user' and must NOT reach any of the three admin
- *  pages. Each page guards with `<Navigate to="/dashboard" />` when the current
- *  user is not superuser (arbiter for /admin/disputes).
+ *  An ordinary user holds no roles at all (`roles: []`) and must NOT reach any
+ *  of the three admin pages. Each page guards with `<Navigate to="/dashboard" />`
+ *  when the current user is not superuser (arbiter for /admin/disputes).
  *
  *  Also verifies the AdminPanelSection Bento card on /profile is hidden for
  *  regular users — no discoverability leak.
  *
- *  **This spec is why the long-lived account must stay `role='user'`.** It read
+ *  **This spec is why the long-lived account must hold no role.** It read
  *  as a free property when every run minted a new account; now it is a standing
  *  requirement on shared state, and promoting the e2e account to arbiter or
  *  superuser turns this test red. That failure is correct — it means the thing
