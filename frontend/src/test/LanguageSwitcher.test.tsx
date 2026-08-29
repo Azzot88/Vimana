@@ -63,7 +63,7 @@ const member: User = {
   can_carry: true,
   can_send: true,
   active_mode: 'sender',
-  role: 'user',
+  roles: [],
   nostr_pubkey: null,
   business_activity_level: null,
   notify_email: true,

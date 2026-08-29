@@ -3,6 +3,7 @@ import api from './client'
 /** T3.42 — one event in the life of one role for one account. Append-only. */
 export interface RoleGrant {
   id: string
+  /** The one role this event is about — not the account's set of them. */
   role: string
   event: 'offered' | 'accepted' | 'declined' | 'revoked'
   actor_id: string | null
@@ -13,8 +14,8 @@ export interface RoleGrant {
 }
 
 export interface MyRoles {
-  /** What this account may actually do right now. */
-  role: string
+  /** Every role this account actually holds. Empty for an ordinary member. */
+  roles: string[]
   /** Proposed and unanswered. An entry here grants **nothing**. */
   offers: RoleGrant[]
 }

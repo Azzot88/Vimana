@@ -27,7 +27,9 @@ export default function AdminUsersPage() {
    *  replied" is the Roles screen, which reads `/api/admin/role-offers`. */
   const [offered, setOffered] = useState<Map<string, Set<UserRole>>>(new Map())
 
-  if (!isSuperuser(me)) return <Navigate to="/dashboard" replace />
+  // `me` is narrowed here as well as guarded: the rows below read `me.id`, and
+  // `isSuperuser` alone tells the compiler nothing about nullability.
+  if (!me || !isSuperuser(me)) return <Navigate to="/dashboard" replace />
 
   const load = async () => {
     setLoading(true)

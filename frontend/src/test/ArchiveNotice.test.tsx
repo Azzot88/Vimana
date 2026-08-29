@@ -39,7 +39,7 @@ const retiredUser: User = {
   can_carry: true,
   can_send: true,
   active_mode: 'carrier',
-  role: 'user',
+  roles: [],
   nostr_pubkey: 'ab'.repeat(32),
   business_activity_level: null,
   notify_email: true,
