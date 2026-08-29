@@ -1,0 +1,171 @@
+{
+  "_note": [
+    "T3.11.04 — ввоз живых домашних животных в США. Черновик: загружается как draft,",
+    "публикуется человеком через /admin/rules после проверки.",
+    "Каждая цитата взята с first-party источника и проверена дословно 2026-08-29;",
+    "источник и дата указаны в блоке sources. Ничего не написано по памяти.",
+    "Разделы с \"placeholder\": true — признанные пробелы: у них нет ни текста, ни",
+    "источника, и набор с ними опубликовать нельзя. Так и задумано."
+  ],
+  "sets": [
+    {
+      "direction": "import",
+      "jurisdiction": "US",
+      "category": "animal",
+      "title": "Ввоз живых домашних животных в США",
+      "sections": [
+        {
+          "anchor": "purpose-matters",
+          "locale": "ru",
+          "order": 0,
+          "title": "Личный питомец и ввоз на продажу — разные режимы",
+          "body": "Главная развилка проходит не по виду животного, а по цели ввоза. Собака, которую везут на перепродажу, требует разрешения APHIS; та же собака, которую везут как своего питомца, — нет. Инструкция про питомца, применённая к продаже, даёт неполный комплект, и обнаруживается это на границе.\n\nВторая развилка — вид. Раздел федеральных правил, вводящий разрешение на перепродажу, называется «Importation of Live Dogs» и на кошек не распространяется. Кошка, ввозимая на продажу, разрешения APHIS по этому основанию не требует — но может упираться в другое: происхождение породы и правила штата.",
+          "sources": [
+            {
+              "authority": "U.S. Government Publishing Office / Code of Federal Regulations",
+              "document_title": "9 CFR Part 2, Subpart J — Importation of Live Dogs (заголовок подраздела)",
+              "url": "https://www.law.cornell.edu/cfr/text/9/2.150",
+              "quote": "No person shall import a live dog from any part of the world into the States for purposes of resale unless the dog is accompanied by an import permit issued by APHIS and is imported into the States within 30 days after the proposed date of arrival stated in the import permit."
+            }
+          ]
+        },
+        {
+          "anchor": "aphis-resale-permit",
+          "locale": "ru",
+          "order": 1,
+          "title": "Разрешение APHIS на ввоз собак для перепродажи",
+          "body": "Ввоз собаки на перепродажу без разрешения APHIS запрещён. Разрешение имеет срок: ввезти нужно в течение 30 дней после заявленной в нём даты прибытия — то есть это не бумага «на будущее», а окно под конкретный рейс.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "9 CFR 2.150(a) — Import permit",
+              "url": "https://www.law.cornell.edu/cfr/text/9/2.150",
+              "quote": "No person shall import a live dog from any part of the world into the States for purposes of resale unless the dog is accompanied by an import permit issued by APHIS and is imported into the States within 30 days after the proposed date of arrival stated in the import permit."
+            }
+          ]
+        },
+        {
+          "anchor": "aphis-certificates",
+          "locale": "ru",
+          "order": 2,
+          "title": "Ветеринарные сертификаты для собак, ввозимых на продажу",
+          "body": "К разрешению прилагаются два документа от лицензированного ветврача страны вывоза, оба на английском: справка о здоровье и сертификат о прививке от бешенства. Справка подтверждает возраст не менее шести месяцев и прививку DHLPP не старше двенадцати месяцев на дату прибытия. Прививка от бешенства должна быть сделана не позднее чем за тридцать дней до прибытия — это и есть срок, из-за которого нельзя привить животное накануне вылета.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "9 CFR 2.151 — Certifications for imported dogs",
+              "url": "https://www.law.cornell.edu/cfr/text/9/2.151",
+              "quote": "Each dog is accompanied by an original health certificate issued in English by a licensed veterinarian"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "9 CFR 2.151 — Certifications for imported dogs (возраст)",
+              "url": "https://www.law.cornell.edu/cfr/text/9/2.151",
+              "quote": "at least 6 months of age"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "9 CFR 2.151 — Certifications for imported dogs (бешенство)",
+              "url": "https://www.law.cornell.edu/cfr/text/9/2.151",
+              "quote": "at least 30 days before the date of arrival of the dog at a U.S. port"
+            }
+          ]
+        },
+        {
+          "anchor": "cdc-federal",
+          "locale": "ru",
+          "order": 3,
+          "title": "Требования CDC — действуют для любой собаки, не только для продажи",
+          "body": "Поверх правил APHIS лежит федеральный санитарный слой CDC, и он не зависит от цели ввоза. Три требования применяются ко всем собакам: возраст не менее шести месяцев на момент прибытия, вживлённый до прибытия микрочип и поданная до прилёта форма CDC Dog Import Form.\n\nДля кошек аналогичного требования по прививке от бешенства федеральное правило не устанавливает: кошки подлежат осмотру при въезде.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "42 CFR 71.51(f)(1) — Dogs and cats (возраст)",
+              "url": "https://www.law.cornell.edu/cfr/text/42/71.51",
+              "quote": "All dogs presented for admission into the United States must be at least six (6) months old at the time of their arrival into the United States."
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "42 CFR 71.51(g)(1) — Dogs and cats (микрочип)",
+              "url": "https://www.law.cornell.edu/cfr/text/42/71.51",
+              "quote": "All dogs presented for admission into the United States must have a microchip implanted prior to arrival at the U.S. port."
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "42 CFR 71.51(h)(1) — Dogs and cats (форма)",
+              "url": "https://www.law.cornell.edu/cfr/text/42/71.51",
+              "quote": "All importers of dogs must submit a complete and accurate CDC dog import form to CDC via a CDC-approved system prior to the dogs arriving in the United States."
+            }
+          ]
+        },
+        {
+          "anchor": "hybrid-breeds",
+          "locale": "ru",
+          "order": 4,
+          "title": "Гибридные породы кошек: чего здесь пока нет",
+          "placeholder": true
+        },
+        {
+          "anchor": "state-and-city",
+          "locale": "ru",
+          "order": 5,
+          "title": "Уровень штата и города: чего здесь пока нет",
+          "placeholder": true
+        },
+        {
+          "anchor": "transit",
+          "locale": "ru",
+          "order": 6,
+          "title": "Транзитная страна: чего здесь пока нет",
+          "placeholder": true
+        }
+      ],
+      "requirements": [
+        {
+          "code": "aphis_import_permit",
+          "title": "Разрешение APHIS на ввоз собаки для перепродажи",
+          "issuer": "USDA APHIS Animal Care",
+          "obtained_by": "recipient",
+          "is_mandatory": true,
+          "condition": { "attr": "purpose", "op": "==", "value": "resale" },
+          "notes": "Ввоз должен состояться в течение 30 дней после заявленной в разрешении даты прибытия. Срок оформления в корпусе не указан — уточнить у APHIS до публикации."
+        },
+        {
+          "code": "health_certificate_en",
+          "title": "Справка о здоровье на английском от лицензированного ветврача страны вывоза",
+          "issuer": "Лицензированный ветеринарный врач страны вывоза",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": { "attr": "purpose", "op": "==", "value": "resale" },
+          "notes": "Подтверждает возраст не менее 6 месяцев и прививку DHLPP не старше 12 месяцев на дату прибытия."
+        },
+        {
+          "code": "rabies_certificate_en",
+          "title": "Сертификат о прививке от бешенства на английском",
+          "issuer": "Лицензированный ветеринарный врач страны вывоза",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": { "attr": "purpose", "op": "==", "value": "resale" },
+          "lead_time_days": 30,
+          "notes": "Прививка должна быть сделана не позднее чем за 30 дней до прибытия — отсюда срок в 30 дней."
+        },
+        {
+          "code": "microchip",
+          "title": "Микрочип, вживлённый до прибытия",
+          "issuer": "Ветеринарный врач",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "notes": "Требование CDC, действует для любой собаки независимо от цели ввоза."
+        },
+        {
+          "code": "cdc_dog_import_form",
+          "title": "CDC Dog Import Form, поданная до прилёта",
+          "issuer": "Подаёт импортёр через систему CDC",
+          "obtained_by": "recipient",
+          "is_mandatory": true,
+          "notes": "Требование CDC, действует для любой собаки независимо от цели ввоза."
+        }
+      ]
+    }
+  ]
+}
