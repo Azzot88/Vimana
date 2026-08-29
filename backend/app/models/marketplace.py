@@ -16,7 +16,7 @@ class TripStatus(str, enum.Enum):
     cancelled = "cancelled"
 
 
-DEFAULT_CATEGORIES = ("document", "medicine", "electronics", "gift", "animal", "other")
+DEFAULT_CATEGORIES = ("document", "medicine", "electronics", "gift", "animal", "art", "other")
 
 
 class Category(Base):

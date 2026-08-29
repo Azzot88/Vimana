@@ -10,4 +10,4 @@
 // Earlier this counted closed tasks (0.03.22 after T3.15) and drifted from the
 // documented rule, so a reader could not tell what the number meant. Owner's
 // decision 2026-07-30: the number tracks the phase.
-export const APP_VERSION = '0.03.9'
+export const APP_VERSION = '0.03.11'
