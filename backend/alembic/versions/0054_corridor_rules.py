@@ -217,7 +217,14 @@ def upgrade() -> None:
         op.execute(
             sa.text(
                 "INSERT INTO jurisdictions (code, kind, parent_code, name, created_at) "
-                "VALUES (:code, :kind, :parent, :name, now()) "
+                # `kind` is cast explicitly: asyncpg sends a bound parameter as
+                # VARCHAR, and Postgres will not coerce it into an enum column on
+                # its own ("column kind is of type jurisdictionkind but expression
+                # is of type character varying"). A string literal would have been
+                # coerced; a parameter is not. This bites any seed of an enum
+                # column, which is why 0003 — seeding plain text categories — did
+                # not hit it.
+                "VALUES (:code, CAST(:kind AS jurisdictionkind), :parent, :name, now()) "
                 "ON CONFLICT (code) DO NOTHING"
             ).bindparams(code=code, kind=kind, parent=parent, name=name)
         )

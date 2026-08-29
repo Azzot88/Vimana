@@ -120,7 +120,7 @@
 - [ ] `RuleSection(rule_set_id, anchor, order, title, body, locale)` — перевод построчно. JSONB не даёт состояния «переведено наполовину», а оно понадобится в `T3.11.13`.
 - [ ] `RuleSource(section_id, authority, document_title, document_date, url, quote)`.
 - [ ] `DocumentRequirement(rule_set_id, code, title, issuer, obtained_by, is_mandatory, condition, valid_for_days, lead_time_days, cost_estimate, notes)`. `issuer` — отдельным полем, к нему привязывается партнёр на ступени 1.
-- [ ] **`condition` — предикат, а не текст:** `{"attr","op","value"}`, интерпретатор на конечном списке операций. Ни одного пути, где предикат исполняется как выражение.
+- [ ] **`condition` — предикат, а не текст:** лист `{"attr","op","value"}` плюс **один уровень** группировки `all` / `any` из листьев, не более восьми. Вложенность глубже отвергается. Интерпретатор на конечном списке операций, ни одного пути, где предикат исполняется как выражение. Незаполненный атрибут — исключение, а не `false`. Валидация на модели, не на эндпоинте.
 - [ ] Список атрибутов закрыт и объявлен в коде: `age_years`, `declared_value`, `author_known`, `species`, `breed`, `generation`, `purpose ∈ {personal, resale}`, `count`. Валидация при сохранении — атрибут вне списка не сохраняется.
 - [ ] **`DEFAULT_CATEGORIES` расширяется значением `art`** (`models/marketplace.py`) — второй корпус целиком про него, а категории такой нет.
 - [ ] Миграция alembic + тесты модели, включая отказ второй `published` версии и отказ неизвестного атрибута.
