@@ -492,6 +492,7 @@
     "electronics": "Elektronika",
     "gift": "Prezent",
     "animal": "Zwierzę",
+    "art": "Sztuka i antyki",
     "other": "Inne"
   },
   "dashboard": {
@@ -1320,6 +1321,17 @@
     "none": "Brak otwartych sporów.",
     "mine": "Moje spory"
   },
+  "rulesIndex": {
+    "navLink": "Zasady korytarzy",
+    "title": "Zasady przekraczania granicy",
+    "lede": "Czego rzecz potrzebuje, by ją przepuszczono — według korytarzy, z cytatem ze źródła przy każdym twierdzeniu i datą ostatniego sprawdzenia przez człowieka. Czytanie jest bezpłatne. Sprzedajemy zebrany komplet dokumentów, a nie wiedzę.",
+    "reviewedAt": "sprawdzono {{when}}",
+    "neverReviewed": "jeszcze nie sprawdzono ze źródłami",
+    "emptyTitle": "Nic jeszcze nie opublikowano",
+    "emptyBody": "Kolejne powstają te korytarze, o które ludzie pytają. Napisz, jakiego kierunku potrzebujesz.",
+    "failed": "Nie udało się wczytać listy. Odśwież stronę — to nie to samo, co „nic tu nie ma”.",
+    "disclaimer": "Vimana nie jest agencją celną i nie wystawia żadnego z tych dokumentów. Każda strona przekazuje to, co mówią źródła, i cytuje je, byś mógł sprawdzić sam."
+  },
   "rulesPage": {
     "missingTitle": "Dla tego korytarza nie opublikowano jeszcze zasad",
     "missingBody": "Tu jeszcze nic nie ma. Jeśli potrzebujesz tego kierunku — napisz: kolejne powstają te korytarze, o które ludzie pytają.",
@@ -1332,6 +1344,7 @@
     "partiallyTranslated": "Część sekcji nie jest jeszcze przetłumaczona i jest pokazana po angielsku. Takie sekcje są oznaczone na miejscu.",
     "inLocale": "w {{locale}}",
     "openSource": "Otwórz dokument",
+    "whatChanged": "Co się zmieniło:",
     "documentsTitle": "Potrzebne dokumenty",
     "documentsHint": "Najważniejszy jest czas oczekiwania: część z nich powstaje tygodniami, a lot za dziesięć dni to zły moment, by się o tym dowiedzieć.",
     "issuerUnknown": "wystawca nie podany",
@@ -1391,6 +1404,13 @@
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — puste, jeśli zawsze wymagany",
     "leadDays": "{{days}} dni na uzyskanie",
     "badJson": "Warunek nie jest poprawnym JSON-em."
+    "moveUp": "W górę",
+    "moveDown": "W dół",
+    "showHistory": "Pokaż historię",
+    "historyTitle": "Historia",
+    "publishNoteLabel": "Co się zmieniło",
+    "publishNotePlaceholder": "Jedno zdanie dla tego, kto wrócił — opcjonalnie",
+    "reqNotesPlaceholder": "Uwagi",
   },
   "adminRoles": {
     "title": "Role i propozycje",

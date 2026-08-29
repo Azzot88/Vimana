@@ -491,6 +491,7 @@
     "electronics": "Electrónica",
     "gift": "Regalo",
     "animal": "Animal",
+    "art": "Arte y antigüedades",
     "other": "Otro"
   },
   "dashboard": {
@@ -1319,6 +1320,17 @@
     "none": "No hay disputas abiertas.",
     "mine": "Mis disputas"
   },
+  "rulesIndex": {
+    "navLink": "Reglas de los corredores",
+    "title": "Reglas para cruzar una frontera",
+    "lede": "Lo que una cosa necesita para que la dejen pasar — por corredor, con la cita de la fuente junto a cada afirmación y la fecha de la última comprobación por una persona. Leer es gratis: lo que vendemos es el expediente reunido, no el conocimiento.",
+    "reviewedAt": "comprobado {{when}}",
+    "neverReviewed": "todavía no comprobado con las fuentes",
+    "emptyTitle": "Todavía no hay nada publicado",
+    "emptyBody": "Los siguientes corredores que se escriben son los que la gente pide. Dinos qué dirección necesitas.",
+    "failed": "No se pudo cargar la lista. Recarga la página — no es lo mismo que no haya nada aquí.",
+    "disclaimer": "Vimana no es un agente de aduanas y no emite ninguno de estos documentos. Cada página traslada lo que dicen las fuentes y las cita, para que puedas comprobarlo tú mismo."
+  },
   "rulesPage": {
     "missingTitle": "Todavía no hay reglas publicadas para este corredor",
     "missingBody": "Aquí aún no hay nada. Si necesitas esta dirección, dínoslo: los siguientes corredores que se escriben son los que la gente pide.",
@@ -1331,6 +1343,7 @@
     "partiallyTranslated": "Algunas secciones aún no están traducidas y se muestran en inglés. Están marcadas donde aparecen.",
     "inLocale": "en {{locale}}",
     "openSource": "Abrir el documento",
+    "whatChanged": "Qué ha cambiado:",
     "documentsTitle": "Documentos que necesitarás",
     "documentsHint": "Lo que más importa es el plazo de obtención: algunos tardan semanas, y un vuelo dentro de diez días es un mal momento para enterarse.",
     "issuerUnknown": "emisor no indicado",
@@ -1390,6 +1403,13 @@
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — vacío si siempre es necesario",
     "leadDays": "{{days}} días para obtenerlo",
     "badJson": "La condición no es JSON válido."
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "showHistory": "Mostrar el historial",
+    "historyTitle": "Historial",
+    "publishNoteLabel": "Qué ha cambiado",
+    "publishNotePlaceholder": "Una línea para quien vuelve — opcional",
+    "reqNotesPlaceholder": "Notas",
   },
   "adminRoles": {
     "title": "Roles y propuestas",

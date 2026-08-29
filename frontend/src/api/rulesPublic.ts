@@ -50,9 +50,12 @@ export interface PublicRuleSet {
   /** The watcher last looked at the source. Says nothing about the text. */
   checked_at: string | null
   needs_review: boolean
-  /** Something on the page is not in the reader's language. */
+  /** Something on the page is not in the readers language. */
   fallback_locale: boolean
   locale: string
+  /** What the editor said when publishing this version — the "what changed"
+   *  line. Empty is the common case for a first version and reads as silence. */
+  published_note: string
   sections: PublicSection[]
   requirements: PublicRequirement[]
 }

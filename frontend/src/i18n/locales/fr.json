@@ -491,6 +491,7 @@
     "electronics": "Électronique",
     "gift": "Cadeau",
     "animal": "Animal",
+    "art": "Art et antiquités",
     "other": "Autre"
   },
   "dashboard": {
@@ -1319,6 +1320,17 @@
     "none": "Aucun litige en cours.",
     "mine": "Mes litiges"
   },
+  "rulesIndex": {
+    "navLink": "Règles des corridors",
+    "title": "Règles pour franchir une frontière",
+    "lede": "Ce qu'il faut à une chose pour être laissée passer — par corridor, avec la citation de la source à côté de chaque affirmation et la date de la dernière vérification humaine. La lecture est gratuite : ce que nous vendons, c'est le dossier réuni, pas le savoir.",
+    "reviewedAt": "vérifié le {{when}}",
+    "neverReviewed": "pas encore vérifié auprès des sources",
+    "emptyTitle": "Rien n'est encore publié",
+    "emptyBody": "Les corridors écrits ensuite sont ceux qu'on nous demande. Dites-nous quelle direction vous intéresse.",
+    "failed": "Impossible de charger la liste. Rechargez la page — ce n'est pas la même chose qu'un rayon vide.",
+    "disclaimer": "Vimana n'est pas un commissionnaire en douane et ne délivre aucun de ces documents. Chaque page rapporte ce que disent les sources et les cite, pour que vous puissiez vérifier vous-même."
+  },
   "rulesPage": {
     "missingTitle": "Aucune règle publiée pour ce corridor",
     "missingBody": "Rien n'a encore été publié ici. Si vous avez besoin de cette direction, dites-le nous : les corridors écrits ensuite sont ceux qu'on nous demande.",
@@ -1331,6 +1343,7 @@
     "partiallyTranslated": "Certaines sections ne sont pas encore traduites et s'affichent en anglais. Elles sont signalées là où elles apparaissent.",
     "inLocale": "en {{locale}}",
     "openSource": "Ouvrir le document",
+    "whatChanged": "Ce qui a changé :",
     "documentsTitle": "Documents nécessaires",
     "documentsHint": "Le délai d'obtention est ce qui compte le plus : certains prennent des semaines, et un vol dans dix jours est un mauvais moment pour l'apprendre.",
     "issuerUnknown": "émetteur non précisé",
@@ -1390,6 +1403,13 @@
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — vide si toujours requis",
     "leadDays": "{{days}} jours pour l'obtenir",
     "badJson": "La condition n'est pas un JSON valide."
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "showHistory": "Afficher l’historique",
+    "historyTitle": "Historique",
+    "publishNoteLabel": "Ce qui a changé",
+    "publishNotePlaceholder": "Une phrase pour qui revient — facultatif",
+    "reqNotesPlaceholder": "Remarques",
   },
   "adminRoles": {
     "title": "Rôles et propositions",

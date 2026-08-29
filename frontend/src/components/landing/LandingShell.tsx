@@ -163,6 +163,14 @@ export default function LandingShell({
             <Link to="/business" className="text-navy/60 transition-colors hover:text-navy">
               {t('audience.business.navLink')}
             </Link>
+            {/* T3.11.03 — the directory's only entry point on the site. It was
+                reachable by typing its address and by nothing else: the top of
+                the funnel with nothing pointing at it. In the footer rather
+                than the header on purpose — it is what a reader looks for after
+                the page has not answered them, which is what a footer is. */}
+            <Link to="/rules" className="text-navy/60 transition-colors hover:text-navy">
+              {t('rulesIndex.navLink')}
+            </Link>
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-navy/10 pt-4">
             <MonoText className="text-[11px] uppercase tracking-[0.14em] text-navy/40">

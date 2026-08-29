@@ -142,3 +142,29 @@ export const deleteRequirement = (reqId: string) =>
 
 export const listJurisdictions = () =>
   api.get<Jurisdiction[]>('/api/admin/jurisdictions')
+
+export const patchSection = (
+  sectionId: string,
+  body: { anchor: string; locale: string; order?: number; title?: string; body?: string },
+) => api.patch<RuleSection>(`/api/admin/rules/sections/${sectionId}`, body)
+
+/** T3.11.02 pt.2 — a citation is the thing most likely to need correcting, and
+ *  delete-and-recreate lost its identity for the sake of a typo. */
+export const patchSource = (
+  sourceId: string,
+  body: { authority: string; document_title: string; url?: string; quote: string },
+) => api.patch<RuleSource>(`/api/admin/rules/sources/${sourceId}`, body)
+
+export const patchRequirement = (
+  reqId: string,
+  body: {
+    code: string
+    title: string
+    issuer?: string
+    obtained_by?: ObtainedBy
+    lead_time_days?: number | null
+    valid_for_days?: number | null
+    condition?: Record<string, unknown> | null
+    notes?: string
+  },
+) => api.patch<DocumentRequirement>(`/api/admin/rules/requirements/${reqId}`, body)

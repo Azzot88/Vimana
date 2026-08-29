@@ -9,6 +9,7 @@ import CarrierLandingPage from './pages/CarrierLandingPage'
 import SenderLandingPage from './pages/SenderLandingPage'
 import BusinessLandingPage from './pages/BusinessLandingPage'
 import RulesPage from './pages/RulesPage'
+import RulesIndexPage from './pages/RulesIndexPage'
 
 /**
  * T_UX.7 pt.2 — the landing, rendered to HTML at build time.
@@ -70,6 +71,28 @@ export function renderRule(lang: string, path: string, data: unknown): string {
             path="/rules/:category/:direction/:country"
             element={<RulesPage initial={data as never} />}
           />
+        </Routes>
+      </StaticRouter>
+    </I18nextProvider>,
+  )
+}
+
+/**
+ * The directory index. Rendered without data on purpose.
+ *
+ * The list is short-lived — it changes with every publication — and the page
+ * fetches it on mount anyway. What prerendering buys here is the heading, the
+ * lede and the shell: a crawler that follows the footer link finds a page that
+ * says what this section is, rather than an empty div. The list it will index
+ * on the next pass, from the corridor pages themselves, which do carry content.
+ */
+export function renderRulesIndex(lang: string): string {
+  i18n.changeLanguage(lang)
+  return renderToString(
+    <I18nextProvider i18n={i18n}>
+      <StaticRouter location="/rules">
+        <Routes>
+          <Route path="/rules" element={<RulesIndexPage />} />
         </Routes>
       </StaticRouter>
     </I18nextProvider>,

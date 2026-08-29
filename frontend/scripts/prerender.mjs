@@ -90,7 +90,18 @@ async function fetchJson(url) {
 }
 
 try {
-  const { renderRule } = await import(pathToFileURL(ssrEntry).href)
+  const { renderRule, renderRulesIndex } = await import(pathToFileURL(ssrEntry).href)
+
+  // The index first: it is the page the footer links to, and the only one
+  // that must exist even when nothing is published yet.
+  const indexHtml = renderRulesIndex("ru")
+  writeFileSync(
+    resolve(dist, "rules-index.html"),
+    shell.replace(marker, `<div id="root">${indexHtml}</div>`),
+    "utf8",
+  )
+  console.log(`prerender: /rules → ${resolve(dist, "rules-index.html")} (${indexHtml.length} chars of markup)`)
+
   const index = await fetchJson(`${apiBase}/api/rules`)
 
   if (index.length === 0) {

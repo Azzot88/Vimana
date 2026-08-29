@@ -39,6 +39,7 @@ from app.models.rules import (
     RuleSet,
     RuleSource,
     RuleStatus,
+    RuleStatusEvent,
 )
 
 router = APIRouter()
@@ -114,6 +115,10 @@ class RuleSetOut(BaseModel):
     #: True when the reader asked for a locale the corpus does not have yet.
     fallback_locale: bool
     locale: str
+    #: What the editor said when publishing this version — "what changed",
+    #: blog-fashion. Empty when they said nothing, which is the common case for
+    #: a first version and reads correctly as silence rather than as a gap.
+    published_note: str
     sections: list[SectionOut]
     requirements: list[RequirementOut]
 
@@ -235,6 +240,21 @@ async def read_rule(
         )
     ).scalar()
 
+    # The note from the publication event — the "what changed" line. Read from
+    # the journal rather than stored a second time on the set: two copies of one
+    # sentence drift, and the journal is where the sentence belongs anyway.
+    published_note = (
+        await db.execute(
+            select(RuleStatusEvent.note)
+            .where(
+                RuleStatusEvent.rule_set_id == rule_set.id,
+                RuleStatusEvent.to_status == RuleStatus.published,
+            )
+            .order_by(RuleStatusEvent.created_at.desc())
+            .limit(1)
+        )
+    ).scalar()
+
     return RuleSetOut(
         id=rule_set.id,
         category_key=rule_set.category_key,
@@ -249,6 +269,7 @@ async def read_rule(
         needs_review=rule_set.needs_review,
         # True when *anything* the reader sees is not in their language.
         fallback_locale=any(s.locale != wanted for s in chosen),
+        published_note=published_note or "",
         locale=wanted,
         sections=[
             SectionOut(

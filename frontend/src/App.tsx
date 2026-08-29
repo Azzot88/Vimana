@@ -47,6 +47,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage'))
 const AdminRulesPage = lazy(() => import('./pages/AdminRulesPage'))
 const RulesPage = lazy(() => import('./pages/RulesPage'))
+const RulesIndexPage = lazy(() => import('./pages/RulesIndexPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const CarrierPage = lazy(() => import('./pages/CarrierPage'))
@@ -105,6 +106,10 @@ export default function App() {
           {/* T3.11.03 — the public rules directory. Category first: people
               search for "how do I take a painting out of Russia", not for
               "what may leave Russia". Open to everybody, by design. */}
+          {/* The index goes first: a bare `/rules` used to fall through to the
+              SPA catch-all and render "page not found" for the one address a
+              person would guess. */}
+          <Route path="/rules" element={<RulesIndexPage />} />
           <Route
             path="/rules/:category/:direction/:country"
             element={<RulesPage />}

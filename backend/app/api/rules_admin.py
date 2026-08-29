@@ -492,6 +492,31 @@ async def add_source(
     return source
 
 
+@router.patch("/admin/rules/sources/{source_id}", response_model=SourceOut)
+async def patch_source(
+    source_id: uuid.UUID,
+    body: SourceIn,
+    _: User = Depends(require_perm(Permission.RULES_EDIT)),
+    db: AsyncSession = Depends(get_db),
+):
+    """A citation is the thing most likely to need correcting.
+
+    Delete-and-recreate was the only way to fix a typo in an authority's name,
+    and it loses the source's identity for no reason. Sections and requirements
+    already had `PATCH`; this was the gap.
+    """
+    source = await db.get(RuleSource, source_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+    section, _set = await _section_and_set(db, source.section_id)
+
+    for field, value in body.model_dump().items():
+        setattr(source, field, value)
+    await db.commit()
+    await db.refresh(source)
+    return source
+
+
 @router.delete("/admin/rules/sources/{source_id}", status_code=204)
 async def delete_source(
     source_id: uuid.UUID,

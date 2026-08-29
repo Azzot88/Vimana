@@ -4,13 +4,9 @@ import { Navigate } from 'react-router-dom'
 import {
   addRequirement,
   addSection,
-  addSource,
   changeRuleStatus,
   createRuleSet,
-  deleteRequirement,
   deleteRuleSet,
-  deleteSection,
-  deleteSource,
   getRuleSet,
   listJurisdictions,
   listRuleSets,
@@ -19,11 +15,16 @@ import {
   type RuleSet,
   type RuleSetDetail,
   type RuleStatus,
+  type StatusEvent,
+  patchRuleSet,
+  ruleHistory,
 } from '../api/rules'
 import { hasRole, isSuperuser } from '../lib/permissions'
 import { usePrefs } from '../hooks/usePrefs'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
+import RuleSectionCard from '../components/RuleSectionCard'
+import RuleRequirementRow from '../components/RuleRequirementRow'
 
 /**
  * T3.11.02 — the rules editor.
@@ -134,17 +135,21 @@ export default function AdminRulesPage() {
   const [secTitle, setSecTitle] = useState('')
   const [secBody, setSecBody] = useState('')
 
-  const [srcFor, setSrcFor] = useState<string | null>(null)
-  const [srcAuthority, setSrcAuthority] = useState('')
-  const [srcDoc, setSrcDoc] = useState('')
-  const [srcUrl, setSrcUrl] = useState('')
-  const [srcQuote, setSrcQuote] = useState('')
 
   const [reqCode, setReqCode] = useState('')
   const [reqTitle, setReqTitle] = useState('')
   const [reqIssuer, setReqIssuer] = useState('')
   const [reqLead, setReqLead] = useState('')
   const [reqCondition, setReqCondition] = useState('')
+
+  // ── set title, publication note, history ─────────────────────────────────
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  /** The "what changed" line, blog-fashion. It goes into the journal *and*
+   *  onto the public page, so a reader who came back sees why the text moved
+   *  rather than only that the date did. */
+  const [publishNote, setPublishNote] = useState('')
+  const [history, setHistory] = useState<StatusEvent[] | null>(null)
 
   const statusChip = (status: RuleStatus) => {
     const tone =
@@ -279,10 +284,50 @@ export default function AdminRulesPage() {
           <div className="space-y-4 min-w-0">
             <div className="bg-white rounded-card border border-navy/10 p-5 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="font-display font-semibold text-lg text-navy">
-                    {detail.title || '—'}
-                  </h2>
+                <div className="min-w-0">
+                  {editingTitle ? (
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        aria-label={t('adminRules.setTitle') as string}
+                        className={field}
+                      />
+                      <button
+                        onClick={() =>
+                          run(async () => {
+                            await patchRuleSet(detail.id, titleDraft.trim())
+                            setEditingTitle(false)
+                          })
+                        }
+                        disabled={busy}
+                        className={`${btn} bg-amber text-white hover:opacity-90`}
+                      >
+                        {t('common.save')}
+                      </button>
+                      <button
+                        onClick={() => setEditingTitle(false)}
+                        className={`${btn} border border-navy/20 text-navy`}
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  ) : (
+                    <h2 className="font-display font-semibold text-lg text-navy">
+                      {detail.title || '—'}
+                      {!frozen && (
+                        <button
+                          onClick={() => {
+                            setTitleDraft(detail.title)
+                            setEditingTitle(true)
+                          }}
+                          className="ml-2 text-xs font-body font-normal text-cyan hover:underline"
+                        >
+                          {t('common.edit')}
+                        </button>
+                      )}
+                    </h2>
+                  )}
                   <MonoText className="text-xs text-navy/50">
                     {detail.category_key} · {t(`adminRules.dir.${detail.direction}`)} ·{' '}
                     {detail.jurisdiction_code} · v{detail.version}
@@ -311,6 +356,29 @@ export default function AdminRulesPage() {
                 </div>
               )}
 
+              {/* The "what changed" line, offered only where it means
+                  something — at the moment of publication. Asking for it on
+                  every transition would turn it into a field people skip, and
+                  a skipped field is worse than an absent one: it makes the
+                  ones that are filled in look optional. */}
+              {detail.status === 'review' && canPublish && (
+                <div className="space-y-1">
+                  <label
+                    htmlFor="publish-note"
+                    className="block text-xs font-body text-navy/60"
+                  >
+                    {t('adminRules.publishNoteLabel')}
+                  </label>
+                  <input
+                    id="publish-note"
+                    value={publishNote}
+                    onChange={(e) => setPublishNote(e.target.value)}
+                    placeholder={t('adminRules.publishNotePlaceholder') as string}
+                    className={field}
+                  />
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 {detail.status === 'draft' && (
                   <button
@@ -335,7 +403,16 @@ export default function AdminRulesPage() {
                         here is "this is somebody else's decision". */}
                     {canPublish && (
                       <button
-                        onClick={() => run(() => changeRuleStatus(detail.id, 'published'))}
+                        onClick={() =>
+                          run(async () => {
+                            await changeRuleStatus(
+                              detail.id,
+                              'published',
+                              publishNote.trim(),
+                            )
+                            setPublishNote('')
+                          })
+                        }
                         disabled={busy || detail.blockers.length > 0}
                         className={`${btn} bg-amber text-white hover:opacity-90`}
                       >
@@ -385,6 +462,53 @@ export default function AdminRulesPage() {
                   {t('adminRules.publishDelayHint')}
                 </p>
               )}
+
+              {/* The journal, on demand rather than always. It answers "who
+                  moved this and when", which is a question asked occasionally
+                  and loudly — not one worth four rows of chrome on every visit. */}
+              {history === null ? (
+                <button
+                  onClick={() =>
+                    ruleHistory(detail.id)
+                      .then(({ data }) => setHistory(data))
+                      .catch(() => setError(t('adminRules.loadFailed') as string))
+                  }
+                  className="text-xs font-body text-cyan hover:underline"
+                >
+                  {t('adminRules.showHistory')}
+                </button>
+              ) : (
+                <div className="rounded-field border border-navy/10 p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-display font-medium text-navy">
+                      {t('adminRules.historyTitle')}
+                    </p>
+                    <button
+                      onClick={() => setHistory(null)}
+                      className="text-xs font-body text-navy/50 hover:text-navy"
+                    >
+                      {t('common.close')}
+                    </button>
+                  </div>
+                  {history.map((event) => (
+                    <div key={event.id} className="flex flex-wrap gap-x-2 items-baseline">
+                      <MonoText className="text-[11px] text-navy/50">
+                        {prefs.dateTime(event.created_at)}
+                      </MonoText>
+                      <span className="text-xs font-body text-navy/70">
+                        {event.from_status
+                          ? `${t(`adminRules.status.${event.from_status}`)} → ${t(`adminRules.status.${event.to_status}`)}`
+                          : t(`adminRules.status.${event.to_status}`)}
+                      </span>
+                      {event.note && (
+                        <span className="text-xs font-body text-navy/50">
+                          — {event.note}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ── sections ────────────────────────────────────────────── */}
@@ -396,131 +520,16 @@ export default function AdminRulesPage() {
                 {t('adminRules.sectionsHint')}
               </p>
 
-              {detail.sections.map((s) => (
-                <div
+              {detail.sections.map((s, i) => (
+                <RuleSectionCard
                   key={s.id}
-                  className="rounded-field border border-navy/10 p-3 space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <MonoText className="text-xs text-navy/70">
-                      {s.anchor} · {s.locale}
-                    </MonoText>
-                    {!frozen && (
-                      <button
-                        onClick={() => run(() => deleteSection(s.id))}
-                        disabled={busy}
-                        className="text-xs font-body text-danger hover:underline"
-                      >
-                        {t('common.delete')}
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-sm font-body text-navy">{s.title || '—'}</p>
-                  <p className="text-xs font-body text-navy/60 whitespace-pre-wrap">
-                    {s.body}
-                  </p>
-
-                  {s.sources.length === 0 ? (
-                    <p className="text-xs font-mono text-amber">
-                      {t('adminRules.noSource')}
-                    </p>
-                  ) : (
-                    s.sources.map((src) => (
-                      <div
-                        key={src.id}
-                        className="rounded-field bg-ivory p-2 space-y-0.5"
-                      >
-                        <MonoText className="text-[11px] text-navy/60">
-                          {src.authority} · {src.document_title}
-                        </MonoText>
-                        <p className="text-xs font-body text-navy/70 italic">
-                          «{src.quote}»
-                        </p>
-                        {!frozen && (
-                          <button
-                            onClick={() => run(() => deleteSource(src.id))}
-                            disabled={busy}
-                            className="text-[11px] font-body text-danger hover:underline"
-                          >
-                            {t('common.delete')}
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  )}
-
-                  {!frozen &&
-                    (srcFor === s.id ? (
-                      <div className="space-y-2 pt-1">
-                        <input
-                          value={srcAuthority}
-                          onChange={(e) => setSrcAuthority(e.target.value)}
-                          placeholder={t('adminRules.srcAuthority') as string}
-                          className={field}
-                        />
-                        <input
-                          value={srcDoc}
-                          onChange={(e) => setSrcDoc(e.target.value)}
-                          placeholder={t('adminRules.srcDocument') as string}
-                          className={field}
-                        />
-                        <input
-                          value={srcUrl}
-                          onChange={(e) => setSrcUrl(e.target.value)}
-                          placeholder={t('adminRules.srcUrl') as string}
-                          className={field}
-                        />
-                        <textarea
-                          value={srcQuote}
-                          onChange={(e) => setSrcQuote(e.target.value)}
-                          placeholder={t('adminRules.srcQuote') as string}
-                          rows={3}
-                          className={field}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              run(async () => {
-                                await addSource(s.id, {
-                                  authority: srcAuthority.trim(),
-                                  document_title: srcDoc.trim(),
-                                  url: srcUrl.trim(),
-                                  quote: srcQuote.trim(),
-                                })
-                                setSrcFor(null)
-                                setSrcAuthority('')
-                                setSrcDoc('')
-                                setSrcUrl('')
-                                setSrcQuote('')
-                              })
-                            }
-                            disabled={
-                              busy ||
-                              !srcAuthority.trim() ||
-                              !srcDoc.trim() ||
-                              !srcQuote.trim()
-                            }
-                            className={`${btn} bg-amber text-white hover:opacity-90`}
-                          >
-                            {t('common.save')}
-                          </button>
-                          <button
-                            onClick={() => setSrcFor(null)}
-                            className={`${btn} border border-navy/20 text-navy`}
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setSrcFor(s.id)}
-                        className="text-xs font-body text-cyan hover:underline"
-                      >
-                        {t('adminRules.addSource')}
-                      </button>
-                    ))}
-                </div>
+                  section={s}
+                  frozen={frozen}
+                  busy={busy}
+                  isFirst={i === 0}
+                  isLast={i === detail.sections.length - 1}
+                  run={run}
+                />
               ))}
 
               {!frozen && (
@@ -589,34 +598,13 @@ export default function AdminRulesPage() {
               <p className="text-xs font-body text-navy/50">{t('adminRules.reqHint')}</p>
 
               {detail.requirements.map((r) => (
-                <div
+                <RuleRequirementRow
                   key={r.id}
-                  className="rounded-field border border-navy/10 p-3 flex items-start justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <MonoText className="text-xs text-navy/70">{r.code}</MonoText>
-                    <p className="text-sm font-body text-navy">{r.title}</p>
-                    <p className="text-xs font-body text-navy/50">
-                      {r.issuer || '—'}
-                      {r.lead_time_days != null &&
-                        ` · ${t('adminRules.leadDays', { days: r.lead_time_days })}`}
-                    </p>
-                    {r.condition && (
-                      <MonoText className="text-[11px] text-navy/50">
-                        {JSON.stringify(r.condition)}
-                      </MonoText>
-                    )}
-                  </div>
-                  {!frozen && (
-                    <button
-                      onClick={() => run(() => deleteRequirement(r.id))}
-                      disabled={busy}
-                      className="text-xs font-body text-danger hover:underline shrink-0"
-                    >
-                      {t('common.delete')}
-                    </button>
-                  )}
-                </div>
+                  requirement={r}
+                  frozen={frozen}
+                  busy={busy}
+                  run={run}
+                />
               ))}
 
               {!frozen && (

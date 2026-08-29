@@ -538,6 +538,7 @@
     "electronics": "Electronics",
     "gift": "Gift",
     "animal": "Animal",
+    "art": "Art and antiques",
     "other": "Other"
   },
   "dashboard": {
@@ -1363,6 +1364,17 @@
     "none": "No open disputes.",
     "mine": "My disputes"
   },
+  "rulesIndex": {
+    "navLink": "Corridor rules",
+    "title": "Rules for crossing a border",
+    "lede": "What a thing needs in order to be let through — written per corridor, with the quotation from the source next to every claim, and the date a person last checked it. Free to read. What we sell is the collected packet of documents, not the knowledge.",
+    "reviewedAt": "checked {{when}}",
+    "neverReviewed": "not yet checked against the sources",
+    "emptyTitle": "Nothing published yet",
+    "emptyBody": "The corridors written next are the ones people ask about. Tell us which direction you need.",
+    "failed": "Could not load the list. Reload the page — this is not the same as there being nothing here.",
+    "disclaimer": "Vimana is not a customs broker and issues none of these documents. Every page states what the sources say and quotes them, so you can check it yourself."
+  },
   "rulesPage": {
     "missingTitle": "No rules published for this corridor yet",
     "missingBody": "Nothing has been published here. If you need this direction, tell us — the corridors people ask about are the ones written next.",
@@ -1375,6 +1387,7 @@
     "partiallyTranslated": "Some sections are not translated yet and are shown in English. They are marked where they appear.",
     "inLocale": "in {{locale}}",
     "openSource": "Open the document",
+    "whatChanged": "What changed:",
     "documentsTitle": "Documents you will need",
     "documentsHint": "The time to obtain is what matters most: some of these take weeks, and a flight in ten days is the wrong moment to find that out.",
     "issuerUnknown": "issuer not stated",
@@ -1439,6 +1452,13 @@
     "reqConditionPlaceholder": "{\"attr\": \"age_years\", \"op\": \">=\", \"value\": 100} — leave empty if always required",
     "leadDays": "{{days}} days to obtain",
     "badJson": "The condition is not valid JSON."
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "showHistory": "Show the history",
+    "historyTitle": "History",
+    "publishNoteLabel": "What changed",
+    "publishNotePlaceholder": "One line for the reader who came back — optional",
+    "reqNotesPlaceholder": "Notes",
   },
   "adminRoles": {
     "title": "Roles and offers",

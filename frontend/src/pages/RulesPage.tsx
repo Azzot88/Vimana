@@ -104,6 +104,15 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
             )}
           </div>
 
+          {/* «Что изменилось» — то, что делает страницу читаемой во второй раз.
+              Без этой строки вернувшийся видит только новую дату и не знает,
+              стоит ли перечитывать. */}
+          {data.published_note && (
+            <p className="text-sm font-body text-navy/70 border-l-2 border-cyan/40 pl-3">
+              {t('rulesPage.whatChanged')} {data.published_note}
+            </p>
+          )}
+
           {data.fallback_locale && (
             <p className="text-xs font-body text-navy/60 border border-navy/15 rounded-field px-3 py-2">
               {t('rulesPage.partiallyTranslated')}
