@@ -113,6 +113,20 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
     await scan(page, '/business')
   })
 
+  // T3.11.03 — the rules directory is the most public surface the product has:
+  // people arrive on it from a search engine, before they know what Vimana is.
+  //
+  // Scanned in its **empty state**, and deliberately: nothing is published in
+  // the e2e database, and seeding a corpus here would make this spec depend on
+  // fixture content that the corpus tasks will change under it. The empty state
+  // is also the one a reader most often meets while the directory is young, and
+  // a page that says "nothing here yet" still has a heading, a landmark and a
+  // way onward — which is exactly what this scan is about.
+  test('rules directory, empty corridor', async ({ page }) => {
+    await page.goto('/rules/art/export/ru')
+    await scan(page, '/rules/art/export/ru')
+  })
+
   test('login', async ({ page }) => {
     await page.goto('/login')
     await scan(page, '/login')

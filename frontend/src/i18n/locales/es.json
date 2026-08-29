@@ -1319,6 +1319,26 @@
     "none": "No hay disputas abiertas.",
     "mine": "Mis disputas"
   },
+  "rulesPage": {
+    "missingTitle": "Todavía no hay reglas publicadas para este corredor",
+    "missingBody": "Aquí aún no hay nada. Si necesitas esta dirección, dínoslo: los siguientes corredores que se escriben son los que la gente pide.",
+    "failed": "No se pudo cargar la página. Inténtalo de nuevo.",
+    "untitled": "Reglas del corredor",
+    "dir": { "export": "Salida de", "import": "Entrada en", "transit": "Tránsito por" },
+    "reviewedAt": "Comprobado con las fuentes el {{when}}",
+    "neverReviewed": "Todavía no comprobado con las fuentes",
+    "needsReview": "una fuente ha cambiado",
+    "partiallyTranslated": "Algunas secciones aún no están traducidas y se muestran en inglés. Están marcadas donde aparecen.",
+    "inLocale": "en {{locale}}",
+    "openSource": "Abrir el documento",
+    "documentsTitle": "Documentos que necesitarás",
+    "documentsHint": "Lo que más importa es el plazo de obtención: algunos tardan semanas, y un vuelo dentro de diez días es un mal momento para enterarse.",
+    "issuerUnknown": "emisor no indicado",
+    "leadDays": "{{days}} días para obtenerlo",
+    "validDays": "válido {{days}} días",
+    "conditional": "necesario solo en algunos casos",
+    "disclaimer": "Vimana no es un agente de aduanas y no emite ninguno de estos documentos. Esta página traslada lo que dicen las fuentes, con la cita junto a cada afirmación, para que puedas comprobarlo tú mismo. Las reglas cambian — la fecha de arriba es el día en que una persona comparó por última vez este texto con la fuente."
+  },
   "adminRules": {
     "title": "Reglas del corredor",
     "description": "Lo que una cosa necesita para cruzar una frontera. Una regla publicada es una afirmación de la plataforma sobre el derecho ajeno: nada se publica sin fuente citada, y lo que la gente ha leído no se reescribe — una corrección es una versión nueva.",

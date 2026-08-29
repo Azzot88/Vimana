@@ -60,3 +60,59 @@ for (const path of PRERENDER_PATHS) {
   writeFileSync(outPath, shell.replace(marker, `<div id="root">${html}</div>`), 'utf8')
   console.log(`prerender: ${path} → ${outPath} (${html.length} chars of markup)`)
 }
+
+/**
+ * T3.11.03 — the rules directory, one file per published corridor.
+ *
+ * Unlike the four pages above, these paths are not a list in the source: they
+ * are whatever is published in the database when the build runs. So the script
+ * asks the API — and **carries on without them when it cannot**.
+ *
+ * That fallback is not laziness. The build runs in two places: on the server,
+ * inside compose, where `backend` answers; and on a developer's laptop, where
+ * it does not. Failing the whole build because a laptop has no database would
+ * make the common case hostage to the rare one, and the pages still work
+ * without a file — nginx falls back to the SPA shell, so a person sees the
+ * page and only a crawler misses it.
+ *
+ * Which is exactly the limitation of variant A, chosen deliberately
+ * (`IMPLEMENTATIONPLAN §3.11.4` п.4). Variant B — serving `/rules/*` from the
+ * database — is `T_OPS.2`, due once there are more than ten corpora.
+ */
+const apiBase = (process.env.PRERENDER_API_BASE || 'http://backend:8000').replace(/\/$/, '')
+const ruleFileFor = (path) =>
+  `rules-${path.replace(/^\/rules\//, '').replace(/\/$/, '').replace(/\//g, '-')}.html`
+
+async function fetchJson(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(4000) })
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  return res.json()
+}
+
+try {
+  const { renderRule } = await import(pathToFileURL(ssrEntry).href)
+  const index = await fetchJson(`${apiBase}/api/rules`)
+
+  if (index.length === 0) {
+    console.log('prerender: no published rule sets — nothing to write')
+  }
+  for (const entry of index) {
+    // The locale of the file is Russian, like every other prerendered page:
+    // `<html lang="ru">` and the founding corridor are Russian-facing. Other
+    // locales hydrate and switch client-side, as they already do.
+    const data = await fetchJson(
+      `${apiBase}/api/rules/${entry.category_key}/${entry.direction}/${entry.jurisdiction_code}?locale=ru`,
+    )
+    const html = renderRule('ru', entry.path, data)
+    const outPath = resolve(dist, ruleFileFor(entry.path))
+    writeFileSync(outPath, shell.replace(marker, `<div id="root">${html}</div>`), 'utf8')
+    console.log(`prerender: ${entry.path} → ${outPath} (${html.length} chars of markup)`)
+  }
+} catch (err) {
+  // One line, and it says which half is missing. Silence here would look like
+  // "there are no rules yet" on a build that simply could not ask.
+  console.log(
+    `prerender: skipped rule pages — API at ${apiBase} not reachable (${err.message}). ` +
+      'Pages still render client-side; only crawlers miss them until the next build on the server.',
+  )
+}

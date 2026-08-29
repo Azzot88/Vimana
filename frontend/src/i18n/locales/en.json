@@ -1363,6 +1363,26 @@
     "none": "No open disputes.",
     "mine": "My disputes"
   },
+  "rulesPage": {
+    "missingTitle": "No rules published for this corridor yet",
+    "missingBody": "Nothing has been published here. If you need this direction, tell us — the corridors people ask about are the ones written next.",
+    "failed": "Could not load this page. Try again in a moment.",
+    "untitled": "Corridor rules",
+    "dir": { "export": "Taking out of", "import": "Bringing into", "transit": "Passing through" },
+    "reviewedAt": "Checked against the sources on {{when}}",
+    "neverReviewed": "Not yet checked against the sources",
+    "needsReview": "a source has changed",
+    "partiallyTranslated": "Some sections are not translated yet and are shown in English. They are marked where they appear.",
+    "inLocale": "in {{locale}}",
+    "openSource": "Open the document",
+    "documentsTitle": "Documents you will need",
+    "documentsHint": "The time to obtain is what matters most: some of these take weeks, and a flight in ten days is the wrong moment to find that out.",
+    "issuerUnknown": "issuer not stated",
+    "leadDays": "{{days}} days to obtain",
+    "validDays": "valid {{days}} days",
+    "conditional": "needed only in some cases",
+    "disclaimer": "Vimana is not a customs broker and issues none of these documents. This page states what the sources say, with the quotation next to each claim, so you can check it yourself. Rules change — the date above is when a person last compared this text with the source."
+  },
   "adminRules": {
     "title": "Corridor rules",
     "description": "What a thing needs in order to cross a border. A published rule is a statement the platform makes about somebody else's law, so nothing is published without a cited source, and what people have read is never rewritten — a correction is a new version.",

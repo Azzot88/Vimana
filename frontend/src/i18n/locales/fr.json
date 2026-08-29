@@ -1319,6 +1319,26 @@
     "none": "Aucun litige en cours.",
     "mine": "Mes litiges"
   },
+  "rulesPage": {
+    "missingTitle": "Aucune règle publiée pour ce corridor",
+    "missingBody": "Rien n'a encore été publié ici. Si vous avez besoin de cette direction, dites-le nous : les corridors écrits ensuite sont ceux qu'on nous demande.",
+    "failed": "Impossible de charger cette page. Réessayez dans un instant.",
+    "untitled": "Règles du corridor",
+    "dir": { "export": "Sortie de", "import": "Entrée en", "transit": "Transit par" },
+    "reviewedAt": "Vérifié auprès des sources le {{when}}",
+    "neverReviewed": "Pas encore vérifié auprès des sources",
+    "needsReview": "une source a changé",
+    "partiallyTranslated": "Certaines sections ne sont pas encore traduites et s'affichent en anglais. Elles sont signalées là où elles apparaissent.",
+    "inLocale": "en {{locale}}",
+    "openSource": "Ouvrir le document",
+    "documentsTitle": "Documents nécessaires",
+    "documentsHint": "Le délai d'obtention est ce qui compte le plus : certains prennent des semaines, et un vol dans dix jours est un mauvais moment pour l'apprendre.",
+    "issuerUnknown": "émetteur non précisé",
+    "leadDays": "{{days}} jours pour l'obtenir",
+    "validDays": "valable {{days}} jours",
+    "conditional": "nécessaire seulement dans certains cas",
+    "disclaimer": "Vimana n'est pas un commissionnaire en douane et ne délivre aucun de ces documents. Cette page rapporte ce que disent les sources, avec la citation à côté de chaque affirmation, pour que vous puissiez vérifier vous-même. Les règles changent — la date ci-dessus est le jour où une personne a comparé ce texte à la source pour la dernière fois."
+  },
   "adminRules": {
     "title": "Règles du corridor",
     "description": "Ce qu'il faut à une chose pour franchir une frontière. Une règle publiée est une affirmation de la plateforme sur le droit d'autrui : rien n'est publié sans source citée, et ce que les gens ont lu n'est jamais réécrit — une correction est une nouvelle version.",

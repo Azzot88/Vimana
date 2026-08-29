@@ -1320,6 +1320,26 @@
     "none": "Brak otwartych sporów.",
     "mine": "Moje spory"
   },
+  "rulesPage": {
+    "missingTitle": "Dla tego korytarza nie opublikowano jeszcze zasad",
+    "missingBody": "Tu jeszcze nic nie ma. Jeśli potrzebujesz tego kierunku — napisz: kolejne powstają te korytarze, o które ludzie pytają.",
+    "failed": "Nie udało się wczytać strony. Spróbuj ponownie.",
+    "untitled": "Zasady korytarza",
+    "dir": { "export": "Wywóz z", "import": "Przywóz do", "transit": "Tranzyt przez" },
+    "reviewedAt": "Zweryfikowano ze źródłami {{when}}",
+    "neverReviewed": "Jeszcze nie zweryfikowano ze źródłami",
+    "needsReview": "źródło się zmieniło",
+    "partiallyTranslated": "Część sekcji nie jest jeszcze przetłumaczona i jest pokazana po angielsku. Takie sekcje są oznaczone na miejscu.",
+    "inLocale": "w {{locale}}",
+    "openSource": "Otwórz dokument",
+    "documentsTitle": "Potrzebne dokumenty",
+    "documentsHint": "Najważniejszy jest czas oczekiwania: część z nich powstaje tygodniami, a lot za dziesięć dni to zły moment, by się o tym dowiedzieć.",
+    "issuerUnknown": "wystawca nie podany",
+    "leadDays": "{{days}} dni na uzyskanie",
+    "validDays": "ważny {{days}} dni",
+    "conditional": "potrzebny nie zawsze",
+    "disclaimer": "Vimana nie jest agencją celną i nie wystawia żadnego z tych dokumentów. Ta strona przekazuje to, co mówią źródła, i przytacza cytat obok każdego twierdzenia, byś mógł sprawdzić sam. Zasady się zmieniają — data powyżej to dzień, w którym człowiek ostatnio porównał ten tekst ze źródłem."
+  },
   "adminRules": {
     "title": "Zasady korytarza",
     "description": "Czego rzecz potrzebuje, by przekroczyć granicę. Opublikowana zasada to twierdzenie platformy o cudzym prawie, więc nic nie jest publikowane bez cytowanego źródła, a to, co ludzie przeczytali, nie jest przepisywane: poprawka to nowa wersja.",

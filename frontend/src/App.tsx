@@ -46,6 +46,7 @@ const AdminEmailPage = lazy(() => import('./pages/AdminEmailPage'))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage'))
 const AdminRulesPage = lazy(() => import('./pages/AdminRulesPage'))
+const RulesPage = lazy(() => import('./pages/RulesPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const CarrierPage = lazy(() => import('./pages/CarrierPage'))
@@ -101,6 +102,13 @@ export default function App() {
           <Route path="/carrier" element={<ModeHomePage mode="carrier" />} />
           <Route path="/send" element={<ModeHomePage mode="sender" />} />
           <Route path="/business" element={<BusinessLandingPage />} />
+          {/* T3.11.03 — the public rules directory. Category first: people
+              search for "how do I take a painting out of Russia", not for
+              "what may leave Russia". Open to everybody, by design. */}
+          <Route
+            path="/rules/:category/:direction/:country"
+            element={<RulesPage />}
+          />
           <Route path="/login" element={<LoginPage />} />
           {/* T3.28 pt.3 — `/register` now goes to the same door. The
               password form is gone from the product: one field, a code, and an
