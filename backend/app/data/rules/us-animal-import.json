@@ -141,15 +141,37 @@
           "anchor": "state-and-city",
           "locale": "ru",
           "order": 5,
-          "title": "Уровень штата и города: чего здесь пока нет",
-          "placeholder": true
+          "title": "Федеральный допуск — не последнее слово",
+          "body": "Пройти границу и иметь право держать и продавать животное в конкретном штате — разные вещи. Федеральные правила это признают прямо: исключение из требования о шестимесячном возрасте действует для ввоза на Гавайи только «в соответствии с применимым регулированием штата Гавайи». То есть федеральный текст сам отсылает к штатному, а не заменяет его.\n\nПородные и поколенческие ограничения — из этого слоя. Они задаются штатом, а иногда городом, и различаются: где-то ограничение по поколению гибрида, где-то полный запрет независимо от поколения, где-то разрешительный порядок.\n\n**Чего эта страница не даёт и почему.** Постатейного перечня по штатам здесь нет. Первоисточники — кодексы штатов и городские санитарные кодексы — не сводятся в один документ, а вторичные сводки, которых в сети много, расходятся между собой вплоть до разных списков штатов. Публиковать их здесь значило бы выдать неточность за проверенное, а вся эта страница держится на обратном.\n\n**Что делать.** До покупки билета выяснить два адреса назначения — штат и город — и запросить требования у ветеринарной службы штата и у городской администрации. Это единственный ответ, который здесь можно дать честно, и он лучше правдоподобного списка.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "9 CFR 2.151 — Certifications for imported dogs (исключение для Гавайев)",
+              "url": "https://www.law.cornell.edu/cfr/text/9/2.151",
+              "quote": "The provisions of paragraph (a)(1)(iii) of this section do not apply to any person who lawfully imports a live dog into the State of Hawaii from the British Isles, Australia, Guam, or New Zealand in compliance with the applicable regulations of the State of Hawaii, provided that the dog is not transported out of the State of Hawaii for purposes of resale at less than 6 months of age."
+            }
+          ]
         },
         {
           "anchor": "transit",
           "locale": "ru",
           "order": 6,
-          "title": "Транзитная страна: чего здесь пока нет",
-          "placeholder": true
+          "title": "Транзит: страна пересадки попадает в документы",
+          "body": "Прямых рейсов Россия — США нет, значит страна пересадки есть всегда. Это не деталь маршрута, а часть подаваемых документов: форма CDC требует перечислить страны, в которых животное физически находилось **за последние шесть месяцев**, а не только страну вылета.\n\nПочему это меняет режим. Уровень риска CDC определяет по стране, и определение опирается на распространённость вируса и на качество надзора и программ вакцинации в ней. Маршрут через страну с иным статусом переводит ввоз на другой набор требований — при том же животном и том же владельце.\n\n**Что уточнять отдельно.** Требования самой транзитной страны и правила авиакомпании к перевозке живого груза здесь не воспроизводятся: они задаются конкретным маршрутом и перевозчиком, а не одним нормативным актом, и меняются от рейса к рейсу. Их выясняют у авиакомпании и у ветеринарной службы страны пересадки — до бронирования, потому что ограничение по времени в пути и по температуре решается выбором рейса, а не документами.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "42 CFR 71.51 — Dogs and cats (сведения о поездке в форме CDC)",
+              "url": "https://www.law.cornell.edu/cfr/text/42/71.51",
+              "quote": "travel information, including dates of departure and arrival, country of departure, countries the dog has been physically present in within the last six months, and U.S. port of entry"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "42 CFR 71.51 — Dogs and cats (определение страны высокого риска)",
+              "url": "https://www.law.cornell.edu/cfr/text/42/71.51",
+              "quote": "DMRVV high-risk country means a country determined by the Director as having high risk for DMRVV transmission based on factors such as the presence and geographic distribution of the virus, or low quality of or low confidence in rabies surveillance systems or dog vaccination programs."
+            }
+          ]
         }
       ],
       "requirements": [

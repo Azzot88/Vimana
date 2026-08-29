@@ -276,14 +276,13 @@ def test_the_shipped_animal_corpus_is_loadable():
     assert validate(corpus) == []
 
     sections = corpus["sets"][0]["sections"]
-    gaps = {s["anchor"] for s in sections if s.get("placeholder")}
 
-    # The layers nobody has sourced yet are present as admitted gaps rather
-    # than absent — an absent section is indistinguishable from a complete
-    # corpus. State law defeated web research (primary sources answer 403,
-    # secondary ones contradict each other) and transit depends on the
-    # transit country and the airline rather than on one citable rule.
-    assert gaps == {"state-and-city", "transit"}
+    # No placeholders left: every section makes a claim and cites it. The two
+    # that were gaps are closed **narrowly** — the state section cites the
+    # federal text that defers to state regulation and then says plainly that
+    # it does not carry a per-state list, rather than inventing one. Saying
+    # what a page does not answer is a claim like any other, and it is true.
+    assert [s["anchor"] for s in sections if s.get("placeholder")] == []
 
     # Everything else carries a verbatim quotation, which is what the
     # publication gate will demand and what makes the page checkable.
