@@ -3,164 +3,308 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { rulesIndex, type RuleIndexEntry } from '../api/rulesPublic'
 import { usePrefs } from '../hooks/usePrefs'
+import { freshnessOf } from '../lib/format'
 import LandingShell from '../components/landing/LandingShell'
+import Breadcrumbs from '../components/Breadcrumbs'
 import MonoText from '../components/MonoText'
 
 /**
- * T3.11.03 pt.2 / T3.11.05 — the way in, and the controls over it.
+ * T3.11.03 pt.2 / T3.11.05 pt.2 — the catalogue of corridors.
  *
- * The corridor pages existed before this one and were reachable only by typing
- * their exact address: a directory built as the top of the funnel that nothing
- * pointed at.
+ * ## What this page is for
  *
- * **Chronological by default** (owner's decision 2026-08-29). A rule that
- * changed last week is news; the same rule six months untouched is reference.
- * The default order answers "what moved", and that is what a returning reader
- * comes back for. Grouping by category is the other question — "where do I
- * look" — and it is one click away rather than the front door.
+ * Two readers arrive here and they need opposite things from the same screen.
+ * A carrier who does this route monthly knows their corridor and wants the date
+ * it was last checked, in about three seconds. Somebody taking a painting
+ * abroad for the first time does not know the taxonomy at all: "art / export /
+ * RU" tells them nothing, because they do not think in categories, they think
+ * in questions.
  *
- * The order itself comes from the API, not from a sort here: grouping is a
- * `reduce` over any list, but ordering by publication needs the dates to be
- * right, and the server is where they are.
+ * That tension is the whole design. The catalogue therefore lists **real
+ * questions inside each corridor entry** rather than a count of them. The
+ * beginner recognises their own question in the list; the professional reads
+ * the corridor code and the date and skims past. One layout, both jobs, no
+ * toggle between two modes of the same page.
  *
- * **The filters are built from the data, never from a list in this file.**
- * A hard-coded `['US','RU']` is correct on the day it is written and wrong on
- * the day somebody publishes a third corridor — and wrong silently, because a
- * missing chip looks exactly like a corridor that does not exist. Deriving them
- * costs one `reduce` and cannot drift.
+ * ## Why not the obvious alternatives
  *
- * Filtering is client-side on purpose. The whole index is one small array that
- * the page has already fetched; a round trip per chip would make the controls
- * feel worse and answer no question the client cannot answer itself. When the
- * corpus count crosses the threshold in `T_OPS.2`, this moves with it.
+ * A matrix of category by country shows the shape of the corpus, and at four
+ * corridors it is mostly empty cells that read as unfinished work. A two-pane
+ * browser with a filter rail scales to fifty corridors and, applied to four,
+ * is an interface pretending to have a problem it does not have. Rows grow;
+ * layouts that assume volume do not degrade gracefully when the volume is not
+ * there yet.
+ *
+ * ## The controls
+ *
+ * **Search is primary** and runs over question text as well as corridor titles,
+ * because "нужно ли разрешение" is what somebody types, not "art export". When
+ * a search is running the page reorganises into matched questions grouped by
+ * corridor, each linking straight to its answer anchor. That is a different
+ * question than "which corridors exist", so it gets a different presentation
+ * rather than a filtered version of the same list.
+ *
+ * **Filters are derived from the data, never from a list in this file.** A
+ * hard-coded `['US','RU']` is correct the day it is written and silently wrong
+ * the day somebody publishes a third country, because a missing chip looks
+ * exactly like a corridor that does not exist. Each dimension also offers only
+ * values still reachable given the other choices: a chip that can only empty
+ * the screen is worse than an absent one, since pressing it reads as "there is
+ * nothing here".
+ *
+ * **Sorting is visually separate from filtering.** They do different things and
+ * looked identical before: one narrows the set, the other reorders it.
+ *
+ * ## Freshness
+ *
+ * The date a person last checked the text against its source is the claim this
+ * whole section rests on, so it is printed twice: how long ago, and when. A
+ * bare "12.01.2026" and a bare "30.08.2026" look the same at a glance, and the
+ * difference between them is the difference between a page worth trusting and
+ * one that is quietly eight months out of date.
  */
 type Sort = 'chronological' | 'category'
 
-/** One filter dimension: what to read off an entry, and how to label a value. */
-type Facet = {
-  key: 'category_key' | 'direction' | 'jurisdiction_code'
-  label: (value: string, entries: RuleIndexEntry[]) => string
+type FacetKey = 'category_key' | 'direction' | 'jurisdiction_code'
+
+const FACETS: FacetKey[] = ['category_key', 'direction', 'jurisdiction_code']
+
+const EMPTY: Record<FacetKey, string | null> = {
+  category_key: null,
+  direction: null,
+  jurisdiction_code: null,
 }
 
-export default function RulesIndexPage() {
-  const { t } = useTranslation()
+export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[] }) {
+  const { t, i18n } = useTranslation()
   const prefs = usePrefs()
-  const [entries, setEntries] = useState<RuleIndexEntry[] | null>(null)
+  const [entries, setEntries] = useState<RuleIndexEntry[] | null>(initial ?? null)
   const [failed, setFailed] = useState(false)
   const [sort, setSort] = useState<Sort>('chronological')
-  //: `null` means "no filter on this dimension" — distinct from a value that
-  //: happens to match everything, and it is what the "all" chip restores.
-  const [picked, setPicked] = useState<Record<string, string | null>>({
-    category_key: null,
-    direction: null,
-    jurisdiction_code: null,
-  })
+  const [query, setQuery] = useState('')
+  const [picked, setPicked] = useState<Record<FacetKey, string | null>>(EMPTY)
 
   useEffect(() => {
-    rulesIndex()
-      .then(({ data }) => setEntries(data))
+    // Guarded because a locale switch starts a second request while the first
+    // is still in flight, and without this the slower one wins by landing last.
+    let live = true
+    rulesIndex(i18n.language)
+      .then(({ data }) => {
+        if (live) setEntries(data)
+      })
       .catch(() => {
+        if (!live) return
         // Not silently empty: "nothing published yet" and "the request died"
         // look identical on screen, and the second reads as the first.
-        setEntries([])
-        setFailed(true)
+        //
+        // The error line is shown only when there is nothing else to show. On a
+        // prerendered page the build-time catalogue is already on screen and
+        // still correct; printing a red failure line above it would tell the
+        // reader that what they are reading is broken, which it is not.
+        if (!initial) {
+          setEntries([])
+          setFailed(true)
+        }
       })
-  }, [])
+    return () => {
+      live = false
+    }
+    // `initial` is a build-time prop and never changes after mount, so it is
+    // read here rather than tracked.
+  }, [i18n.language])
 
-  const facets: Facet[] = useMemo(
-    () => [
-      {
-        key: 'category_key',
-        label: (v) => t(`categories.${v}`, { defaultValue: v }),
-      },
-      {
-        key: 'direction',
-        label: (v) => t(`rulesPage.dir.${v}`, { defaultValue: v }),
-      },
-      {
-        key: 'jurisdiction_code',
-        // The country's own name, taken from the entry rather than from a map
-        // in this file: the API already knows it, and a second copy is a second
-        // place to forget a country.
-        label: (v, rows) =>
-          rows.find((r) => r.jurisdiction_code === v)?.jurisdiction_name || v,
-      },
-    ],
-    [t],
-  )
+  const label = (key: FacetKey, value: string, rows: RuleIndexEntry[]): string => {
+    if (key === 'category_key') return t(`categories.${value}`, { defaultValue: value })
+    if (key === 'direction') return t(`rulesPage.dir.${value}`, { defaultValue: value })
+    // The country's own name, taken from the row rather than from a map in this
+    // file: the API already knows it, and a second copy is a second place to
+    // forget a country.
+    return rows.find((r) => r.jurisdiction_code === value)?.jurisdiction_name || value
+  }
 
-  const shown = useMemo(() => {
+  const needle = query.trim().toLocaleLowerCase()
+
+  const filtered = useMemo(() => {
     if (!entries) return []
-    return entries.filter((entry) =>
-      facets.every((f) => picked[f.key] == null || entry[f.key] === picked[f.key]),
-    )
-  }, [entries, picked, facets])
+    return entries.filter((e) => FACETS.every((k) => picked[k] == null || e[k] === picked[k]))
+  }, [entries, picked])
 
-  /** Values of one dimension that are still reachable given the other picks.
-   *
-   *  Cross-filtered on purpose: offering "export" when the only export corpus
-   *  is Russian and the reader has picked the US would be offering a chip that
-   *  empties the page. A control that can only produce nothing is worse than an
-   *  absent one, because pressing it reads as "there is nothing here".
-   */
-  const optionsFor = (facet: Facet): string[] => {
-    if (!entries) return []
-    const others = facets.filter((f) => f.key !== facet.key)
-    const reachable = entries.filter((entry) =>
-      others.every((f) => picked[f.key] == null || entry[f.key] === picked[f.key]),
+  /** Corridors whose title or any question matches the search. */
+  const searched = useMemo(() => {
+    if (!needle) return filtered
+    return filtered.filter(
+      (e) =>
+        e.title.toLocaleLowerCase().includes(needle) ||
+        e.jurisdiction_name.toLocaleLowerCase().includes(needle) ||
+        e.questions.some((q) => q.question.toLocaleLowerCase().includes(needle)),
     )
-    return [...new Set(reachable.map((e) => e[facet.key]))].sort()
+  }, [filtered, needle])
+
+  /** Values of one dimension still reachable given the other picks. */
+  const optionsFor = (key: FacetKey): string[] => {
+    if (!entries) return []
+    const reachable = entries.filter((e) =>
+      FACETS.filter((k) => k !== key).every((k) => picked[k] == null || e[k] === picked[k]),
+    )
+    return [...new Set(reachable.map((e) => e[key]))].sort()
   }
 
   const chip = (active: boolean) =>
-    `text-xs font-display font-medium px-3 py-1 rounded-field transition-colors ${
-      active
-        ? 'bg-navy text-ivory'
-        : 'border border-navy/20 text-navy/70 hover:bg-ivory'
-    }`
+    `rounded-field px-3 py-1 text-xs font-display font-medium transition-colors ` +
+    `` +
+    `active:translate-y-px ` +
+    (active
+      ? 'bg-navy text-ivory'
+      : 'border border-navy/20 text-navy/70 hover:border-navy/40 hover:bg-white')
 
-  const card = (entry: RuleIndexEntry) => (
-    <Link
-      to={entry.path}
-      className="block rounded-card border border-navy/10 bg-white p-4 hover:border-cyan transition-colors"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-display font-medium text-navy">
-          {t(`rulesPage.dir.${entry.direction}`)} {entry.jurisdiction_name}
-        </p>
-        <MonoText className="text-xs text-navy/45">
-          {entry.reviewed_at
-            ? t('rulesIndex.reviewedAt', { when: prefs.date(entry.reviewed_at) })
-            : t('rulesIndex.neverReviewed')}
+  /** "Проверено вчера · 30.08.2026", plus a warning when that was long ago. */
+  const checked = (iso: string | null) => {
+    const fresh = freshnessOf(iso)
+    if (!fresh) {
+      return (
+        <MonoText className="text-[11px] text-amber">
+          {t('rulesIndex.neverReviewed')}
         </MonoText>
-      </div>
-      {entry.title && (
-        <p className="text-sm font-body text-navy/60">{entry.title}</p>
-      )}
-      {/* What makes an entry an entry rather than a menu item. A reader who
-          has been here before scans these lines and nothing else. */}
-      {entry.published_note && (
-        <p className="mt-1 text-sm font-body text-navy/70 border-l-2 border-cyan/40 pl-3">
-          {entry.published_note}
-        </p>
-      )}
-      {/* Said before the click, because it is what the reader is deciding
-          about: a corridor answering twelve questions is a different offer
-          from one that has only the legal text. */}
-      {entry.question_count > 0 && (
-        <MonoText className="mt-2 inline-block text-[11px] text-cyan">
-          {t('rulesIndex.answersCount', { count: entry.question_count })}
-        </MonoText>
-      )}
-    </Link>
-  )
+      )
+    }
+    return (
+      <MonoText
+        className={`text-[11px] ${fresh.stale ? 'text-amber' : 'text-navy/45'}`}
+      >
+        {/* Zero is its own sentence, not a plural form: i18next selects a zero
+            category only for languages that have one, so "0 дней назад" is
+            what a count-based key would print today. */}
+        {fresh.days === 0
+          ? t('rulesIndex.checkedToday')
+          : t('rulesIndex.checkedAgo', { count: fresh.days })}
+        <span className="text-navy/30"> · {prefs.date(iso)}</span>
+      </MonoText>
+    )
+  }
 
-  const chronological = (rows: RuleIndexEntry[]) => (
-    <ul className="space-y-2">
-      {rows.map((entry) => (
-        <li key={entry.path}>{card(entry)}</li>
-      ))}
-    </ul>
+  /**
+   * One corridor. A row with a rule above it, not a card.
+   *
+   * Cards were the previous shape and they flattened the page: a corridor
+   * answering eight questions looked exactly like one carrying only legal text,
+   * because a border and a shadow say the same thing about every row they wrap.
+   * The hairline groups, and the content inside carries the difference.
+   */
+  const row = (entry: RuleIndexEntry) => {
+    const preview = entry.questions.slice(0, 3)
+    const rest = entry.questions.length - preview.length
+    return (
+      <article className="border-t border-navy/10 py-6 first:border-t-0 sm:py-7">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          {/* A departure-board line, which is the brand's own device and
+              carries more than a flag would: the arrow points the way the
+              goods travel, so `RU →` is out of Russia and `→ US` is into the
+              States. Country codes also survive every platform; emoji flags
+              render as bare letters on Windows. */}
+          <MonoText className="text-[11px] uppercase tracking-[0.14em] text-cyan">
+            {entry.direction === 'export'
+              ? `${entry.jurisdiction_code} →`
+              : `→ ${entry.jurisdiction_code}`}
+            <span className="text-navy/35">
+              {' · '}
+              {t(`categories.${entry.category_key}`, {
+                defaultValue: entry.category_key,
+              })}
+            </span>
+          </MonoText>
+          {checked(entry.reviewed_at)}
+        </div>
+
+        <h3 className="mt-1 font-display text-xl font-semibold leading-tight tracking-tight text-navy sm:text-2xl">
+          <Link to={entry.path} className="transition-colors hover:text-cyan">
+            {entry.title || t('rulesPage.untitled')}
+          </Link>
+        </h3>
+
+        {entry.published_note && (
+          <p className="mt-2 max-w-[65ch] border-l-2 border-cyan/40 pl-3 text-sm font-body leading-relaxed text-navy/70">
+            {entry.published_note}
+          </p>
+        )}
+
+        {/* The point of the whole row. Real questions, so a reader who does not
+            think in categories can still recognise their own problem. */}
+        {preview.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {preview.map((q) => (
+              <li key={q.anchor}>
+                <Link
+                  to={`${entry.path}#${q.anchor}`}
+                  className="block max-w-[62ch] text-sm font-body leading-snug text-navy/75 underline decoration-navy/15 underline-offset-4 transition-colors hover:text-navy hover:decoration-cyan"
+                >
+                  {q.question}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Only when it says something the title link does not. Two links to
+            the same page in one row, differing only in wording, is a control
+            that adds a decision without adding a choice. */}
+        {(rest > 0 || preview.length === 0) && (
+          <Link
+            to={entry.path}
+            className="mt-3 inline-block text-sm font-display font-medium text-cyan transition-colors hover:text-navy"
+          >
+            {rest > 0
+              ? t('rulesIndex.openWithRest', { count: rest })
+              : t('rulesIndex.open')}
+          </Link>
+        )}
+      </article>
+    )
+  }
+
+  /** Search results: the questions themselves, grouped by where they live. */
+  const results = (rows: RuleIndexEntry[]) => (
+    <div className="space-y-8">
+      {rows.map((entry) => {
+        const hits = entry.questions.filter((q) =>
+          q.question.toLocaleLowerCase().includes(needle),
+        )
+        return (
+          <section key={entry.path}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 border-b border-navy/10 pb-2">
+              <h3 className="font-display text-base font-semibold text-navy">
+                <Link
+                  to={entry.path}
+                  className="transition-colors hover:text-cyan"
+                >
+                  {entry.title || t('rulesPage.untitled')}
+                </Link>
+              </h3>
+              {checked(entry.reviewed_at)}
+            </div>
+            {hits.length === 0 ? (
+              // The corridor matched by its title, not by a question. Saying so
+              // is better than showing a heading with nothing under it.
+              <p className="pt-2 text-sm font-body text-navy/50">
+                {t('rulesIndex.matchedByTitle')}
+              </p>
+            ) : (
+              <ul className="divide-y divide-navy/5">
+                {hits.map((q) => (
+                  <li key={q.anchor}>
+                    <Link
+                      to={`${entry.path}#${q.anchor}`}
+                      className="block py-2.5 text-sm font-body leading-snug text-navy/80 transition-colors hover:text-navy"
+                    >
+                      {q.question}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )
+      })}
+    </div>
   )
 
   const byCategory = (rows: RuleIndexEntry[]) => {
@@ -169,148 +313,228 @@ export default function RulesIndexPage() {
       return acc
     }, {})
     return Object.entries(grouped).map(([category, group]) => (
-      <section key={category} className="space-y-3">
-        <h2 className="font-display font-semibold text-xl text-navy">
+      <section key={category}>
+        <h2 className="font-display text-lg font-semibold tracking-tight text-navy">
           {t(`categories.${category}`, { defaultValue: category })}
         </h2>
-        <ul className="space-y-2">
-          {group.map((entry) => (
-            <li key={entry.path}>{card(entry)}</li>
-          ))}
-        </ul>
+        <div className="mt-3">{group.map((e) => <div key={e.path}>{row(e)}</div>)}</div>
       </section>
     ))
   }
 
-  const anyPicked = facets.some((f) => picked[f.key] != null)
+  /** Skeleton shaped like a corridor row, not a spinner. */
+  const skeleton = (
+    <div aria-hidden="true" className="animate-pulse">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="border-t border-navy/10 py-7 first:border-t-0">
+          <div className="h-2 w-28 rounded bg-navy/10" />
+          <div className="mt-3 h-5 w-2/3 rounded bg-navy/10" />
+          <div className="mt-4 h-3 w-5/6 rounded bg-navy/5" />
+          <div className="mt-2 h-3 w-3/4 rounded bg-navy/5" />
+        </div>
+      ))}
+    </div>
+  )
+
+  const anyPicked = FACETS.some((k) => picked[k] != null)
+  const totals = entries ?? []
+  const questionTotal = totals.reduce((n, e) => n + e.question_count, 0)
 
   return (
     <LandingShell source="sender">
       {() => (
-        <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
-          <header className="space-y-2">
-            <h1 className="font-display font-bold text-3xl text-navy">
+        <div className="py-8 sm:py-12">
+          <Breadcrumbs
+            items={[
+              { label: t('rulesIndex.crumbHome'), to: '/' },
+              { label: t('rulesIndex.navLink') },
+            ]}
+          />
+
+          <header className="mt-5 max-w-[46ch]">
+            <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-navy sm:text-5xl">
               {t('rulesIndex.title')}
             </h1>
-            <p className="text-sm font-body text-navy/70 leading-relaxed">
+            <p className="mt-4 max-w-[62ch] text-base font-body leading-relaxed text-navy/70">
               {t('rulesIndex.lede')}
             </p>
           </header>
 
-          {failed && (
-            <p className="text-xs font-mono text-danger">{t('rulesIndex.failed')}</p>
+          {/* The scale of the corpus, from the corpus. This is the trust
+              signal for a reference work, and every number here is counted
+              from the data rather than written into the copy. */}
+          {totals.length > 0 && (
+            <MonoText className="mt-5 block text-xs text-navy/45">
+              {/* Two keys, not one string with two numbers in it: i18next
+                  pluralises on a single `count`, so a combined line could only
+                  ever be right for one of them. "5 коридора" is the shape of
+                  that bug in Russian. */}
+              {t('rulesIndex.scaleCorridors', { count: totals.length })}
+              {' · '}
+              {t('rulesIndex.scaleQuestions', { count: questionTotal })}
+            </MonoText>
           )}
 
-          {entries !== null && entries.length > 0 && (
-            <div className="rounded-card border border-navy/10 bg-white p-4 space-y-3">
-              {facets.map((facet) => {
-                const options = optionsFor(facet)
-                // A dimension with one value is not a choice. Showing it would
-                // be a control that cannot change anything on the screen.
-                if (options.length < 2) return null
-                return (
-                  <div key={facet.key} className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-body text-navy/50 w-24 shrink-0">
-                      {t(`rulesIndex.facet.${facet.key}`)}
-                    </span>
-                    <button
-                      onClick={() => setPicked((p) => ({ ...p, [facet.key]: null }))}
-                      aria-pressed={picked[facet.key] == null}
-                      className={chip(picked[facet.key] == null)}
-                    >
-                      {t('rulesIndex.facet.any')}
-                    </button>
-                    {options.map((value) => (
-                      <button
-                        key={value}
-                        onClick={() =>
-                          setPicked((p) => ({
-                            ...p,
-                            // Pressing the active chip clears it. Without this
-                            // the only way back is the "any" chip, and people
-                            // press the lit one to turn it off.
-                            [facet.key]: p[facet.key] === value ? null : value,
-                          }))
-                        }
-                        aria-pressed={picked[facet.key] === value}
-                        className={chip(picked[facet.key] === value)}
-                      >
-                        {facet.label(value, entries)}
-                      </button>
-                    ))}
-                  </div>
-                )
-              })}
+          {failed && (
+            <p className="mt-6 text-xs font-mono text-danger">{t('rulesIndex.failed')}</p>
+          )}
 
-              <div className="flex flex-wrap items-center gap-2 border-t border-navy/10 pt-3">
-                <span className="text-xs font-body text-navy/50 w-24 shrink-0">
-                  {t('rulesIndex.sortLabel')}
+          {totals.length > 0 && (
+            <div className="mt-8 border-y border-navy/10 py-5">
+              <label className="block">
+                <span className="text-xs font-body text-navy/50">
+                  {t('rulesIndex.searchLabel')}
                 </span>
-                {(['chronological', 'category'] as const).map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => setSort(option)}
-                    aria-pressed={sort === option}
-                    className={chip(sort === option)}
-                  >
-                    {t(`rulesIndex.sort.${option}`)}
-                  </button>
-                ))}
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t('rulesIndex.searchPlaceholder') as string}
+                  className="mt-1.5 w-full rounded-field border border-navy/20 bg-white px-3 py-2.5 text-base font-body text-navy placeholder:text-navy/60 transition-colors focus:border-cyan focus:outline-none"
+                />
+              </label>
+
+              <div className="mt-4 space-y-2">
+                {FACETS.map((key) => {
+                  const options = optionsFor(key)
+                  // A dimension with one value is not a choice. Showing it
+                  // would be a control that cannot change the screen.
+                  if (options.length < 2) return null
+                  return (
+                    <div key={key} className="flex flex-wrap items-center gap-1.5">
+                      <span className="w-24 shrink-0 text-xs font-body text-navy/45">
+                        {t(`rulesIndex.facet.${key}`)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPicked((p) => ({ ...p, [key]: null }))}
+                        aria-pressed={picked[key] == null}
+                        className={chip(picked[key] == null)}
+                      >
+                        {t('rulesIndex.facet.any')}
+                      </button>
+                      {options.map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() =>
+                            setPicked((p) => ({
+                              // Pressing the lit chip clears it. Without this
+                              // the only way back is the "any" chip, and people
+                              // press the lit one to turn it off.
+                              ...p,
+                              [key]: p[key] === value ? null : value,
+                            }))
+                          }
+                          aria-pressed={picked[key] === value}
+                          className={chip(picked[key] === value)}
+                        >
+                          {label(key, value, totals)}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
               </div>
 
-              {anyPicked && (
-                <p className="text-xs font-body text-navy/50">
-                  {t('rulesIndex.showingCount', {
-                    shown: shown.length,
-                    total: entries.length,
-                  })}
+              {/* Ordering, kept visually apart from filtering: one narrows the
+                  set, the other rearranges it, and they looked identical. */}
+              {!needle && (
+                <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-navy/5 pt-4">
+                  <span className="w-24 shrink-0 text-xs font-body text-navy/45">
+                    {t('rulesIndex.sortLabel')}
+                  </span>
+                  {(['chronological', 'category'] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSort(option)}
+                      aria-pressed={sort === option}
+                      className={chip(sort === option)}
+                    >
+                      {t(`rulesIndex.sort.${option}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {(anyPicked || needle) && (
+                <p className="mt-4 flex flex-wrap items-center gap-3 text-xs font-body text-navy/50">
+                  <span>
+                    {t('rulesIndex.showingCount', {
+                      shown: searched.length,
+                      total: totals.length,
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPicked(EMPTY)
+                      setQuery('')
+                    }}
+                    className="text-cyan underline underline-offset-2 transition-colors hover:text-navy"
+                  >
+                    {t('rulesIndex.clearFilters')}
+                  </button>
                 </p>
               )}
             </div>
           )}
 
-          {entries === null ? (
-            <p className="text-sm font-body text-navy/40">{t('common.loading')}</p>
-          ) : entries.length === 0 ? (
-            <div className="rounded-card border border-navy/10 bg-white p-6 space-y-2">
-              <p className="font-display font-medium text-navy">
-                {t('rulesIndex.emptyTitle')}
-              </p>
-              {/* Says what to do rather than only that there is nothing. The
-                  corridors written next are the ones people ask about. */}
-              <p className="text-sm font-body text-navy/60">
-                {t('rulesIndex.emptyBody')}
-              </p>
-            </div>
-          ) : shown.length === 0 ? (
-            // Reachable only if a filter combination empties the list, which
-            // `optionsFor` is built to prevent — kept because "prevented by
-            // construction" is a claim, and an empty screen with no sentence
-            // on it is the worst way to discover the claim was wrong.
-            <div className="rounded-card border border-navy/10 bg-white p-6 space-y-2">
-              <p className="font-display font-medium text-navy">
-                {t('rulesIndex.noMatchTitle')}
-              </p>
-              <button
-                onClick={() =>
-                  setPicked({
-                    category_key: null,
-                    direction: null,
-                    jurisdiction_code: null,
-                  })
-                }
-                className="text-sm font-body text-cyan hover:underline"
-              >
-                {t('rulesIndex.clearFilters')}
-              </button>
-            </div>
-          ) : sort === 'chronological' ? (
-            chronological(shown)
-          ) : (
-            <div className="space-y-8">{byCategory(shown)}</div>
-          )}
+          <div className="mt-8">
+            {entries === null ? (
+              skeleton
+            ) : entries.length === 0 ? (
+              <div className="max-w-[60ch] space-y-3">
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  {t('rulesIndex.emptyTitle')}
+                </h2>
+                {/* Says what to do rather than only that there is nothing. */}
+                <p className="text-sm font-body leading-relaxed text-navy/60">
+                  {t('rulesIndex.emptyBody')}
+                </p>
+              </div>
+            ) : searched.length === 0 ? (
+              <div className="max-w-[60ch] space-y-3">
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  {t('rulesIndex.noMatchTitle')}
+                </h2>
+                <p className="text-sm font-body leading-relaxed text-navy/60">
+                  {t('rulesIndex.noMatchBody')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPicked(EMPTY)
+                    setQuery('')
+                  }}
+                  className="text-sm font-display font-medium text-cyan transition-colors hover:text-navy"
+                >
+                  {t('rulesIndex.clearFilters')}
+                </button>
+              </div>
+            ) : needle ? (
+              results(searched)
+            ) : sort === 'chronological' ? (
+              <div>{searched.map((e) => <div key={e.path}>{row(e)}</div>)}</div>
+            ) : (
+              <div className="space-y-10">{byCategory(searched)}</div>
+            )}
+          </div>
 
-          <p className="text-xs font-body text-navy/50 border-t border-navy/10 pt-4">
+          {/* What the catalogue does not cover, said out loud. On a page about
+              somebody else's border this is not a weakness to hide: a reader
+              who assumes a gap is covered is the one who gets hurt by it. */}
+          <section className="mt-14 max-w-[65ch] border-t border-navy/10 pt-6">
+            <h2 className="font-display text-base font-semibold text-navy">
+              {t('rulesIndex.gapsTitle')}
+            </h2>
+            <p className="mt-2 text-sm font-body leading-relaxed text-navy/65">
+              {t('rulesIndex.gapsBody')}
+            </p>
+          </section>
+
+          <p className="mt-8 max-w-[65ch] text-xs font-body leading-relaxed text-navy/45">
             {t('rulesIndex.disclaimer')}
           </p>
         </div>

@@ -89,25 +89,44 @@ async function fetchJson(url) {
   return res.json()
 }
 
+const { renderRule, renderRulesIndex } = await import(pathToFileURL(ssrEntry).href)
+
+// Fetched before the index is rendered, because the index is the only page
+// linking to the corridors: rendering it empty left the corridor pages
+// reachable only by typing their addresses.
+//
+// The fetch is its own try. The index file must be written either way — with
+// the catalogue when the API answered, with the heading and lede when it did
+// not — because a build on a laptop with no database should still leave a page
+// at `/rules` rather than fall through to the SPA shell.
+let index = null
 try {
-  const { renderRule, renderRulesIndex } = await import(pathToFileURL(ssrEntry).href)
-
-  // The index first: it is the page the footer links to, and the only one
-  // that must exist even when nothing is published yet.
-  const indexHtml = renderRulesIndex("ru")
-  writeFileSync(
-    resolve(dist, "rules-index.html"),
-    shell.replace(marker, `<div id="root">${indexHtml}</div>`),
-    "utf8",
+  index = await fetchJson(`${apiBase}/api/rules?locale=ru`)
+} catch (err) {
+  console.log(
+    `prerender: API at ${apiBase} not reachable (${err.message}). ` +
+      'Writing the directory shell without its catalogue; corridor pages are ' +
+      'skipped and render client-side, so only crawlers miss them until the ' +
+      'next build on the server.',
   )
-  console.log(`prerender: /rules → ${resolve(dist, "rules-index.html")} (${indexHtml.length} chars of markup)`)
+}
 
-  const index = await fetchJson(`${apiBase}/api/rules`)
+const indexHtml = renderRulesIndex('ru', index ?? undefined)
+writeFileSync(
+  resolve(dist, 'rules-index.html'),
+  shell.replace(marker, `<div id="root">${indexHtml}</div>`),
+  'utf8',
+)
+console.log(
+  `prerender: /rules → ${resolve(dist, 'rules-index.html')} ` +
+    `(${indexHtml.length} chars of markup, ${index ? index.length : 0} corridors)`,
+)
 
-  if (index.length === 0) {
-    console.log('prerender: no published rule sets — nothing to write')
+try {
+  if (index && index.length === 0) {
+    console.log('prerender: no published rule sets, no corridor pages to write')
   }
-  for (const entry of index) {
+  for (const entry of index ?? []) {
     // The locale of the file is Russian, like every other prerendered page:
     // `<html lang="ru">` and the founding corridor are Russian-facing. Other
     // locales hydrate and switch client-side, as they already do.
@@ -123,7 +142,7 @@ try {
   // One line, and it says which half is missing. Silence here would look like
   // "there are no rules yet" on a build that simply could not ask.
   console.log(
-    `prerender: skipped rule pages — API at ${apiBase} not reachable (${err.message}). ` +
-      'Pages still render client-side; only crawlers miss them until the next build on the server.',
+    `prerender: stopped partway through the corridor pages (${err.message}). ` +
+      'Pages still render client-side; only crawlers miss them until the next build.',
   )
 }

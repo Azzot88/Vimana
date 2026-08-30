@@ -65,3 +65,35 @@ export function formatDate(
     year: 'numeric',
   })
 }
+
+/** How long ago a rule was checked against its source, and whether that is
+ *  long enough to say so.
+ *
+ *  T3.11.05 pt.2 — freshness is the directory's central claim, and a bare date
+ *  does not carry it: "30.08.2026" and "12.01.2026" look identical at a glance,
+ *  while "вчера" and "восемь месяцев назад" mean completely different things to
+ *  somebody deciding whether to trust the page. So both are printed, the
+ *  relative one first.
+ *
+ *  Lives here rather than in each page because the staleness threshold is a
+ *  claim about the corpus, not a display preference. Two copies of it would
+ *  drift, and the version that drifted upward would quietly stop warning.
+ *
+ *  Called by: `pages/RulesIndexPage`, `pages/RulesPage`.
+ */
+export const STALE_AFTER_DAYS = 180
+
+export interface Freshness {
+  /** Whole days since the check. Negative clock skew is clamped to 0. */
+  days: number
+  /** Past `STALE_AFTER_DAYS`. The page says so next to the date. */
+  stale: boolean
+}
+
+export function freshnessOf(iso: string | null | undefined): Freshness | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
+  return { days, stale: days > STALE_AFTER_DAYS }
+}

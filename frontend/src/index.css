@@ -6,6 +6,14 @@ html, body {
   overflow-x: hidden;
 }
 
+/* T3.11.05 pt.2 — anchor links land instead of teleporting. The rules pages
+ * navigate inside themselves (contents rail, question to its section), and an
+ * instant jump reads as a page reload. The reduced-motion block below turns
+ * this off for anyone who asked for less movement. */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: #F5F3EE;

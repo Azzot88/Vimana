@@ -377,6 +377,7 @@ async def test_an_undeclared_jurisdiction_is_refused(session_maker, corridor):
 
 CORPORA = (
     "us-animal-import.json",
+    "us-art-import.json",
     "ru-animal-export.json",
     "ru-art-export.json",
 )

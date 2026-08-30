@@ -1,0 +1,161 @@
+{
+  "_note": [
+    "T3.11.05 pt.2 — ввозная сторона США по предметам искусства.",
+    "Парный набор к art/export/RU: разрешение на вывоз и допуск на ввоз — два независимых",
+    "решения двух государств, и коридор проходится только при обоих.",
+    "Цитаты проверены дословно 2026-08-30 по Cornell LII (US Code, CFR).",
+    "",
+    "Санкционный слой сюда НЕ включён и остаётся отдельной задачей: первоисточники OFAC",
+    "(cbp.gov, ecfr.gov, federalregister.gov) отвечают 403, а набор из пересказов",
+    "в справочнике о границе хуже отсутствующего."
+  ],
+  "jurisdictions": [
+    { "code": "US", "kind": "country", "parent_code": null, "name": "США" }
+  ],
+  "sets": [
+    {
+      "direction": "import",
+      "jurisdiction": "US",
+      "category": "art",
+      "title": "Ввоз предметов искусства в США",
+      "questions": [
+        {
+          "anchor": "q-sanctions",
+          "locale": "ru",
+          "order": 0,
+          "question": "Картина написана в России. Пропустят ли её вообще?",
+          "answer": "У произведений искусства редкое преимущество: они названы в законе США среди **информационных материалов**, ввоз которых выведен из-под санкционных полномочий президента, — поимённо, рядом с публикациями и фотографиями. Исключение установлено законом, а не разрешением ведомства, и потому не отзывается отдельным решением.",
+          "section_anchor": "informational-materials"
+        },
+        {
+          "anchor": "q-invoice",
+          "locale": "ru",
+          "order": 1,
+          "question": "Какие документы смотрят на въезде?",
+          "answer": "Инвойс, и в нём должно быть сказано **оригинал это, реплика, репродукция или копия, и кто автор**. Отдельно подаётся декларация. На эстампах и гравюрах нужна подлинная подпись или знак художника как свидетельство подлинности. Это не формальность: от ответа «оригинал или копия» зависит товарная позиция.",
+          "section_anchor": "entry-declaration"
+        },
+        {
+          "anchor": "q-stolen",
+          "locale": "ru",
+          "order": 2,
+          "question": "Предмет из старой коллекции. Что может пойти не так?",
+          "answer": "Ввоз запрещён, если предмет числится в инвентаре музея, религиозного или иного публичного учреждения и был оттуда похищен. Проверять происхождение придётся вам: закон говорит о самом предмете, а не о вашей добросовестности. Это зеркало российского запрета на вывоз из Музейного фонда — **одна и та же вещь закрыта с обеих сторон границы**.",
+          "section_anchor": "stolen-from-inventory"
+        },
+        {
+          "anchor": "q-archaeology",
+          "locale": "ru",
+          "order": 3,
+          "question": "А если это археология или этнография?",
+          "answer": "Тогда нужен **сертификат страны вывоза** о том, что вывоз не нарушил её закон, — для материалов, обозначенных по соглашению между США и этой страной. Без него таможня удерживает предмет; срок на предъявление документа ограничен, дальше следует конфискация.",
+          "section_anchor": "designated-material"
+        }
+      ],
+      "sections": [
+        {
+          "anchor": "informational-materials",
+          "locale": "ru",
+          "order": 0,
+          "title": "Произведения искусства — информационные материалы",
+          "body": "Закон, дающий президенту США санкционные полномочия, сам же выводит из-под них ввоз и вывоз информационных материалов, и перечисляет их: публикации, фильмы, плакаты, фотографии, микрофильмы, ленты, компакт-диски и **произведения искусства**. Оговорка известна как поправка Бермана.\n\nДва следствия стоит прочитать точно. Первое: это ограничение самих полномочий, а не разрешение, выданное ведомством, — то есть оно не отзывается отдельным решением и не требует получения.\n\nВторое: исключение относится к **предмету**, а не к сделке. Запрет на операции с лицом, попавшим в санкционный список, действует независимо. Картина ввозится свободно; покупка её у заблокированного лица остаётся запрещённой операцией. Это разные слои, и второй здесь не описан.",
+          "sources": [
+            {
+              "authority": "United States Code",
+              "document_title": "50 U.S.C. § 1702(b)(3) — International Emergency Economic Powers Act, исключение для информационных материалов",
+              "url": "https://www.law.cornell.edu/uscode/text/50/1702",
+              "quote": "the importation from any country, or the exportation to any country, whether commercial or otherwise, regardless of format or medium of transmission, of any information or informational materials, including but not limited to, publications, films, posters, phonograph records, photographs, microfilms, microfiche, tapes, compact disks, CD ROMs, artworks, and news wire feeds."
+            }
+          ]
+        },
+        {
+          "anchor": "entry-declaration",
+          "locale": "ru",
+          "order": 1,
+          "title": "Инвойс называет автора и отвечает, оригинал или копия",
+          "body": "Таможенное правило о беспошлинном пропуске произведений искусства требует, чтобы инвойс прямо указывал, оригинал перед нами, реплика, репродукция или копия, **и имя художника**. Отдельно подаётся декларация — от художника, продавца, отправителя или импортёра.\n\nДля скульптуры декларация подтверждает, что это оригинальная работа или модель либо один из первых двенадцати отливов. Для гравюр и эстампов — что оттиск сделан вручную с досок, камней или пластин, обработанных вручную. На самих эстампах должна стоять подлинная подпись или знак художника как свидетельство подлинности.\n\nПрактический смысл в том, что «оригинал или копия» — не вежливый вопрос о ценности, а классификационный. Ответ на него определяет товарную позицию, и расхождение между инвойсом и предметом разбирается уже не как спор о культуре.",
+          "sources": [
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "19 CFR 10.48(a) — Engravings, sculptures and other works of art: инвойс",
+              "url": "https://www.law.cornell.edu/cfr/text/19/10.48",
+              "quote": "Invoices covering works of art claimed to be free of duty under subheadings 9702.00.00 and 9703.00.00, HTSUS, shall show whether they are originals, replicas, reproductions, or copies, and also the name of the artist"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "19 CFR 10.48(b) — декларация о скульптуре",
+              "url": "https://www.law.cornell.edu/cfr/text/19/10.48",
+              "quote": "original work or model, or one of the first twelve castings"
+            },
+            {
+              "authority": "Code of Federal Regulations",
+              "document_title": "19 CFR 10.48(d) — подпись художника на эстампе",
+              "url": "https://www.law.cornell.edu/cfr/text/19/10.48",
+              "quote": "genuine signature or mark of the artist as evidence of their authenticity"
+            }
+          ]
+        },
+        {
+          "anchor": "stolen-from-inventory",
+          "locale": "ru",
+          "order": 2,
+          "title": "Похищенное из музейного инвентаря не ввозится ниоткуда",
+          "body": "Предмет культуры, числящийся в инвентаре музея, религиозного или иного публичного памятника либо подобного учреждения и похищенный оттуда, ввозу в США не подлежит. Правило не зависит от отдельного соглашения о конкретных категориях предметов — достаточно того, что вещь документирована в инвентаре и украдена после вступления нормы в силу.\n\nЗдесь стоит увидеть симметрию коридора. Российская сторона запрещает вывоз предметов, включённых в Музейный фонд, в том числе находящихся в частной собственности. Американская — запрещает ввоз того, что из такого инвентаря похищено. Одна и та же вещь закрыта с двух сторон, и закрыта разными механизмами, поэтому обойти один из них не означает пройти.\n\nПроверка происхождения ложится на ввозящего. Закон говорит о статусе предмета, а не о добросовестности того, кто его везёт.",
+          "sources": [
+            {
+              "authority": "United States Code",
+              "document_title": "19 U.S.C. § 2607 — Stolen cultural property",
+              "url": "https://www.law.cornell.edu/uscode/text/19/2607",
+              "quote": "No article of cultural property documented as appertaining to the inventory of a museum or religious or secular public monument or similar institution in any State Party which is stolen from such institution after the effective date of this chapter"
+            }
+          ]
+        },
+        {
+          "anchor": "designated-material",
+          "locale": "ru",
+          "order": 3,
+          "title": "Археология и этнография: нужен сертификат страны вывоза",
+          "body": "Для археологических и этнологических материалов, обозначенных в порядке соглашения между США и страной происхождения, действует отдельный режим: ввоз возможен только при наличии сертификата этой страны о том, что вывоз её закон не нарушил.\n\nЕсли документа нет, предмет удерживается таможней до его предъявления, и срок на это ограничен — дальше следует конфискация. Закон допускает и альтернативные доказательства, в частности подтверждение, что предмет покинул страну достаточно давно, однако это доказательство собирается заранее, а не на границе.\n\nЗамкнуть этот раздел на конкретный список обозначенных для России категорий здесь нечем: перечни ведутся отдельными соглашениями, и проверенного первоисточника с действующим составом мы не нашли. Спрашивать нужно в CBP до отправки, а не после.",
+          "sources": [
+            {
+              "authority": "United States Code",
+              "document_title": "19 U.S.C. § 2606(a) — Import restrictions, требование сертификата",
+              "url": "https://www.law.cornell.edu/uscode/text/19/2606",
+              "quote": "No designated archaeological or ethnological material that is exported from the State Party after the designation of such material under section 2604 of this title may be imported into the United States unless the State Party issues a certification or other documentation which certifies that such exportation was not in violation of the laws of the State Party."
+            }
+          ]
+        }
+      ],
+      "requirements": [
+        {
+          "code": "us_art_invoice",
+          "title": "Инвойс с указанием автора и статуса «оригинал или копия»",
+          "issuer": "Продавец или отправитель",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "lead_time_days": 1,
+          "notes": "Ответ «оригинал или копия» определяет товарную позицию, а не только описание."
+        },
+        {
+          "code": "us_art_declaration",
+          "title": "Декларация художника, продавца, отправителя или импортёра",
+          "issuer": "Одно из перечисленных лиц",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "lead_time_days": 3,
+          "notes": "Для скульптуры подтверждает оригинал или один из первых двенадцати отливов; для эстампа — ручную печать."
+        },
+        {
+          "code": "us_art_provenance",
+          "title": "Подтверждение происхождения предмета",
+          "issuer": "Собирается владельцем",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "lead_time_days": 14,
+          "condition": { "attr": "age_years", "op": ">=", "value": 50 },
+          "notes": "Закрывает вопрос о музейном инвентаре и об археологическом происхождении. Собирается заранее: на границе доказать происхождение нечем."
+        }
+      ]
+    }
+  ]
+}

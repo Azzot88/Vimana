@@ -108,6 +108,26 @@ class RequirementOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class QuestionPreview(BaseModel):
+    """A question as it appears in the directory, without its answer.
+
+    The directory shows real questions rather than a count of them, because
+    that is what a reader recognises: somebody who does not know the taxonomy
+    ("art / export / RU") does know their own question. The answer stays behind
+    the click, so this payload is question text only.
+
+    **Growth threshold.** Every question of every published corpus travels on
+    one response. At four corridors that is a couple of kilobytes and one
+    request; past roughly fifty corridors it stops being free and this becomes
+    a search endpoint (`T_OPS.3`). Recorded rather than guessed at, so the move
+    happens on a number instead of on a feeling.
+    """
+
+    anchor: str
+    question: str
+    locale: str
+
+
 class RuleIndexOut(BaseModel):
     category_key: str
     direction: RuleDirection
@@ -130,6 +150,9 @@ class RuleIndexOut(BaseModel):
     #: what a reader gets before they click. Zero is a real answer — a corpus
     #: written as law and not yet given a compact reading.
     question_count: int
+    #: The questions themselves, so the directory can be searched by what a
+    #: person actually wants to know, and can show a few before the click.
+    questions: list[QuestionPreview]
 
 
 class RuleSetOut(BaseModel):
@@ -173,7 +196,10 @@ def path_for(category: str, direction: RuleDirection, country: str) -> str:
 
 
 @router.get("/rules", response_model=list[RuleIndexOut])
-async def index(db: AsyncSession = Depends(get_db)):
+async def index(
+    db: AsyncSession = Depends(get_db),
+    locale: str = Query(default=FALLBACK_LOCALE, max_length=5),
+):
     """Everything published, **newest change first**.
 
     Chronological is the server's order, not a client's option, because it is
@@ -185,6 +211,13 @@ async def index(db: AsyncSession = Depends(get_db)):
     review date only if something wrote the status without going through
     `core/rule_status`, and such a row belongs at the bottom of a chronology
     rather than at the top of it.
+
+    **Every question travels with the index**, text only, no answers. The
+    directory shows real questions rather than a count of them: somebody who
+    does not know the taxonomy still knows their own question, and that is the
+    only entry point that works for a first-time reader. It also makes the
+    directory searchable without a second request. See `QuestionPreview` for
+    the size threshold at which this becomes a search endpoint.
     """
     rows = (
         await db.execute(
@@ -195,27 +228,39 @@ async def index(db: AsyncSession = Depends(get_db)):
         )
     ).all()
 
-    # One grouped count rather than a query per row: the directory is the page
-    # a crawler hits, and N+1 there is N+1 on every corpus we ever publish.
-    counts = {
-        rule_set_id: total
-        for rule_set_id, total in (
-            await db.execute(
-                select(
-                    RuleQuestion.rule_set_id,
-                    # Anchors, not rows: a question translated into Russian is
-                    # the same question, and counting rows would make a
-                    # translated corpus look like a longer one.
-                    func.count(func.distinct(RuleQuestion.anchor)),
+    # One query for every question of every published set, not one per row: the
+    # directory is the page a crawler hits, and N+1 there is N+1 on every corpus
+    # we ever publish.
+    question_rows = (
+        await db.execute(
+            select(RuleQuestion)
+            .where(
+                RuleQuestion.rule_set_id.in_(
+                    [rs.id for rs, _ in rows] or [uuid.uuid4()]
                 )
-                .where(
-                    RuleQuestion.rule_set_id.in_(
-                        [rs.id for rs, _ in rows] or [uuid.uuid4()]
-                    )
-                )
-                .group_by(RuleQuestion.rule_set_id)
             )
-        ).all()
+            .order_by(RuleQuestion.order)
+        )
+    ).scalars().all()
+
+    # Same per-anchor locale choice as the corridor page, and the same reason:
+    # a question translated into Russian is the same question, so the directory
+    # must count and show anchors rather than rows. Counting rows would make a
+    # translated corpus look like a longer one.
+    wanted = (locale or FALLBACK_LOCALE).split("-")[0].lower()
+    if wanted not in CORPUS_LOCALES:
+        wanted = FALLBACK_LOCALE
+
+    picked: dict[uuid.UUID, dict[str, RuleQuestion]] = {}
+    for question in question_rows:
+        per_set = picked.setdefault(question.rule_set_id, {})
+        current = per_set.get(question.anchor)
+        if current is None or (question.locale == wanted and current.locale != wanted):
+            per_set[question.anchor] = question
+
+    questions = {
+        set_id: sorted(by_anchor.values(), key=lambda q: q.order)
+        for set_id, by_anchor in picked.items()
     }
 
     notes = {
@@ -246,7 +291,13 @@ async def index(db: AsyncSession = Depends(get_db)):
             # the version being served.
             published_note=notes.get(rs.id) or "",
             path=path_for(rs.category_key, rs.direction, rs.jurisdiction_code),
-            question_count=counts.get(rs.id, 0),
+            question_count=len(questions.get(rs.id, ())),
+            questions=[
+                QuestionPreview(
+                    anchor=q.anchor, question=q.question, locale=q.locale
+                )
+                for q in questions.get(rs.id, ())
+            ],
         )
         for rs, name in rows
     ]

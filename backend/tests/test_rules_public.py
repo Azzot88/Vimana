@@ -426,6 +426,47 @@ async def test_the_index_says_how_many_questions_a_corridor_answers(client, publ
     assert row["question_count"] == 2
 
 
+async def test_the_index_carries_the_questions_themselves(client, published):
+    """The directory lists real questions, not a count of them.
+
+    Somebody who does not know the taxonomy ("art / export / RU") still knows
+    their own question, and that is the only entry point that works for a
+    first-time reader. It is also what makes the directory searchable without a
+    second request.
+    """
+    _code, cat_key = published
+    row = next(
+        r for r in (await client.get("/api/rules")).json() if r["category_key"] == cat_key
+    )
+    assert [q["anchor"] for q in row["questions"]] == ["q-permit", "q-how-long"]
+    assert row["questions"][0]["question"] == "Do I need a permit?"
+    # Text only. The answer stays behind the click, so the index does not grow
+    # into a copy of every corridor page.
+    assert "answer" not in row["questions"][0]
+
+
+async def test_the_index_follows_the_readers_locale(client, published):
+    """Same per-anchor fallback as the corridor page.
+
+    A directory that listed questions in English while the page underneath
+    showed them in Russian would be two different products sharing a link.
+    """
+    _code, cat_key = published
+    rows = (await client.get("/api/rules", params={"locale": "ru"})).json()
+    row = next(r for r in rows if r["category_key"] == cat_key)
+
+    permit = next(q for q in row["questions"] if q["anchor"] == "q-permit")
+    untranslated = next(q for q in row["questions"] if q["anchor"] == "q-how-long")
+
+    assert permit["locale"] == "ru" and permit["question"] == "Нужно ли разрешение?"
+    # Not dropped for lacking a translation: a question nobody has translated
+    # is still a question this corridor answers.
+    assert untranslated["locale"] == "en"
+    # And the count stays anchors, so a half-translated corpus does not read as
+    # a longer one.
+    assert row["question_count"] == 2
+
+
 async def test_the_markdown_carries_the_questions_and_their_sections(client, published):
     code, cat_key = published
     text = (await client.get(f"/api/rules/{cat_key}/export/{code}/markdown")).text

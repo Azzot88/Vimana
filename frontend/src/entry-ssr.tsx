@@ -78,21 +78,27 @@ export function renderRule(lang: string, path: string, data: unknown): string {
 }
 
 /**
- * The directory index. Rendered without data on purpose.
+ * The directory index, rendered from the same data the page would fetch.
  *
- * The list is short-lived — it changes with every publication — and the page
- * fetches it on mount anyway. What prerendering buys here is the heading, the
- * lede and the shell: a crawler that follows the footer link finds a page that
- * says what this section is, rather than an empty div. The list it will index
- * on the next pass, from the corridor pages themselves, which do carry content.
+ * It used to render empty, on the argument that the list changes with every
+ * publication and the page fetches it on mount anyway. That was wrong in one
+ * specific way: the index is the **only** thing linking to the corridor pages,
+ * so a crawler following the footer link found a page with no outbound links
+ * and the corridors stayed unreachable except by guessing their addresses. The
+ * list being short-lived is an argument for rebuilding often, not for shipping
+ * it blank.
+ *
+ * `data` is optional so the build still produces a usable page when the API is
+ * unreachable — the shell, the heading and the lede, which is what it produced
+ * before. `scripts/prerender.mjs` passes the index it already fetched.
  */
-export function renderRulesIndex(lang: string): string {
+export function renderRulesIndex(lang: string, data?: unknown): string {
   i18n.changeLanguage(lang)
   return renderToString(
     <I18nextProvider i18n={i18n}>
       <StaticRouter location="/rules">
         <Routes>
-          <Route path="/rules" element={<RulesIndexPage />} />
+          <Route path="/rules" element={<RulesIndexPage initial={data as never} />} />
         </Routes>
       </StaticRouter>
     </I18nextProvider>,

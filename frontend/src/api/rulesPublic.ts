@@ -74,6 +74,12 @@ export interface PublicRuleSet {
   requirements: PublicRequirement[]
 }
 
+export interface QuestionPreview {
+  anchor: string
+  question: string
+  locale: string
+}
+
 export interface RuleIndexEntry {
   category_key: string
   direction: RuleDirection
@@ -90,12 +96,16 @@ export interface RuleIndexEntry {
   /** Served by the API, never assembled here: the prerender step writes one
    *  file per path, and a path built in two places differs in one of them. */
   path: string
-  /** How many questions this corridor answers — said on the card, so a reader
-   *  knows what they get before clicking. Zero is a real answer. */
+  /** How many questions this corridor answers. Zero is a real answer. */
   question_count: number
+  /** The questions themselves, text only. The directory shows real questions
+   *  rather than a count of them: somebody who does not know the taxonomy
+   *  still knows their own question. Also what the search field searches. */
+  questions: QuestionPreview[]
 }
 
-export const rulesIndex = () => api.get<RuleIndexEntry[]>('/api/rules')
+export const rulesIndex = (locale: string) =>
+  api.get<RuleIndexEntry[]>('/api/rules', { params: { locale } })
 
 export const readRule = (
   category: string,
