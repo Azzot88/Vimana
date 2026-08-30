@@ -22,6 +22,7 @@ from app.models.rules import (
     DocumentRequirement,
     Jurisdiction,
     JurisdictionKind,
+    RuleQuestion,
     RuleSection,
     RuleSet,
     RuleSource,
@@ -97,6 +98,9 @@ async def corridor(session_maker):
                 delete(DocumentRequirement).where(
                     DocumentRequirement.rule_set_id == rs.id
                 )
+            )
+            await db.execute(
+                delete(RuleQuestion).where(RuleQuestion.rule_set_id == rs.id)
             )
             await db.execute(
                 delete(RuleStatusEvent).where(RuleStatusEvent.rule_set_id == rs.id)
@@ -428,3 +432,146 @@ async def test_a_state_can_be_added_under_its_country(client, editor):
         json={"code": f"{code}-X", "kind": "city", "parent_code": "NOPE"},
     )
     assert orphan.status_code == 400
+
+
+# --- questions (T3.11.05) ---------------------------------------------------
+
+async def _question(client, headers, set_id, anchor="q-1", section_anchor="overview"):
+    return await client.post(
+        f"/api/admin/rules/{set_id}/questions",
+        headers=headers,
+        json={
+            "anchor": anchor,
+            "locale": "en",
+            "question": "Do I need a permit?",
+            "answer": "Yes, above fifty years.",
+            "section_anchor": section_anchor,
+        },
+    )
+
+
+async def test_a_question_answering_from_nowhere_blocks_publication(
+    client, editor, publisher, corridor
+):
+    """The acceptance case for the questions layer.
+
+    A short answer is allowed to be short because the section behind it carries
+    the quotation. An answer pointing at a section that does not exist is a
+    confident sentence about somebody else's border with nothing behind it —
+    the one thing this corpus must never publish. Asserted on the transition
+    endpoint, not on the form: the corpus loader takes that path too.
+    """
+    set_id = await _new_set(client, editor, corridor)
+    section_id = await _section(client, editor, set_id)
+    await _source(client, editor, section_id)
+    assert (
+        await _question(client, editor, set_id, section_anchor="no-such-section")
+    ).status_code == 201
+
+    await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=editor, json={"to": "review"}
+    )
+    refused = await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=publisher, json={"to": "published"}
+    )
+    assert refused.status_code == 409
+    assert "which this set does not have" in refused.json()["detail"]
+
+
+async def test_a_question_pointing_at_a_real_section_publishes(
+    client, editor, publisher, corridor
+):
+    set_id = await _new_set(client, editor, corridor)
+    section_id = await _section(client, editor, set_id)
+    await _source(client, editor, section_id)
+    assert (await _question(client, editor, set_id)).status_code == 201
+
+    await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=editor, json={"to": "review"}
+    )
+    published = await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=publisher, json={"to": "published"}
+    )
+    assert published.status_code == 200, published.text
+
+
+async def test_a_dangling_question_is_saved_and_only_blocks_later(
+    client, editor, corridor
+):
+    """Saving is permitted; publishing is not.
+
+    An editor writes the question while the section is still being drafted.
+    Refusing the save would force them to work in an order they did not choose,
+    and the gate loses nothing by waiting — it cannot be bypassed.
+    """
+    set_id = await _new_set(client, editor, corridor)
+    section_id = await _section(client, editor, set_id)
+    await _source(client, editor, section_id)
+    assert (
+        await _question(client, editor, set_id, section_anchor="not-written-yet")
+    ).status_code == 201
+
+    detail = (await client.get(f"/api/admin/rules/{set_id}", headers=editor)).json()
+    assert len(detail["questions"]) == 1
+    assert any("not-written-yet" in b for b in detail["blockers"])
+
+
+async def test_a_question_can_be_edited_and_deleted(client, editor, corridor):
+    set_id = await _new_set(client, editor, corridor)
+    await _section(client, editor, set_id)
+    question_id = (await _question(client, editor, set_id)).json()["id"]
+
+    patched = await client.patch(
+        f"/api/admin/rules/questions/{question_id}",
+        headers=editor,
+        json={
+            "anchor": "q-1",
+            "locale": "en",
+            "question": "Do I need a permit for a modern painting?",
+            "answer": "No — the threshold is fifty years.",
+            "section_anchor": "overview",
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["answer"].startswith("No")
+
+    assert (
+        await client.delete(
+            f"/api/admin/rules/questions/{question_id}", headers=editor
+        )
+    ).status_code == 204
+    detail = (await client.get(f"/api/admin/rules/{set_id}", headers=editor)).json()
+    assert detail["questions"] == []
+
+
+async def test_questions_are_frozen_with_the_set(client, editor, publisher, corridor):
+    """Same freeze as sections. What people read stays what they read."""
+    set_id = await _new_set(client, editor, corridor)
+    section_id = await _section(client, editor, set_id)
+    await _source(client, editor, section_id)
+    question_id = (await _question(client, editor, set_id)).json()["id"]
+
+    await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=editor, json={"to": "review"}
+    )
+    await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=publisher, json={"to": "published"}
+    )
+
+    refused = await client.patch(
+        f"/api/admin/rules/questions/{question_id}",
+        headers=editor,
+        json={
+            "anchor": "q-1",
+            "locale": "en",
+            "question": "Rewritten after publication",
+            "answer": "…",
+            "section_anchor": "overview",
+        },
+    )
+    assert refused.status_code == 409
+    assert (
+        await client.delete(
+            f"/api/admin/rules/questions/{question_id}", headers=editor
+        )
+    ).status_code == 409

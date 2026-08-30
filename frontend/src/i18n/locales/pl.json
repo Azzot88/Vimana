@@ -1333,18 +1333,37 @@
     "reviewedAt": "sprawdzono {{when}}",
     "neverReviewed": "jeszcze nie sprawdzono ze źródłami",
     "sortLabel": "Kolejność:",
-    "sort": { "chronological": "według zmian", "category": "według kategorii" },
+    "sort": {
+      "chronological": "według zmian",
+      "category": "według kategorii"
+    },
     "emptyTitle": "Nic jeszcze nie opublikowano",
     "emptyBody": "Kolejne powstają te korytarze, o które ludzie pytają. Napisz, jakiego kierunku potrzebujesz.",
     "failed": "Nie udało się wczytać listy. Odśwież stronę — to nie to samo, co „nic tu nie ma”.",
-    "disclaimer": "Vimana nie jest agencją celną i nie wystawia żadnego z tych dokumentów. Każda strona przekazuje to, co mówią źródła, i cytuje je, byś mógł sprawdzić sam."
+    "disclaimer": "Vimana nie jest agencją celną i nie wystawia żadnego z tych dokumentów. Każda strona przekazuje to, co mówią źródła, i cytuje je, byś mógł sprawdzić sam.",
+    "answersCount_one": "{{count}} pytanie z odpowiedzią",
+    "answersCount_few": "{{count}} pytania z odpowiedziami",
+    "answersCount_many": "{{count}} pytań z odpowiedziami",
+    "facet": {
+      "category_key": "Co przewozisz",
+      "direction": "Kierunek",
+      "jurisdiction_code": "Kraj",
+      "any": "Dowolny"
+    },
+    "showingCount": "Pokazano {{shown}} z {{total}}",
+    "noMatchTitle": "Dla tych warunków nie ma jeszcze zasad",
+    "clearFilters": "Wyczyść filtry"
   },
   "rulesPage": {
     "missingTitle": "Dla tego korytarza nie opublikowano jeszcze zasad",
     "missingBody": "Tu jeszcze nic nie ma. Jeśli potrzebujesz tego kierunku — napisz: kolejne powstają te korytarze, o które ludzie pytają.",
     "failed": "Nie udało się wczytać strony. Spróbuj ponownie.",
     "untitled": "Zasady korytarza",
-    "dir": { "export": "Wywóz z", "import": "Przywóz do", "transit": "Tranzyt przez" },
+    "dir": {
+      "export": "Wywóz z",
+      "import": "Przywóz do",
+      "transit": "Tranzyt przez"
+    },
     "reviewedAt": "Zweryfikowano ze źródłami {{when}}",
     "neverReviewed": "Jeszcze nie zweryfikowano ze źródłami",
     "needsReview": "źródło się zmieniło",
@@ -1359,7 +1378,10 @@
     "leadDays": "{{days}} dni na uzyskanie",
     "validDays": "ważny {{days}} dni",
     "conditional": "potrzebny nie zawsze",
-    "disclaimer": "Vimana nie jest agencją celną i nie wystawia żadnego z tych dokumentów. Ta strona przekazuje to, co mówią źródła, i przytacza cytat obok każdego twierdzenia, byś mógł sprawdzić sam. Zasady się zmieniają — data powyżej to dzień, w którym człowiek ostatnio porównał ten tekst ze źródłem."
+    "disclaimer": "Vimana nie jest agencją celną i nie wystawia żadnego z tych dokumentów. Ta strona przekazuje to, co mówią źródła, i przytacza cytat obok każdego twierdzenia, byś mógł sprawdzić sam. Zasady się zmieniają — data powyżej to dzień, w którym człowiek ostatnio porównał ten tekst ze źródłem.",
+    "questionsTitle": "W skrócie: najczęstsze pytania",
+    "questionsHint": "Krótka odpowiedź i odnośnik do sekcji, w której potwierdza ją cytat ze źródła.",
+    "readTheRule": "Pełna zasada: {{section}}"
   },
   "adminRules": {
     "title": "Zasady korytarza",
@@ -1378,8 +1400,17 @@
     "categoryPlaceholder": "art, animal, document…",
     "setTitle": "Tytuł",
     "titlePlaceholder": "Tytuł zestawu",
-    "dir": { "export": "wywóz", "import": "przywóz", "transit": "tranzyt" },
-    "status": { "draft": "szkic", "review": "w przeglądzie", "published": "opublikowany", "outdated": "zastąpiony" },
+    "dir": {
+      "export": "wywóz",
+      "import": "przywóz",
+      "transit": "tranzyt"
+    },
+    "status": {
+      "draft": "szkic",
+      "review": "w przeglądzie",
+      "published": "opublikowany",
+      "outdated": "zastąpiony"
+    },
     "reviewedAt": "Ostatnio sprawdzone przez człowieka: {{when}}",
     "blockersTitle": "Na razie nie można opublikować",
     "toReview": "Wyślij do przeglądu",
@@ -1420,7 +1451,24 @@
     "publishNoteLabel": "Co się zmieniło",
     "publishNotePlaceholder": "Jedno zdanie dla tego, kto wrócił — opcjonalnie",
     "reqNotesPlaceholder": "Uwagi",
-    "md": { "bold": "pogrubienie", "italic": "kursywa", "heading": "nagłówek", "list": "lista", "quote": "cytat", "link": "link", "preview": "podgląd", "edit": "źródło" }
+    "md": {
+      "bold": "pogrubienie",
+      "italic": "kursywa",
+      "heading": "nagłówek",
+      "list": "lista",
+      "quote": "cytat",
+      "link": "link",
+      "preview": "podgląd",
+      "edit": "źródło"
+    },
+    "questionsTitle": "Pytania i krótkie odpowiedzi",
+    "questionsHint": "Każda odpowiedź odpowiada z sekcji z cytatem. Pytanie wskazujące donikąd blokuje publikację.",
+    "addQuestion": "Dodaj pytanie",
+    "questionLabel": "Pytanie",
+    "answerLabel": "Krótka odpowiedź",
+    "answersFrom": "Odpowiada z sekcji",
+    "answersFromMissing": "Nie ma takiej sekcji w tym zestawie",
+    "questionAnchor": "Kotwica pytania"
   },
   "adminRoles": {
     "title": "Role i propozycje",

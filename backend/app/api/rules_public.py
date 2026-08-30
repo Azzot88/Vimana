@@ -15,10 +15,17 @@ the source) and `needs_review` travel as fields, not as a sentence at the bottom
 of the page — a machine reading this cannot parse a sentence, and a person
 deserves the date next to the claim rather than in a footer.
 
+**Two readings of the same corpus travel together.** The sections are the law,
+each with its verbatim quotation; the questions (T3.11.05) are the compact form,
+each naming the section it was compressed from. They arrive on one response
+rather than from a second call, so there is no state in which the page has the
+sections but not the answers and renders half of itself.
+
 Endpoints:
 - `GET /api/rules` — index of everything published, for the directory and for
   the prerender step that turns it into files.
 - `GET /api/rules/{category}/{direction}/{country}` — one set in full.
+- `GET /api/rules/{category}/{direction}/{country}/markdown` — the same as a file.
 """
 from __future__ import annotations
 
@@ -36,6 +43,7 @@ from app.models.rules import (
     DocumentRequirement,
     Jurisdiction,
     RuleDirection,
+    RuleQuestion,
     RuleSection,
     RuleSet,
     RuleSource,
@@ -71,6 +79,22 @@ class SectionOut(BaseModel):
     sources: list[SourceOut]
 
 
+class QuestionOut(BaseModel):
+    """One question, its short answer, and the section that backs it.
+
+    `section_anchor` is served, not hidden: it is what turns a three-line answer
+    into a checkable one, and the page renders it as a link down to the section
+    with the quotation. An answer without that link would be the platform
+    asserting somebody else's law on its own authority.
+    """
+
+    anchor: str
+    question: str
+    answer: str
+    section_anchor: str
+    locale: str
+
+
 class RequirementOut(BaseModel):
     code: str
     title: str
@@ -102,6 +126,10 @@ class RuleIndexOut(BaseModel):
     #: caller: the prerender step writes one file per path, and a path built in
     #: two places is a path that differs in one of them.
     path: str
+    #: How many questions this corridor answers, so the directory card can say
+    #: what a reader gets before they click. Zero is a real answer — a corpus
+    #: written as law and not yet given a compact reading.
+    question_count: int
 
 
 class RuleSetOut(BaseModel):
@@ -127,6 +155,9 @@ class RuleSetOut(BaseModel):
     #: blog-fashion. Empty when they said nothing, which is the common case for
     #: a first version and reads correctly as silence rather than as a gap.
     published_note: str
+    #: The compact reading of the same corpus, first on the page: the questions
+    #: people arrive with, each answered from a section below.
+    questions: list[QuestionOut]
     sections: list[SectionOut]
     requirements: list[RequirementOut]
 
@@ -164,6 +195,29 @@ async def index(db: AsyncSession = Depends(get_db)):
         )
     ).all()
 
+    # One grouped count rather than a query per row: the directory is the page
+    # a crawler hits, and N+1 there is N+1 on every corpus we ever publish.
+    counts = {
+        rule_set_id: total
+        for rule_set_id, total in (
+            await db.execute(
+                select(
+                    RuleQuestion.rule_set_id,
+                    # Anchors, not rows: a question translated into Russian is
+                    # the same question, and counting rows would make a
+                    # translated corpus look like a longer one.
+                    func.count(func.distinct(RuleQuestion.anchor)),
+                )
+                .where(
+                    RuleQuestion.rule_set_id.in_(
+                        [rs.id for rs, _ in rows] or [uuid.uuid4()]
+                    )
+                )
+                .group_by(RuleQuestion.rule_set_id)
+            )
+        ).all()
+    }
+
     notes = {
         rule_set_id: note
         for rule_set_id, note in (
@@ -192,6 +246,7 @@ async def index(db: AsyncSession = Depends(get_db)):
             # the version being served.
             published_note=notes.get(rs.id) or "",
             path=path_for(rs.category_key, rs.direction, rs.jurisdiction_code),
+            question_count=counts.get(rs.id, 0),
         )
         for rs, name in rows
     ]
@@ -225,6 +280,24 @@ def _as_markdown(data: "RuleSetOut") -> str:
         out.append("")
         out.append(f"What changed: {data.published_note}")
     out.append("")
+
+    if data.questions:
+        # First in the file for the same reason it is first on the page: this is
+        # the reading somebody does before deciding whether the rest concerns
+        # them. Each answer names the section it came from, so the compact form
+        # stays traceable after the file leaves the site.
+        out.append("## Short answers")
+        out.append("")
+        for q in data.questions:
+            out.append(f"### {q.question}")
+            if q.locale != data.locale:
+                out.append("")
+                out.append(f"*(in {q.locale.upper()} — not translated yet)*")
+            out.append("")
+            out.append(q.answer)
+            out.append("")
+            out.append(f"*Source section: `{q.section_anchor}` below.*")
+            out.append("")
 
     for section in data.sections:
         out.append(f"## {section.title or section.anchor}")
@@ -368,6 +441,26 @@ async def read_rule(
     for src in source_rows:
         sources.setdefault(src.section_id, []).append(src)
 
+    all_questions = (
+        await db.execute(
+            select(RuleQuestion)
+            .where(RuleQuestion.rule_set_id == rule_set.id)
+            .order_by(RuleQuestion.order)
+        )
+    ).scalars().all()
+
+    # Same fallback as sections, and deliberately the same code shape: a
+    # question translated into Russian must win over the English one, and a
+    # question that has not been translated must still be answered rather than
+    # dropped. Two different rules for the same decision on one page is how a
+    # page ends up half in each language with no way to say so.
+    q_by_anchor: dict[str, RuleQuestion] = {}
+    for question in all_questions:
+        current = q_by_anchor.get(question.anchor)
+        if current is None or (question.locale == wanted and current.locale != wanted):
+            q_by_anchor[question.anchor] = question
+    chosen_questions = sorted(q_by_anchor.values(), key=lambda q: q.order)
+
     requirements = (
         await db.execute(
             select(DocumentRequirement)
@@ -409,10 +502,23 @@ async def read_rule(
         reviewed_at=rule_set.reviewed_at,
         checked_at=rule_set.checked_at,
         needs_review=rule_set.needs_review,
-        # True when *anything* the reader sees is not in their language.
-        fallback_locale=any(s.locale != wanted for s in chosen),
+        # True when *anything* the reader sees is not in their language —
+        # questions included, since they are the first thing on the page.
+        fallback_locale=any(
+            row.locale != wanted for row in (*chosen, *chosen_questions)
+        ),
         published_note=published_note or "",
         locale=wanted,
+        questions=[
+            QuestionOut(
+                anchor=q.anchor,
+                question=q.question,
+                answer=q.answer,
+                section_anchor=q.section_anchor,
+                locale=q.locale,
+            )
+            for q in chosen_questions
+        ],
         sections=[
             SectionOut(
                 anchor=s.anchor,

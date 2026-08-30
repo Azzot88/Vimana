@@ -23,6 +23,7 @@ from app.models.marketplace import Category
 from app.models.rules import (
     DocumentRequirement,
     Jurisdiction,
+    RuleQuestion,
     RuleSection,
     RuleSet,
     RuleSource,
@@ -56,6 +57,15 @@ def _corpus(code: str, category: str, **over) -> dict:
                                 "quote": "A verbatim quotation.",
                             }
                         ],
+                    }
+                ],
+                "questions": [
+                    {
+                        "anchor": "q-overview",
+                        "locale": "en",
+                        "question": "What does this corridor need?",
+                        "answer": "One certificate.",
+                        "section_anchor": "overview",
                     }
                 ],
                 "requirements": [
@@ -99,6 +109,9 @@ async def corridor(session_maker):
             await db.execute(delete(RuleSection).where(RuleSection.rule_set_id == rs_id))
             await db.execute(
                 delete(DocumentRequirement).where(DocumentRequirement.rule_set_id == rs_id)
+            )
+            await db.execute(
+                delete(RuleQuestion).where(RuleQuestion.rule_set_id == rs_id)
             )
             await db.execute(
                 delete(RuleStatusEvent).where(RuleStatusEvent.rule_set_id == rs_id)
@@ -154,6 +167,46 @@ def test_a_placeholder_with_a_body_is_refused():
     assert any("not a gap" in p for p in validate(corpus))
 
 
+def test_a_question_answering_from_a_missing_section_is_refused():
+    """Caught by the loader, not only by the publication gate.
+
+    A file is the artefact somebody reviews in a diff. An anchor typo caught
+    here is one line of output; the same typo caught at publication is an
+    editor hunting through a screen for which of twenty questions is broken.
+    """
+    corpus = _corpus("ZZ-x", "cat")
+    corpus["sets"][0]["questions"][0]["section_anchor"] = "no-such-anchor"
+    assert any("no-such-anchor" in p for p in validate(corpus))
+
+
+def test_a_question_without_an_answer_is_refused():
+    """A question with no answer is a heading, and a heading in a list of
+    answers is a promise the page does not keep."""
+    corpus = _corpus("ZZ-x", "cat")
+    corpus["sets"][0]["questions"][0]["answer"] = "   "
+    assert any("no answer" in p for p in validate(corpus))
+
+
+def test_two_questions_may_share_an_anchor_across_locales():
+    """The translation of a question is the same question.
+
+    The unique constraint is on `(set, anchor, locale)` for exactly this: one
+    anchor per question, one row per language, and the directory counts anchors
+    rather than rows so a translated corpus does not look like a longer one.
+    """
+    corpus = _corpus("ZZ-x", "cat")
+    corpus["sets"][0]["questions"].append(
+        {
+            "anchor": "q-overview",
+            "locale": "ru",
+            "question": "Что нужно на этом коридоре?",
+            "answer": "Одна справка.",
+            "section_anchor": "overview",
+        }
+    )
+    assert validate(corpus) == []
+
+
 def test_an_unknown_predicate_attribute_is_refused():
     corpus = _corpus("ZZ-x", "cat")
     corpus["sets"][0]["requirements"][0]["condition"] = {
@@ -177,6 +230,24 @@ def test_every_problem_is_reported_not_just_the_first():
 
 
 # --- what it writes ---------------------------------------------------------
+
+async def test_questions_are_written_with_the_corpus(session_maker, corridor):
+    code, category = corridor
+    async with session_maker() as db:
+        counts = await load(db, _corpus(code, category), replace=False)
+    assert counts["questions"] == 1
+
+    async with session_maker() as db:
+        rule_set = (
+            await db.execute(select(RuleSet).where(RuleSet.jurisdiction_code == code))
+        ).scalar_one()
+        question = (
+            await db.execute(
+                select(RuleQuestion).where(RuleQuestion.rule_set_id == rule_set.id)
+            )
+        ).scalar_one()
+    assert question.section_anchor == "overview"
+
 
 async def test_the_corpus_lands_as_a_draft(session_maker, corridor):
     """Never published, not once, not with a flag: publication is the moment
@@ -304,27 +375,54 @@ async def test_an_undeclared_jurisdiction_is_refused(session_maker, corridor):
 
 # --- the shipped corpus -----------------------------------------------------
 
-def test_the_shipped_animal_corpus_is_loadable():
-    """The file in the repository must always be valid — it is reviewed in a
-    diff, and a diff of a file that cannot load is a review of nothing."""
-    path = Path(__file__).resolve().parent.parent / "app" / "data" / "rules" / "us-animal-import.json"
+CORPORA = (
+    "us-animal-import.json",
+    "ru-animal-export.json",
+    "ru-art-export.json",
+)
+
+
+@pytest.mark.parametrize("filename", CORPORA)
+def test_every_shipped_corpus_is_loadable(filename):
+    """The files in the repository must always be valid.
+
+    They are reviewed in a diff, and a diff of a file that cannot load is a
+    review of nothing.
+    """
+    path = Path(__file__).resolve().parent.parent / "app" / "data" / "rules" / filename
     corpus = json.loads(path.read_text(encoding="utf-8"))
-    assert validate(corpus) == []
+    assert validate(corpus) == [], filename
 
     sections = corpus["sets"][0]["sections"]
 
-    # No placeholders left: every section makes a claim and cites it. The two
-    # that were gaps are closed **narrowly** — the state section cites the
-    # federal text that defers to state regulation and then says plainly that
-    # it does not carry a per-state list, rather than inventing one. Saying
-    # what a page does not answer is a claim like any other, and it is true.
-    assert [s["anchor"] for s in sections if s.get("placeholder")] == []
+    # No placeholders left in any shipped corpus: every section makes a claim
+    # and cites it. Where a gap remains it is closed **narrowly** — the section
+    # cites the text that establishes the gap exists and then says plainly what
+    # it does not answer, rather than inventing the answer. Saying what a page
+    # does not cover is a claim like any other, and it is true.
+    assert [s["anchor"] for s in sections if s.get("placeholder")] == [], filename
 
-    # Everything else carries a verbatim quotation, which is what the
-    # publication gate will demand and what makes the page checkable.
     for section in sections:
-        if section.get("placeholder"):
-            continue
-        assert section["sources"], section["anchor"]
+        assert section["sources"], f"{filename}: {section['anchor']}"
         for source in section["sources"]:
-            assert source["quote"].strip(), section["anchor"]
+            assert source["quote"].strip(), f"{filename}: {section['anchor']}"
+
+
+@pytest.mark.parametrize("filename", CORPORA)
+def test_every_shipped_corpus_answers_questions(filename):
+    """A corpus with no questions is law nobody reads.
+
+    Asserted rather than left to review: the sections are what makes the corpus
+    checkable, and the questions are what makes it useful. Shipping the first
+    without the second is the failure this layer exists to prevent, and it is
+    invisible in a diff of a file that is already long.
+    """
+    path = Path(__file__).resolve().parent.parent / "app" / "data" / "rules" / filename
+    corpus = json.loads(path.read_text(encoding="utf-8"))
+    questions = corpus["sets"][0].get("questions", [])
+
+    assert questions, filename
+    anchors = {s["anchor"] for s in corpus["sets"][0]["sections"]}
+    for question in questions:
+        assert question["section_anchor"] in anchors, f"{filename}: {question['anchor']}"
+        assert question["answer"].strip(), f"{filename}: {question['anchor']}"

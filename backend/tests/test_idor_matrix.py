@@ -259,6 +259,17 @@ MATRIX: dict[tuple[str, str], Case] = {
         json={"authority": "a", "document_title": "b", "quote": "c"},
     ),
     ("DELETE", "/api/admin/rules/sources/{source_id}"): Case(DENIED, "rules:edit only"),
+    ("POST", "/api/admin/rules/{set_id}/questions"): Case(
+        DENIED,
+        "rules:edit only",
+        json={"anchor": "probe", "question": "?", "section_anchor": "probe"},
+    ),
+    ("PATCH", "/api/admin/rules/questions/{question_id}"): Case(
+        DENIED,
+        "rules:edit only",
+        json={"anchor": "probe", "question": "?", "section_anchor": "probe"},
+    ),
+    ("DELETE", "/api/admin/rules/questions/{question_id}"): Case(DENIED, "rules:edit only"),
     ("POST", "/api/admin/rules/{set_id}/requirements"): Case(
         DENIED, "rules:edit only", json={"code": "probe", "title": "Probe"}
     ),
@@ -580,6 +591,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "set_id": str(uuidlib.uuid4()),
         "section_id": str(uuidlib.uuid4()),
         "source_id": str(uuidlib.uuid4()),
+        "question_id": str(uuidlib.uuid4()),
         "req_id": str(uuidlib.uuid4()),
         # Only the capability rows use this, and they want an unknown one.
         "token": uuidlib.uuid4().hex,

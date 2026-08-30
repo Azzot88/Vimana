@@ -27,6 +27,19 @@ export interface RuleSection {
   sources: RuleSource[]
 }
 
+export interface RuleQuestion {
+  id: string
+  anchor: string
+  locale: string
+  order: number
+  question: string
+  /** Markdown, like a section body. Short by design. */
+  answer: string
+  /** The section this answer compresses. Checked at the publication gate: an
+   *  answer pointing nowhere blocks the whole set. */
+  section_anchor: string
+}
+
 export interface DocumentRequirement {
   id: string
   code: string
@@ -59,6 +72,7 @@ export interface RuleSet {
 }
 
 export interface RuleSetDetail extends RuleSet {
+  questions: RuleQuestion[]
   sections: RuleSection[]
   requirements: DocumentRequirement[]
   /** Empty means publishable. Shown before the button is pressed, so the
@@ -139,6 +153,33 @@ export const addRequirement = (
 
 export const deleteRequirement = (reqId: string) =>
   api.delete<void>(`/api/admin/rules/requirements/${reqId}`)
+
+export const addQuestion = (
+  setId: string,
+  body: {
+    anchor: string
+    locale: string
+    order?: number
+    question: string
+    answer?: string
+    section_anchor: string
+  },
+) => api.post<RuleQuestion>(`/api/admin/rules/${setId}/questions`, body)
+
+export const patchQuestion = (
+  questionId: string,
+  body: {
+    anchor: string
+    locale: string
+    order?: number
+    question: string
+    answer?: string
+    section_anchor: string
+  },
+) => api.patch<RuleQuestion>(`/api/admin/rules/questions/${questionId}`, body)
+
+export const deleteQuestion = (questionId: string) =>
+  api.delete<void>(`/api/admin/rules/questions/${questionId}`)
 
 export const listJurisdictions = () =>
   api.get<Jurisdiction[]>('/api/admin/jurisdictions')

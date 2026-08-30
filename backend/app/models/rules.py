@@ -347,3 +347,50 @@ class RuleStatusEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class RuleQuestion(Base):
+    """A question a reader actually asks, and the short answer, in one locale.
+
+    The corpus is written as law: a section per rule, each carrying the verbatim
+    text it rests on. That is the right shape for a document somebody has to be
+    able to check, and the wrong shape for a person who wants to know whether
+    they can put a painting in a suitcase on Thursday. This table is the second
+    reading of the same corpus — the compact one.
+
+    **A question is an index into a sourced section, not a new claim.**
+    `section_anchor` must resolve to a section of the same set, and publication
+    is blocked when it does not (`core.rule_status.publication_blockers`). That
+    constraint is the whole design: the short answer is allowed to be short
+    precisely because one click away is the section with the quotation, the
+    authority and the date. An answer with nothing behind it would be the one
+    thing this corpus must never produce — a confident sentence about somebody
+    else's border with no way to check it.
+
+    Locale is per row for the same reason as `RuleSection`: half-translated is a
+    real state and the page has to be able to say so.
+    """
+
+    __tablename__ = "rule_questions"
+    __table_args__ = (
+        UniqueConstraint(
+            "rule_set_id", "anchor", "locale", name="uq_rule_questions_anchor"
+        ),
+        Index("ix_rule_questions_render", "rule_set_id", "locale", "order"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    rule_set_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rule_sets.id"))
+    # Its own slug, so a single question can be deep-linked and cited — the
+    # checklist and the MCP answer both need to point at one.
+    anchor: Mapped[str] = mapped_column(String(64))
+    order: Mapped[int] = mapped_column(Integer, default=0)
+    locale: Mapped[str] = mapped_column(String(5), default="en")
+    question: Mapped[str] = mapped_column(String(500))
+    # Markdown, like `RuleSection.body`. Rendered client-side with raw HTML off.
+    answer: Mapped[str] = mapped_column(Text, default="")
+    # The section this answer compresses. Not nullable: see the class docstring.
+    section_anchor: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

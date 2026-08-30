@@ -1332,18 +1332,36 @@
     "reviewedAt": "vérifié le {{when}}",
     "neverReviewed": "pas encore vérifié auprès des sources",
     "sortLabel": "Ordre :",
-    "sort": { "chronological": "par modification", "category": "par catégorie" },
+    "sort": {
+      "chronological": "par modification",
+      "category": "par catégorie"
+    },
     "emptyTitle": "Rien n'est encore publié",
     "emptyBody": "Les corridors écrits ensuite sont ceux qu'on nous demande. Dites-nous quelle direction vous intéresse.",
     "failed": "Impossible de charger la liste. Rechargez la page — ce n'est pas la même chose qu'un rayon vide.",
-    "disclaimer": "Vimana n'est pas un commissionnaire en douane et ne délivre aucun de ces documents. Chaque page rapporte ce que disent les sources et les cite, pour que vous puissiez vérifier vous-même."
+    "disclaimer": "Vimana n'est pas un commissionnaire en douane et ne délivre aucun de ces documents. Chaque page rapporte ce que disent les sources et les cite, pour que vous puissiez vérifier vous-même.",
+    "answersCount_one": "{{count}} question traitée",
+    "answersCount_other": "{{count}} questions traitées",
+    "facet": {
+      "category_key": "Ce que vous transportez",
+      "direction": "Sens",
+      "jurisdiction_code": "Pays",
+      "any": "Tous"
+    },
+    "showingCount": "Affiché {{shown}} sur {{total}}",
+    "noMatchTitle": "Aucune règle pour cette combinaison pour l’instant",
+    "clearFilters": "Effacer les filtres"
   },
   "rulesPage": {
     "missingTitle": "Aucune règle publiée pour ce corridor",
     "missingBody": "Rien n'a encore été publié ici. Si vous avez besoin de cette direction, dites-le nous : les corridors écrits ensuite sont ceux qu'on nous demande.",
     "failed": "Impossible de charger cette page. Réessayez dans un instant.",
     "untitled": "Règles du corridor",
-    "dir": { "export": "Sortie de", "import": "Entrée en", "transit": "Transit par" },
+    "dir": {
+      "export": "Sortie de",
+      "import": "Entrée en",
+      "transit": "Transit par"
+    },
     "reviewedAt": "Vérifié auprès des sources le {{when}}",
     "neverReviewed": "Pas encore vérifié auprès des sources",
     "needsReview": "une source a changé",
@@ -1358,7 +1376,10 @@
     "leadDays": "{{days}} jours pour l'obtenir",
     "validDays": "valable {{days}} jours",
     "conditional": "nécessaire seulement dans certains cas",
-    "disclaimer": "Vimana n'est pas un commissionnaire en douane et ne délivre aucun de ces documents. Cette page rapporte ce que disent les sources, avec la citation à côté de chaque affirmation, pour que vous puissiez vérifier vous-même. Les règles changent — la date ci-dessus est le jour où une personne a comparé ce texte à la source pour la dernière fois."
+    "disclaimer": "Vimana n'est pas un commissionnaire en douane et ne délivre aucun de ces documents. Cette page rapporte ce que disent les sources, avec la citation à côté de chaque affirmation, pour que vous puissiez vérifier vous-même. Les règles changent — la date ci-dessus est le jour où une personne a comparé ce texte à la source pour la dernière fois.",
+    "questionsTitle": "En bref : les questions qui reviennent",
+    "questionsHint": "Une réponse courte, et un lien vers la section où elle est appuyée par une citation de la source.",
+    "readTheRule": "La règle en entier : {{section}}"
   },
   "adminRules": {
     "title": "Règles du corridor",
@@ -1377,8 +1398,17 @@
     "categoryPlaceholder": "art, animal, document…",
     "setTitle": "Titre",
     "titlePlaceholder": "Titre du jeu",
-    "dir": { "export": "sortie", "import": "entrée", "transit": "transit" },
-    "status": { "draft": "brouillon", "review": "en relecture", "published": "publié", "outdated": "remplacé" },
+    "dir": {
+      "export": "sortie",
+      "import": "entrée",
+      "transit": "transit"
+    },
+    "status": {
+      "draft": "brouillon",
+      "review": "en relecture",
+      "published": "publié",
+      "outdated": "remplacé"
+    },
     "reviewedAt": "Dernière vérification humaine : {{when}}",
     "blockersTitle": "Publication impossible pour l'instant",
     "toReview": "Envoyer en relecture",
@@ -1419,7 +1449,24 @@
     "publishNoteLabel": "Ce qui a changé",
     "publishNotePlaceholder": "Une phrase pour qui revient — facultatif",
     "reqNotesPlaceholder": "Remarques",
-    "md": { "bold": "gras", "italic": "italique", "heading": "titre", "list": "liste", "quote": "citation", "link": "lien", "preview": "aperçu", "edit": "source" }
+    "md": {
+      "bold": "gras",
+      "italic": "italique",
+      "heading": "titre",
+      "list": "liste",
+      "quote": "citation",
+      "link": "lien",
+      "preview": "aperçu",
+      "edit": "source"
+    },
+    "questionsTitle": "Questions et réponses courtes",
+    "questionsHint": "Chaque réponse répond depuis une section citée. Une question qui ne pointe nulle part bloque la publication.",
+    "addQuestion": "Ajouter une question",
+    "questionLabel": "Question",
+    "answerLabel": "Réponse courte",
+    "answersFrom": "Répond depuis la section",
+    "answersFromMissing": "Cette section n’existe pas dans ce jeu",
+    "questionAnchor": "Ancre de la question"
   },
   "adminRoles": {
     "title": "Rôles et propositions",

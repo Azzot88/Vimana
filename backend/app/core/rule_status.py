@@ -1,10 +1,12 @@
 """T3.11.02 — moving a rule set between statuses, and what publication requires.
 
-The one rule this module exists to hold: **a set cannot become `published`
-unless every section in it cites a source.** The check lives here, on the
-transition, and not on the editor form — a rule enforced in the UI is bypassed
-by a CLI import, by a fixture, and by the first bulk load of a corpus, which is
-exactly how the two corpora (T3.11.04, T3.11.05) will arrive.
+Two rules this module exists to hold. **A set cannot become `published` unless
+every section in it cites a source**, and **no question may answer from a
+section the set does not have** (T3.11.05): the short answer is allowed to be
+short only because the section behind it carries the quotation. Both checks live
+here, on the transition, and not on the editor form — a rule enforced in the UI
+is bypassed by a CLI import, by a fixture, and by the first bulk load of a
+corpus, which is exactly how the corpora arrive.
 
 Why it is a hard gate rather than a warning: a published rule is a checkable
 statement the platform makes about somebody else's law, and an uncited one is
@@ -35,6 +37,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.rules import (
+    RuleQuestion,
     RuleSection,
     RuleSet,
     RuleSource,
@@ -93,6 +96,26 @@ async def publication_blockers(db: AsyncSession, rule_set: RuleSet) -> list[str]
             blockers.append(
                 f"Section `{section.anchor}` ({section.locale}) cites no source "
                 f"with a quotation."
+            )
+
+    # A short answer is allowed to be short only because the section behind it
+    # carries the quotation. An answer pointing at nothing is a confident
+    # sentence about somebody else's border with no way to check it — the one
+    # thing this corpus must not publish. Anchors are compared across locales
+    # on purpose: a Russian question may legitimately point at a section that
+    # exists so far only in English, and blocking that would push editors to
+    # write the answer twice instead of translating the section.
+    anchors = {s.anchor for s in sections}
+    questions = (
+        await db.execute(
+            select(RuleQuestion).where(RuleQuestion.rule_set_id == rule_set.id)
+        )
+    ).scalars().all()
+    for question in questions:
+        if question.section_anchor not in anchors:
+            blockers.append(
+                f"Question `{question.anchor}` ({question.locale}) answers from "
+                f"section `{question.section_anchor}`, which this set does not have."
             )
     return blockers
 

@@ -23,6 +23,18 @@ export interface PublicSection {
   sources: PublicSource[]
 }
 
+export interface PublicQuestion {
+  anchor: string
+  question: string
+  /** Markdown. Short by design — the section behind it carries the citation. */
+  answer: string
+  /** The section this answer compresses. Rendered as a link down to it: an
+   *  answer with nothing behind it would be us asserting somebody else's law
+   *  on our own authority. */
+  section_anchor: string
+  locale: string
+}
+
 export interface PublicRequirement {
   code: string
   title: string
@@ -56,6 +68,8 @@ export interface PublicRuleSet {
   /** What the editor said when publishing this version — the "what changed"
    *  line. Empty is the common case for a first version and reads as silence. */
   published_note: string
+  /** The compact reading of the same corpus, first on the page. */
+  questions: PublicQuestion[]
   sections: PublicSection[]
   requirements: PublicRequirement[]
 }
@@ -76,6 +90,9 @@ export interface RuleIndexEntry {
   /** Served by the API, never assembled here: the prerender step writes one
    *  file per path, and a path built in two places differs in one of them. */
   path: string
+  /** How many questions this corridor answers — said on the card, so a reader
+   *  knows what they get before clicking. Zero is a real answer. */
+  question_count: number
 }
 
 export const rulesIndex = () => api.get<RuleIndexEntry[]>('/api/rules')

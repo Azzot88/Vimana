@@ -24,6 +24,8 @@ Endpoints:
 - `PATCH/DELETE  /api/admin/rules/sections/{section_id}`
 - `POST          /api/admin/rules/sections/{section_id}/sources`
 - `DELETE        /api/admin/rules/sources/{source_id}`
+- `POST          /api/admin/rules/{set_id}/questions`
+- `PATCH/DELETE  /api/admin/rules/questions/{question_id}`
 - `POST          /api/admin/rules/{set_id}/requirements`
 - `PATCH/DELETE  /api/admin/rules/requirements/{req_id}`
 - `GET/POST      /api/admin/jurisdictions`
@@ -53,6 +55,7 @@ from app.models.rules import (
     JurisdictionKind,
     ObtainedBy,
     RuleDirection,
+    RuleQuestion,
     RuleSection,
     RuleSet,
     RuleSource,
@@ -94,6 +97,22 @@ class SectionIn(BaseModel):
 class SectionOut(SectionIn):
     id: uuid.UUID
     sources: list[SourceOut] = []
+
+
+class QuestionIn(BaseModel):
+    anchor: str = Field(min_length=1, max_length=64)
+    locale: str = Field(default="en", min_length=2, max_length=5)
+    order: int = 0
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = ""
+    # Required, and checked again at the publication gate. A short answer earns
+    # the right to be short from the sourced section underneath it.
+    section_anchor: str = Field(min_length=1, max_length=64)
+
+
+class QuestionOut(QuestionIn):
+    id: uuid.UUID
+    model_config = {"from_attributes": True}
 
 
 class RequirementIn(BaseModel):
@@ -142,6 +161,7 @@ class SetOut(BaseModel):
 
 
 class SetDetailOut(SetOut):
+    questions: list[QuestionOut] = []
     sections: list[SectionOut] = []
     requirements: list[RequirementOut] = []
     #: Empty when the set may be published. Shown before the button is pressed,
@@ -289,6 +309,14 @@ async def get_set(
     for src in sources:
         by_section.setdefault(src.section_id, []).append(src)
 
+    questions = (
+        await db.execute(
+            select(RuleQuestion)
+            .where(RuleQuestion.rule_set_id == set_id)
+            .order_by(RuleQuestion.locale, RuleQuestion.order)
+        )
+    ).scalars().all()
+
     requirements = (
         await db.execute(
             select(DocumentRequirement)
@@ -311,6 +339,7 @@ async def get_set(
             )
             for s in sections
         ],
+        questions=[QuestionOut.model_validate(q) for q in questions],
         requirements=[RequirementOut.model_validate(r) for r in requirements],
         blockers=await publication_blockers(db, rule_set),
     )
@@ -362,6 +391,7 @@ async def delete_set(
             )
         )
     await db.execute(sa_delete(RuleSection).where(RuleSection.rule_set_id == set_id))
+    await db.execute(sa_delete(RuleQuestion).where(RuleQuestion.rule_set_id == set_id))
     await db.execute(
         sa_delete(DocumentRequirement).where(DocumentRequirement.rule_set_id == set_id)
     )
@@ -468,6 +498,66 @@ async def delete_section(
     section, _set = await _section_and_set(db, section_id)
     await db.execute(sa_delete(RuleSource).where(RuleSource.section_id == section.id))
     await db.delete(section)
+    await db.commit()
+
+
+# ────────────────────────────── questions ──────────────────────────────
+
+async def _question_and_set(
+    db: AsyncSession, question_id: uuid.UUID
+) -> tuple[RuleQuestion, RuleSet]:
+    question = await db.get(RuleQuestion, question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return question, await _get_editable_set(db, question.rule_set_id)
+
+
+@router.post("/admin/rules/{set_id}/questions", response_model=QuestionOut, status_code=201)
+async def add_question(
+    set_id: uuid.UUID,
+    body: QuestionIn,
+    _: User = Depends(require_perm(Permission.RULES_EDIT)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Write a question. The anchor it answers from is **not** validated here.
+
+    Deliberately: an editor writes the question while the section is still being
+    drafted, and refusing the save would make them write the section first in an
+    order they did not choose. The check happens where it bites — the
+    publication gate — which is also where it cannot be bypassed by the CLI
+    loader or a fixture.
+    """
+    await _get_editable_set(db, set_id)
+    question = RuleQuestion(rule_set_id=set_id, **body.model_dump())
+    db.add(question)
+    await db.commit()
+    await db.refresh(question)
+    return question
+
+
+@router.patch("/admin/rules/questions/{question_id}", response_model=QuestionOut)
+async def patch_question(
+    question_id: uuid.UUID,
+    body: QuestionIn,
+    _: User = Depends(require_perm(Permission.RULES_EDIT)),
+    db: AsyncSession = Depends(get_db),
+):
+    question, _set = await _question_and_set(db, question_id)
+    for field, value in body.model_dump().items():
+        setattr(question, field, value)
+    await db.commit()
+    await db.refresh(question)
+    return question
+
+
+@router.delete("/admin/rules/questions/{question_id}", status_code=204)
+async def delete_question(
+    question_id: uuid.UUID,
+    _: User = Depends(require_perm(Permission.RULES_EDIT)),
+    db: AsyncSession = Depends(get_db),
+):
+    question, _set = await _question_and_set(db, question_id)
+    await db.delete(question)
     await db.commit()
 
 

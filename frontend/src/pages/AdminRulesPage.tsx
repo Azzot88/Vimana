@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import {
+  addQuestion,
   addRequirement,
   addSection,
   changeRuleStatus,
@@ -25,6 +26,7 @@ import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
 import RuleSectionCard from '../components/RuleSectionCard'
 import RuleRequirementRow from '../components/RuleRequirementRow'
+import RuleQuestionRow from '../components/RuleQuestionRow'
 
 /**
  * T3.11.02 — the rules editor.
@@ -134,6 +136,17 @@ export default function AdminRulesPage() {
   const [secLocale, setSecLocale] = useState('en')
   const [secTitle, setSecTitle] = useState('')
   const [secBody, setSecBody] = useState('')
+
+  const [qAnchor, setQAnchor] = useState('')
+  const [qLocale, setQLocale] = useState('en')
+  const [qText, setQText] = useState('')
+  const [qAnswer, setQAnswer] = useState('')
+  const [qSection, setQSection] = useState('')
+
+  /** Anchors present in this set, in section order and without locale
+   *  duplicates: the same rule translated twice is one anchor, and offering it
+   *  twice in a select would read as two different sections. */
+  const sectionAnchors = [...new Set((detail?.sections ?? []).map((s) => s.anchor))]
 
 
   const [reqCode, setReqCode] = useState('')
@@ -596,6 +609,105 @@ export default function AdminRulesPage() {
                     className={`${btn} bg-navy/10 text-navy hover:bg-navy/20`}
                   >
                     {t('adminRules.addSection')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── questions ───────────────────────────────────────────── */}
+            {/* After the sections, deliberately. A question answers *from* a
+                section, so the natural order of work is to write the rule and
+                then compress it — and a form that invites the compression
+                first is a form that produces answers with nothing behind
+                them. On the public page the order is the other way round,
+                because a reader arrives with the question. */}
+            <div className="bg-white rounded-card border border-navy/10 p-5 space-y-3">
+              <h3 className="font-display font-semibold text-base text-navy">
+                {t('adminRules.questionsTitle')}
+              </h3>
+              <p className="text-xs font-body text-navy/50">
+                {t('adminRules.questionsHint')}
+              </p>
+
+              {detail.questions.map((q) => (
+                <RuleQuestionRow
+                  key={q.id}
+                  question={q}
+                  sectionAnchors={sectionAnchors}
+                  frozen={frozen}
+                  busy={busy}
+                  run={run}
+                />
+              ))}
+
+              {!frozen && (
+                <div className="space-y-2 pt-2 border-t border-navy/5">
+                  <div className="flex gap-2">
+                    <input
+                      value={qAnchor}
+                      onChange={(e) => setQAnchor(e.target.value)}
+                      placeholder={t('adminRules.questionAnchor') as string}
+                      className={field}
+                    />
+                    <select
+                      value={qLocale}
+                      onChange={(e) => setQLocale(e.target.value)}
+                      aria-label={t('adminRules.locale') as string}
+                      className={field}
+                    >
+                      {LOCALES.map((l) => (
+                        <option key={l} value={l}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <input
+                    value={qText}
+                    onChange={(e) => setQText(e.target.value)}
+                    placeholder={t('adminRules.questionLabel') as string}
+                    className={field}
+                  />
+                  <textarea
+                    value={qAnswer}
+                    onChange={(e) => setQAnswer(e.target.value)}
+                    placeholder={t('adminRules.answerLabel') as string}
+                    rows={3}
+                    className={field}
+                  />
+                  <select
+                    value={qSection}
+                    onChange={(e) => setQSection(e.target.value)}
+                    aria-label={t('adminRules.answersFrom') as string}
+                    className={field}
+                  >
+                    <option value="">{t('adminRules.answersFrom')}…</option>
+                    {sectionAnchors.map((anchor) => (
+                      <option key={anchor} value={anchor}>
+                        {anchor}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() =>
+                      run(async () => {
+                        await addQuestion(detail.id, {
+                          anchor: qAnchor.trim(),
+                          locale: qLocale,
+                          question: qText.trim(),
+                          answer: qAnswer,
+                          section_anchor: qSection,
+                        })
+                        setQAnchor('')
+                        setQText('')
+                        setQAnswer('')
+                        setQSection('')
+                      })
+                    }
+                    disabled={busy || !qAnchor.trim() || !qText.trim() || !qSection}
+                    className={`${btn} bg-navy/10 text-navy hover:bg-navy/20`}
+                  >
+                    {t('adminRules.addQuestion')}
                   </button>
                 </div>
               )}

@@ -61,6 +61,7 @@ from app.models.rules import (
     JurisdictionKind,
     ObtainedBy,
     RuleDirection,
+    RuleQuestion,
     RuleSection,
     RuleSet,
     RuleSource,
@@ -126,6 +127,35 @@ def validate(corpus: dict) -> list[str]:
                         f"{where}, section `{anchor}`: a source with no authority"
                     )
 
+        # A question answers *from* a section. Checked here as well as at the
+        # publication gate, and not only there, because a file is the artefact
+        # a person reviews in a diff: an anchor typo caught by the loader is one
+        # line of output, and the same typo caught at publication is an editor
+        # hunting through a screen for which of twenty questions is broken.
+        section_anchors = {s.get("anchor") for s in sections}
+        q_keys = [
+            (q.get("anchor"), q.get("locale", "en"))
+            for q in rule_set.get("questions", [])
+        ]
+        if len(q_keys) != len(set(q_keys)):
+            problems.append(f"{where}: duplicate question anchors within one locale")
+
+        for question in rule_set.get("questions", []):
+            q_anchor = question.get("anchor", "?")
+            if not (question.get("question") or "").strip():
+                problems.append(f"{where}, question `{q_anchor}`: no question text")
+            if not (question.get("answer") or "").strip():
+                problems.append(
+                    f"{where}, question `{q_anchor}`: no answer. A question with "
+                    f"no answer is a heading"
+                )
+            target = question.get("section_anchor")
+            if target not in section_anchors:
+                problems.append(
+                    f"{where}, question `{q_anchor}`: answers from section "
+                    f"`{target}`, which this set does not have"
+                )
+
         codes = [r.get("code") for r in rule_set.get("requirements", [])]
         if len(codes) != len(set(codes)):
             problems.append(f"{where}: duplicate requirement codes")
@@ -157,7 +187,14 @@ async def load(db, corpus: dict, replace: bool) -> dict:
     if problems:
         raise CorpusError("\n".join(problems))
 
-    counts = {"jurisdictions": 0, "sets": 0, "sections": 0, "sources": 0, "documents": 0}
+    counts = {
+        "jurisdictions": 0,
+        "sets": 0,
+        "sections": 0,
+        "sources": 0,
+        "questions": 0,
+        "documents": 0,
+    }
 
     for node in corpus.get("jurisdictions", []):
         if await db.get(Jurisdiction, node["code"]) is not None:
@@ -225,6 +262,9 @@ async def load(db, corpus: dict, replace: bool) -> dict:
                 delete(RuleSection).where(RuleSection.rule_set_id == old.id)
             )
             await db.execute(
+                delete(RuleQuestion).where(RuleQuestion.rule_set_id == old.id)
+            )
+            await db.execute(
                 delete(DocumentRequirement).where(
                     DocumentRequirement.rule_set_id == old.id
                 )
@@ -283,6 +323,20 @@ async def load(db, corpus: dict, replace: bool) -> dict:
                     )
                 )
                 counts["sources"] += 1
+
+        for order, question in enumerate(spec.get("questions", [])):
+            db.add(
+                RuleQuestion(
+                    rule_set_id=rule_set.id,
+                    anchor=question["anchor"],
+                    locale=question.get("locale", "en"),
+                    order=question.get("order", order),
+                    question=question["question"],
+                    answer=question.get("answer", ""),
+                    section_anchor=question["section_anchor"],
+                )
+            )
+            counts["questions"] += 1
 
         for req in spec.get("requirements", []):
             db.add(

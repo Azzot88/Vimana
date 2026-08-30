@@ -27,6 +27,12 @@ import MonoText from '../components/MonoText'
  * When a section has not been translated yet, the page says so on that section
  * instead of showing English as though it were the translation.
  *
+ * **The questions come first** (T3.11.05). The corpus below them is written as
+ * law — which is the right shape for something a person has to be able to
+ * check, and the wrong shape for somebody deciding whether they can put a
+ * painting in a suitcase on Thursday. Each short answer links down to the
+ * section it compresses, and that link is what earns it the right to be short.
+ *
  * Rendered inside `LandingShell` (T_UX.23) so a visitor arriving from a search
  * lands on something that is recognisably the same product, with a way onward.
  */
@@ -120,6 +126,57 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
             </p>
           )}
         </header>
+
+        {/* The compact reading, first. A corpus written as law is checkable
+            and unreadable; this block is the same corpus answered as somebody
+            arrives asking it. Each answer names the section it came from and
+            links down to it — the short form is allowed to be short precisely
+            because the citation is one click away, and an answer with nothing
+            behind it would be us asserting somebody else's law on our own
+            authority. Collapsed by default it would not be: this is what the
+            page is for. */}
+        {data.questions.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="font-display font-semibold text-xl text-navy">
+              {t('rulesPage.questionsTitle')}
+            </h2>
+            <p className="text-sm font-body text-navy/60">
+              {t('rulesPage.questionsHint')}
+            </p>
+            <ul className="space-y-2">
+              {data.questions.map((q) => (
+                <li
+                  key={`${q.anchor}-${q.locale}`}
+                  id={q.anchor}
+                  className="rounded-card border border-navy/10 bg-white p-4 space-y-2"
+                >
+                  <h3 className="font-display font-medium text-navy">
+                    {q.question}
+                    {q.locale !== data.locale && (
+                      <span className="ml-2 text-xs font-mono text-navy/40">
+                        {t('rulesPage.inLocale', { locale: q.locale.toUpperCase() })}
+                      </span>
+                    )}
+                  </h3>
+                  <div
+                    className="rules-prose text-sm font-body text-navy/80 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(q.answer) }}
+                  />
+                  <a
+                    href={`#${q.section_anchor}`}
+                    className="inline-block text-xs font-body text-cyan hover:underline"
+                  >
+                    {t('rulesPage.readTheRule', {
+                      section:
+                        data.sections.find((s) => s.anchor === q.section_anchor)?.title ||
+                        q.section_anchor,
+                    })}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {data.sections.map((s) => (
           <section key={`${s.anchor}-${s.locale}`} id={s.anchor} className="space-y-2">

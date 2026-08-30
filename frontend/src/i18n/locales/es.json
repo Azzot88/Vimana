@@ -1332,18 +1332,36 @@
     "reviewedAt": "comprobado {{when}}",
     "neverReviewed": "todavía no comprobado con las fuentes",
     "sortLabel": "Orden:",
-    "sort": { "chronological": "por cambios", "category": "por categoría" },
+    "sort": {
+      "chronological": "por cambios",
+      "category": "por categoría"
+    },
     "emptyTitle": "Todavía no hay nada publicado",
     "emptyBody": "Los siguientes corredores que se escriben son los que la gente pide. Dinos qué dirección necesitas.",
     "failed": "No se pudo cargar la lista. Recarga la página — no es lo mismo que no haya nada aquí.",
-    "disclaimer": "Vimana no es un agente de aduanas y no emite ninguno de estos documentos. Cada página traslada lo que dicen las fuentes y las cita, para que puedas comprobarlo tú mismo."
+    "disclaimer": "Vimana no es un agente de aduanas y no emite ninguno de estos documentos. Cada página traslada lo que dicen las fuentes y las cita, para que puedas comprobarlo tú mismo.",
+    "answersCount_one": "{{count}} pregunta respondida",
+    "answersCount_other": "{{count}} preguntas respondidas",
+    "facet": {
+      "category_key": "Qué transportas",
+      "direction": "Sentido",
+      "jurisdiction_code": "País",
+      "any": "Cualquiera"
+    },
+    "showingCount": "Mostrando {{shown}} de {{total}}",
+    "noMatchTitle": "Todavía no hay reglas para esta combinación",
+    "clearFilters": "Borrar filtros"
   },
   "rulesPage": {
     "missingTitle": "Todavía no hay reglas publicadas para este corredor",
     "missingBody": "Aquí aún no hay nada. Si necesitas esta dirección, dínoslo: los siguientes corredores que se escriben son los que la gente pide.",
     "failed": "No se pudo cargar la página. Inténtalo de nuevo.",
     "untitled": "Reglas del corredor",
-    "dir": { "export": "Salida de", "import": "Entrada en", "transit": "Tránsito por" },
+    "dir": {
+      "export": "Salida de",
+      "import": "Entrada en",
+      "transit": "Tránsito por"
+    },
     "reviewedAt": "Comprobado con las fuentes el {{when}}",
     "neverReviewed": "Todavía no comprobado con las fuentes",
     "needsReview": "una fuente ha cambiado",
@@ -1358,7 +1376,10 @@
     "leadDays": "{{days}} días para obtenerlo",
     "validDays": "válido {{days}} días",
     "conditional": "necesario solo en algunos casos",
-    "disclaimer": "Vimana no es un agente de aduanas y no emite ninguno de estos documentos. Esta página traslada lo que dicen las fuentes, con la cita junto a cada afirmación, para que puedas comprobarlo tú mismo. Las reglas cambian — la fecha de arriba es el día en que una persona comparó por última vez este texto con la fuente."
+    "disclaimer": "Vimana no es un agente de aduanas y no emite ninguno de estos documentos. Esta página traslada lo que dicen las fuentes, con la cita junto a cada afirmación, para que puedas comprobarlo tú mismo. Las reglas cambian — la fecha de arriba es el día en que una persona comparó por última vez este texto con la fuente.",
+    "questionsTitle": "En breve: las preguntas más frecuentes",
+    "questionsHint": "Una respuesta corta y un enlace a la sección donde la respalda una cita de la fuente.",
+    "readTheRule": "La regla completa: {{section}}"
   },
   "adminRules": {
     "title": "Reglas del corredor",
@@ -1377,8 +1398,17 @@
     "categoryPlaceholder": "art, animal, document…",
     "setTitle": "Título",
     "titlePlaceholder": "Título del conjunto",
-    "dir": { "export": "salida", "import": "entrada", "transit": "tránsito" },
-    "status": { "draft": "borrador", "review": "en revisión", "published": "publicado", "outdated": "sustituido" },
+    "dir": {
+      "export": "salida",
+      "import": "entrada",
+      "transit": "tránsito"
+    },
+    "status": {
+      "draft": "borrador",
+      "review": "en revisión",
+      "published": "publicado",
+      "outdated": "sustituido"
+    },
     "reviewedAt": "Última comprobación por una persona: {{when}}",
     "blockersTitle": "Todavía no se puede publicar",
     "toReview": "Enviar a revisión",
@@ -1419,7 +1449,24 @@
     "publishNoteLabel": "Qué ha cambiado",
     "publishNotePlaceholder": "Una línea para quien vuelve — opcional",
     "reqNotesPlaceholder": "Notas",
-    "md": { "bold": "negrita", "italic": "cursiva", "heading": "título", "list": "lista", "quote": "cita", "link": "enlace", "preview": "vista previa", "edit": "fuente" }
+    "md": {
+      "bold": "negrita",
+      "italic": "cursiva",
+      "heading": "título",
+      "list": "lista",
+      "quote": "cita",
+      "link": "enlace",
+      "preview": "vista previa",
+      "edit": "fuente"
+    },
+    "questionsTitle": "Preguntas y respuestas cortas",
+    "questionsHint": "Cada respuesta responde desde una sección con cita. Una pregunta que no apunta a nada bloquea la publicación.",
+    "addQuestion": "Añadir pregunta",
+    "questionLabel": "Pregunta",
+    "answerLabel": "Respuesta corta",
+    "answersFrom": "Responde desde la sección",
+    "answersFromMissing": "No existe esa sección en este conjunto",
+    "questionAnchor": "Ancla de la pregunta"
   },
   "adminRoles": {
     "title": "Roles y propuestas",

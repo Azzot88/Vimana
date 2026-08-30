@@ -1376,18 +1376,36 @@
     "reviewedAt": "checked {{when}}",
     "neverReviewed": "not yet checked against the sources",
     "sortLabel": "Order:",
-    "sort": { "chronological": "by change", "category": "by category" },
+    "sort": {
+      "chronological": "by change",
+      "category": "by category"
+    },
     "emptyTitle": "Nothing published yet",
     "emptyBody": "The corridors written next are the ones people ask about. Tell us which direction you need.",
     "failed": "Could not load the list. Reload the page — this is not the same as there being nothing here.",
-    "disclaimer": "Vimana is not a customs broker and issues none of these documents. Every page states what the sources say and quotes them, so you can check it yourself."
+    "disclaimer": "Vimana is not a customs broker and issues none of these documents. Every page states what the sources say and quotes them, so you can check it yourself.",
+    "answersCount_one": "{{count}} question answered",
+    "answersCount_other": "{{count}} questions answered",
+    "facet": {
+      "category_key": "What you carry",
+      "direction": "Direction",
+      "jurisdiction_code": "Country",
+      "any": "Any"
+    },
+    "showingCount": "Showing {{shown}} of {{total}}",
+    "noMatchTitle": "No rules for this combination yet",
+    "clearFilters": "Clear filters"
   },
   "rulesPage": {
     "missingTitle": "No rules published for this corridor yet",
     "missingBody": "Nothing has been published here. If you need this direction, tell us — the corridors people ask about are the ones written next.",
     "failed": "Could not load this page. Try again in a moment.",
     "untitled": "Corridor rules",
-    "dir": { "export": "Taking out of", "import": "Bringing into", "transit": "Passing through" },
+    "dir": {
+      "export": "Taking out of",
+      "import": "Bringing into",
+      "transit": "Passing through"
+    },
     "reviewedAt": "Checked against the sources on {{when}}",
     "neverReviewed": "Not yet checked against the sources",
     "needsReview": "a source has changed",
@@ -1402,7 +1420,10 @@
     "leadDays": "{{days}} days to obtain",
     "validDays": "valid {{days}} days",
     "conditional": "needed only in some cases",
-    "disclaimer": "Vimana is not a customs broker and issues none of these documents. This page states what the sources say, with the quotation next to each claim, so you can check it yourself. Rules change — the date above is when a person last compared this text with the source."
+    "disclaimer": "Vimana is not a customs broker and issues none of these documents. This page states what the sources say, with the quotation next to each claim, so you can check it yourself. Rules change — the date above is when a person last compared this text with the source.",
+    "questionsTitle": "In short: the questions people ask",
+    "questionsHint": "A short answer, and a link to the section where it is backed by a quotation from the source.",
+    "readTheRule": "The rule in full: {{section}}"
   },
   "adminRules": {
     "title": "Corridor rules",
@@ -1421,7 +1442,11 @@
     "categoryPlaceholder": "art, animal, document…",
     "setTitle": "Title",
     "titlePlaceholder": "Title of the set",
-    "dir": { "export": "export", "import": "import", "transit": "transit" },
+    "dir": {
+      "export": "export",
+      "import": "import",
+      "transit": "transit"
+    },
     "status": {
       "draft": "draft",
       "review": "in review",
@@ -1468,7 +1493,24 @@
     "publishNoteLabel": "What changed",
     "publishNotePlaceholder": "One line for the reader who came back — optional",
     "reqNotesPlaceholder": "Notes",
-    "md": { "bold": "bold", "italic": "italic", "heading": "heading", "list": "list", "quote": "quote", "link": "link", "preview": "preview", "edit": "source" }
+    "md": {
+      "bold": "bold",
+      "italic": "italic",
+      "heading": "heading",
+      "list": "list",
+      "quote": "quote",
+      "link": "link",
+      "preview": "preview",
+      "edit": "source"
+    },
+    "questionsTitle": "Questions and short answers",
+    "questionsHint": "Every answer answers from a section with a citation. A question pointing nowhere blocks publication.",
+    "addQuestion": "Add a question",
+    "questionLabel": "Question",
+    "answerLabel": "Short answer",
+    "answersFrom": "Answers from section",
+    "answersFromMissing": "No such section in this set",
+    "questionAnchor": "Question anchor"
   },
   "adminRoles": {
     "title": "Roles and offers",
