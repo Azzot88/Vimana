@@ -347,7 +347,10 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
   return (
     <LandingShell source="sender">
       {() => (
-        <div className="py-8 sm:py-12">
+        // Back to the measure the page had before the rebuild (owner's
+        // decision 2026-09-02). The catalogue has no side rail, so the cap is
+        // simply the reading width and holds at every size.
+        <div className="mx-auto max-w-3xl py-8 sm:py-12">
           <Breadcrumbs
             items={[
               { label: t('rulesIndex.crumbHome'), to: '/' },

@@ -134,7 +134,12 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
     })
 
     return (
-      <article>
+      // 48rem is `max-w-3xl`: the reading column keeps the density it had
+      // before the rebuild (owner's decision 2026-09-02), and the contents rail
+      // sits in the margin beside it rather than inside it, so getting the text
+      // back does not cost the reader the map of the document.
+      <article className="lg:grid lg:grid-cols-[minmax(0,48rem)_13rem] lg:justify-center lg:gap-10">
+        <div className="min-w-0">
         <Breadcrumbs
           items={[
             { label: t('rulesIndex.crumbHome'), to: '/' },
@@ -208,8 +213,7 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
           )}
         </header>
 
-        <div className="mt-10 lg:grid lg:grid-cols-[minmax(0,1fr)_13rem] lg:gap-10">
-          <div className="min-w-0">
+        <div className="mt-10">
             {/* The compact reading, first. Rows under one heading rather than a
                 grid of cards: these are questions in a list, and a card around
                 each one would say they are separate objects when they are one
@@ -403,15 +407,16 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Contents. A map of a reference document, sticky where there is room
-              for it and simply first-in-order where there is not. Hidden below
-              `lg` rather than collapsed into an accordion: on a phone the page
-              is one column and scrolling is the map. */}
-          <nav
-            aria-label={t('rulesPage.contents') as string}
-            className="mt-12 hidden lg:sticky lg:top-24 lg:mt-0 lg:block lg:self-start"
-          >
+        {/* Contents. A map of a reference document, sticky where there is room
+            for it and simply first-in-order where there is not. Hidden below
+            `lg` rather than collapsed into an accordion: on a phone the page is
+            one column and scrolling is the map. */}
+        <nav
+          aria-label={t('rulesPage.contents') as string}
+          className="mt-12 hidden lg:sticky lg:top-24 lg:mt-0 lg:block lg:self-start"
+        >
             <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-navy/40">
               {t('rulesPage.contents')}
             </p>
@@ -447,8 +452,7 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
                 </li>
               )}
             </ul>
-          </nav>
-        </div>
+        </nav>
       </article>
     )
   }
@@ -458,7 +462,12 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
   // rules reader under a fourth source that means nothing to whoever reads it.
   return (
     <LandingShell source="sender">
-      {() => <div className="py-8 sm:py-12">{body()}</div>}
+      {() => (
+        // Capped at the old measure below `lg`; released above it so the
+        // article's own grid can put the contents rail alongside the text
+        // instead of taking a bite out of it.
+        <div className="mx-auto max-w-3xl py-8 sm:py-12 lg:max-w-none">{body()}</div>
+      )}
     </LandingShell>
   )
 }
