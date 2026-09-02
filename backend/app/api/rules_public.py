@@ -29,6 +29,7 @@ Endpoints:
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date, datetime
 
@@ -183,6 +184,36 @@ class RuleSetOut(BaseModel):
     questions: list[QuestionOut]
     sections: list[SectionOut]
     requirements: list[RequirementOut]
+
+
+#: What a category key or a country code may contain. Both are slugs the editor
+#: types and the URL carries; nothing else can match a stored row.
+_SLUG = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _slug_or_404(value: str) -> str:
+    """Check the shape before the database sees it.
+
+    A category or a country that is not a slug cannot match a row, so asking is
+    pointless. One particular "anything else" was worse than pointless: a NUL
+    byte in the path reached asyncpg, which refuses it at the protocol level
+    (`invalid byte sequence for encoding "UTF8"`), turning a malformed public
+    URL into a 500. Found by the contract fuzzer, and found here for the second
+    time in this codebase after `T_KEYS.1` fixed the same class of bug on
+    `/identities/{npub}` — which is why the check now sits next to the two
+    handlers that share it rather than inside one of them.
+
+    404 rather than 422, following that precedent: this endpoint answers "no
+    such corridor" to everything it will not talk about, and a distinct code for
+    "malformed" would be a second shape of answer on a public URL for no gain.
+    It also keeps a crawler that mangles a link from learning anything about
+    which half of the address was wrong.
+    """
+    if not _SLUG.match(value or ""):
+        raise HTTPException(
+            status_code=404, detail="No published rules for this corridor"
+        )
+    return value
 
 
 def path_for(category: str, direction: RuleDirection, country: str) -> str:
@@ -415,7 +446,17 @@ async def read_rule_markdown(
     part with a decision in it.
     """
     data = await read_rule(category, direction, country, db, locale)
-    filename = f"{category}-{direction.value}-{country.lower()}.md"
+    # Built from the **stored** values, not from the path. Two reasons, and the
+    # second is the one that matters: a filename goes into a response header,
+    # where a quote closes the `filename="..."` early and a control character is
+    # header injection. Reading it back from the row that was actually found
+    # means the header can only ever contain what an editor stored, and it also
+    # gives the reader a file named after the corridor rather than after the
+    # casing they happened to type.
+    filename = (
+        f"{data.category_key}-{data.direction.value}-"
+        f"{data.jurisdiction_code.lower()}.md"
+    )
     return PlainTextResponse(
         _as_markdown(data),
         media_type="text/markdown; charset=utf-8",
@@ -431,6 +472,9 @@ async def read_rule(
     db: AsyncSession = Depends(get_db),
     locale: str = Query(default=FALLBACK_LOCALE, max_length=5),
 ):
+    _slug_or_404(category)
+    _slug_or_404(country)
+
     rule_set = (
         await db.execute(
             select(RuleSet).where(

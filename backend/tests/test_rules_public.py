@@ -476,3 +476,65 @@ async def test_the_markdown_carries_the_questions_and_their_sections(client, pub
     # The pointer travels with the answer, so the compact form stays traceable
     # once the file has left the site.
     assert "`overview`" in text
+
+
+# --- malformed addresses (found by the contract fuzzer) ---------------------
+
+async def test_a_nul_byte_in_the_path_is_a_404_not_a_500(client, published):
+    """The bug the fuzzer found, asserted so it cannot come back.
+
+    A NUL byte in the URL reached asyncpg, which refuses it at the protocol
+    level (`invalid byte sequence for encoding "UTF8"`), and a malformed public
+    address turned into a server error. This is the **second** time this class
+    of bug appeared in this codebase; `T_KEYS.1` fixed it on
+    `/identities/{npub}` first. Which is the argument for the test: the fix is
+    four lines and the finding is a year apart from itself.
+    """
+    code, cat_key = published
+
+    for path in (
+        f"/api/rules/{cat_key}%00/export/{code}",
+        f"/api/rules/{cat_key}/export/{code}%00",
+        f"/api/rules/{cat_key}%00/export/{code}/markdown",
+    ):
+        resp = await client.get(path)
+        assert resp.status_code == 404, f"{path} -> {resp.status_code}"
+
+
+async def test_a_malformed_corridor_answers_like_an_unknown_one(client):
+    """One shape of answer on a public URL.
+
+    404 rather than 422: a distinct code for "malformed" would tell a crawler
+    that mangled a link which half of the address it got wrong, and would buy
+    nothing for the reader, who is looking at a page that does not exist either
+    way.
+    """
+    for path in (
+        "/api/rules/has spaces/export/US",
+        # Longer than the slug bound. A category key is a slug an editor typed,
+        # not an essay, and the bound is what keeps the check from being a
+        # character test that passes anything patient enough.
+        f"/api/rules/{'a' * 65}/export/US",
+        "/api/rules/'; DROP TABLE rule_sets; --/export/US",
+    ):
+        resp = await client.get(path)
+        assert resp.status_code == 404, f"{path} -> {resp.status_code}"
+
+
+async def test_the_download_filename_comes_from_the_row_not_the_url(client, published):
+    """A filename lands in a response header, and a header built from user
+    input is header injection rather than a cosmetic problem.
+
+    Reading it back from the row that was found means the header can only ever
+    carry what an editor stored. The visible effect is also better: the file is
+    named after the corridor rather than after the casing somebody typed.
+    """
+    code, cat_key = published
+    resp = await client.get(f"/api/rules/{cat_key}/export/{code.lower()}/markdown")
+
+    assert resp.status_code == 200
+    disposition = resp.headers["content-disposition"]
+    assert f'filename="{cat_key}-export-{code.lower()}.md"' == disposition.split("; ", 1)[1]
+    # No stray quote or control character can reach the header, because nothing
+    # from the path reaches it at all.
+    assert "\r" not in disposition and "\n" not in disposition
