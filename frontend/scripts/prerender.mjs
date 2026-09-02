@@ -37,16 +37,13 @@ if (!existsSync(ssrEntry)) {
   throw new Error(`prerender: ${ssrEntry} is missing — run \`vite build --ssr\` first`)
 }
 
-const { render, PRERENDER_PATHS } = await import(pathToFileURL(ssrEntry).href)
+const { render, PRERENDER_PATHS, injectPage } = await import(pathToFileURL(ssrEntry).href)
 
 const shell = readFileSync(shellPath, 'utf8')
-const marker = '<div id="root"></div>'
-if (!shell.includes(marker)) {
-  // Fail loudly. A silent no-op here would ship an empty landing that looks
-  // fine in the browser and is blank to every crawler — the exact failure this
-  // script exists to prevent, made invisible.
-  throw new Error(`prerender: could not find ${marker} in index.html`)
-}
+// `injectPage` fails loudly if the marker is missing. A silent no-op there
+// would ship an empty landing that looks fine in the browser and is blank to
+// every crawler — the exact failure this script exists to prevent, made
+// invisible.
 
 /** `/` keeps the name `landing.html` it has had since T_UX.7: nginx, the
  *  Dockerfile and anybody debugging a deploy all know it by that name, and
@@ -57,7 +54,7 @@ const fileFor = (path) => (path === '/' ? 'landing.html' : `${path.replace(/^\//
 for (const path of PRERENDER_PATHS) {
   const html = render('ru', path)
   const outPath = resolve(dist, fileFor(path))
-  writeFileSync(outPath, shell.replace(marker, `<div id="root">${html}</div>`), 'utf8')
+  writeFileSync(outPath, injectPage(shell, html), 'utf8')
   console.log(`prerender: ${path} → ${outPath} (${html.length} chars of markup)`)
 }
 
@@ -71,13 +68,15 @@ for (const path of PRERENDER_PATHS) {
  * That fallback is not laziness. The build runs in two places: on the server,
  * inside compose, where `backend` answers; and on a developer's laptop, where
  * it does not. Failing the whole build because a laptop has no database would
- * make the common case hostage to the rare one, and the pages still work
- * without a file — nginx falls back to the SPA shell, so a person sees the
- * page and only a crawler misses it.
+ * make the common case hostage to the rare one.
  *
- * Which is exactly the limitation of variant A, chosen deliberately
- * (`IMPLEMENTATIONPLAN §3.11.4` п.4). Variant B — serving `/rules/*` from the
- * database — is `T_OPS.2`, due once there are more than ten corpora.
+ * **These files are no longer how the pages are served** (`T_OPS.2`). `/rules`
+ * and `/rules/*` are rendered per request by `scripts/ssr-server.mjs` from the
+ * current state of the database, so publishing and being visible are one event.
+ * What is written here is the floor: what nginx serves when that renderer is
+ * down, and past it the SPA shell. Worth keeping precisely because it costs one
+ * build step and removes a failure mode: an auxiliary process going down would
+ * otherwise take the whole section with it.
  */
 const apiBase = (process.env.PRERENDER_API_BASE || 'http://backend:8000').replace(/\/$/, '')
 const ruleFileFor = (path) =>
@@ -114,7 +113,7 @@ try {
 const indexHtml = renderRulesIndex('ru', index ?? undefined)
 writeFileSync(
   resolve(dist, 'rules-index.html'),
-  shell.replace(marker, `<div id="root">${indexHtml}</div>`),
+  injectPage(shell, indexHtml, index ?? undefined, '/rules'),
   'utf8',
 )
 console.log(
@@ -135,7 +134,7 @@ try {
     )
     const html = renderRule('ru', entry.path, data)
     const outPath = resolve(dist, ruleFileFor(entry.path))
-    writeFileSync(outPath, shell.replace(marker, `<div id="root">${html}</div>`), 'utf8')
+    writeFileSync(outPath, injectPage(shell, html, data, entry.path), 'utf8')
     console.log(`prerender: ${entry.path} → ${outPath} (${html.length} chars of markup)`)
   }
 } catch (err) {

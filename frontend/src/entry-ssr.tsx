@@ -10,6 +10,7 @@ import SenderLandingPage from './pages/SenderLandingPage'
 import BusinessLandingPage from './pages/BusinessLandingPage'
 import RulesPage from './pages/RulesPage'
 import RulesIndexPage from './pages/RulesIndexPage'
+import { RULES_DATA_ID } from './api/rulesPublic'
 
 /**
  * T_UX.7 pt.2 — the landing, rendered to HTML at build time.
@@ -54,12 +55,11 @@ export const PRERENDER_PATHS = Object.keys(PAGES)
  * passed in rather than fetched here — Node has no session, no axios base URL
  * and no business knowing where the API lives; `scripts/prerender.mjs` does.
  *
- * ⚠️ **What this does and does not solve.** A set published after the last
- * deploy has no file, and nginx falls back to the SPA shell: the page works for
- * a person and is empty for a crawler until the next build. That is variant A,
- * chosen deliberately (`IMPLEMENTATIONPLAN §3.11.4` п.4); variant B — serving
- * `/rules/*` from the database — is `T_OPS.2`, to be picked up once there are
- * more than ten corpora.
+ * **Two callers now, and that is the point** (`T_OPS.2`). The build-time step
+ * still writes a file per corridor, and `scripts/ssr-server.mjs` calls the same
+ * function per request from the live database. The files stopped being the
+ * delivery mechanism and became the fallback for a renderer that is down; the
+ * markup is identical either way, because it is the same function.
  */
 export function renderRule(lang: string, path: string, data: unknown): string {
   i18n.changeLanguage(lang)
@@ -103,6 +103,57 @@ export function renderRulesIndex(lang: string, data?: unknown): string {
       </StaticRouter>
     </I18nextProvider>,
   )
+}
+
+/** Typed as a record so indexing it with a string is not an implicit `any`. */
+const ATTR_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+
+/**
+ * Put rendered markup into the shell, and the data it was rendered from
+ * beside it (`T_OPS.2`).
+ *
+ * Both callers used to do the `String.replace` themselves, which was fine
+ * while there was nothing to carry but markup. Now the payload has to travel
+ * too: a page hydrating against content while its component starts empty makes
+ * React discard the server's work and paint a skeleton over a finished page.
+ *
+ * `<` is escaped because `</script>` inside a JSON string closes the tag no
+ * matter what `type` says. The address is stamped alongside so the browser can
+ * tell whether the payload belongs to the page it is currently on.
+ */
+export function injectPage(
+  shell: string,
+  markup: string,
+  data?: unknown,
+  path?: string,
+): string {
+  const marker = '<div id="root"></div>'
+  if (!shell.includes(marker)) {
+    throw new Error(`injectPage: could not find ${marker} in the shell`)
+  }
+  if (data !== undefined && !path) {
+    // The address is what makes the payload usable: the document outlives
+    // client-side navigation, and an untagged payload would be handed to
+    // whatever page mounts next.
+    throw new Error('injectPage: data was given without the path it belongs to')
+  }
+  // Escaped because the path comes from the request line: nginx routes
+  // `/rules/<a>/<b>/<c>` with `[^/]+` for each segment, and a double quote is
+  // a perfectly legal character there. Unescaped it would close the attribute
+  // and put whatever followed into the tag.
+  const safePath = String(path ?? '').replace(/[&<>"']/g, (c) => ATTR_ESCAPES[c])
+  const payload =
+    data === undefined
+      ? ''
+      : `<script id="${RULES_DATA_ID}" type="application/json" data-path="${safePath}">` +
+        `${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`
+  return shell.replace(marker, `<div id="root">${markup}</div>${payload}`)
 }
 
 export function render(lang: string, path = '/'): string {

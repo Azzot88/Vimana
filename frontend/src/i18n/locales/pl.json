@@ -1445,7 +1445,6 @@
     "retire": "Wycofaj",
     "deleteDraft": "Usuń szkic",
     "frozenHint": "Zestaw jest zamrożony: to, co ludzie przeczytali, pozostaje tym, co przeczytali. Zamiast edytować, opublikuj nową wersję.",
-    "publishDelayHint": "Dla czytelnika strona jest już dostępna. Wyszukiwarki zobaczą ją po najbliższym wdrożeniu — strony są budowane, nie renderowane na żądanie.",
     "sectionsTitle": "Sekcje",
     "sectionsHint": "Każda sekcja ma własne cytowanie. Sekcji bez źródła nie da się opublikować — to cytat czyni twierdzenie sprawdzalnym.",
     "noSource": "Brak źródła — ta sekcja blokuje publikację.",
@@ -1493,7 +1492,9 @@
     "answerLabel": "Krótka odpowiedź",
     "answersFrom": "Odpowiada z sekcji",
     "answersFromMissing": "Nie ma takiej sekcji w tym zestawie",
-    "questionAnchor": "Kotwica pytania"
+    "questionAnchor": "Kotwica pytania",
+    "publishedLive": "Strona jest dostępna dla czytelników i dla wyszukiwarek: renderuje się na żądanie.",
+    "openPublicPage": "Otwórz stronę"
   },
   "adminRoles": {
     "title": "Role i propozycje",

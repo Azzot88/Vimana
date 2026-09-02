@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { rulesIndex, type RuleIndexEntry } from '../api/rulesPublic'
+import { bootstrapped, rulesIndex, type RuleIndexEntry } from '../api/rulesPublic'
 import { usePrefs } from '../hooks/usePrefs'
 import { freshnessOf } from '../lib/format'
 import LandingShell from '../components/landing/LandingShell'
@@ -78,7 +78,11 @@ const EMPTY: Record<FacetKey, string | null> = {
 export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[] }) {
   const { t, i18n } = useTranslation()
   const prefs = usePrefs()
-  const [entries, setEntries] = useState<RuleIndexEntry[] | null>(initial ?? null)
+  // `initial` on the server, the payload it shipped on the client. Both must
+  // produce the same first render or hydration throws the server's markup away
+  // and paints a skeleton over a finished page (T_OPS.2).
+  const seed = initial ?? bootstrapped<RuleIndexEntry[]>()
+  const [entries, setEntries] = useState<RuleIndexEntry[] | null>(seed ?? null)
   const [failed, setFailed] = useState(false)
   const [sort, setSort] = useState<Sort>('chronological')
   const [query, setQuery] = useState('')
@@ -101,7 +105,7 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
         // prerendered page the build-time catalogue is already on screen and
         // still correct; printing a red failure line above it would tell the
         // reader that what they are reading is broken, which it is not.
-        if (!initial) {
+        if (!seed) {
           setEntries([])
           setFailed(true)
         }
@@ -109,8 +113,8 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
     return () => {
       live = false
     }
-    // `initial` is a build-time prop and never changes after mount, so it is
-    // read here rather than tracked.
+    // `seed` is fixed at mount and never changes, so it is read here rather
+    // than tracked.
   }, [i18n.language])
 
   const label = (key: FacetKey, value: string, rows: RuleIndexEntry[]): string => {

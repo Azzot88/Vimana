@@ -1483,7 +1483,6 @@
     "retire": "Retire",
     "deleteDraft": "Delete draft",
     "frozenHint": "This set is frozen: what people read stays what they read. Publish a new version instead of editing it.",
-    "publishDelayHint": "The page is live for readers now. Search engines see it after the next deploy — the pages are built, not rendered on request.",
     "sectionsTitle": "Sections",
     "sectionsHint": "Each section carries its own citation. One without a source cannot be published — the quotation is what makes the claim checkable.",
     "noSource": "No source yet — this section blocks publication.",
@@ -1531,7 +1530,9 @@
     "answerLabel": "Short answer",
     "answersFrom": "Answers from section",
     "answersFromMissing": "No such section in this set",
-    "questionAnchor": "Question anchor"
+    "questionAnchor": "Question anchor",
+    "publishedLive": "The page is live for readers and for search engines: it is rendered on request.",
+    "openPublicPage": "Open the page"
   },
   "adminRoles": {
     "title": "Roles and offers",

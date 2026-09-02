@@ -104,6 +104,48 @@ export interface RuleIndexEntry {
   questions: QuestionPreview[]
 }
 
+/**
+ * T_OPS.2 — the payload the server rendered this page from.
+ *
+ * Without it the page hydrates against markup full of content while the
+ * component starts with no data, React throws the server's work away and
+ * re-renders a loading skeleton, and the reader watches a finished page turn
+ * into grey boxes and back. Reading the same payload the markup was built from
+ * makes the first client render identical to the server one, which is the only
+ * thing hydration actually asks for.
+ *
+ * **The payload carries the address it was rendered for, and that is not
+ * belt-and-braces.** The document survives client-side navigation: without the
+ * check, opening the catalogue and then clicking into a corridor would hand
+ * that page the catalogue's array, which has the wrong shape entirely and would
+ * render as garbage rather than fail. Comparing against the current path costs
+ * one line and makes the payload usable only where it is true.
+ *
+ * The id is declared here rather than in `entry-ssr` because both sides need
+ * it and only this module is safe to import from the browser bundle.
+ *
+ * Called by: `pages/RulesIndexPage`, `pages/RulesPage`, `entry-ssr.injectPage`.
+ */
+export const RULES_DATA_ID = '__rules_data__'
+
+/** `/rules/art/export/RU/` and `/rules/art/export/RU` are the same address. */
+const samePath = (a: string, b: string) =>
+  a.replace(/\/+$/, '') === b.replace(/\/+$/, '')
+
+export function bootstrapped<T>(): T | undefined {
+  if (typeof document === 'undefined') return undefined
+  const el = document.getElementById(RULES_DATA_ID)
+  if (!el?.textContent) return undefined
+  if (!samePath(el.dataset.path || '', window.location.pathname)) return undefined
+  try {
+    return JSON.parse(el.textContent) as T
+  } catch {
+    // A malformed payload is not worth a blank page: fall through to the
+    // fetch the component would have made anyway.
+    return undefined
+  }
+}
+
 export const rulesIndex = (locale: string) =>
   api.get<RuleIndexEntry[]>('/api/rules', { params: { locale } })
 

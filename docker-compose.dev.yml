@@ -147,6 +147,41 @@ services:
       --workers ${UVICORN_WORKERS:-2} --proxy-headers --forwarded-allow-ips=*
       --timeout-graceful-shutdown 20
 
+  ssr:
+    # T_OPS.2 — renders `/rules` and `/rules/*` from the current state of the
+    # database, per request. Before it, those pages were files written at build
+    # time and a rule published after the last deploy stayed invisible to a
+    # crawler until the next one.
+    #
+    # Same image as the frontend, different stage: the SSR bundle is the same
+    # code the browser runs, so there is one page rendered in two places rather
+    # than two copies of one page.
+    #
+    # Not published to the host and not reachable from outside: the frontend's
+    # nginx proxies to it over this network, and a 502 from it falls back to the
+    # prerendered file (`frontend/nginx.conf`).
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ssr
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SSR_API_BASE: http://backend:8000
+      SSR_PORT: "3000"
+      # Small on purpose. The point of this service is that publishing is
+      # visible at once; a long TTL would quietly restore the delay it removes.
+      SSR_CACHE_TTL_MS: "15000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
+
   frontend:
     # T_SEC.2 — production static build served by internal nginx on :80.
     # No source volume mount: the container ships the compiled bundle only.
@@ -157,6 +192,10 @@ services:
     logging: *default-logging
     depends_on:
       - backend
+      # Not `service_healthy`: nginx resolves the name per request and answers a
+      # missing renderer with the prerendered file, so the site must be able to
+      # come up without it.
+      - ssr
     healthcheck:
       # `127.0.0.1`, not `localhost`: inside the container the name resolves to
       # `::1` first, and `listen 80;` binds IPv4 only — so the probe was testing

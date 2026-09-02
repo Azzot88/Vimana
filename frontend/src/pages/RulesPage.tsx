@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { readRule, type PublicRuleSet } from '../api/rulesPublic'
+import { bootstrapped, readRule, type PublicRuleSet } from '../api/rulesPublic'
 import { usePrefs } from '../hooks/usePrefs'
 import { freshnessOf } from '../lib/format'
 import { renderMarkdown } from '../lib/markdown'
@@ -49,9 +49,13 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
   const prefs = usePrefs()
   const params = useParams<{ category: string; direction: string; country: string }>()
 
-  const [data, setData] = useState<PublicRuleSet | null>(initial ?? null)
+  // `initial` on the server, the payload it shipped on the client. Both must
+  // produce the same first render or hydration throws the server's markup away
+  // and paints a skeleton over a finished page (T_OPS.2).
+  const seed = initial ?? bootstrapped<PublicRuleSet>()
+  const [data, setData] = useState<PublicRuleSet | null>(seed ?? null)
   const [state, setState] = useState<'idle' | 'loading' | 'missing' | 'failed'>(
-    initial ? 'idle' : 'loading',
+    seed ? 'idle' : 'loading',
   )
 
   useEffect(() => {
@@ -70,7 +74,7 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
         setState('idle')
       })
       .catch((err: { response?: { status?: number } }) => {
-        if (!live || initial) return // keep what the file already showed
+        if (!live || seed) return // keep what the server already showed
         setState(err?.response?.status === 404 ? 'missing' : 'failed')
       })
     return () => {

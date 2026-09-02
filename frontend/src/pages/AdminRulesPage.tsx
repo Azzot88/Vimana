@@ -476,14 +476,23 @@ export default function AdminRulesPage() {
                 </p>
               )}
 
-              {/* T3.11.03 / T_OPS.2 — said here rather than only in the PRD.
-                  The page is live for a reader the moment it is published; it
-                  reaches a search engine after the next deploy, because the
-                  prerender runs at build time. An editor who does not know this
-                  will report it as a bug, and be right to. */}
+              {/* T_OPS.2 — the line that used to warn about a deploy delay.
+                  It is gone as a warning because the delay is gone: `/rules` is
+                  rendered per request from the database now, so publishing and
+                  being visible are one event. What replaces it says where the
+                  page is, because an editor who just pressed a button wants the
+                  address, not a reassurance. */}
               {detail.status === 'published' && (
                 <p className="text-xs font-body text-navy/50">
-                  {t('adminRules.publishDelayHint')}
+                  {t('adminRules.publishedLive')}{' '}
+                  <a
+                    href={`/rules/${detail.category_key}/${detail.direction}/${detail.jurisdiction_code}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan underline underline-offset-2 transition-colors hover:text-navy"
+                  >
+                    {t('adminRules.openPublicPage')}
+                  </a>
                 </p>
               )}
 

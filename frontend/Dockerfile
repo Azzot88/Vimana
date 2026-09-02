@@ -13,6 +13,21 @@ COPY . .
 RUN npm run build
 
 # ─────────────────────────────────────────────────────────────
+# T_OPS.2 — the SSR process for `/rules` and `/rules/*`.
+#
+# Built `FROM builder` rather than from a bare node image: the SSR bundle
+# imports React and the router as externals, so it needs the same
+# `node_modules` the build used. Copying a curated subset would be a second
+# dependency list to keep in step with the first, and the drift would show up
+# as a page that renders in the build and crashes in production.
+#
+# Nothing is exposed publicly: the frontend's nginx proxies to it over the
+# compose network, and it answers two path shapes and a health probe.
+FROM builder AS ssr
+ENV NODE_ENV=production
+CMD ["node", "scripts/ssr-server.mjs"]
+
+# ─────────────────────────────────────────────────────────────
 
 FROM nginx:1.27-alpine AS server
 

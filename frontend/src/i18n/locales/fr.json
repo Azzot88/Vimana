@@ -1439,7 +1439,6 @@
     "retire": "Retirer",
     "deleteDraft": "Supprimer le brouillon",
     "frozenHint": "Ce jeu est figé : ce que les gens ont lu reste ce qu’ils ont lu. Publiez une nouvelle version plutôt que de le modifier.",
-    "publishDelayHint": "La page est déjà en ligne pour les lecteurs. Les moteurs de recherche la verront après le prochain déploiement — les pages sont générées, pas rendues à la demande.",
     "sectionsTitle": "Sections",
     "sectionsHint": "Chaque section porte sa propre citation. Une section sans source ne peut pas être publiée — c'est la citation qui rend l'affirmation vérifiable.",
     "noSource": "Pas encore de source — cette section bloque la publication.",
@@ -1487,7 +1486,9 @@
     "answerLabel": "Réponse courte",
     "answersFrom": "Répond depuis la section",
     "answersFromMissing": "Cette section n’existe pas dans ce jeu",
-    "questionAnchor": "Ancre de la question"
+    "questionAnchor": "Ancre de la question",
+    "publishedLive": "La page est en ligne pour les lecteurs comme pour les moteurs de recherche : elle est rendue à la demande.",
+    "openPublicPage": "Ouvrir la page"
   },
   "adminRoles": {
     "title": "Rôles et propositions",
