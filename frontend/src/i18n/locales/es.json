@@ -1372,9 +1372,9 @@
     "failed": "No se pudo cargar la página. Inténtalo de nuevo.",
     "untitled": "Reglas del corredor",
     "dir": {
-      "export": "Salida de",
-      "import": "Entrada en",
-      "transit": "Tránsito por"
+      "export": "Salida",
+      "import": "Entrada",
+      "transit": "Tránsito"
     },
     "neverReviewed": "Todavía no comprobado con las fuentes",
     "needsReview": "una fuente ha cambiado",

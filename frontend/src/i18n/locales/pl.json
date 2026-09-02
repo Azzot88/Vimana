@@ -1377,9 +1377,9 @@
     "failed": "Nie udało się wczytać strony. Spróbuj ponownie.",
     "untitled": "Zasady korytarza",
     "dir": {
-      "export": "Wywóz z",
-      "import": "Przywóz do",
-      "transit": "Tranzyt przez"
+      "export": "Wywóz",
+      "import": "Przywóz",
+      "transit": "Tranzyt"
     },
     "neverReviewed": "Jeszcze nie zweryfikowano ze źródłami",
     "needsReview": "źródło się zmieniło",

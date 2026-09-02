@@ -1372,9 +1372,9 @@
     "failed": "Impossible de charger cette page. Réessayez dans un instant.",
     "untitled": "Règles du corridor",
     "dir": {
-      "export": "Sortie de",
-      "import": "Entrée en",
-      "transit": "Transit par"
+      "export": "Sortie",
+      "import": "Entrée",
+      "transit": "Transit"
     },
     "neverReviewed": "Pas encore vérifié auprès des sources",
     "needsReview": "une source a changé",

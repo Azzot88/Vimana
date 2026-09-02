@@ -145,9 +145,12 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
             { label: t('rulesIndex.crumbHome'), to: '/' },
             { label: t('rulesIndex.navLink'), to: '/rules' },
             { label: category, to: '/rules' },
-            {
-              label: `${t(`rulesPage.dir.${data.direction}`)} ${data.jurisdiction_name}`,
-            },
+            // The corridor's own title, not a direction glued to a country
+            // name. `"Вывоз из" + "Россия"` produced "Вывоз из Россия": Russian
+            // declines the country and a template cannot. The title is prose an
+            // editor wrote, so it is already correct in whatever language the
+            // corpus is written in.
+            { label: data.title || t('rulesPage.untitled') },
           ]}
         />
 

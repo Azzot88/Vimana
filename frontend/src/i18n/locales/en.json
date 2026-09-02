@@ -1416,9 +1416,9 @@
     "failed": "Could not load this page. Try again in a moment.",
     "untitled": "Corridor rules",
     "dir": {
-      "export": "Taking out of",
-      "import": "Bringing into",
-      "transit": "Passing through"
+      "export": "Taking out",
+      "import": "Bringing in",
+      "transit": "Transit"
     },
     "neverReviewed": "Not yet checked against the sources",
     "needsReview": "a source has changed",
