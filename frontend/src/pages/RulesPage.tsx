@@ -101,7 +101,7 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
     </div>
   )
 
-  const body = () => {
+  const body = (openWaitlist: () => void) => {
     if (state === 'loading') return skeleton
 
     if (state === 'missing' || (state === 'idle' && !data)) {
@@ -132,6 +132,35 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
     const category = t(`categories.${data.category_key}`, {
       defaultValue: data.category_key,
     })
+
+    // Built once and rendered twice: as a rail beside the text on a wide
+    // screen, and as a disclosure at the top of the page where the rail does
+    // not fit. Two hand-written copies of the same list is how one of them ends
+    // up missing a section nobody notices.
+    const contents: { href: string; label: string }[] = [
+      ...(data.questions.length > 0
+        ? [{ href: '#answers', label: t('rulesPage.questionsTitle') }]
+        : []),
+      ...data.sections.map((s) => ({ href: `#${s.anchor}`, label: s.title || s.anchor })),
+      ...(data.requirements.length > 0
+        ? [{ href: '#documents', label: t('rulesPage.documentsTitle') }]
+        : []),
+    ]
+
+    const contentsLinks = (
+      <ul className="space-y-2">
+        {contents.map((item) => (
+          <li key={item.href}>
+            <a
+              href={item.href}
+              className="block text-xs font-body leading-snug text-navy/60 transition-colors hover:text-cyan"
+            >
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
 
     return (
       // 48rem is `max-w-3xl`: the reading column keeps the density it had
@@ -215,6 +244,19 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
             </p>
           )}
         </header>
+
+        {/* The contents where the rail does not fit. A native `details` rather
+            than a state hook: it is a disclosure, it works before JavaScript
+            arrives, and the page already carries enough moving parts. Closed by
+            default because the reader came for the answers, not the map. */}
+        {contents.length > 2 && (
+          <details className="mt-6 rounded-field border border-navy/10 bg-white px-4 py-3 lg:hidden">
+            <summary className="cursor-pointer font-display text-sm font-medium text-navy">
+              {t('rulesPage.contents')}
+            </summary>
+            <div className="mt-3">{contentsLinks}</div>
+          </details>
+        )}
 
         <div className="mt-10">
             {/* The compact reading, first. Rows under one heading rather than a
@@ -304,9 +346,14 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
                     {s.sources.map((src, i) => (
                       <figure
                         key={`${s.anchor}-src-${i}`}
-                        className="mt-4 max-w-[65ch] border-l-2 border-navy/20 pl-4"
+                        className="mt-4 max-w-[65ch] border-l-2 border-navy/15 bg-white/70 py-3 pl-4 pr-4"
                       >
-                        <blockquote className="font-body text-sm italic leading-relaxed text-navy/75">
+                        {/* Not italic. These are long statutory quotations, and
+                            italic at length is slower to read than upright -
+                            which is the wrong trade for the one element on the
+                            page that has to be read carefully. The rule and the
+                            tint carry the "this is quoted" job instead. */}
+                        <blockquote className="font-body text-sm leading-relaxed text-navy/80">
                           {src.quote}
                         </blockquote>
                         <figcaption className="mt-2 text-xs font-body text-navy/50">
@@ -393,6 +440,36 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
               </section>
             )}
 
+            {/* The next step, placed where the reader has just met the
+                problem it solves. Not at the foot of the page: the sharpest
+                moment on this screen is the line above, where somebody reads
+                "30 days to obtain" and counts back from a flight in two weeks.
+                An offer three sections later is an offer to a different person.
+
+                §9.1 - the copy claims intent and nothing more. There is no
+                packet service yet and no partner executors (Platform-not-broker
+                is on rung zero), so the block says it is being built and asks
+                for an address. Anything warmer would be a promise with no
+                mechanism behind it, on a page whose entire worth is that it
+                does not do that. */}
+            {data.requirements.length > 0 && (
+              <section className="mt-10 rounded-card border border-amber/30 bg-amber/5 p-5">
+                <h2 className="font-display text-lg font-semibold text-navy">
+                  {t('rulesPage.packetTitle')}
+                </h2>
+                <p className="mt-2 max-w-[60ch] text-sm font-body leading-relaxed text-navy/70">
+                  {t('rulesPage.packetBody')}
+                </p>
+                <button
+                  type="button"
+                  onClick={openWaitlist}
+                  className="mt-4 rounded-field bg-amber px-4 py-2 text-sm font-display font-medium text-white transition-opacity hover:opacity-90 active:translate-y-px"
+                >
+                  {t('rulesPage.packetCta')}
+                </button>
+              </section>
+            )}
+
             <div className="mt-12 border-t border-navy/10 pt-6">
               {/* The same corridor as a file. `body` is stored as Markdown, so
                   this is the text itself rather than a conversion of it. A real
@@ -412,10 +489,10 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
           </div>
         </div>
 
-        {/* Contents. A map of a reference document, sticky where there is room
-            for it and simply first-in-order where there is not. Hidden below
-            `lg` rather than collapsed into an accordion: on a phone the page is
-            one column and scrolling is the map. */}
+        {/* Contents as a rail, where there is a margin to put it in. The
+            narrow-screen half of this lives at the top of the column above:
+            eight sections and eight questions is a long scroll to navigate by
+            thumb, and "scrolling is the map" was wishful thinking. */}
         <nav
           aria-label={t('rulesPage.contents') as string}
           className="mt-12 hidden lg:sticky lg:top-24 lg:mt-0 lg:block lg:self-start"
@@ -423,38 +500,7 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
             <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-navy/40">
               {t('rulesPage.contents')}
             </p>
-            <ul className="mt-3 space-y-2 border-l border-navy/10 pl-3">
-              {data.questions.length > 0 && (
-                <li>
-                  <a
-                    href="#answers"
-                    className="block text-xs font-body leading-snug text-navy/60 transition-colors hover:text-cyan"
-                  >
-                    {t('rulesPage.questionsTitle')}
-                  </a>
-                </li>
-              )}
-              {data.sections.map((s) => (
-                <li key={`toc-${s.anchor}`}>
-                  <a
-                    href={`#${s.anchor}`}
-                    className="block text-xs font-body leading-snug text-navy/60 transition-colors hover:text-cyan"
-                  >
-                    {s.title || s.anchor}
-                  </a>
-                </li>
-              ))}
-              {data.requirements.length > 0 && (
-                <li>
-                  <a
-                    href="#documents"
-                    className="block text-xs font-body leading-snug text-navy/60 transition-colors hover:text-cyan"
-                  >
-                    {t('rulesPage.documentsTitle')}
-                  </a>
-                </li>
-              )}
-            </ul>
+            <div className="mt-3 border-l border-navy/10 pl-3">{contentsLinks}</div>
         </nav>
       </article>
     )
@@ -465,11 +511,13 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
   // rules reader under a fourth source that means nothing to whoever reads it.
   return (
     <LandingShell source="sender">
-      {() => (
+      {(openWaitlist) => (
         // Capped at the old measure below `lg`; released above it so the
         // article's own grid can put the contents rail alongside the text
         // instead of taking a bite out of it.
-        <div className="mx-auto max-w-3xl py-8 sm:py-12 lg:max-w-none">{body()}</div>
+        <div className="mx-auto max-w-3xl py-8 sm:py-12 lg:max-w-none">
+          {body(openWaitlist)}
+        </div>
       )}
     </LandingShell>
   )

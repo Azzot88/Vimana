@@ -1444,7 +1444,10 @@
     "rulesHint": "Each section carries the quotation from the rule it rests on.",
     "daysUnit": "days",
     "contents": "Contents",
-    "missingCrumb": "Corridor not found"
+    "missingCrumb": "Corridor not found",
+    "packetTitle": "Collecting this yourself takes weeks",
+    "packetBody": "We are building a service that assembles this packet against your departure date. It is not open yet. Leave an address and we will write when it is.",
+    "packetCta": "Leave an address"
   },
   "adminRules": {
     "title": "Corridor rules",

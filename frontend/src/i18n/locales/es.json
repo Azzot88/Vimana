@@ -1400,7 +1400,10 @@
     "rulesHint": "Cada sección lleva la cita de la norma en la que se apoya.",
     "daysUnit": "días",
     "contents": "Contenido",
-    "missingCrumb": "Corredor no encontrado"
+    "missingCrumb": "Corredor no encontrado",
+    "packetTitle": "Reunir esto por su cuenta lleva semanas",
+    "packetBody": "Estamos construyendo un servicio que reúne este paquete para su fecha de salida. Todavía no está abierto. Deje una dirección y le escribiremos.",
+    "packetCta": "Dejar una dirección"
   },
   "adminRules": {
     "title": "Reglas del corredor",

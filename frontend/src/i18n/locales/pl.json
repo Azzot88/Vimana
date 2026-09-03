@@ -1406,7 +1406,10 @@
     "rulesHint": "Pod każdą sekcją stoi cytat z przepisu, na którym się opiera.",
     "daysUnit": "dni",
     "contents": "Spis treści",
-    "missingCrumb": "Nie znaleziono korytarza"
+    "missingCrumb": "Nie znaleziono korytarza",
+    "packetTitle": "Zebranie tego samemu zajmuje tygodnie",
+    "packetBody": "Budujemy usługę, która zbierze ten komplet na twoją datę wylotu. Jeszcze nie działa. Zostaw adres, napiszemy, gdy ruszy.",
+    "packetCta": "Zostaw adres"
   },
   "adminRules": {
     "title": "Zasady korytarza",

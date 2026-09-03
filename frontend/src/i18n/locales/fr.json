@@ -1400,7 +1400,10 @@
     "rulesHint": "Chaque section porte la citation du texte sur lequel elle repose.",
     "daysUnit": "jours",
     "contents": "Sommaire",
-    "missingCrumb": "Corridor introuvable"
+    "missingCrumb": "Corridor introuvable",
+    "packetTitle": "Réunir tout cela prend des semaines",
+    "packetBody": "Nous construisons un service qui rassemble ce dossier pour votre date de départ. Il n’est pas encore ouvert. Laissez une adresse, nous vous écrirons.",
+    "packetCta": "Laisser une adresse"
   },
   "adminRules": {
     "title": "Règles du corridor",
