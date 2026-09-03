@@ -346,7 +346,7 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
 
   return (
     <LandingShell source="sender">
-      {() => (
+      {(openWaitlist) => (
         // Back to the measure the page had before the rebuild (owner's
         // decision 2026-09-02). The catalogue has no side rail, so the cap is
         // simply the reading width and holds at every size.
@@ -528,6 +528,32 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
               <div className="space-y-10">{byCategory(searched)}</div>
             )}
           </div>
+
+          {/* The next step. It belongs here as well as on the corridor pages:
+              this is the page people arrive at from a search, and a catalogue
+              that ends in a disclaimer is a catalogue that reads everything and
+              leaves.
+
+              Same label as the corridor page on purpose. One label per intent,
+              used everywhere, is what keeps a reader from wondering whether two
+              buttons do two different things. */}
+          {totals.length > 0 && (
+            <section className="mt-12 rounded-card border border-amber/30 bg-amber/5 p-5">
+              <h2 className="font-display text-lg font-semibold text-navy">
+                {t('rulesPage.packetTitle')}
+              </h2>
+              <p className="mt-2 max-w-[60ch] text-sm font-body leading-relaxed text-navy/70">
+                {t('rulesPage.packetBody')}
+              </p>
+              <button
+                type="button"
+                onClick={openWaitlist}
+                className="mt-4 rounded-field bg-amber px-4 py-2 text-sm font-display font-medium text-white transition-opacity hover:opacity-90 active:translate-y-px"
+              >
+                {t('rulesPage.packetCta')}
+              </button>
+            </section>
+          )}
 
           {/* What the catalogue does not cover, said out loud. On a page about
               somebody else's border this is not a weakness to hide: a reader
