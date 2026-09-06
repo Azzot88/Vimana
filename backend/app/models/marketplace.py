@@ -16,7 +16,27 @@ class TripStatus(str, enum.Enum):
     cancelled = "cancelled"
 
 
-DEFAULT_CATEGORIES = ("document", "medicine", "electronics", "gift", "animal", "art", "other")
+# T3.11.07 — ordered by how often the market names each thing, measured over
+# 15 128 messages (TASKS.md, «Разбор переписок рынка»): documents 86.2 %,
+# parcels ≈71, clothing and personal effects 34, medicine 32.8, electronics 15,
+# animals 9.1, gifts 8.8. `parcel` and `clothing` were missing entirely — the
+# two commonest words on this market after "documents" had no key to be filed
+# under, so a carrier saying "возьму посылки" could not say it here at all.
+#
+# Order matters: it seeds `Category.sort_order`, which breaks ties while every
+# `usage_count` is still zero. Once this platform has its own traffic,
+# `usage_count` wins and this list stops deciding anything.
+DEFAULT_CATEGORIES = (
+    "document",
+    "parcel",
+    "clothing",
+    "medicine",
+    "electronics",
+    "animal",
+    "gift",
+    "art",
+    "other",
+)
 
 
 class Category(Base):
@@ -26,6 +46,11 @@ class Category(Base):
     name_key: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     usage_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # T3.11.07 — where this sits in the picker before this platform has traffic
+    # of its own. Seeded from the market analysis; `usage_count` outranks it as
+    # soon as there is any, so the seed decides only the cold start. Carrier-
+    # added categories default to the end.
+    sort_order: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

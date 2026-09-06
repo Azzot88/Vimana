@@ -114,16 +114,44 @@ def _ensure_test_database() -> None:
     conn.close()
 
 
+async def _ensure_category_order(engine) -> None:
+    """T3.11.07: `categories.sort_order` on an existing table. Mirrors 0063.
+
+    Runs before `_seed_default_categories`, which writes the column.
+    """
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE categories ADD COLUMN IF NOT EXISTS "
+                "sort_order INTEGER NOT NULL DEFAULT 100"
+            )
+        )
+
+
 async def _seed_default_categories(engine) -> None:
     from sqlalchemy.ext.asyncio import async_sessionmaker
     maker = async_sessionmaker(engine, expire_on_commit=False)
     async with maker() as db:
         result = await db.execute(select(Category))
-        existing = {c.name_key for c in result.scalars().all()}
-        for key in DEFAULT_CATEGORIES:
-            if key in existing:
-                continue
-            db.add(Category(name_key=key, is_default=True, usage_count=0))
+        existing = {c.name_key: c for c in result.scalars().all()}
+        # T3.11.07 — `sort_order` mirrors the position in `DEFAULT_CATEGORIES`,
+        # which is ordered by how often this market names each thing. Applied to
+        # rows that already exist too: a database seeded before 0063 has the
+        # column defaulted to 100 for everything, and every category tied at 100
+        # is the alphabetical ordering this replaces.
+        for position, key in enumerate(DEFAULT_CATEGORIES):
+            category = existing.get(key)
+            if category is None:
+                db.add(
+                    Category(
+                        name_key=key,
+                        is_default=True,
+                        usage_count=0,
+                        sort_order=position,
+                    )
+                )
+            else:
+                category.sort_order = position
         await db.commit()
 
 
@@ -1611,6 +1639,7 @@ async def test_engine():
     await _ensure_display_prefs_columns(engine)
     await _ensure_carrier_notes_columns(engine)
     await _ensure_user_roles_column(engine)
+    await _ensure_category_order(engine)
     await _seed_default_categories(engine)
     await _seed_jurisdictions(engine)
     yield engine
