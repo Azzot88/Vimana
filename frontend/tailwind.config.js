@@ -67,6 +67,10 @@ export default {
         nav: '100',
         overlay: '200',
         modal: '300',
+        // T3.11.07 — a list anchored to a field inside a modal. It is portalled
+        // to `body`, so it is no longer a child of the modal and cannot rely on
+        // DOM order to paint above it.
+        popover: '350',
         toast: '400',
       },
     },

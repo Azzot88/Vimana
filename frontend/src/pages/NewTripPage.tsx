@@ -1,4 +1,4 @@
-import { useId, useCallback, useEffect, useState } from 'react'
+import { useId, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -295,6 +295,16 @@ export default function NewTripPage() {
 
   const [preflightNotes, setPreflightNotes] = useState<RouteNote[]>([])
   const [ackedPreflight, setAckedPreflight] = useState(false)
+  const preflightRef = useRef<HTMLDivElement>(null)
+
+  // An overlay announced itself by covering the screen; a panel has to be
+  // taken to. Without this the carrier presses publish, nothing visibly
+  // happens, and the reason is a screen below the fold.
+  useEffect(() => {
+    if (preflightNotes.length === 0) return
+    preflightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    preflightRef.current?.focus()
+  }, [preflightNotes])
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -1104,16 +1114,27 @@ export default function NewTripPage() {
         </button>
       </div>
 
+      {/* T3.11.07 — an inline panel, not a second overlay.
+          It used to be `fixed inset-0 z-modal`, which was right while the form
+          was a page and wrong the moment the form itself becomes a sheet: two
+          stacked overlays mean two focus traps, and dismissing the top one by
+          clicking the backdrop lands the click on the one underneath. As a
+          panel it also stops being dismissible by a stray click on the
+          backdrop, which for a restricted-corridor warning is the correct
+          behaviour anyway — it is answered, not waved away. */}
       {preflightNotes.length > 0 && (
         <div
-          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-modal flex items-center justify-center p-4"
-          onClick={() => setPreflightNotes([])}
+          ref={preflightRef}
+          role="alertdialog"
+          aria-labelledby="preflight-title"
+          tabIndex={-1}
+          className="border-2 border-amber/50 bg-amber/5 rounded-card p-4 sm:p-6 space-y-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-card p-6 max-w-lg w-full space-y-4 shadow-2xl"
-          >
-            <h3 className="font-display font-semibold text-lg text-navy">
+          <div className="space-y-4">
+            <h3
+              id="preflight-title"
+              className="font-display font-semibold text-lg text-navy"
+            >
               {t('routeNote.preflightTitle', 'Route requires attention')}
             </h3>
             <p className="text-sm font-body text-navy/70">
@@ -1142,20 +1163,22 @@ export default function NewTripPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setPreflightNotes([])}
-                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2 min-h-[2.75rem]"
               >
                 {t('common.cancel')}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setPreflightNotes([])
                   setAckedPreflight(true)
                   handleSubmit()
                 }}
-                className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid"
+                className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid"
               >
                 {t('routeNote.iUnderstand', 'I understand — publish anyway')}
               </button>

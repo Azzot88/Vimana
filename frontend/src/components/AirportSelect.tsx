@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import {
   airportsInCity,
@@ -87,6 +88,18 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
   const [popular, setPopular] = useState<Airport[]>([])
   const [nearby, setNearby] = useState<Airport[]>([])
   const wrapperRef = useRef<HTMLDivElement>(null)
+  // T3.11.07 — the list is drawn in a portal on `document.body`, not inside the
+  // field. Absolutely positioned it was clipped by the first ancestor that
+  // scrolls, and the wizard's step is exactly that: a sheet with
+  // `overflow-y: auto`. So the panel is measured against the field and placed
+  // in fixed coordinates, which no ancestor can crop.
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [anchor, setAnchor] = useState<{
+    top: number
+    left: number
+    width: number
+    openUp: boolean
+  } | null>(null)
 
   const displayNames = useMemo(
     () => new Intl.DisplayNames([i18n.language], { type: 'region' }),
@@ -159,13 +172,47 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      // The panel lives outside this subtree now, so it has to be checked
+      // separately: closing on `mousedown` would unmount the option before its
+      // `click` ever lands, and the pick would silently do nothing.
+      if (wrapperRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const measure = useCallback(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const below = window.innerHeight - r.bottom
+    // Flip up only when there is genuinely less room below than above: on a
+    // phone with the keyboard open the field often sits in the top third, and
+    // a list that always drops down would open under the keyboard.
+    const openUp = below < 260 && r.top > below
+    setAnchor({
+      top: openUp ? r.top : r.bottom,
+      left: r.left,
+      width: r.width,
+      openUp,
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    measure()
+    window.addEventListener('resize', measure)
+    // Capture phase: the field may scroll inside a sheet rather than the page,
+    // and a scroll event on that container does not bubble to `window`.
+    window.addEventListener('scroll', measure, true)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', measure, true)
+    }
+  }, [open, measure])
 
   useEffect(() => {
     const q = query.trim()
@@ -330,6 +377,33 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
     ).filter(([, list]) => list.length > 0)
   }, [suggesting, recent, popular, nearby])
 
+  /** T3.11.07 — one portal, one set of styles, two callers (the suggestions and
+   *  the search results). Returns `null` until the field has been measured, so
+   *  the panel never paints for a frame at the top-left corner.
+   *
+   *  Called by: the two dropdown blocks in this component's render. */
+  const renderPanel = (children: React.ReactNode) => {
+    if (!anchor) return null
+    return createPortal(
+      <div
+        ref={panelRef}
+        style={{
+          position: 'fixed',
+          left: anchor.left,
+          width: anchor.width,
+          top: anchor.top,
+          transform: anchor.openUp ? 'translateY(-100%)' : undefined,
+        }}
+        className={`z-popover bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto ${
+          anchor.openUp ? '-mt-1' : 'mt-1'
+        }`}
+      >
+        {children}
+      </div>,
+      document.body,
+    )
+  }
+
   const inputPlaceholder =
     cityFilter
       ? t('airports.typeIata', { defaultValue: 'Airport IATA' })
@@ -386,9 +460,10 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
         </button>
       </div>
 
-      {suggestionGroups.length > 0 && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto">
-          {suggestionGroups.map(([labelKey, list]) => (
+      {suggestionGroups.length > 0 &&
+        renderPanel(
+          <>
+            {suggestionGroups.map(([labelKey, list]) => (
             <div key={labelKey}>
               <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">
                 {t(labelKey)}
@@ -406,11 +481,12 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
               ))}
             </div>
           ))}
-        </div>
-      )}
+          </>,
+        )}
 
-      {open && !suggesting && (countryMatches.length > 0 || cityMatches.length > 0 || airportMatches.length > 0) && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto">
+      {open && !suggesting && (countryMatches.length > 0 || cityMatches.length > 0 || airportMatches.length > 0) &&
+        renderPanel(
+          <>
           {countryMatches.length > 0 && (
             <div>
               <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">
@@ -471,8 +547,8 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
               ))}
             </div>
           )}
-        </div>
-      )}
+          </>,
+        )}
     </div>
   )
 }
