@@ -6,10 +6,45 @@ import {
   listCountries,
   lookupAirports,
   nearestAirports,
+  popularAirports,
   type Airport,
   type CityMatch,
   type CountryCount,
 } from '../api/airports'
+
+/** T3.11.07 — the airports this viewer has actually chosen before.
+ *
+ *  An empty field with a blinking cursor asks the carrier to recall an IATA
+ *  code from memory. The strongest answer is their own history: people fly the
+ *  same corridor repeatedly — 5.4 % of real posts say "I fly every week" in as
+ *  many words — so the code they picked last time is very often the one they
+ *  want now.
+ *
+ *  Local to the browser on purpose: it is a convenience, it is per-device, and
+ *  it is nobody's business but the viewer's. Wrapped in try/catch because
+ *  storage throws outright in a private window with site data blocked.
+ */
+const RECENT_KEY = 'airports:recent:v1'
+const RECENT_MAX = 6
+
+function loadRecent(): Airport[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    return raw ? (JSON.parse(raw) as Airport[]) : []
+  } catch {
+    return []
+  }
+}
+
+function rememberAirport(a: Airport) {
+  try {
+    const next = [a, ...loadRecent().filter((x) => x.iata !== a.iata)].slice(0, RECENT_MAX)
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+  } catch {
+    /* a picker that throws because history could not be saved is worse than
+       a picker with no history. */
+  }
+}
 
 interface Props {
   value: string
@@ -45,6 +80,12 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
   const [airportMatches, setAirportMatches] = useState<Airport[]>([])
   const [open, setOpen] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
+  // T3.11.07 — the three answers to an empty field, in order of how much they
+  // know about this particular person: their own history, then this platform's
+  // traffic, then where they are standing.
+  const [recent, setRecent] = useState<Airport[]>([])
+  const [popular, setPopular] = useState<Airport[]>([])
+  const [nearby, setNearby] = useState<Airport[]>([])
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const displayNames = useMemo(
@@ -67,6 +108,49 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
 
   useEffect(() => {
     listCountries().then((r) => setCountries(r.data)).catch(() => {})
+  }, [])
+
+  // T3.11.07 — the suggestions are gathered once per mount, not per focus: they
+  // do not change between two focuses of the same field, and a request on every
+  // focus would fire several times while somebody tabs through a chain of legs.
+  useEffect(() => {
+    setRecent(loadRecent())
+    popularAirports(6)
+      .then((r) => setPopular(r.data))
+      .catch(() => {})
+
+    // Location is asked for **only if the viewer has already granted it**.
+    // Prompting on focus would put a browser permission dialog in front of
+    // somebody who came to type three letters, which is how a picker teaches
+    // people to say no. The explicit button below stays the way to grant it.
+    if (!navigator.geolocation || !navigator.permissions?.query) return
+    let cancelled = false
+    navigator.permissions
+      .query({ name: 'geolocation' as PermissionName })
+      .then((status) => {
+        if (cancelled || status.state !== 'granted') return
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              const { data } = await nearestAirports(
+                pos.coords.latitude,
+                pos.coords.longitude,
+                4,
+              )
+              if (!cancelled) setNearby(data)
+            } catch {
+              /* silent — a suggestion that fails to load is not an error the
+                 viewer can act on. */
+            }
+          },
+          () => {},
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+        )
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -154,9 +238,18 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
       async (pos) => {
         try {
           const { data } = await nearestAirports(pos.coords.latitude, pos.coords.longitude, 10)
-          setAirportMatches(data)
-          setCityMatches([])
-          setCountryMatches([])
+          // T3.11.07 — the result lands in the "nearby" suggestion group rather
+          // than in the search results, so there is one place where a list of
+          // airports appears and one way it looks. Pressing the button is a
+          // deliberate "start again from where I am", so the field is cleared:
+          // leaving a stale code behind the suggestions would show the viewer
+          // two different answers at once.
+          setNearby(data)
+          setCountryFilter(null)
+          setCityFilter(null)
+          setSubtitle(null)
+          onChange('')
+          setQuery('')
           setOpen(true)
         } catch { /* silent */ }
         finally { setGeoLoading(false) }
@@ -189,6 +282,9 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
     onChange(a.iata)
     setQuery(a.iata)
     setOpen(false)
+    // T3.11.07 — every pick teaches the next empty field.
+    rememberAirport(a)
+    setRecent(loadRecent())
   }
 
   const clearAll = () => {
@@ -206,6 +302,33 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
       ? `${isoToFlag(countryFilter.iso)} ${countryFilter.name} · ${cityFilter.city}`
       : `${isoToFlag(countryFilter.iso)} ${countryFilter.name}`
     : null
+
+  // T3.11.07 — suggestions replace the empty dropdown, they never compete with
+  // a search. The moment there is a query, or a country/city has been picked,
+  // the list is about that and nothing else.
+  const suggesting = open && !query.trim() && !countryFilter && !cityFilter
+  // Deduplicated across the three groups in order of confidence: the same
+  // airport listed twice under two headings reads as two different answers.
+  const suggestionGroups = useMemo(() => {
+    if (!suggesting) return []
+    const seen = new Set<string>()
+    const take = (list: Airport[]) => {
+      const out: Airport[] = []
+      for (const a of list) {
+        if (seen.has(a.iata)) continue
+        seen.add(a.iata)
+        out.push(a)
+      }
+      return out
+    }
+    return (
+      [
+        ['airports.groupRecent', take(recent)] as const,
+        ['airports.groupPopular', take(popular)] as const,
+        ['airports.groupNearby', take(nearby)] as const,
+      ] as const
+    ).filter(([, list]) => list.length > 0)
+  }, [suggesting, recent, popular, nearby])
 
   const inputPlaceholder =
     cityFilter
@@ -263,7 +386,30 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
         </button>
       </div>
 
-      {open && (countryMatches.length > 0 || cityMatches.length > 0 || airportMatches.length > 0) && (
+      {suggestionGroups.length > 0 && (
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto">
+          {suggestionGroups.map(([labelKey, list]) => (
+            <div key={labelKey}>
+              <div className="px-3 py-1 text-[10px] font-body font-semibold text-navy/40 uppercase tracking-wider bg-ivory">
+                {t(labelKey)}
+              </div>
+              {list.map((a) => (
+                <button
+                  key={`${labelKey}-${a.iata}`}
+                  type="button"
+                  onClick={() => pickAirport(a)}
+                  className="w-full text-left px-3 py-2 hover:bg-ivory border-b border-navy/5 last:border-0 text-sm"
+                >
+                  <span className="font-mono font-bold text-navy">{a.iata}</span>
+                  <span className="text-navy/60 ml-2">{a.city} · {a.country_iso}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open && !suggesting && (countryMatches.length > 0 || cityMatches.length > 0 || airportMatches.length > 0) && (
         <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-navy/15 rounded-field shadow-md max-h-72 overflow-y-auto">
           {countryMatches.length > 0 && (
             <div>

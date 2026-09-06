@@ -482,7 +482,10 @@
     "typeIata": "IATA",
     "groupCountries": "Pays",
     "groupCities": "Villes",
-    "groupAirports": "Aéroports"
+    "groupAirports": "Aéroports",
+    "groupRecent": "Choisis récemment",
+    "groupPopular": "Les plus volés sur Vimana",
+    "groupNearby": "Près de vous"
   },
   "categories": {
     "placeholder": "Catégorie ou personnalisée…",
@@ -596,6 +599,7 @@
     "routeHint": "Tous les vols de ce trajet. La recherche porte sur le premier et le dernier ; les autres figurent sur la fiche.",
     "legNumber": "Vol {{n}}",
     "addLeg": "+ Ajouter un vol",
+    "addLegBlocked": "Terminez d'abord ce vol — départ, arrivée et heure.",
     "removeLeg": "Retirer ce vol",
     "flownBy": {
       "label": "Qui voyage",

@@ -483,7 +483,10 @@
     "typeIata": "IATA",
     "groupCountries": "Kraje",
     "groupCities": "Miasta",
-    "groupAirports": "Lotniska"
+    "groupAirports": "Lotniska",
+    "groupRecent": "Ostatnio wybrane",
+    "groupPopular": "Najczęściej latane na Vimanie",
+    "groupNearby": "Blisko Ciebie"
   },
   "categories": {
     "placeholder": "Kategoria lub własna…",
@@ -597,6 +600,7 @@
     "routeHint": "Wszystkie loty tej podróży. Po pierwszym i ostatnim znajdą Cię w wyszukiwarce, pośrednie widać na karcie.",
     "legNumber": "Lot {{n}}",
     "addLeg": "+ Dodaj lot",
+    "addLegBlocked": "Najpierw uzupełnij ten lot — skąd, dokąd i godzina wylotu.",
     "removeLeg": "Usuń ten lot",
     "flownBy": {
       "label": "Kto leci",

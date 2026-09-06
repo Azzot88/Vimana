@@ -161,3 +161,61 @@ async def test_airports_in_dubai_sorted_dxb_first(client):
     assert resp.status_code == 200
     iatas = [a["iata"] for a in resp.json()]
     assert iatas[0] == "DXB", f"expected DXB first, got {iatas}"
+
+
+# ── T3.11.07 · what the picker offers before anything is typed ─────────────
+
+
+async def test_popular_is_open_without_auth(client):
+    """Same posture as the rest of this router: every code it can return is
+    already visible on the public board."""
+    resp = await client.get("/api/airports/popular")
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+async def test_popular_counts_both_ends_of_a_flight(client, carrier_headers):
+    """A corridor is busy in both directions. Counting departures only would
+    rank the return leg at zero, and the picker would offer half a market."""
+    from datetime import datetime, timedelta, timezone
+
+    depart = (datetime.now(timezone.utc) + timedelta(days=4)).isoformat()
+    created = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={"legs": [{"origin": "DXB", "destination": "JFK", "depart_at": depart}]},
+    )
+    assert created.status_code == 201, created.text
+
+    resp = await client.get("/api/airports/popular", params={"limit": 20})
+    codes = [a["iata"] for a in resp.json()]
+    assert "DXB" in codes
+    assert "JFK" in codes
+
+
+async def test_popular_drops_codes_that_are_not_airports(client, carrier_headers):
+    """Trips are published with hand-typed codes too (and every fixture in this
+    suite does it). A code with no airport behind it cannot be rendered as a
+    suggestion, so it is skipped rather than returned half-filled."""
+    from datetime import datetime, timedelta, timezone
+
+    depart = (datetime.now(timezone.utc) + timedelta(days=4)).isoformat()
+    await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "legs": [
+                {"origin": "ZZQ", "destination": "ZZW", "depart_at": depart}
+            ]
+        },
+    )
+    resp = await client.get("/api/airports/popular", params={"limit": 20})
+    codes = [a["iata"] for a in resp.json()]
+    assert "ZZQ" not in codes
+    assert "ZZW" not in codes
+
+
+async def test_popular_respects_the_limit(client):
+    resp = await client.get("/api/airports/popular", params={"limit": 2})
+    assert resp.status_code == 200
+    assert len(resp.json()) <= 2

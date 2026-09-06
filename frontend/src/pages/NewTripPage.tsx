@@ -9,27 +9,38 @@ import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import { usePrefs } from '../hooks/usePrefs'
 
-// T3.11.07 — bumped from v1 when the route became a chain. A draft saved under
-// the old shape carries a flat origin/destination/date and cannot be read as
-// legs; a stale one is a lost half-filled form, a misread one is a form that
-// looks filled and is not.
-const DRAFT_KEY = 'trips:draft:v2'
+// T3.11.07 — bumped from v1 when the route became a chain, and again when "who
+// is flying" moved from the leg to the trip. Both times for the same reason: a
+// draft read under the wrong shape looks filled and is not. Here a v2 draft
+// would carry the answer on each leg, where nothing reads it any more, and
+// publish `self` for a carrier who had said otherwise.
+const DRAFT_KEY = 'trips:draft:v3'
 
 /** T3.11.15 — one flight. Strings throughout: these come from inputs, and an
- *  empty string is a real answer ("not stated yet") that a number is not. */
+ *  empty string is a real answer ("not stated yet") that a number is not.
+ *
+ *  Note what is *not* here: who is flying. The model keeps `flown_by` per leg,
+ *  because a chain can genuinely be flown by two people, but the form asks it
+ *  once for the whole trip (owner's decision 2026-09-06) — the answer is almost
+ *  always the same for every leg, and asking it three times makes a real
+ *  question look like a formality. */
 interface LegDraft {
   origin: string
   destination: string
   departAt: string
-  flownBy: 'self' | 'proxy'
 }
 
 const EMPTY_LEG: LegDraft = {
   origin: '',
   destination: '',
   departAt: '',
-  flownBy: 'self',
 }
+
+/** A leg the carrier has finished answering. Used to decide when the next one
+ *  may be offered: a form that hands out empty rows before the first is filled
+ *  shows work instead of asking for it. */
+const isLegComplete = (leg: LegDraft) =>
+  Boolean(leg.origin && leg.destination && leg.departAt)
 
 // Matches `core.trip_legs.MAX_LEGS` on the server. Real posts top out at six
 // cities; the limit exists so one listing cannot become a database.
@@ -61,6 +72,11 @@ const SIZE_HINTS = ['small', 'medium', 'large'] as const
 
 interface Draft {
   legs: LegDraft[]
+  // T3.11.15 — asked once for the trip and written onto every leg. "Flying in
+  // person" is the most valuable claim on this market and it appears in the
+  // same posts as "(a friend is flying)", so silence is not allowed to answer
+  // it — but one switch answers it, not one per flight.
+  flownBy: 'self' | 'proxy'
   capacity: string
   // T3.11.15 — the physical half of the capacity: what kind of room, and how
   // big a thing fits. Kilograms are named in 2.4 % of real posts and
@@ -87,6 +103,7 @@ interface Draft {
 
 const EMPTY: Draft = {
   legs: [{ ...EMPTY_LEG }],
+  flownBy: 'self',
   capacity: '',
   spaceKind: 'unspecified',
   sizeHint: '',
@@ -199,6 +216,9 @@ export default function NewTripPage() {
     setDraft((prev) => {
       if (prev.legs.length >= MAX_LEGS) return prev
       const last = prev.legs[prev.legs.length - 1]
+      // Guarded here as well as in the button's `disabled`: a disabled control
+      // is a hint, not a rule, and this one is also reachable by keyboard.
+      if (last && !isLegComplete(last)) return prev
       // The next flight starts where the last one landed far more often than
       // not — «Москва — Майами — Лос-Анджелес», «Дубай — Москва — Дубай». It
       // stays editable, so guessing costs a keystroke and saves several.
@@ -327,7 +347,9 @@ export default function NewTripPage() {
           origin: leg.origin,
           destination: leg.destination,
           depart_at: leg.departAt,
-          flown_by: leg.flownBy,
+          // One answer for the trip, written onto every leg. The model keeps it
+          // per leg so a chain flown by two people stays expressible later.
+          flown_by: draft.flownBy,
         })),
         capacity: cap,
         allowed_categories: draft.categories,
@@ -503,8 +525,8 @@ export default function NewTripPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                <div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="min-w-[12rem] flex-1">
                   <label
                     htmlFor={`${departId}-${index}`}
                     className="block text-xs font-body font-medium text-navy/60 mb-1"
@@ -523,60 +545,85 @@ export default function NewTripPage() {
                     className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
                   />
                 </div>
-                <fieldset>
-                  <legend className="block text-xs font-body font-medium text-navy/60 mb-1">
-                    {t('trips.flownBy.label')}
-                  </legend>
-                  {/* Asked outright rather than assumed. "Flying in person" is
-                      the most valuable claim on this market, and it appears in
-                      the same posts as "(a friend is flying)" — so the platform
-                      does not let it be implied by silence. */}
-                  <div className="flex gap-2">
-                    {(['self', 'proxy'] as const).map((who) => (
-                      <label
-                        key={who}
-                        className={`flex-1 text-center text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center justify-center rounded-field border cursor-pointer transition-colors ${
-                          leg.flownBy === who
-                            ? 'border-cyan bg-cyan/10 text-navy'
-                            : 'border-navy/20 text-navy/50 hover:border-navy/40'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`${departId}-flownBy-${index}`}
-                          value={who}
-                          checked={leg.flownBy === who}
-                          onChange={() => patchLeg(index, { flownBy: who })}
-                          className="sr-only"
-                        />
-                        {t(`trips.flownBy.${who}`)}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              </div>
 
-              {draft.legs.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeLeg(index)}
-                  className="text-xs font-body text-navy/40 hover:text-danger transition-colors"
-                >
-                  {t('trips.removeLeg')}
-                </button>
-              )}
+                {draft.legs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeLeg(index)}
+                    className="text-xs font-body text-navy/40 hover:text-danger transition-colors py-2 min-h-[2.75rem]"
+                  >
+                    {t('trips.removeLeg')}
+                  </button>
+                )}
+              </div>
             </fieldset>
           ))}
 
+          {/* T3.11.07 — the next flight is offered only once this one is
+              answered (owner's decision 2026-09-06). Handing out empty rows in
+              advance shows the carrier work they have not asked for, and the
+              row they never fill has to be swept up on submit. */}
           {draft.legs.length < MAX_LEGS && (
             <button
               type="button"
               onClick={addLeg}
-              className="w-full border border-dashed border-navy/25 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy/60 hover:border-cyan hover:text-navy transition-colors"
+              disabled={!isLegComplete(draft.legs[draft.legs.length - 1])}
+              title={
+                isLegComplete(draft.legs[draft.legs.length - 1])
+                  ? undefined
+                  : (t('trips.addLegBlocked') as string)
+              }
+              className="w-full border border-dashed border-navy/25 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy/60 hover:border-cyan hover:text-navy transition-colors disabled:opacity-40 disabled:hover:border-navy/25 disabled:hover:text-navy/60 disabled:cursor-not-allowed"
             >
               {t('trips.addLeg')}
             </button>
           )}
+
+          {/* Who is flying — one answer for the trip, not one per flight.
+              A switch rather than two buttons (owner's decision 2026-09-06),
+              with both positions spelled out beside it: this is the claim the
+              market makes most often and backs least, so neither state is
+              allowed to be the one nobody read. */}
+          <div className="flex items-center justify-between gap-3 border-t border-navy/10 pt-3">
+            <span className="text-xs font-body font-medium text-navy/60">
+              {t('trips.flownBy.label')}
+            </span>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <span
+                className={`text-xs font-body ${
+                  draft.flownBy === 'self' ? 'text-navy' : 'text-navy/40'
+                }`}
+              >
+                {t('trips.flownBy.self')}
+              </span>
+              <span className="relative inline-flex">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={draft.flownBy === 'proxy'}
+                  onChange={(e) =>
+                    patch({ flownBy: e.target.checked ? 'proxy' : 'self' })
+                  }
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className="w-11 h-6 rounded-full bg-navy/15 peer-checked:bg-cyan transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-cyan peer-focus-visible:ring-offset-2"
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5"
+                />
+              </span>
+              <span
+                className={`text-xs font-body ${
+                  draft.flownBy === 'proxy' ? 'text-navy' : 'text-navy/40'
+                }`}
+              >
+                {t('trips.flownBy.proxy')}
+              </span>
+            </label>
+          </div>
         </div>
 
         {/* Terms cell 1x1 — T3.35. Bento rows close as: route 3 ·
@@ -940,11 +987,6 @@ export default function NewTripPage() {
                 >
                   <MonoText className="text-lg text-navy font-medium">
                     {leg.origin || '???'} → {leg.destination || '???'}
-                    {leg.flownBy === 'proxy' && (
-                      <span className="ml-2 text-xs font-body text-navy/50">
-                        {t('trips.flownBy.proxyChip')}
-                      </span>
-                    )}
                   </MonoText>
                   <MonoText className="text-sm text-navy/60">
                     {formatDeparture(leg.departAt)}
@@ -963,6 +1005,12 @@ export default function NewTripPage() {
                   <span className="ml-1">· {t(`trips.sizeHint.${draft.sizeHint}`)}</span>
                 )}
               </span>
+              {/* Stated once for the trip, as it is asked. A sender who is
+                  choosing a carrier on "flying in person" needs to see that the
+                  person flying is somebody else. */}
+              {draft.flownBy === 'proxy' && (
+                <span>{t('trips.flownBy.proxyChip')}</span>
+              )}
               {/* The one state a sender has to see before writing: the allowance
                   is spent, so a valuable parcel is not what this flight can take
                   even though the bag is not full. */}

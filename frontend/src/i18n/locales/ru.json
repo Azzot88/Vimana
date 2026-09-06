@@ -530,7 +530,10 @@
     "typeIata": "IATA",
     "groupCountries": "Страны",
     "groupCities": "Города",
-    "groupAirports": "Аэропорты"
+    "groupAirports": "Аэропорты",
+    "groupRecent": "Вы недавно выбирали",
+    "groupPopular": "Чаще всего летают на Vimana",
+    "groupNearby": "Рядом с вами"
   },
   "categories": {
     "placeholder": "Категория или своя…",
@@ -644,6 +647,7 @@
     "routeHint": "Все перелёты этого рейса. По первому и последнему вас ищут в выдаче, промежуточные видны в карточке.",
     "legNumber": "Сегмент {{n}}",
     "addLeg": "+ Добавить перелёт",
+    "addLegBlocked": "Сначала заполните этот перелёт — откуда, куда и время вылета.",
     "removeLeg": "Убрать этот перелёт",
     "flownBy": {
       "label": "Кто летит",

@@ -36,6 +36,11 @@ export const searchAirports = (q: string) =>
 export const nearestAirports = (lat: number, lon: number, limit = 5) =>
   api.get<Airport[]>('/api/airports/nearest', { params: { lat, lon, limit } })
 
+/** T3.11.07 — what this platform actually flies, counted over both ends of
+ *  every published flight. Fills the picker before anything is typed. */
+export const popularAirports = (limit = 6) =>
+  api.get<Airport[]>('/api/airports/popular', { params: { limit } })
+
 export const listCountries = () =>
   api.get<CountryCount[]>('/api/airports/countries')
 

@@ -482,7 +482,10 @@
     "typeIata": "IATA",
     "groupCountries": "Países",
     "groupCities": "Ciudades",
-    "groupAirports": "Aeropuertos"
+    "groupAirports": "Aeropuertos",
+    "groupRecent": "Elegidos hace poco",
+    "groupPopular": "Los más volados en Vimana",
+    "groupNearby": "Cerca de ti"
   },
   "categories": {
     "placeholder": "Categoría o personalizada…",
@@ -596,6 +599,7 @@
     "routeHint": "Todos los vuelos de este viaje. La búsqueda usa el primero y el último; los intermedios se ven en la ficha.",
     "legNumber": "Vuelo {{n}}",
     "addLeg": "+ Añadir un vuelo",
+    "addLegBlocked": "Completa antes este vuelo: origen, destino y hora de salida.",
     "removeLeg": "Quitar este vuelo",
     "flownBy": {
       "label": "Quién vuela",

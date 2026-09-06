@@ -529,7 +529,10 @@
     "typeIata": "IATA",
     "groupCountries": "Countries",
     "groupCities": "Cities",
-    "groupAirports": "Airports"
+    "groupAirports": "Airports",
+    "groupRecent": "You picked recently",
+    "groupPopular": "Flown most on Vimana",
+    "groupNearby": "Near you"
   },
   "categories": {
     "placeholder": "Category or custom…",
@@ -643,6 +646,7 @@
     "routeHint": "Every flight of this trip. Senders search on the first and last of them; the ones in between show on the card.",
     "legNumber": "Flight {{n}}",
     "addLeg": "+ Add a flight",
+    "addLegBlocked": "Finish this flight first — from, to and the departure time.",
     "removeLeg": "Remove this flight",
     "flownBy": {
       "label": "Who is flying",
