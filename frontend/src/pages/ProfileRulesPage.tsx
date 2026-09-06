@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AddressesSection from '../components/AddressesSection'
+import MeetingPlacesSection from '../components/MeetingPlacesSection'
 import StandingNoteSection from '../components/StandingNoteSection'
 
 /**
@@ -68,6 +69,9 @@ export default function ProfileRulesPage() {
         ]}
       />
       <AddressesSection />
+      {/* T3.11.07 — beside the addresses, because the trip form offers both and
+          a carrier filling one will want the other in the same place. */}
+      <MeetingPlacesSection />
       <StandingNoteSection
         titleKey="rules.payment.title"
         descKey="rules.payment.desc"

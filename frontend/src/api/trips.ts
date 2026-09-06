@@ -23,6 +23,15 @@ export type TripLegInput = Omit<TripLeg, 'order'>
 export interface HandoverSide {
   methods: string[]
   points: string[]
+  /** T3.11.07 — ids into the carrier's own lists, not copies of their text: a
+   *  person who corrects a typo in their address must not have to republish
+   *  every trip that mentions it. */
+  address_id?: string | null
+  meeting_place_id?: string | null
+  /** Third level of the chain — service → method → which service. Free strings,
+   *  not codes: the catalogue has no external source and must not be able to
+   *  say the one company collecting parcels in a town does not exist. */
+  postal_services?: string[]
 }
 
 export type SpaceKind = 'cabin' | 'checked_partial' | 'checked_full' | 'unspecified'

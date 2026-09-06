@@ -703,6 +703,14 @@
     "handoverHint": "How you take cargo and how you hand it over. Asked separately for each end, because they are usually arranged differently.",
     "handoverOrigin": "Accepting at",
     "handoverDestination": "Handing over at",
+    "meetingPlace": "Which meeting place",
+    "noMeetingPlaces": "No meeting places yet — add them in your profile.",
+    "handoverAddress": "Which address",
+    "noAddresses": "No addresses yet — add them in your profile.",
+    "pickNothing": "— not chosen —",
+    "postalServicesMore": "Another service, if it is not listed",
+    "postalServicesManual": "Which service (comma-separated)",
+    "postalServicesPlaceholder": "the one that collects near you",
     "handoverPoints": "Places (comma-separated)",
     "handoverPointsPlaceholder": "Tustin, Irvine, the airport",
     "excludedLabel": "Will not take — optional, shown on the card and filterable",
@@ -742,6 +750,17 @@
     "carriageRules": "Carriage rules"
   },
   "profile": {
+    "meetingPlaces": {
+      "title": "Meeting places",
+      "hint": "Where you are willing to meet, in your own words. Offered in the trip form when you accept or hand over in person.",
+      "empty": "None yet. The first one becomes your default.",
+      "placeholder": "By the metro, exit 3",
+      "add": "Add",
+      "default": "default",
+      "makeDefault": "Make default",
+      "loadFailed": "Could not load your meeting places",
+      "saveFailed": "Could not save"
+    },
     "title": "Profile",
     "nav": {
       "label": "Profile sections",

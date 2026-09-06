@@ -656,6 +656,14 @@
     "handoverHint": "Cómo recoges la carga y cómo la entregas. Se pregunta por cada extremo, porque suelen organizarse distinto.",
     "handoverOrigin": "Recojo en",
     "handoverDestination": "Entrego en",
+    "meetingPlace": "Qué punto de encuentro",
+    "noMeetingPlaces": "Aún no hay puntos de encuentro: añádelos en tu perfil.",
+    "handoverAddress": "Qué dirección",
+    "noAddresses": "Aún no hay direcciones: añádelas en tu perfil.",
+    "pickNothing": "— sin elegir —",
+    "postalServicesMore": "Otro servicio, si no está en la lista",
+    "postalServicesManual": "Qué servicio (separados por comas)",
+    "postalServicesPlaceholder": "el que recoge cerca de ti",
     "handoverPoints": "Lugares (separados por comas)",
     "handoverPointsPlaceholder": "centro, aeropuerto",
     "excludedLabel": "No llevo — opcional, se ve en la ficha y sirve de filtro",
@@ -695,6 +703,17 @@
     "carriageRules": "Reglas de transporte"
   },
   "profile": {
+    "meetingPlaces": {
+      "title": "Puntos de encuentro",
+      "hint": "Dónde aceptas quedar, con tus palabras. Se ofrecen en el formulario de viaje cuando recoges o entregas en persona.",
+      "empty": "Todavía ninguno. El primero será el predeterminado.",
+      "placeholder": "En el metro, salida 3",
+      "add": "Añadir",
+      "default": "predeterminado",
+      "makeDefault": "Hacer predeterminado",
+      "loadFailed": "No se pudieron cargar los puntos de encuentro",
+      "saveFailed": "No se pudo guardar"
+    },
     "title": "Perfil",
     "nav": {
       "label": "Secciones del perfil",

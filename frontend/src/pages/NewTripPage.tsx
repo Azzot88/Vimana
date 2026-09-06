@@ -14,6 +14,17 @@ import {
   type TripService,
 } from '../api/trips'
 import { listRouteNotes, type RouteNote } from '../api/notices'
+import {
+  listAddresses,
+  listMeetingPlaces,
+  type Address,
+  type MeetingPlace,
+} from '../api/addresses'
+import {
+  listPaymentSystems,
+  listPostalServices,
+  type DirectoryEntry,
+} from '../api/directories'
 import AirportSelect from '../components/AirportSelect'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
@@ -48,12 +59,22 @@ interface LegDraft {
   origin: string
   destination: string
   departAt: string
+  // T3.11.07 — the country behind each code, captured when the airport is
+  // picked. Postal services are offered by the country the flight lands in and
+  // payment systems by the two ends of the route; deriving that from an IATA
+  // code later would be a second lookup for something the picker already had.
+  // Empty for a hand-typed code, and that is a real state: the pickers then
+  // fall back to typing the answer.
+  originCountry: string
+  destinationCountry: string
 }
 
 const EMPTY_LEG: LegDraft = {
   origin: '',
   destination: '',
   departAt: '',
+  originCountry: '',
+  destinationCountry: '',
 }
 
 /** A leg the carrier has finished answering. Used to decide when the next one
@@ -72,9 +93,23 @@ const MAX_LEGS = 10
 interface HandoverDraft {
   methods: string[]
   points: string
+  // T3.11.07 — ids into the carrier's own lists, not copies of their text: a
+  // person who corrects a typo in their address should not have to republish
+  // every trip that mentions it. Empty means "not chosen".
+  addressId: string
+  placeId: string
+  // Third level of the chain (service → method → which service), typed as one
+  // comma-separated line and shown as chips. Destination side only.
+  postalServices: string
 }
 
-const EMPTY_HANDOVER: HandoverDraft = { methods: [], points: '' }
+const EMPTY_HANDOVER: HandoverDraft = {
+  methods: [],
+  points: '',
+  addressId: '',
+  placeId: '',
+  postalServices: '',
+}
 
 // Matches `schemas.marketplace.HANDOVER_METHODS` and reuses the card labels
 // (`cards.opt.*`): one vocabulary, named once, so a carrier cannot advertise a
@@ -206,17 +241,45 @@ function splitChips(value: string, limit = 8): string[] | null {
   return parts.length > 0 ? parts : null
 }
 
+/** T3.11.07 — one stored handover end back into the shape the form edits.
+ *
+ *  The ids come back as they are: "same as last time" copies the whole answer,
+ *  and an address the carrier still owns is still the right address. If they
+ *  have since deleted it the select simply shows nothing chosen, which is the
+ *  honest result and better than silently publishing a dangling id.
+ *
+ *  Called by: `NewTripPage.prefillFromLast`.
+ */
+function fromHandover(side: Trip['handover_origin']): HandoverDraft {
+  return {
+    methods: side?.methods ?? [],
+    points: (side?.points ?? []).join(', '),
+    addressId: side?.address_id ?? '',
+    placeId: side?.meeting_place_id ?? '',
+    postalServices: (side?.postal_services ?? []).join(', '),
+  }
+}
+
 function toHandover(side: HandoverDraft) {
-  const points = side.points
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean)
-    // The API caps this at six; trimming here means a carrier who typed seven
-    // gets a published trip rather than a validation error about a field they
-    // filled in generously.
-    .slice(0, 6)
-  if (side.methods.length === 0 && points.length === 0) return null
-  return { methods: side.methods, points }
+  // The API caps points at six; trimming here means a carrier who typed seven
+  // gets a published trip rather than a validation error about a field they
+  // filled in generously.
+  const points = splitChips(side.points, 6) ?? []
+  const postal = splitChips(side.postalServices) ?? []
+  const empty =
+    side.methods.length === 0 &&
+    points.length === 0 &&
+    postal.length === 0 &&
+    !side.addressId &&
+    !side.placeId
+  if (empty) return null
+  return {
+    methods: side.methods,
+    points,
+    address_id: side.addressId || null,
+    meeting_place_id: side.placeId || null,
+    postal_services: postal,
+  }
 }
 
 // Feature flags for experimental input methods (voice / ticket scan).
@@ -252,6 +315,14 @@ export default function NewTripPage() {
   // every week", and for them the whole wizard is a date change.
   const [lastTrip, setLastTrip] = useState<Trip | null>(null)
   const [prefilled, setPrefilled] = useState(false)
+  // T3.11.07 — the carrier's own lists, and the two catalogues the handover
+  // step offers. Fetched once on mount: none of them changes while the form is
+  // open, and the postal one is refetched only when the destination country
+  // does.
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [places, setPlaces] = useState<MeetingPlace[]>([])
+  const [postal, setPostal] = useState<DirectoryEntry[]>([])
+  const [systems, setSystems] = useState<DirectoryEntry[]>([])
 
   // T3.11.20 — the step lives in the URL, not in state.
   //
@@ -304,6 +375,45 @@ export default function NewTripPage() {
       .catch(() => {})
   }, [user?.id])
 
+  // T3.11.07 — the carrier's own two lists. Neither changes while the form is
+  // open, so they are fetched once; a carrier who has none sees the manual
+  // fields, which is the same thing the form does for a country the catalogue
+  // does not cover.
+  useEffect(() => {
+    listAddresses()
+      .then(({ data }) => setAddresses(data))
+      .catch(() => {})
+    listMeetingPlaces()
+      .then(({ data }) => setPlaces(data))
+      .catch(() => {})
+  }, [])
+
+  // Postal services follow the **arrival** country: onward shipping happens
+  // after landing. Refetched when that country changes and not before — a
+  // carrier editing the second leg has not changed where the parcel ends up.
+  const arrivalIso = draft.legs[draft.legs.length - 1]?.destinationCountry ?? ''
+  useEffect(() => {
+    if (!arrivalIso) {
+      setPostal([])
+      return
+    }
+    listPostalServices(arrivalIso)
+      .then(({ data }) => setPostal(data))
+      .catch(() => setPostal([]))
+  }, [arrivalIso])
+
+  // Payment systems follow both ends, arrival first.
+  const departureIso = draft.legs[0]?.originCountry ?? ''
+  useEffect(() => {
+    if (!arrivalIso && !departureIso) {
+      setSystems([])
+      return
+    }
+    listPaymentSystems(arrivalIso || undefined, departureIso || undefined)
+      .then(({ data }) => setSystems(data))
+      .catch(() => setSystems([]))
+  }, [arrivalIso, departureIso])
+
   /** Fills everything except the dates from that trip.
    *
    *  Dates are the one thing that is never right twice, so they stay empty and
@@ -330,14 +440,8 @@ export default function NewTripPage() {
       capacity: trip.capacity != null ? String(trip.capacity) : '',
       spaceKind: trip.space_kind ?? 'unspecified',
       sizeHint: trip.size_hint ?? '',
-      handoverOrigin: {
-        methods: trip.handover_origin?.methods ?? [],
-        points: (trip.handover_origin?.points ?? []).join(', '),
-      },
-      handoverDestination: {
-        methods: trip.handover_destination?.methods ?? [],
-        points: (trip.handover_destination?.points ?? []).join(', '),
-      },
+      handoverOrigin: fromHandover(trip.handover_origin),
+      handoverDestination: fromHandover(trip.handover_destination),
       excluded: trip.excluded ?? [],
       services: trip.services ?? [],
       paymentModel: trip.payment_model ?? '',
@@ -570,10 +674,10 @@ export default function NewTripPage() {
         excluded: draft.excluded.length > 0 ? draft.excluded : null,
         services: draft.services.length > 0 ? draft.services : null,
         payment_model: draft.paymentModel || null,
-        // Only meaningful for a transfer; sending it with another model would
-        // store an answer to a question that was not asked.
+        // Only meaningful off the platform; sending it alongside `on_platform`
+        // would store an answer to a question that was not asked.
         payment_systems:
-          draft.paymentModel === 'transfer_on_delivery'
+          draft.paymentModel === 'off_platform'
             ? splitChips(draft.paymentSystems)
             : null,
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
@@ -641,6 +745,9 @@ export default function NewTripPage() {
   // is not an abstract question. Empty until the carrier has typed the route.
   const firstOrigin = draft.legs[0]?.origin ?? ''
   const lastDestination = draft.legs[draft.legs.length - 1]?.destination ?? ''
+  const departureCountry = draft.legs[0]?.originCountry ?? ''
+  const arrivalCountry =
+    draft.legs[draft.legs.length - 1]?.destinationCountry ?? ''
 
   const formatDeparture = (value: string) =>
     value
@@ -884,6 +991,7 @@ export default function NewTripPage() {
                     inputId={`${originId}-${index}`}
                     value={leg.origin}
                     onChange={(v) => patchLeg(index, { origin: v })}
+                    onPick={(a) => patchLeg(index, { originCountry: a.country_iso })}
                     required
                     placeholder="DXB"
                   />
@@ -902,6 +1010,9 @@ export default function NewTripPage() {
                     inputId={`${destId}-${index}`}
                     value={leg.destination}
                     onChange={(v) => patchLeg(index, { destination: v })}
+                    onPick={(a) =>
+                      patchLeg(index, { destinationCountry: a.country_iso })
+                    }
                     required
                     placeholder="JFK"
                   />
@@ -1237,6 +1348,138 @@ export default function NewTripPage() {
                       )
                     })}
                   </div>
+                  {/* Each of the three below appears only when the method it
+                      belongs to is chosen. That is the whole fix for the three
+                      vocabularies (T3.11.22): the levels narrow — what I do,
+                      how I hand over, which service — and a level that cannot
+                      be answered before the one above it cannot contradict it.
+                      An always-visible field teaches people to skip the block. */}
+
+                  {/* Meeting in person — one of the places from the profile. */}
+                  {draft[field].methods.includes('in_person') && (
+                    <label className="block">
+                      <span className="block text-[11px] font-body text-navy/40 mb-1">
+                        {t('trips.meetingPlace')}
+                      </span>
+                      {places.length > 0 ? (
+                        <select
+                          value={draft[field].placeId}
+                          onChange={(e) =>
+                            patchHandover(field, { placeId: e.target.value })
+                          }
+                          className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                        >
+                          <option value="">{t('trips.pickNothing')}</option>
+                          {places.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.description}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-[11px] font-body text-navy/40">
+                          {t('trips.noMeetingPlaces')}
+                        </p>
+                      )}
+                    </label>
+                  )}
+
+                  {/* Any method that involves an address — a courier collecting
+                      it, a parcel sent, a locker booked against one. */}
+                  {draft[field].methods.some((m) =>
+                    ['courier', 'local_post', 'parcel_locker', 'poste_restante'].includes(m),
+                  ) && (
+                    <label className="block">
+                      <span className="block text-[11px] font-body text-navy/40 mb-1">
+                        {t('trips.handoverAddress')}
+                      </span>
+                      {addresses.length > 0 ? (
+                        <select
+                          value={draft[field].addressId}
+                          onChange={(e) =>
+                            patchHandover(field, { addressId: e.target.value })
+                          }
+                          className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                        >
+                          <option value="">{t('trips.pickNothing')}</option>
+                          {addresses.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.label}
+                              {a.city ? ` · ${a.city}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-[11px] font-body text-navy/40">
+                          {t('trips.noAddresses')}
+                        </p>
+                      )}
+                    </label>
+                  )}
+
+                  {/* The third level, destination end only: onward shipping
+                      happens after landing. Local services of the arrival
+                      country, and typing by hand for everything else — this
+                      catalogue has no external source and must not be able to
+                      say the one company collecting parcels in a carrier's town
+                      does not exist. */}
+                  {field === 'handoverDestination' &&
+                    draft[field].methods.includes('local_post') && (
+                      <div className="space-y-2">
+                        {postal.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {postal.map((s) => {
+                              const chosen = (
+                                splitChips(draft[field].postalServices) ?? []
+                              ).includes(s.name)
+                              return (
+                                <button
+                                  key={s.code}
+                                  type="button"
+                                  aria-pressed={chosen}
+                                  onClick={() => {
+                                    const current =
+                                      splitChips(draft[field].postalServices) ?? []
+                                    const next = chosen
+                                      ? current.filter((x) => x !== s.name)
+                                      : [...current, s.name]
+                                    patchHandover(field, {
+                                      postalServices: next.join(', '),
+                                    })
+                                  }}
+                                  className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                                    chosen
+                                      ? 'border-cyan bg-cyan/10 text-navy'
+                                      : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                                  }`}
+                                >
+                                  {s.name}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                        <label className="block">
+                          <span className="block text-[11px] font-body text-navy/40 mb-1">
+                            {postal.length > 0
+                              ? t('trips.postalServicesMore')
+                              : t('trips.postalServicesManual')}
+                          </span>
+                          <input
+                            type="text"
+                            value={draft[field].postalServices}
+                            onChange={(e) =>
+                              patchHandover(field, {
+                                postalServices: e.target.value,
+                              })
+                            }
+                            placeholder={t('trips.postalServicesPlaceholder') as string}
+                            className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                          />
+                        </label>
+                      </div>
+                    )}
+
                   {/* Free text, and deliberately so: the market names districts,
                       suburbs and satellite cities, which an airport picker
                       cannot say. */}
@@ -1295,11 +1538,44 @@ export default function NewTripPage() {
             {/* Only asked when it applies. A transfer needs to say through
                 what; the other two models do not, and a field that is always
                 on screen teaches people to skip the whole block. */}
-            {draft.paymentModel === 'transfer_on_delivery' && (
+            {draft.paymentModel === 'off_platform' && (
               <label className="block">
                 <span className="block text-[11px] font-body text-navy/40 mb-1">
                   {t('trips.paymentSystems')}
                 </span>
+                {/* Arrival country first, then departure — the order the API
+                    returns them in. Cash is the first entry of the global set,
+                    not a settlement model of its own. */}
+                {systems.length > 0 && (
+                  <span className="flex flex-wrap gap-2 mb-2">
+                    {systems.slice(0, 12).map((s) => {
+                      const current = splitChips(draft.paymentSystems) ?? []
+                      const chosen = current.includes(s.name)
+                      return (
+                        <button
+                          key={s.code}
+                          type="button"
+                          aria-pressed={chosen}
+                          onClick={() =>
+                            patch({
+                              paymentSystems: (chosen
+                                ? current.filter((x) => x !== s.name)
+                                : [...current, s.name]
+                              ).join(', '),
+                            })
+                          }
+                          className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                            chosen
+                              ? 'border-cyan bg-cyan/10 text-navy'
+                              : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                          }`}
+                        >
+                          {s.name}
+                        </button>
+                      )
+                    })}
+                  </span>
+                )}
                 <input
                   type="text"
                   value={draft.paymentSystems}

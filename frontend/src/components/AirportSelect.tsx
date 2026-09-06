@@ -55,6 +55,14 @@ interface Props {
   /** T_TEST.8 — the caller owns the visible label, so it has to own the id the
    *  label points at. Without this the control is a text field with no name. */
   inputId?: string
+  /** T3.11.07 — the whole airport, when the caller needs more than the code.
+   *
+   *  The trip form needs the **country**: postal services are offered by the
+   *  country the flight lands in, payment systems by the two ends of the route.
+   *  Deriving that from an IATA code would mean a second lookup for something
+   *  this component already had in its hand. Fires only on a pick from the
+   *  list — a hand-typed code is a code and nothing more. */
+  onPick?: (airport: Airport) => void
 }
 
 function isoToFlag(iso: string): string {
@@ -69,7 +77,14 @@ interface CountryRow {
   count: number
 }
 
-export default function AirportSelect({ value, onChange, placeholder, required, inputId }: Props) {
+export default function AirportSelect({
+  value,
+  onChange,
+  placeholder,
+  required,
+  inputId,
+  onPick,
+}: Props) {
   const { t, i18n } = useTranslation()
   const [query, setQuery] = useState(value)
   const [countries, setCountries] = useState<CountryCount[]>([])
@@ -332,6 +347,7 @@ export default function AirportSelect({ value, onChange, placeholder, required, 
     // T3.11.07 — every pick teaches the next empty field.
     rememberAirport(a)
     setRecent(loadRecent())
+    onPick?.(a)
   }
 
   const clearAll = () => {

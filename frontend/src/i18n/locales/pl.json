@@ -657,6 +657,14 @@
     "handoverHint": "Jak odbierasz przesyłkę i jak ją przekazujesz. Pytamy osobno o każdy koniec, bo zwykle wygląda to inaczej.",
     "handoverOrigin": "Odbieram w",
     "handoverDestination": "Przekazuję w",
+    "meetingPlace": "Które miejsce spotkania",
+    "noMeetingPlaces": "Brak miejsc spotkań — dodaj je w profilu.",
+    "handoverAddress": "Który adres",
+    "noAddresses": "Brak adresów — dodaj je w profilu.",
+    "pickNothing": "— nie wybrano —",
+    "postalServicesMore": "Inna firma, jeśli nie ma jej na liście",
+    "postalServicesManual": "Jaką firmą (po przecinku)",
+    "postalServicesPlaceholder": "ta, która odbiera obok Ciebie",
     "handoverPoints": "Miejsca (po przecinku)",
     "handoverPointsPlaceholder": "centrum, lotnisko",
     "excludedLabel": "Nie wezmę — opcjonalne, widoczne na karcie i działa w filtrze",
@@ -696,6 +704,17 @@
     "carriageRules": "Zasady przewozu"
   },
   "profile": {
+    "meetingPlaces": {
+      "title": "Miejsca spotkań",
+      "hint": "Gdzie chcesz się spotykać, własnymi słowami. Proponowane w formularzu lotu przy odbiorze i przekazaniu osobistym.",
+      "empty": "Na razie żadnego. Pierwsze stanie się domyślnym.",
+      "placeholder": "Przy metrze, wyjście 3",
+      "add": "Dodaj",
+      "default": "domyślne",
+      "makeDefault": "Ustaw domyślne",
+      "loadFailed": "Nie udało się wczytać miejsc spotkań",
+      "saveFailed": "Nie udało się zapisać"
+    },
     "title": "Profil",
     "nav": {
       "label": "Sekcje profilu",

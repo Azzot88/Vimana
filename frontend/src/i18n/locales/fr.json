@@ -656,6 +656,14 @@
     "handoverHint": "Comment vous récupérez le colis et comment vous le remettez. Une question par extrémité : elles sont rarement organisées pareil.",
     "handoverOrigin": "Je récupère à",
     "handoverDestination": "Je remets à",
+    "meetingPlace": "Quel point de rencontre",
+    "noMeetingPlaces": "Aucun point de rencontre — ajoutez-en dans votre profil.",
+    "handoverAddress": "Quelle adresse",
+    "noAddresses": "Aucune adresse — ajoutez-en dans votre profil.",
+    "pickNothing": "— non choisi —",
+    "postalServicesMore": "Un autre service, s'il n'est pas listé",
+    "postalServicesManual": "Quel service (séparés par des virgules)",
+    "postalServicesPlaceholder": "celui qui collecte près de chez vous",
     "handoverPoints": "Lieux (séparés par des virgules)",
     "handoverPointsPlaceholder": "centre-ville, aéroport",
     "excludedLabel": "Je ne prends pas — facultatif, affiché sur la fiche et filtrable",
@@ -695,6 +703,17 @@
     "carriageRules": "Règles de transport"
   },
   "profile": {
+    "meetingPlaces": {
+      "title": "Points de rencontre",
+      "hint": "Où vous acceptez de vous retrouver, dans vos mots. Proposés dans le formulaire de trajet pour une remise en personne.",
+      "empty": "Aucun pour l'instant. Le premier deviendra votre choix par défaut.",
+      "placeholder": "Au métro, sortie 3",
+      "add": "Ajouter",
+      "default": "par défaut",
+      "makeDefault": "Définir par défaut",
+      "loadFailed": "Impossible de charger vos points de rencontre",
+      "saveFailed": "Impossible d'enregistrer"
+    },
     "title": "Profil",
     "nav": {
       "label": "Sections du profil",
