@@ -568,12 +568,40 @@
       "terms": "Condiciones",
       "rules": "Reglas",
       "customs": "Franquicia aduanera",
-      "handover": "Recogida y entrega"
+      "handover": "Recogida y entrega",
+      "payment": "Liquidación",
+      "services": "Qué más haces"
+    },
+    "wizard": {
+      "progress": "Paso {{step}} de {{total}}",
+      "step1": "Adónde y cuándo vuelas",
+      "step1Sub": "Es por esto que te encuentran en la búsqueda",
+      "step2": "Qué llevas y cuánto sitio",
+      "step3": "Entrega y liquidación",
+      "step4": "Servicios y reglas",
+      "optional": "Opcional: puedes publicar sin esto",
+      "keepDraftTitle": "¿Guardar el borrador?",
+      "keepDraftBody": "Se queda en este dispositivo y te esperará la próxima vez que abras el formulario.",
+      "keepDraft": "Guardar y cerrar",
+      "discardDraft": "Descartar"
+    },
+    "paymentHint": "Cómo cobras. Se ve en la ficha; el importe es opcional.",
+    "paymentModel": {
+      "on_delivery": "Al entregar",
+      "escrow": "Depósito en garantía",
+      "prepaid": "Por adelantado"
+    },
+    "servicesHint": "Opcional. Cada uno se puede buscar: quien lo necesita te encuentra.",
+    "services": {
+      "domestic_shipping": "Lo reenvío por correo dentro del país",
+      "marketplace_pickup": "Recojo pedidos de marketplace",
+      "purchase_on_request": "Compro el producto por encargo",
+      "door_delivery": "Entrego a domicilio",
+      "photo_report": "Informe de foto y vídeo"
     },
     "newTripHook": {
       "voice": "Entrada de voz",
-      "scan": "Escanear billete",
-      "manual": "Entrada manual"
+      "scan": "Escanear billete"
     },
     "newTripHookComingSoon": "{{feature}} — próximamente",
     "newTripValidation": {

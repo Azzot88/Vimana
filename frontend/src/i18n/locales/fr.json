@@ -568,12 +568,40 @@
       "terms": "Conditions",
       "rules": "Règles",
       "customs": "Franchise douanière",
-      "handover": "Réception et remise"
+      "handover": "Réception et remise",
+      "payment": "Règlement",
+      "services": "Ce que vous faites en plus"
+    },
+    "wizard": {
+      "progress": "Étape {{step}} sur {{total}}",
+      "step1": "Où et quand vous volez",
+      "step1Sub": "C'est là-dessus que les expéditeurs cherchent",
+      "step2": "Ce que vous prenez et la place",
+      "step3": "Remise et règlement",
+      "step4": "Services et règles",
+      "optional": "Facultatif — vous pouvez publier sans",
+      "keepDraftTitle": "Garder ce brouillon ?",
+      "keepDraftBody": "Il reste sur cet appareil et vous attendra à la prochaine ouverture du formulaire.",
+      "keepDraft": "Garder et fermer",
+      "discardDraft": "Supprimer"
+    },
+    "paymentHint": "Comment vous êtes payé. Affiché sur la fiche ; le montant est facultatif.",
+    "paymentModel": {
+      "on_delivery": "À la remise",
+      "escrow": "Séquestre",
+      "prepaid": "D'avance"
+    },
+    "servicesHint": "Facultatif. Chacun est cherchable : ceux qui en ont besoin vous trouvent.",
+    "services": {
+      "domestic_shipping": "Je réexpédie par la poste dans le pays",
+      "marketplace_pickup": "Je récupère les commandes en ligne",
+      "purchase_on_request": "J'achète sur demande",
+      "door_delivery": "Je livre à domicile",
+      "photo_report": "Rapport photo et vidéo"
     },
     "newTripHook": {
       "voice": "Saisie vocale",
-      "scan": "Scanner le billet",
-      "manual": "Saisie manuelle"
+      "scan": "Scanner le billet"
     },
     "newTripHookComingSoon": "{{feature}} — bientôt",
     "newTripValidation": {

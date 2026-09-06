@@ -615,12 +615,40 @@
       "terms": "Terms",
       "rules": "Rules",
       "customs": "Customs allowance",
-      "handover": "Accepting and handing over"
+      "handover": "Accepting and handing over",
+      "payment": "Settlement",
+      "services": "What else you do"
+    },
+    "wizard": {
+      "progress": "Step {{step}} of {{total}}",
+      "step1": "Where and when you fly",
+      "step1Sub": "This is what senders search on",
+      "step2": "What you take and how much room",
+      "step3": "Handover and settlement",
+      "step4": "Services and rules",
+      "optional": "Optional — you can publish without it",
+      "keepDraftTitle": "Keep this draft?",
+      "keepDraftBody": "It stays on this device and will be waiting the next time you open the form.",
+      "keepDraft": "Keep and close",
+      "discardDraft": "Discard"
+    },
+    "paymentHint": "How you expect to be paid. Shown on the card; the amount is optional.",
+    "paymentModel": {
+      "on_delivery": "On delivery",
+      "escrow": "Escrow",
+      "prepaid": "Paid up front"
+    },
+    "servicesHint": "Optional. Each one is searchable, so senders looking for it find you.",
+    "services": {
+      "domestic_shipping": "I post it on within the country",
+      "marketplace_pickup": "I collect marketplace orders",
+      "purchase_on_request": "I buy goods to order",
+      "door_delivery": "I deliver to the door",
+      "photo_report": "Photo and video report"
     },
     "newTripHook": {
       "voice": "Voice input",
-      "scan": "Scan ticket",
-      "manual": "Manual input"
+      "scan": "Scan ticket"
     },
     "newTripHookComingSoon": "{{feature}} — coming soon",
     "newTripValidation": {

@@ -569,12 +569,40 @@
       "terms": "Warunki",
       "rules": "Zasady",
       "customs": "Limit celny",
-      "handover": "Odbiór i przekazanie"
+      "handover": "Odbiór i przekazanie",
+      "payment": "Rozliczenie",
+      "services": "Co jeszcze robisz"
+    },
+    "wizard": {
+      "progress": "Krok {{step}} z {{total}}",
+      "step1": "Dokąd i kiedy lecisz",
+      "step1Sub": "Po tym znajdą Cię w wyszukiwarce",
+      "step2": "Co bierzesz i ile miejsca",
+      "step3": "Przekazanie i rozliczenie",
+      "step4": "Usługi i zasady",
+      "optional": "Opcjonalne — można opublikować i bez tego",
+      "keepDraftTitle": "Zachować szkic?",
+      "keepDraftBody": "Zostanie na tym urządzeniu i poczeka, aż otworzysz formularz ponownie.",
+      "keepDraft": "Zachowaj i zamknij",
+      "discardDraft": "Usuń"
+    },
+    "paymentHint": "Jak się rozliczasz. Widoczne na karcie; kwota jest opcjonalna.",
+    "paymentModel": {
+      "on_delivery": "Przy odbiorze",
+      "escrow": "Escrow",
+      "prepaid": "Z góry"
+    },
+    "servicesHint": "Opcjonalne. Po każdej można wyszukiwać — znajdą Cię ci, którzy jej szukają.",
+    "services": {
+      "domestic_shipping": "Wyślę pocztą po kraju",
+      "marketplace_pickup": "Odbiorę zamówienie z marketplace'u",
+      "purchase_on_request": "Kupię towar na zamówienie",
+      "door_delivery": "Dowiozę pod drzwi",
+      "photo_report": "Raport foto i wideo"
     },
     "newTripHook": {
       "voice": "Wprowadzanie głosowe",
-      "scan": "Skanuj bilet",
-      "manual": "Wprowadzanie ręczne"
+      "scan": "Skanuj bilet"
     },
     "newTripHookComingSoon": "{{feature}} — wkrótce",
     "newTripValidation": {

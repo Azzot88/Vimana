@@ -1,13 +1,31 @@
 import { useId, useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
-import { createTrip, EXCLUSIONS, type Exclusion } from '../api/trips'
+import {
+  createTrip,
+  EXCLUSIONS,
+  PAYMENT_MODELS,
+  TRIP_SERVICES,
+  type Exclusion,
+  type PaymentModel,
+  type TripService,
+} from '../api/trips'
 import { listRouteNotes, type RouteNote } from '../api/notices'
 import AirportSelect from '../components/AirportSelect'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
+import WizardSheet from '../components/WizardSheet'
 import { usePrefs } from '../hooks/usePrefs'
+
+/** T3.11.20 — four steps, and only the first is required.
+ *
+ *  The order is the order of certainty. Step 1 is what the carrier knows by
+ *  heart and can answer in fifteen seconds; step 4 is commercial decisions that
+ *  need thinking about. Putting money earlier is the classic way to lose the
+ *  people who would have published.
+ */
+const TOTAL_STEPS = 4
 
 // T3.11.07 — bumped from v1 when the route became a chain, and again when "who
 // is flying" moved from the leg to the trip. Both times for the same reason: a
@@ -93,6 +111,12 @@ interface Draft {
   // T3.11.07 — a closed list, so a sender can filter on it. Empty means the
   // carrier said nothing, and that is sent as `null` rather than `[]`.
   excluded: Exclusion[]
+  // T3.11.07 — what the carrier does around the flight, and how they expect to
+  // be paid. The settlement model is stated by 61.7 % of this market and a
+  // price by 0.1 %, so the empty string here means "did not say" and is sent
+  // as `null` — not as the commonest answer.
+  services: TripService[]
+  paymentModel: '' | PaymentModel
   categories: string[]
   alsoOnNostr: boolean
   // T3.35 — the carrier's baseline terms. Strings because they come from
@@ -114,6 +138,8 @@ const EMPTY: Draft = {
   handoverOrigin: { ...EMPTY_HANDOVER },
   handoverDestination: { ...EMPTY_HANDOVER },
   excluded: [],
+  services: [],
+  paymentModel: '',
   categories: [],
   alsoOnNostr: true,
   pricePerKg: '',
@@ -136,6 +162,7 @@ function loadDraft(): Draft {
       // rows and no way to add one.
       legs: parsed.legs?.length ? parsed.legs : [{ ...EMPTY_LEG }],
       excluded: parsed.excluded ?? [],
+      services: parsed.services ?? [],
       handoverOrigin: { ...EMPTY_HANDOVER, ...parsed.handoverOrigin },
       handoverDestination: { ...EMPTY_HANDOVER, ...parsed.handoverDestination },
     }
@@ -190,6 +217,26 @@ export default function NewTripPage() {
   const [draft, setDraft] = useState<Draft>(loadDraft)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [askingToClose, setAskingToClose] = useState(false)
+
+  // T3.11.20 — the step lives in the URL, not in state.
+  //
+  // Browser Back and the phone's back gesture then mean "previous step", which
+  // is what a person pressing them at step 3 intends. Held in state instead,
+  // the same press throws the whole wizard away — and a wizard you can fall out
+  // of by the most ordinary gesture on the device is exactly the trap the
+  // always-visible Back button exists to prevent.
+  const [params, setParams] = useSearchParams()
+  const step = Math.min(
+    TOTAL_STEPS,
+    Math.max(1, Number(params.get('step')) || 1),
+  )
+  const goToStep = useCallback(
+    (next: number, replace = false) => {
+      setParams({ step: String(next) }, { replace })
+    },
+    [setParams],
+  )
 
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
@@ -306,6 +353,42 @@ export default function NewTripPage() {
     preflightRef.current?.focus()
   }, [preflightNotes])
 
+  /** T3.11.20 — moving on. Validation runs here and not on blur: a field that
+   *  turns red while it is being typed into reads as nagging, and the only step
+   *  with required answers is the first.
+   *
+   *  Called by: the "Next" button in the sheet footer. */
+  const goNext = () => {
+    if (step === 1) {
+      const problem = validate()
+      if (problem) {
+        setError(problem)
+        return
+      }
+    }
+    setError('')
+    goToStep(Math.min(TOTAL_STEPS, step + 1))
+  }
+
+  /** Leaving. The draft is already in `localStorage` on every keystroke, so the
+   *  question is whether to keep it, not whether to save it — and the wrong
+   *  silent answer is the one that throws away a half-filled form.
+   *
+   *  Called by: the close button in the sheet header, and Escape. */
+  const requestClose = () => {
+    const untouched =
+      draft.legs.length === 1 &&
+      !draft.legs[0].origin &&
+      !draft.legs[0].destination &&
+      !draft.legs[0].departAt
+    if (untouched) {
+      localStorage.removeItem(DRAFT_KEY)
+      navigate(-1)
+      return
+    }
+    setAskingToClose(true)
+  }
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     setError('')
@@ -388,6 +471,8 @@ export default function NewTripPage() {
         // and excludes nothing" are different answers, and the card reads them
         // differently.
         excluded: draft.excluded.length > 0 ? draft.excluded : null,
+        services: draft.services.length > 0 ? draft.services : null,
+        payment_model: draft.paymentModel || null,
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
         // rules" rather than "fall back to my template".
         carriage_rules: draft.carriageRules,
@@ -462,43 +547,197 @@ export default function NewTripPage() {
         })
       : '—'
 
-  return (
-    <div className="max-w-4xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('trips.newTrip')}
-        </h1>
-        <div className="flex gap-2">
-          {showHookIcon('🎤', t('trips.newTripHook.voice'), VOICE_ENABLED)}
-          {showHookIcon('📷', t('trips.newTripHook.scan'), SCAN_ENABLED)}
-          <button
-            type="button"
-            aria-label={t('trips.newTripHook.manual') as string}
-            className="w-10 h-10 rounded-field border border-navy/40 bg-navy text-ivory"
-            title={t('trips.newTripHook.manual') as string}
-          >
-            <span aria-hidden="true" className="text-lg">
-              ⌨️
+
+  /** The card as it will appear on the board.
+   *
+   *  T3.11.20 — collapsed, and present from the first step rather than as a
+   *  fifth one. Carriers are used to seeing their whole post before it goes
+   *  out; a wizard that hides it until the end leaves the feeling that
+   *  something was dropped along the way. A step of its own would have cost
+   *  every carrier a screen, including the 31 % publishing inside two days.
+   */
+  const preview = (
+    <details className="rounded-card border border-navy/10 bg-navy/[0.02] px-4 py-3">
+      <summary className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide cursor-pointer">
+        {t('trips.newTripCell.preview')}
+      </summary>
+      <div className="mt-3 bg-white rounded-card border border-navy/10 p-4">
+        <div className="space-y-1">
+          {draft.legs.map((leg, index) => (
+            <div
+              key={index}
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2"
+            >
+              <MonoText className="text-lg text-navy font-medium">
+                {leg.origin || '???'} → {leg.destination || '???'}
+              </MonoText>
+              <MonoText className="text-sm text-navy/60">
+                {formatDeparture(leg.departAt)}
+              </MonoText>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
+          {draft.capacity && (
+            <span>
+              {t('trips.capacity')}:{' '}
+              <MonoText className="text-xs">
+                {prefs.weight(Number(draft.capacity))}
+              </MonoText>
+              {draft.spaceKind !== 'unspecified' && (
+                <span className="ml-1">
+                  · {t(`trips.spaceKind.${draft.spaceKind}`)}
+                </span>
+              )}
             </span>
-          </button>
+          )}
+          {draft.sizeHint && <span>{t(`trips.sizeHint.${draft.sizeHint}`)}</span>}
+          {draft.flownBy === 'proxy' && (
+            <span>{t('trips.flownBy.proxyChip')}</span>
+          )}
+          {draft.declaredValueStatus === 'exhausted' && (
+            <span className="text-amber">
+              {t('trips.declaredValueStatus.exhausted')}
+            </span>
+          )}
+          {draft.excluded.length > 0 && (
+            <span className="text-amber">
+              {t('trips.excludedPrefix')}{' '}
+              {draft.excluded.map((x) => t(`trips.excluded.${x}`)).join(', ')}
+            </span>
+          )}
+          {draft.categories.length > 0 && (
+            <span className="flex flex-wrap gap-1">
+              {draft.categories.map((c) => (
+                <span
+                  key={c}
+                  className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-navy/60"
+                >
+                  {t(`categories.${c}`, { defaultValue: c })}
+                </span>
+              ))}
+            </span>
+          )}
         </div>
       </div>
+    </details>
+  )
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Route cell — the whole chain, T3.11.07 */}
-        <div className="md:col-span-3 bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-              {t('trips.newTripCell.route')}
-            </p>
-            <MonoText className="text-[11px] text-navy/40">
-              {draft.legs.length}/{MAX_LEGS}
-            </MonoText>
-          </div>
-          {/* DESIGNGUIDELINES §9b — what this field changes and where it shows. */}
-          <p className="text-[11px] font-body text-navy/40 -mt-1">
-            {t('trips.routeHint')}
+  const stepTitles = [
+    t('trips.wizard.step1'),
+    t('trips.wizard.step2'),
+    t('trips.wizard.step3'),
+    t('trips.wizard.step4'),
+  ]
+  const stepSubtitles = [
+    t('trips.wizard.step1Sub'),
+    t('trips.wizard.optional'),
+    t('trips.wizard.optional'),
+    t('trips.wizard.optional'),
+  ]
+
+  const publishButton = (primary: boolean) => (
+    <button
+      type="button"
+      onClick={() => handleSubmit()}
+      disabled={loading}
+      className={
+        primary
+          ? 'bg-amber text-white font-display font-semibold px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50'
+          : 'border border-amber/60 text-amber font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-amber/5 transition-colors disabled:opacity-50'
+      }
+    >
+      {loading ? t('common.loading') : t('trips.publish')}
+    </button>
+  )
+
+  return (
+    <WizardSheet
+      step={step}
+      total={TOTAL_STEPS}
+      title={stepTitles[step - 1] as string}
+      subtitle={stepSubtitles[step - 1] as string}
+      onBack={step > 1 ? () => goToStep(step - 1) : undefined}
+      onClose={requestClose}
+      footer={
+        <>
+          {/* T3.11.07 — publish is reachable from the first step, not the
+              second. `0060` made weight optional precisely so a route and a
+              date would be a publishable trip: the median carrier on this
+              market posts five days out, 31 % inside two days and 11.8 % on
+              the day of the flight, and a screen standing between them and the
+              board is the toll that migration removed. */}
+          {publishButton(step === TOTAL_STEPS)}
+          {step < TOTAL_STEPS && (
+            <button
+              type="button"
+              onClick={goNext}
+              className="bg-navy text-ivory font-display font-semibold px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid transition-colors"
+            >
+              {t('common.continue')}
+            </button>
+          )}
+        </>
+      }
+    >
+      {askingToClose && (
+        <div
+          role="alertdialog"
+          aria-labelledby="close-title"
+          className="rounded-card border-2 border-navy/20 bg-ivory p-4 space-y-3"
+        >
+          <p
+            id="close-title"
+            className="font-display font-semibold text-sm text-navy"
+          >
+            {t('trips.wizard.keepDraftTitle')}
           </p>
+          <p className="text-xs font-body text-navy/60">
+            {t('trips.wizard.keepDraftBody')}
+          </p>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setAskingToClose(false)}
+              className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2 min-h-[2.75rem]"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(DRAFT_KEY)
+                navigate(-1)
+              }}
+              className="text-sm font-body text-danger hover:opacity-80 px-3 py-2 min-h-[2.75rem]"
+            >
+              {t('trips.wizard.discardDraft')}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid"
+            >
+              {t('trips.wizard.keepDraft')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 1 · where and when ─────────────────────────────────────── */}
+      {step === 1 && (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-body text-navy/40">
+              {t('trips.routeHint')}
+            </p>
+            <div className="flex gap-2 shrink-0">
+              {/* EXP-03 / EXP-04 hook points. Second rework of this form in one
+                  phase, and §3.10.1 requires them to survive both. */}
+              {showHookIcon('🎤', t('trips.newTripHook.voice'), VOICE_ENABLED)}
+              {showHookIcon('📷', t('trips.newTripHook.scan'), SCAN_ENABLED)}
+            </div>
+          </div>
 
           {draft.legs.map((leg, index) => (
             <fieldset
@@ -578,10 +817,8 @@ export default function NewTripPage() {
             </fieldset>
           ))}
 
-          {/* T3.11.07 — the next flight is offered only once this one is
-              answered (owner's decision 2026-09-06). Handing out empty rows in
-              advance shows the carrier work they have not asked for, and the
-              row they never fill has to be swept up on submit. */}
+          {/* The next flight is offered only once this one is answered: handing
+              out empty rows in advance shows work nobody asked for. */}
           {draft.legs.length < MAX_LEGS && (
             <button
               type="button"
@@ -598,11 +835,11 @@ export default function NewTripPage() {
             </button>
           )}
 
-          {/* Who is flying — one answer for the trip, not one per flight.
-              A switch rather than two buttons (owner's decision 2026-09-06),
-              with both positions spelled out beside it: this is the claim the
-              market makes most often and backs least, so neither state is
-              allowed to be the one nobody read. */}
+          {/* Who is flying — one answer for the trip, not one per flight, and a
+              switch rather than two buttons (owner's decision 2026-09-06).
+              Both positions are spelled out beside it: this is the claim the
+              market makes most often and backs least, so neither state may be
+              the one nobody read. */}
           <div className="flex items-center justify-between gap-3 border-t border-navy/10 pt-3">
             <span className="text-xs font-body font-medium text-navy/60">
               {t('trips.flownBy.label')}
@@ -643,67 +880,23 @@ export default function NewTripPage() {
               </span>
             </label>
           </div>
-        </div>
+        </>
+      )}
 
-        {/* Terms cell 1x1 — T3.35. Bento rows close as: route 3 ·
-            capacity 2 + terms 1 · categories 3 · handover 3 ·
-            rules 2 + publish 1 · preview 3. */}
-        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-            {t('trips.newTripCell.terms')}
-          </p>
-          <p className="text-[11px] font-body text-navy/40 -mt-1">
-            {t('trips.termsHint')}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <label className="flex-1 min-w-[6rem]">
-              <span className="block text-[11px] font-body text-navy/40 mb-1">
-                {t('trips.pricePerKg')}
-              </span>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={draft.pricePerKg}
-                onChange={(e) => patch({ pricePerKg: e.target.value })}
-                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-              />
-            </label>
-            <label className="flex-1 min-w-[6rem]">
-              <span className="block text-[11px] font-body text-navy/40 mb-1">
-                {t('trips.minDealPrice')}
-              </span>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={draft.minDealPrice}
-                onChange={(e) => patch({ minDealPrice: e.target.value })}
-                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-              />
-            </label>
-            <label className="w-24">
-              <span className="block text-[11px] font-body text-navy/40 mb-1">
-                {t('trips.currency')}
-              </span>
-              <input
-                maxLength={3}
-                value={draft.currency}
-                onChange={(e) =>
-                  patch({ currency: e.target.value.toUpperCase() })
-                }
-                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-              />
-            </label>
+      {/* ── Step 2 · what you carry and how much room ───────────────────── */}
+      {step === 2 && (
+        <>
+          <div className="space-y-2">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.categories')}
+            </p>
+            <CategoryBubbles
+              selected={draft.categories}
+              onChange={(next) => patch({ categories: next })}
+            />
           </div>
-        </div>
 
-        {/* Capacity cell 2x1 — T3.11.07. Two capacities, not one: room in the
-            bag and headroom under the customs allowance. They run out
-            separately, and the market says so outright — "the luxury limit is
-            already taken" sits in posts that still carry documents that day. */}
-        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-3">
+          <div className="space-y-3 border-t border-navy/10 pt-4">
             <label
               id={capacityLabelId}
               htmlFor={capacityId}
@@ -711,10 +904,6 @@ export default function NewTripPage() {
             >
               {t('trips.newTripCell.capacity')}
             </label>
-            {/* §9b — and it says outright that the whole cell is skippable.
-                A field that looks required is required in practice: the carrier
-                who is flying tonight fills it with a guess rather than leave it
-                blank, and a guessed weight is worse than none. */}
             <p className="text-[11px] font-body text-navy/40 -mt-1">
               {t('trips.spaceHint')}
             </p>
@@ -764,9 +953,7 @@ export default function NewTripPage() {
               className="w-full accent-cyan"
             />
             {/* The second way to answer the same question. Kilograms are named
-                in 2.4 % of real posts and "small / not big" in 9.9 %, so the
-                scale is not a decoration on the number — for most carriers it
-                is the answer they actually have. */}
+                in 2.4 % of real posts and "small / not big" in 9.9 %. */}
             <fieldset>
               <legend className="block text-[11px] font-body text-navy/40 mb-1">
                 {t('trips.sizeHint.label')}
@@ -798,11 +985,10 @@ export default function NewTripPage() {
 
           {/* The customs allowance — the other capacity. A ceiling alone cannot
               say "spent", and "spent" is what carriers announce. */}
-          <div className="space-y-3 sm:border-l sm:border-navy/10 sm:pl-4">
+          <div className="space-y-3 border-t border-navy/10 pt-4">
             <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
               {t('trips.newTripCell.customs')}
             </p>
-            {/* §9b */}
             <p className="text-[11px] font-body text-navy/40 -mt-1">
               {t('trips.customsHint')}
             </p>
@@ -848,166 +1034,263 @@ export default function NewTripPage() {
                 ))}
               </div>
             </fieldset>
-            {/* Says outright that the trip is still publishable. The whole point
-                of a separate state is that a spent allowance closes one
-                capacity and not the other. */}
             {draft.declaredValueStatus === 'exhausted' && (
               <p className="text-[11px] font-body text-navy/50">
                 {t('trips.declaredValueStatus.exhaustedNote')}
               </p>
             )}
           </div>
-        </div>
+        </>
+      )}
 
-        {/* Categories cell — full row */}
-        <div className="md:col-span-3 bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-            {t('trips.newTripCell.categories')}
-          </p>
-          <CategoryBubbles
-            selected={draft.categories}
-            onChange={(next) => patch({ categories: next })}
-          />
-        </div>
-
-        {/* Handover cell — full row, T3.11.07. Two ends, not one list. Carriers
-            arrange the two differently as a matter of course: "in Italy I take
-            it at my address or meet in Milan, Turin, Genoa; in Russia I accept
-            a courier at home". One combined list cannot say that. */}
-        <div className="md:col-span-3 bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-            {t('trips.newTripCell.handover')}
-          </p>
-          {/* §9b */}
-          <p className="text-[11px] font-body text-navy/40 -mt-1">
-            {t('trips.handoverHint')}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {(
-              [
-                ['handoverOrigin', firstOrigin] as const,
-                ['handoverDestination', lastDestination] as const,
-              ]
-            ).map(([field, place]) => (
-              <fieldset
-                key={field}
-                className="border border-navy/10 rounded-field p-3 space-y-3"
-              >
-                <legend className="px-1 text-[11px] font-mono text-navy/40">
-                  {t(`trips.${field}`)}
-                  {place && <span className="ml-1 text-cyan">{place}</span>}
-                </legend>
-                <div className="flex flex-wrap gap-2">
-                  {HANDOVER_METHODS.map((method) => {
-                    const chosen = draft[field].methods.includes(method)
-                    return (
-                      <button
-                        key={method}
-                        type="button"
-                        aria-pressed={chosen}
-                        onClick={() =>
-                          patchHandover(field, {
-                            methods: chosen
-                              ? draft[field].methods.filter((m) => m !== method)
-                              : [...draft[field].methods, method],
-                          })
-                        }
-                        className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
-                          chosen
-                            ? 'border-cyan bg-cyan/10 text-navy'
-                            : 'border-navy/20 text-navy/50 hover:border-navy/40'
-                        }`}
-                      >
-                        {t(`cards.opt.${method}`)}
-                      </button>
-                    )
-                  })}
-                </div>
-                {/* Free text, and deliberately so: the market names districts,
-                    suburbs and satellite cities — "Tustin, Irvine or LAX",
-                    "Fili, Moscow" — and an airport picker cannot say any of
-                    that. */}
-                <label className="block">
-                  <span className="block text-[11px] font-body text-navy/40 mb-1">
-                    {t('trips.handoverPoints')}
-                  </span>
-                  <input
-                    type="text"
-                    value={draft[field].points}
-                    onChange={(e) => patchHandover(field, { points: e.target.value })}
-                    placeholder={t('trips.handoverPointsPlaceholder') as string}
-                    className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
-                  />
-                </label>
-              </fieldset>
-            ))}
+      {/* ── Step 3 · handover and settlement ────────────────────────────── */}
+      {step === 3 && (
+        <>
+          <div className="space-y-3">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.handover')}
+            </p>
+            <p className="text-[11px] font-body text-navy/40 -mt-1">
+              {t('trips.handoverHint')}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(
+                [
+                  ['handoverOrigin', firstOrigin] as const,
+                  ['handoverDestination', lastDestination] as const,
+                ]
+              ).map(([field, place]) => (
+                <fieldset
+                  key={field}
+                  className="border border-navy/10 rounded-field p-3 space-y-3"
+                >
+                  <legend className="px-1 text-[11px] font-mono text-navy/40">
+                    {t(`trips.${field}`)}
+                    {place && <span className="ml-1 text-cyan">{place}</span>}
+                  </legend>
+                  <div className="flex flex-wrap gap-2">
+                    {HANDOVER_METHODS.map((method) => {
+                      const chosen = draft[field].methods.includes(method)
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          aria-pressed={chosen}
+                          onClick={() =>
+                            patchHandover(field, {
+                              methods: chosen
+                                ? draft[field].methods.filter((m) => m !== method)
+                                : [...draft[field].methods, method],
+                            })
+                          }
+                          className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                            chosen
+                              ? 'border-cyan bg-cyan/10 text-navy'
+                              : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                          }`}
+                        >
+                          {t(`cards.opt.${method}`)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {/* Free text, and deliberately so: the market names districts,
+                      suburbs and satellite cities, which an airport picker
+                      cannot say. */}
+                  <label className="block">
+                    <span className="block text-[11px] font-body text-navy/40 mb-1">
+                      {t('trips.handoverPoints')}
+                    </span>
+                    <input
+                      type="text"
+                      value={draft[field].points}
+                      onChange={(e) =>
+                        patchHandover(field, { points: e.target.value })
+                      }
+                      placeholder={t('trips.handoverPointsPlaceholder') as string}
+                      className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                    />
+                  </label>
+                </fieldset>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Carriage rules cell 1x2 — T_UX.15, exclusions T3.11.07 */}
-        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-2">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-            {t('trips.newTripCell.rules')}
-          </p>
-
-          {/* T3.11.07 — the five refusals this market writes, as chips. Only
-              5.9 % of posts state any, so this is not a checklist to work
-              through: nothing ticked is the ordinary answer and is sent as
-              "said nothing", not as "excludes nothing". A free-text field
-              alone produced five spellings of "сигареты" and nothing a filter
-              could read. §9b: the line below says where they show up. */}
-          <fieldset>
-            <legend className="block text-[11px] font-body text-navy/40 mb-1">
-              {t('trips.excludedLabel')}
-            </legend>
+          <div className="space-y-3 border-t border-navy/10 pt-4">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.payment')}
+            </p>
+            {/* The settlement model, not the price, is what this market states:
+                61.7 % of posts name one ("без предоплаты" 42.6, "оплата при
+                получении" 19.1) and 0.1 % name a sum. So the model is asked
+                first and plainly, and the number is marked optional. */}
+            <p className="text-[11px] font-body text-navy/40 -mt-1">
+              {t('trips.paymentHint')}
+            </p>
             <div className="flex flex-wrap gap-2">
-              {EXCLUSIONS.map((item) => {
-                const chosen = draft.excluded.includes(item)
+              {PAYMENT_MODELS.map((model) => (
+                <button
+                  key={model}
+                  type="button"
+                  aria-pressed={draft.paymentModel === model}
+                  onClick={() =>
+                    patch({
+                      paymentModel: draft.paymentModel === model ? '' : model,
+                    })
+                  }
+                  className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                    draft.paymentModel === model
+                      ? 'border-cyan bg-cyan/10 text-navy'
+                      : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                  }`}
+                >
+                  {t(`trips.paymentModel.${model}`)}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-[11px] font-body text-navy/40">
+              {t('trips.termsHint')}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex-1 min-w-[6rem]">
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t('trips.pricePerKg')}
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={draft.pricePerKg}
+                  onChange={(e) => patch({ pricePerKg: e.target.value })}
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                />
+              </label>
+              <label className="flex-1 min-w-[6rem]">
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t('trips.minDealPrice')}
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={draft.minDealPrice}
+                  onChange={(e) => patch({ minDealPrice: e.target.value })}
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                />
+              </label>
+              <label className="w-24">
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t('trips.currency')}
+                </span>
+                <input
+                  maxLength={3}
+                  value={draft.currency}
+                  onChange={(e) => patch({ currency: e.target.value.toUpperCase() })}
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                />
+              </label>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Step 4 · services and rules ─────────────────────────────────── */}
+      {step === 4 && (
+        <>
+          <div className="space-y-2">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.services')}
+            </p>
+            {/* Every one of these is something this market already sells and
+                the platform could not see: onward shipping inside the
+                destination country 44.9 %, marketplace pickup 19 %, buying to
+                order 18 %, door delivery 8 %, photo reports 1.7 %. */}
+            <p className="text-[11px] font-body text-navy/40">
+              {t('trips.servicesHint')}
+            </p>
+            <div className="space-y-2">
+              {TRIP_SERVICES.map((service) => {
+                const chosen = draft.services.includes(service)
                 return (
                   <button
-                    key={item}
+                    key={service}
                     type="button"
                     aria-pressed={chosen}
                     onClick={() =>
                       patch({
-                        excluded: chosen
-                          ? draft.excluded.filter((x) => x !== item)
-                          : [...draft.excluded, item],
+                        services: chosen
+                          ? draft.services.filter((s) => s !== service)
+                          : [...draft.services, service],
                       })
                     }
-                    className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                    className={`w-full text-left px-3 py-2 min-h-[2.75rem] rounded-field border text-sm font-body flex items-center justify-between gap-2 transition-colors ${
                       chosen
-                        ? 'border-amber bg-amber/10 text-navy'
-                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                        ? 'border-cyan bg-cyan/10 text-navy'
+                        : 'border-navy/20 text-navy/60 hover:border-navy/40'
                     }`}
                   >
-                    {t(`trips.excluded.${item}`)}
+                    {t(`trips.services.${service}`)}
+                    {chosen && <span aria-hidden>✓</span>}
                   </button>
                 )
               })}
             </div>
-          </fieldset>
+          </div>
 
-          <p className="text-[11px] font-body text-navy/40">{t('trips.rulesHint')}</p>
-          <label htmlFor={rulesId} className="sr-only">
-            {t('trips.newTripCell.rules')}
-          </label>
-          <textarea
-            id={rulesId}
-            value={draft.carriageRules}
-            onChange={(e) => patch({ carriageRules: e.target.value })}
-            rows={3}
-            maxLength={4000}
-            className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-          />
-        </div>
+          <div className="space-y-2 border-t border-navy/10 pt-4">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.rules')}
+            </p>
+            <fieldset>
+              <legend className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.excludedLabel')}
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {EXCLUSIONS.map((item) => {
+                  const chosen = draft.excluded.includes(item)
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      aria-pressed={chosen}
+                      onClick={() =>
+                        patch({
+                          excluded: chosen
+                            ? draft.excluded.filter((x) => x !== item)
+                            : [...draft.excluded, item],
+                        })
+                      }
+                      className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                        chosen
+                          ? 'border-amber bg-amber/10 text-navy'
+                          : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                      }`}
+                    >
+                      {t(`trips.excluded.${item}`)}
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
 
-        {/* Publish cell 1x1 */}
-        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3 flex flex-col">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-            {t('trips.newTripCell.publish')}
-          </p>
-          <label className="flex items-start gap-2 text-xs font-body text-navy/60">
+            <p className="text-[11px] font-body text-navy/40">
+              {t('trips.rulesHint')}
+            </p>
+            <label htmlFor={rulesId} className="sr-only">
+              {t('trips.newTripCell.rules')}
+            </label>
+            <textarea
+              id={rulesId}
+              value={draft.carriageRules}
+              onChange={(e) => patch({ carriageRules: e.target.value })}
+              rows={3}
+              maxLength={4000}
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            />
+          </div>
+
+          <label className="flex items-start gap-2 text-xs font-body text-navy/60 border-t border-navy/10 pt-4">
             <input
               type="checkbox"
               checked={draft.alsoOnNostr}
@@ -1016,176 +1299,87 @@ export default function NewTripPage() {
             />
             <span>{t('trips.newTripCell.alsoOnNostr')}</span>
           </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-auto bg-amber text-white font-display font-semibold px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {loading ? t('common.loading') : t('trips.publish')}
-          </button>
-          <p className="text-[10px] font-mono text-navy/30 text-center">
-            ⌘/Ctrl + ⏎
-          </p>
-        </div>
-
-        {/* Preview cell 2x1 — sticky bottom on desktop */}
-        <div className="md:col-span-3 bg-gradient-to-br from-navy/5 to-cyan/5 rounded-card border border-navy/10 p-4">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide mb-2">
-            {t('trips.newTripCell.preview')}
-          </p>
-          <div className="bg-white rounded-card border border-navy/10 p-4">
-            {/* One row per flight. Carriers are used to seeing their whole post
-                before it goes out, and a chain summarised as first→last would
-                hide the very segment they added the chain for. */}
-            <div className="space-y-1">
-              {draft.legs.map((leg, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2"
-                >
-                  <MonoText className="text-lg text-navy font-medium">
-                    {leg.origin || '???'} → {leg.destination || '???'}
-                  </MonoText>
-                  <MonoText className="text-sm text-navy/60">
-                    {formatDeparture(leg.departAt)}
-                  </MonoText>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
-              <span>
-                {t('trips.capacity')}:{' '}
-                <MonoText className="text-xs">{draft.capacity ? prefs.weight(Number(draft.capacity)) : '?'}</MonoText>
-                {draft.spaceKind !== 'unspecified' && (
-                  <span className="ml-1">· {t(`trips.spaceKind.${draft.spaceKind}`)}</span>
-                )}
-                {draft.sizeHint && (
-                  <span className="ml-1">· {t(`trips.sizeHint.${draft.sizeHint}`)}</span>
-                )}
-              </span>
-              {/* Stated once for the trip, as it is asked. A sender who is
-                  choosing a carrier on "flying in person" needs to see that the
-                  person flying is somebody else. */}
-              {draft.flownBy === 'proxy' && (
-                <span>{t('trips.flownBy.proxyChip')}</span>
-              )}
-              {/* The one state a sender has to see before writing: the allowance
-                  is spent, so a valuable parcel is not what this flight can take
-                  even though the bag is not full. */}
-              {draft.declaredValueStatus === 'exhausted' && (
-                <span className="text-amber">
-                  {t('trips.declaredValueStatus.exhausted')}
-                </span>
-              )}
-              {draft.excluded.length > 0 && (
-                <span className="text-amber">
-                  {t('trips.excludedPrefix')}{' '}
-                  {draft.excluded.map((x) => t(`trips.excluded.${x}`)).join(', ')}
-                </span>
-              )}
-              {draft.categories.length > 0 && (
-                <span className="flex flex-wrap gap-1">
-                  {draft.categories.map((c) => (
-                    <span
-                      key={c}
-                      className="text-xs font-mono bg-ivory px-2 py-0.5 rounded text-navy/60"
-                    >
-                      {c}
-                    </span>
-                  ))}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </form>
-
-      {error && (
-        <p className="text-xs font-mono text-amber text-center">{error}</p>
+        </>
       )}
 
-      <div className="text-center">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-sm font-body text-navy/50 hover:text-navy transition-colors"
-        >
-          {t('common.cancel')}
-        </button>
-      </div>
+      {preview}
+
+      {error && (
+        <p role="alert" className="text-xs font-mono text-amber text-center">
+          {error}
+        </p>
+      )}
 
       {/* T3.11.07 — an inline panel, not a second overlay.
           It used to be `fixed inset-0 z-modal`, which was right while the form
-          was a page and wrong the moment the form itself becomes a sheet: two
-          stacked overlays mean two focus traps, and dismissing the top one by
-          clicking the backdrop lands the click on the one underneath. As a
-          panel it also stops being dismissible by a stray click on the
-          backdrop, which for a restricted-corridor warning is the correct
-          behaviour anyway — it is answered, not waved away. */}
+          was a page and wrong now that the form is itself a sheet: two stacked
+          overlays mean two focus traps, and dismissing the top one by clicking
+          the backdrop lands the click on the one underneath. As a panel it also
+          stops being dismissible by a stray click, which for a
+          restricted-corridor warning is the correct behaviour anyway — it is
+          answered, not waved away. */}
       {preflightNotes.length > 0 && (
         <div
           ref={preflightRef}
           role="alertdialog"
           aria-labelledby="preflight-title"
           tabIndex={-1}
-          className="border-2 border-amber/50 bg-amber/5 rounded-card p-4 sm:p-6 space-y-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+          className="border-2 border-amber/50 bg-amber/5 rounded-card p-4 space-y-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber"
         >
-          <div className="space-y-4">
-            <h3
-              id="preflight-title"
-              className="font-display font-semibold text-lg text-navy"
+          <h3
+            id="preflight-title"
+            className="font-display font-semibold text-lg text-navy"
+          >
+            {t('routeNote.preflightTitle', 'Route requires attention')}
+          </h3>
+          <p className="text-sm font-body text-navy/70">
+            {t(
+              'routeNote.preflightBody',
+              'This corridor has known specifics. Read them below and confirm you understand before publishing.',
+            )}
+          </p>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {preflightNotes.map((n) => (
+              <div
+                key={n.id}
+                className={`border rounded-field p-3 text-xs font-body ${
+                  n.status === 'restricted'
+                    ? 'bg-danger/5 border-danger/30 text-danger'
+                    : 'bg-amber/10 border-amber/40 text-navy'
+                }`}
+              >
+                <p className="font-mono text-xs mb-1">
+                  {n.origin_iso}→{n.destination_iso} [{n.status}/{n.severity}]
+                </p>
+                <p className="font-medium mb-1">{n.headline}</p>
+                {n.body && (
+                  <p className="text-navy/70 whitespace-pre-line">{n.body}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setPreflightNotes([])}
+              className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2 min-h-[2.75rem]"
             >
-              {t('routeNote.preflightTitle', 'Route requires attention')}
-            </h3>
-            <p className="text-sm font-body text-navy/70">
-              {t(
-                'routeNote.preflightBody',
-                'This corridor has known specifics. Read them below and confirm you understand before publishing.',
-              )}
-            </p>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {preflightNotes.map((n) => (
-                <div
-                  key={n.id}
-                  className={`border rounded-field p-3 text-xs font-body ${
-                    n.status === 'restricted'
-                      ? 'bg-danger/5 border-danger/30 text-danger'
-                      : 'bg-amber/10 border-amber/40 text-navy'
-                  }`}
-                >
-                  <p className="font-mono text-xs mb-1">
-                    {n.origin_iso}→{n.destination_iso} [{n.status}/{n.severity}]
-                  </p>
-                  <p className="font-medium mb-1">{n.headline}</p>
-                  {n.body && (
-                    <p className="text-navy/70 whitespace-pre-line">{n.body}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setPreflightNotes([])}
-                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2 min-h-[2.75rem]"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPreflightNotes([])
-                  setAckedPreflight(true)
-                  handleSubmit()
-                }}
-                className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid"
-              >
-                {t('routeNote.iUnderstand', 'I understand — publish anyway')}
-              </button>
-            </div>
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPreflightNotes([])
+                setAckedPreflight(true)
+                handleSubmit()
+              }}
+              className="bg-navy text-ivory font-display font-medium px-4 py-2 min-h-[2.75rem] rounded-field text-sm hover:bg-navy-mid"
+            >
+              {t('routeNote.iUnderstand', 'I understand — publish anyway')}
+            </button>
           </div>
         </div>
       )}
-    </div>
+    </WizardSheet>
   )
 }
