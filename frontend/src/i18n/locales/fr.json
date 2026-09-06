@@ -588,8 +588,7 @@
     "paymentHint": "Comment vous êtes payé. Affiché sur la fiche ; le montant est facultatif.",
     "paymentModel": {
       "on_platform": "Sur la plateforme",
-      "cash_on_delivery": "En espèces après livraison",
-      "transfer_on_delivery": "Par virement après livraison"
+      "off_platform": "Hors plateforme"
     },
     "servicesHint": "Facultatif. Chacun est cherchable : ceux qui en ont besoin vous trouvent.",
     "services": {

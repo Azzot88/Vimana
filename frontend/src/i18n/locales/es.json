@@ -588,8 +588,7 @@
     "paymentHint": "Cómo cobras. Se ve en la ficha; el importe es opcional.",
     "paymentModel": {
       "on_platform": "En la plataforma",
-      "cash_on_delivery": "En efectivo tras la entrega",
-      "transfer_on_delivery": "Por transferencia tras la entrega"
+      "off_platform": "Fuera de la plataforma"
     },
     "servicesHint": "Opcional. Cada uno se puede buscar: quien lo necesita te encuentra.",
     "services": {

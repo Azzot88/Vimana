@@ -635,8 +635,7 @@
     "paymentHint": "How you expect to be paid. Shown on the card; the amount is optional.",
     "paymentModel": {
       "on_platform": "On the platform",
-      "cash_on_delivery": "Cash after delivery",
-      "transfer_on_delivery": "Transfer after delivery"
+      "off_platform": "Outside the platform"
     },
     "servicesHint": "Optional. Each one is searchable, so senders looking for it find you.",
     "services": {

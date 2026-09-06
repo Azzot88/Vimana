@@ -589,8 +589,7 @@
     "paymentHint": "Jak się rozliczasz. Widoczne na karcie; kwota jest opcjonalna.",
     "paymentModel": {
       "on_platform": "Na platformie",
-      "cash_on_delivery": "Gotówką po dostawie",
-      "transfer_on_delivery": "Przelewem po dostawie"
+      "off_platform": "Poza platformą"
     },
     "servicesHint": "Opcjonalne. Po każdej można wyszukiwać — znajdą Cię ci, którzy jej szukają.",
     "services": {

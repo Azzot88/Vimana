@@ -58,11 +58,10 @@ export type TripService = (typeof TRIP_SERVICES)[number]
 
 /** T3.11.07 — the settlement model. Stated by 61.7 % of this market; a concrete
  *  price by 0.1 %. Null is "did not say", not "on delivery". */
-export const PAYMENT_MODELS = [
-  'on_platform',
-  'cash_on_delivery',
-  'transfer_on_delivery',
-] as const
+/** Two, not three. Cash is not a peer of "transfer" — it is one of the systems
+ *  people settle in outside the platform, so it lives in `payment_systems` and
+ *  the model says only whether the money touches the platform. */
+export const PAYMENT_MODELS = ['on_platform', 'off_platform'] as const
 export type PaymentModel = (typeof PAYMENT_MODELS)[number]
 
 export interface Trip {

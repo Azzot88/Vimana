@@ -317,7 +317,7 @@ export default function NewTripPage() {
   const capacityLabelId = useId()
   const rulesId = useId()
   const navigate = useNavigate()
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
 
   const [draft, setDraft] = useState<Draft>(loadDraft)
@@ -443,13 +443,18 @@ export default function NewTripPage() {
     if (!trip) return
     setDraft((prev) => ({
       ...prev,
-      legs: (trip.legs.length > 0
-        ? trip.legs.map((leg) => ({
-            origin: leg.origin,
-            destination: leg.destination,
-            departAt: '',
-          }))
-        : [{ ...EMPTY_LEG, origin: trip.origin, destination: trip.destination }]),
+      legs:
+        trip.legs.length > 0
+          ? trip.legs.map((leg) => ({
+              ...EMPTY_LEG,
+              origin: leg.origin,
+              destination: leg.destination,
+              // Dates stay empty — the one thing never right twice — and so do
+              // the countries: a stored trip carries codes, not ISO pairs, and
+              // guessing them would put the wrong postal catalogue in front of
+              // somebody. They fill in as soon as an airport is re-picked.
+            }))
+          : [{ ...EMPTY_LEG, origin: trip.origin, destination: trip.destination }],
       flownBy: trip.legs[0]?.flown_by ?? 'self',
       // Stored metric, shown in the account's unit.
       capacity:
