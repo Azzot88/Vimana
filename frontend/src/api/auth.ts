@@ -83,6 +83,9 @@ export interface User {
    *  from the browser. */
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
+  /** T3.11.07 — the currency new trips start in, chosen once instead of
+   *  re-picked on every publication. */
+  default_currency?: string
   /** T_UX.15 — standing carriage rules, copied into each new trip. */
   carriage_rules?: string | null
   /** T_UX.21 — the other two standing notes, and unlike the carriage rules
@@ -254,6 +257,7 @@ export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 export interface UserUpdate {
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
+  default_currency?: string
   carriage_rules?: string | null
   interaction_rules?: string | null
   payment_instructions?: string | null

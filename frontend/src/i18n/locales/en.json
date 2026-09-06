@@ -1445,6 +1445,8 @@
     "kg": "Kilograms",
     "lb": "Pounds",
     "dates": "Dates and time",
+    "currency": "Currency",
+    "currencyDesc": "What new trips are priced in. You can still change it on any single trip.",
     "datesDesc": "Used for departure times, deal events, chat messages and letters. The clock follows the same switch: European is 24-hour, American is 12-hour.",
     "european": "European",
     "american": "American",

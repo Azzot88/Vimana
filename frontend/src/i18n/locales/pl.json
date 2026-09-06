@@ -1402,6 +1402,8 @@
     "kg": "Kilogramy",
     "lb": "Funty",
     "dates": "Data i godzina",
+    "currency": "Waluta",
+    "currencyDesc": "W czym wyceniane są nowe loty. Dla pojedynczego lotu nadal można zmienić.",
     "datesDesc": "Dotyczy godzin wylotu, zdarzeń transakcji, wiadomości na czacie i listów. Zegar idzie za tym samym przełącznikiem: europejski jest 24-godzinny, amerykański 12-godzinny.",
     "european": "Europejski",
     "american": "Amerykański",

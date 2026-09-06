@@ -1401,6 +1401,8 @@
     "kg": "Kilogrammes",
     "lb": "Livres",
     "dates": "Date et heure",
+    "currency": "Devise",
+    "currencyDesc": "Dans quoi les nouveaux trajets sont chiffrés. Modifiable sur chaque trajet.",
     "datesDesc": "S'applique aux heures de départ, aux événements d'une transaction, aux messages du chat et aux e-mails. L'horloge suit le même réglage : européen sur 24 heures, américain sur 12 heures.",
     "european": "Européen",
     "american": "Américain",

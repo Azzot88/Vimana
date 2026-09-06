@@ -1401,6 +1401,8 @@
     "kg": "Kilogramos",
     "lb": "Libras",
     "dates": "Fecha y hora",
+    "currency": "Moneda",
+    "currencyDesc": "En qué se cotizan los viajes nuevos. Puedes cambiarlo en cada viaje.",
     "datesDesc": "Se aplica a las horas de salida, a los eventos del acuerdo, a los mensajes del chat y a los correos. El reloj sigue el mismo interruptor: el europeo es de 24 horas, el americano de 12.",
     "european": "Europeo",
     "american": "Americano",

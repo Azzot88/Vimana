@@ -133,8 +133,19 @@ const SIZE_HINTS = ['small', 'medium', 'large'] as const
  *  the numbers people actually say are printed. Labelling all 33 would turn a
  *  scale into a wall of digits and make the eight that matter unfindable.
  */
-const CAPACITY_MAX = 32
-const CAPACITY_LABELLED = [0, 5, 10, 15, 20, 23, 25, 32] as const
+/** The same scale in the unit the account reads in.
+ *
+ *  T3.11.07 — pounds are not kilograms relabelled. 23 kg is the ordinary
+ *  checked bag and 32 kg the airline ceiling for one; in pounds those are the
+ *  round numbers 50 and 70, and printing "50.7" beside them would make a scale
+ *  built out of the numbers people say into one built out of arithmetic.
+ *
+ *  Storage stays metric either way — `prefs.toKg` is what goes to the API.
+ */
+const CAPACITY_SCALE = {
+  kg: { max: 32, labelled: [0, 5, 10, 15, 20, 23, 25, 32] },
+  lb: { max: 70, labelled: [0, 10, 20, 30, 40, 50, 60, 70] },
+} as const
 
 interface Draft {
   legs: LegDraft[]
@@ -191,7 +202,10 @@ const EMPTY: Draft = {
   alsoOnNostr: true,
   pricePerKg: '',
   minDealPrice: '',
-  currency: 'USD',
+  // T3.11.07 — empty means "use the account's default currency", the same
+  // convention every other field in this draft uses. Hard-coding USD here made
+  // "untouched" indistinguishable from "chose USD".
+  currency: '',
   maxDeclaredValue: '',
   carriageRules: '',
 }
@@ -437,7 +451,11 @@ export default function NewTripPage() {
           }))
         : [{ ...EMPTY_LEG, origin: trip.origin, destination: trip.destination }]),
       flownBy: trip.legs[0]?.flown_by ?? 'self',
-      capacity: trip.capacity != null ? String(trip.capacity) : '',
+      // Stored metric, shown in the account's unit.
+      capacity:
+        trip.capacity != null
+          ? String(Math.round(prefs.toUnit(trip.capacity) * 2) / 2)
+          : "",
       spaceKind: trip.space_kind ?? 'unspecified',
       sizeHint: trip.size_hint ?? '',
       handoverOrigin: fromHandover(trip.handover_origin),
@@ -535,7 +553,9 @@ export default function NewTripPage() {
     // typo there is a wrong claim rather than a missing one.
     if (draft.capacity) {
       const cap = parseFloat(draft.capacity)
-      if (Number.isNaN(cap) || cap < 0.5) {
+      // Compared in kilograms: 0.5 kg is the floor the API enforces, and in
+      // pounds the same number would be a different, smaller parcel.
+      if (Number.isNaN(cap) || prefs.toKg(cap) < 0.5) {
         return t('trips.newTripValidation.capacity') as string
       }
     }
@@ -651,13 +671,16 @@ export default function NewTripPage() {
         })),
         // Empty means "not stated" and travels as `null`: the express path made
         // weight optional, and a zero here would be a claim nobody made.
-        capacity: draft.capacity ? Number(draft.capacity) : null,
+        // Typed in the account's unit, stored metric: the column is kilograms
+        // and a pound written into it would be a weight nobody meant.
+        capacity: draft.capacity ? prefs.toKg(Number(draft.capacity)) : null,
         allowed_categories: draft.categories,
         // Empty stays empty: a trip without a stated price is "price on
         // request", not a trip priced at zero.
         price_per_kg: draft.pricePerKg ? Number(draft.pricePerKg) : null,
         min_deal_price: draft.minDealPrice ? Number(draft.minDealPrice) : null,
-        currency: draft.currency || 'USD',
+        // Empty means "the account's default", chosen once in the profile.
+        currency: draft.currency || prefs.currency,
         max_declared_value: draft.maxDeclaredValue
           ? Number(draft.maxDeclaredValue)
           : null,
@@ -745,17 +768,16 @@ export default function NewTripPage() {
   // is not an abstract question. Empty until the carrier has typed the route.
   const firstOrigin = draft.legs[0]?.origin ?? ''
   const lastDestination = draft.legs[draft.legs.length - 1]?.destination ?? ''
-  const departureCountry = draft.legs[0]?.originCountry ?? ''
-  const arrivalCountry =
-    draft.legs[draft.legs.length - 1]?.destinationCountry ?? ''
+  // T3.11.07 — the weight scale in the unit this account reads in. Storage
+  // stays metric; only the numbers on screen change.
+  const scale = CAPACITY_SCALE[prefs.unit]
 
-  const formatDeparture = (value: string) =>
-    value
-      ? new Date(value).toLocaleString(i18n.language, {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        })
-      : '—'
+  // T3.11.07 — through `usePrefs`, not `toLocaleString` on the spot. The clock
+  // format is an account setting, not a consequence of the interface language:
+  // a Russian-speaking carrier working a US corridor reads the hours their
+  // paperwork uses. Calling the locale directly here is the exact bug that hook
+  // was written to end, and this file had a copy of it.
+  const formatDeparture = (value: string) => (value ? prefs.dateTime(value) : '—')
 
 
   /** The card as it will appear on the board.
@@ -792,7 +814,7 @@ export default function NewTripPage() {
             <span>
               {t('trips.capacity')}:{' '}
               <MonoText className="text-xs">
-                {prefs.weight(Number(draft.capacity))}
+                {prefs.weight(prefs.toKg(Number(draft.capacity)))}
               </MonoText>
               {draft.spaceKind !== 'unspecified' && (
                 <span className="ml-1">
@@ -1038,6 +1060,18 @@ export default function NewTripPage() {
                     required
                     className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
                   />
+                  {/* T3.11.07 — the account's own clock, echoed under the field.
+                      `datetime-local` is a native control: the browser draws its
+                      calendar and picks 12- or 24-hour from the **device**
+                      locale, and no attribute overrides that. So the setting is
+                      honoured where we control the pixels — here, in the preview
+                      and on every card — and this line is what tells a carrier
+                      which hour they actually chose. */}
+                  {leg.departAt && (
+                    <MonoText className="block mt-1 text-[11px] text-navy/40">
+                      {formatDeparture(leg.departAt)}
+                    </MonoText>
+                  )}
                 </div>
 
                 {draft.legs.length > 1 && (
@@ -1170,20 +1204,20 @@ export default function NewTripPage() {
                 type="number"
                 step="0.5"
                 min="0"
-                max={CAPACITY_MAX}
+                max={scale.max}
                 value={draft.capacity}
                 onChange={(e) => patch({ capacity: e.target.value })}
                 placeholder="23"
                 className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
               />
-              <MonoText className="text-sm text-navy/60">kg</MonoText>
+              <MonoText className="text-sm text-navy/60">{prefs.unit}</MonoText>
             </div>
             <div>
               <input
                 type="range"
                 aria-labelledby={capacityLabelId}
                 min="0"
-                max={CAPACITY_MAX}
+                max={scale.max}
                 step="0.5"
                 value={draft.capacity || 0}
                 onChange={(e) =>
@@ -1200,12 +1234,12 @@ export default function NewTripPage() {
                 aria-hidden="true"
                 className="relative h-7 mt-1 select-none"
               >
-                {Array.from({ length: CAPACITY_MAX + 1 }, (_, kg) => {
-                  const labelled = (CAPACITY_LABELLED as readonly number[]).includes(kg)
+                {Array.from({ length: scale.max + 1 }, (_, mark) => {
+                  const labelled = (scale.labelled as readonly number[]).includes(mark)
                   return (
                     <span
-                      key={kg}
-                      style={{ left: `${(kg / CAPACITY_MAX) * 100}%` }}
+                      key={mark}
+                      style={{ left: `${(mark / scale.max) * 100}%` }}
                       className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
                     >
                       <span
@@ -1215,7 +1249,7 @@ export default function NewTripPage() {
                       />
                       {labelled && (
                         <span className="mt-0.5 text-[10px] font-mono text-navy/40">
-                          {kg}
+                          {mark}
                         </span>
                       )}
                     </span>
@@ -1637,7 +1671,7 @@ export default function NewTripPage() {
                 </span>
                 <input
                   maxLength={3}
-                  value={draft.currency}
+                  value={draft.currency || prefs.currency}
                   onChange={(e) => patch({ currency: e.target.value.toUpperCase() })}
                   className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
                 />

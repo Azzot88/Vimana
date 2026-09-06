@@ -1171,6 +1171,9 @@ async def _ensure_display_prefs_columns(engine) -> None:
             "ADD COLUMN IF NOT EXISTS unit_weight VARCHAR(4) NOT NULL DEFAULT 'kg'",
             "ADD COLUMN IF NOT EXISTS date_format VARCHAR(2) NOT NULL DEFAULT 'eu'",
             "ADD COLUMN IF NOT EXISTS carriage_rules TEXT",
+            # 0067 — the currency new trips start in.
+            "ADD COLUMN IF NOT EXISTS default_currency VARCHAR(3) "
+            "NOT NULL DEFAULT 'USD'",
         ):
             await conn.execute(text(f"ALTER TABLE users {ddl}"))
         await conn.execute(

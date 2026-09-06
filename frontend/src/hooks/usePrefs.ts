@@ -4,6 +4,8 @@ import {
   formatDate,
   formatDateTime,
   formatWeight,
+  toDisplayWeight,
+  toKilograms,
   type DateStyle,
   type WeightUnit,
 } from '../lib/format'
@@ -25,12 +27,23 @@ export function usePrefs() {
 
   const unit = (user?.unit_weight as WeightUnit) ?? 'kg'
   const style = (user?.date_format as DateStyle) ?? 'eu'
+  // T3.11.07 — the currency new trips start in. Chosen once in the profile
+  // rather than re-picked on every publication, which is a field always
+  // answered the same way.
+  const currency = user?.default_currency ?? 'USD'
 
   return {
     unit,
     style,
+    currency,
     /** Kilograms in, the account's unit out. Storage stays metric. */
     weight: (kg: number | null | undefined) => formatWeight(kg, unit),
+    /** T3.11.07 — the same conversion without the unit suffix, for the places
+     *  that put the number **into a field** rather than print it: a form input
+     *  showing "50 lb" cannot be typed into. Storage stays metric either way —
+     *  `toKilograms` is what goes back to the API. */
+    toUnit: (kg: number) => toDisplayWeight(kg, unit),
+    toKg: (value: number) => toKilograms(value, unit),
     date: (iso: string | null | undefined) => formatDate(iso, style, i18n.language),
     dateTime: (iso: string | null | undefined) =>
       formatDateTime(iso, style, i18n.language),

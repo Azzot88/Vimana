@@ -249,3 +249,51 @@ async def test_trip_can_override_with_no_rules(client, carrier_headers):
     )
     assert r.status_code == 201, r.text
     assert r.json()["carriage_rules"] == ""
+
+
+# ── T3.11.07 · the account's default currency ─────────────────────────────
+
+
+async def test_default_currency_is_stored_and_upper_cased(client, carrier_headers):
+    """Upper-cased on the way in, exactly as `TripCreate.currency` is: a code
+    stored two ways is a code that matches nothing half the time, and the trip
+    form pre-fills from this value."""
+    r = await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currency": "aed"}
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["default_currency"] == "AED"
+
+    back = await client.get("/api/auth/me", headers=carrier_headers)
+    assert back.json()["default_currency"] == "AED"
+
+    # Put back: the test database is never reset, and a currency left behind
+    # would follow this carrier through every later test.
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currency": "USD"}
+    )
+
+
+async def test_currency_preference_does_not_touch_published_trips(
+    client, carrier_headers
+):
+    """A preference decides what an empty form starts with and nothing else.
+
+    The trip keeps what it was published in — changing the account setting
+    afterwards must not silently reprice a listing somebody already read.
+    """
+    published = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(currency="EUR")
+    )
+    trip_id = published.json()["id"]
+
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currency": "AED"}
+    )
+    listing = await client.get("/api/trips", headers=carrier_headers)
+    mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
+    assert mine["currency"] == "EUR"
+
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currency": "USD"}
+    )

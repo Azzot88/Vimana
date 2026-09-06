@@ -5,6 +5,11 @@ import { useAuthStore } from '../stores/auth'
 import { formatDateTime, formatWeight, type DateStyle, type WeightUnit } from '../lib/format'
 import MonoText from './MonoText'
 
+/** T3.11.07 — the currencies this product's corridors are priced in.
+ *  A short list rather than free text: a typo in a code is a price nobody can
+ *  compare, and every one of these is a currency our carriers actually quote. */
+const CURRENCIES = ['USD', 'EUR', 'AED', 'GBP', 'RUB', 'TRY', 'KZT'] as const
+
 /** T_UX.14 — units and date style, and since T_UX.21 nothing else.
  *
  *  The carriage rules used to sit here too, which put the carrier's standing
@@ -24,6 +29,7 @@ export default function DisplayPrefsSection() {
 
   const [unit, setUnit] = useState<WeightUnit>((user?.unit_weight as WeightUnit) ?? 'kg')
   const [style, setStyle] = useState<DateStyle>((user?.date_format as DateStyle) ?? 'eu')
+  const [currency, setCurrency] = useState<string>(user?.default_currency ?? 'USD')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -126,8 +132,34 @@ export default function DisplayPrefsSection() {
         </div>
       </div>
 
-      {/* Said once at the bottom rather than twice above: both switches are
-          display-only, and neither changes a stored value. */}
+      {/* T3.11.07 — the currency new trips start in.
+          Unlike the two above this one is **not** display-only: it decides what
+          a published trip is priced in, which is why it sits under its own
+          heading and why the note about storage below no longer speaks for it.
+          A short list rather than free text: a typo in a currency code is a
+          price nobody can compare, and the seven here cover the corridors this
+          product flies. */}
+      <div className="space-y-2 pt-1 border-t border-navy/5">
+        <div className="pt-3">
+          <p className="text-sm font-body font-medium text-navy">
+            {t('prefs.currency')}
+          </p>
+          <p className="text-xs font-body text-navy/50 mt-0.5">
+            {t('prefs.currencyDesc')}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CURRENCIES.map((code) =>
+            pick(currency, code, code, (v) => {
+              setCurrency(v)
+              void save({ default_currency: v })
+            }),
+          )}
+        </div>
+      </div>
+
+      {/* Said once at the bottom rather than twice above: the weight and date
+          switches are display-only, and neither changes a stored value. */}
       <p className="text-xs font-body text-navy/45 border-t border-navy/5 pt-3">
         {t('prefs.storageNote')}
       </p>

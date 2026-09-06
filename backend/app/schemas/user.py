@@ -65,6 +65,10 @@ class UserUpdate(BaseModel):
     # T_UX.14 — display preferences.
     unit_weight: Literal["kg", "lb"] | None = None
     date_format: Literal["eu", "us"] | None = None
+    # T3.11.07 — the currency new trips start in. Three letters, upper-cased on
+    # the way in like `Trip.currency`: a code stored two ways is a code that
+    # matches nothing half the time.
+    default_currency: str | None = Field(default=None, min_length=3, max_length=3)
     # T_UX.15 — standing carriage rules, the template copied into new trips.
     carriage_rules: str | None = Field(default=None, max_length=4000)
     # T_UX.21 — standing notes about the carrier rather than the shipment, so
@@ -73,6 +77,18 @@ class UserUpdate(BaseModel):
     # differs between neighbouring boxes is one somebody meets by surprise.
     interaction_rules: str | None = Field(default=None, max_length=4000)
     payment_instructions: str | None = Field(default=None, max_length=4000)
+
+    @field_validator("default_currency")
+    @classmethod
+    def _currency_upper(cls, v: str | None) -> str | None:
+        """Upper-cased on the way in, exactly as `TripCreate.currency` is.
+
+        A code stored two ways is a code that matches nothing half the time,
+        and the form pre-fills the trip from this value — so `usd` here would
+        become `usd` on a published trip and fail to line up with every `USD`
+        beside it.
+        """
+        return v.upper() if v else v
 
     @field_validator("locale")
     @classmethod
@@ -199,6 +215,7 @@ class UserOut(BaseModel):
 class MeOut(UserOut):
     unit_weight: str = "kg"
     date_format: str = "eu"
+    default_currency: str = "USD"
     carriage_rules: str | None = None
     # T_UX.21 — owner-only, like the rest of `MeOut`. They are meant for a
     # counterparty, but the carrier decides when to send them: putting them on

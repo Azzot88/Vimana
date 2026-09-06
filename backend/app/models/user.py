@@ -123,6 +123,17 @@ class User(Base):
     date_format: Mapped[str] = mapped_column(
         String(2), default="eu", server_default="eu"
     )
+    # T3.11.07 — the currency this account prices in, chosen once instead of
+    # per trip. It is a display preference by the same argument as the two
+    # above: a carrier working one corridor quotes in one currency for years,
+    # and re-picking it on every publication is a field that is always answered
+    # the same way. USD by default because the launch corridor is UAE ↔ US.
+    #
+    # Not a rate and not a conversion: `Trip.currency` still stores what the
+    # carrier published in, and nothing here converts anything.
+    default_currency: Mapped[str] = mapped_column(
+        String(3), default="USD", server_default="USD"
+    )
     # T_UX.15 — the carrier's standing carriage rules, written once and copied
     # into each trip. Copied rather than referenced: a rule changed in March
     # must not silently rewrite what a sender agreed to in February.

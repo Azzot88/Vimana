@@ -1073,6 +1073,7 @@ _NOT_NULL_UPDATE_FIELDS = {
     # is a screen that cannot decide how to print a weight.
     "unit_weight",
     "date_format",
+    "default_currency",
     "notify_email",
     "notify_telegram",
     "notify_whatsapp",
