@@ -2,7 +2,7 @@ import { useId, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
-import { createTrip } from '../api/trips'
+import { createTrip, EXCLUSIONS, type Exclusion } from '../api/trips'
 import { listRouteNotes, type RouteNote } from '../api/notices'
 import AirportSelect from '../components/AirportSelect'
 import CategoryBubbles from '../components/CategoryBubbles'
@@ -90,6 +90,9 @@ interface Draft {
   declaredValueStatus: 'open' | 'exhausted'
   handoverOrigin: HandoverDraft
   handoverDestination: HandoverDraft
+  // T3.11.07 — a closed list, so a sender can filter on it. Empty means the
+  // carrier said nothing, and that is sent as `null` rather than `[]`.
+  excluded: Exclusion[]
   categories: string[]
   alsoOnNostr: boolean
   // T3.35 — the carrier's baseline terms. Strings because they come from
@@ -110,6 +113,7 @@ const EMPTY: Draft = {
   declaredValueStatus: 'open',
   handoverOrigin: { ...EMPTY_HANDOVER },
   handoverDestination: { ...EMPTY_HANDOVER },
+  excluded: [],
   categories: [],
   alsoOnNostr: true,
   pricePerKg: '',
@@ -131,6 +135,7 @@ function loadDraft(): Draft {
       // A saved draft with an empty chain would render a route cell with no
       // rows and no way to add one.
       legs: parsed.legs?.length ? parsed.legs : [{ ...EMPTY_LEG }],
+      excluded: parsed.excluded ?? [],
       handoverOrigin: { ...EMPTY_HANDOVER, ...parsed.handoverOrigin },
       handoverDestination: { ...EMPTY_HANDOVER, ...parsed.handoverDestination },
     }
@@ -369,6 +374,10 @@ export default function NewTripPage() {
         size_hint: draft.sizeHint || null,
         handover_origin: toHandover(draft.handoverOrigin),
         handover_destination: toHandover(draft.handoverDestination),
+        // Nothing ticked is `null`, not `[]`: "said nothing" and "considered it
+        // and excludes nothing" are different answers, and the card reads them
+        // differently.
+        excluded: draft.excluded.length > 0 ? draft.excluded : null,
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
         // rules" rather than "fall back to my template".
         carriage_rules: draft.carriageRules,
@@ -925,11 +934,50 @@ export default function NewTripPage() {
           </div>
         </div>
 
-        {/* Carriage rules cell 1x2 — T_UX.15 */}
+        {/* Carriage rules cell 1x2 — T_UX.15, exclusions T3.11.07 */}
         <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-2">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.rules')}
           </p>
+
+          {/* T3.11.07 — the five refusals this market writes, as chips. Only
+              5.9 % of posts state any, so this is not a checklist to work
+              through: nothing ticked is the ordinary answer and is sent as
+              "said nothing", not as "excludes nothing". A free-text field
+              alone produced five spellings of "сигареты" and nothing a filter
+              could read. §9b: the line below says where they show up. */}
+          <fieldset>
+            <legend className="block text-[11px] font-body text-navy/40 mb-1">
+              {t('trips.excludedLabel')}
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {EXCLUSIONS.map((item) => {
+                const chosen = draft.excluded.includes(item)
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={chosen}
+                    onClick={() =>
+                      patch({
+                        excluded: chosen
+                          ? draft.excluded.filter((x) => x !== item)
+                          : [...draft.excluded, item],
+                      })
+                    }
+                    className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                      chosen
+                        ? 'border-amber bg-amber/10 text-navy'
+                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                    }`}
+                  >
+                    {t(`trips.excluded.${item}`)}
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
+
           <p className="text-[11px] font-body text-navy/40">{t('trips.rulesHint')}</p>
           <label htmlFor={rulesId} className="sr-only">
             {t('trips.newTripCell.rules')}
@@ -1017,6 +1065,12 @@ export default function NewTripPage() {
               {draft.declaredValueStatus === 'exhausted' && (
                 <span className="text-amber">
                   {t('trips.declaredValueStatus.exhausted')}
+                </span>
+              )}
+              {draft.excluded.length > 0 && (
+                <span className="text-amber">
+                  {t('trips.excludedPrefix')}{' '}
+                  {draft.excluded.map((x) => t(`trips.excluded.${x}`)).join(', ')}
                 </span>
               )}
               {draft.categories.length > 0 && (

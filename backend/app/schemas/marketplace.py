@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from app.core.trip_legs import MAX_LEGS
+from app.models.marketplace import EXCLUSIONS
 
 
 # Mirrors `schemas.cards.HandoverMethod`. Kept as a set here rather than
@@ -94,6 +95,10 @@ class TripCreate(BaseModel):
     min_deal_price: float | None = Field(default=None, ge=0, le=1_000_000)
     currency: str = Field(default="USD", min_length=3, max_length=3)
     max_declared_value: float | None = Field(default=None, ge=0)
+    # T3.11.07 — a closed list, so a sender can filter on it. `None` means the
+    # carrier said nothing, which is what 94 % of this market does; an empty
+    # list would claim they considered the question and had no exclusions.
+    excluded: list[str] | None = Field(default=None, max_length=len(EXCLUSIONS))
     # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
     carriage_rules: str | None = Field(default=None, max_length=4000)
@@ -115,6 +120,19 @@ class TripCreate(BaseModel):
     @classmethod
     def _upper(cls, v: str) -> str:
         return v.upper()
+
+    @field_validator("excluded")
+    @classmethod
+    def _known_exclusions(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        unknown = set(v) - set(EXCLUSIONS)
+        if unknown:
+            raise ValueError(f"unknown exclusions: {sorted(unknown)}")
+        # Deduplicated rather than refused: a repeated value is a client bug,
+        # not a carrier saying something twice, and storing it would show the
+        # same chip twice on the card.
+        return list(dict.fromkeys(v))
 
 
 class TripOut(BaseModel):
@@ -146,6 +164,7 @@ class TripOut(BaseModel):
     handover_origin: dict | None = None
     handover_destination: dict | None = None
     legs: list[TripLegOut] = Field(default_factory=list)
+    excluded: list[str] | None = None
     carriage_rules: str | None = None
     status: str
     created_at: datetime

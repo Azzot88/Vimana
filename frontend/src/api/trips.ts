@@ -28,6 +28,12 @@ export interface HandoverSide {
 export type SpaceKind = 'cabin' | 'checked_partial' | 'checked_full' | 'unspecified'
 export type SizeHint = 'small' | 'medium' | 'large'
 
+/** T3.11.07 — the exclusions carriers actually write, and nothing else. Mirrors
+ *  `models.marketplace.EXCLUSIONS`. Cigarettes and tobacco are one entry: they
+ *  are one refusal written two ways. */
+export const EXCLUSIONS = ['tobacco', 'alcohol', 'food', 'luxury', 'money'] as const
+export type Exclusion = (typeof EXCLUSIONS)[number]
+
 export interface Trip {
   id: string
   carrier_id: string
@@ -61,6 +67,9 @@ export interface Trip {
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
   handover_destination?: HandoverSide | null
+  /** T3.11.07 — null means the carrier said nothing about exclusions, which is
+   *  what 94 % of this market does. An empty array would claim otherwise. */
+  excluded?: Exclusion[] | null
   /** T_UX.15 — the rules copied into this trip when it was published. */
   carriage_rules?: string | null
   status: string
@@ -86,6 +95,7 @@ export interface CreateTripPayload {
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
   handover_destination?: HandoverSide | null
+  excluded?: Exclusion[] | null
   /** Sent explicitly: an emptied field means "this trip has no rules", not
    *  "fall back to my profile template". */
   carriage_rules?: string | null

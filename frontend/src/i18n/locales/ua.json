@@ -644,7 +644,16 @@
     "handoverOrigin": "Прийму в",
     "handoverDestination": "Віддам у",
     "handoverPoints": "Місця (через кому)",
-    "handoverPointsPlaceholder": "центр, аеропорт"
+    "handoverPointsPlaceholder": "центр, аеропорт",
+    "excludedLabel": "Не беру — необов'язково, видно в картці та працює фільтром",
+    "excludedPrefix": "Не беру:",
+    "excluded": {
+      "tobacco": "Сигарети і тютюн",
+      "alcohol": "Алкоголь",
+      "food": "Їжу",
+      "luxury": "Люкс",
+      "money": "Готівку"
+    }
   },
   "deals": {
     "title": "Угоди",

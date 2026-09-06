@@ -69,6 +69,7 @@ async def create_trip(
             if body.handover_destination
             else None
         ),
+        excluded=body.excluded,
         # T_UX.15 — the carrier's standing rules are **copied** into the trip,
         # not referenced. Edited later they must not rewrite what a sender read
         # when they chose this trip. `None` means "use my template"; an explicit
@@ -253,6 +254,7 @@ async def list_trips(
                     handover_origin=t.handover_origin,
                     handover_destination=t.handover_destination,
                     legs=[TripLegOut.model_validate(leg) for leg in t.legs],
+                    excluded=t.excluded,
                     carriage_rules=t.carriage_rules,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,

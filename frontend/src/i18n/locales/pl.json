@@ -631,7 +631,16 @@
     "handoverOrigin": "Odbieram w",
     "handoverDestination": "Przekazuję w",
     "handoverPoints": "Miejsca (po przecinku)",
-    "handoverPointsPlaceholder": "centrum, lotnisko"
+    "handoverPointsPlaceholder": "centrum, lotnisko",
+    "excludedLabel": "Nie wezmę — opcjonalne, widoczne na karcie i działa w filtrze",
+    "excludedPrefix": "Nie wezmę:",
+    "excluded": {
+      "tobacco": "Papierosy i tytoń",
+      "alcohol": "Alkohol",
+      "food": "Jedzenie",
+      "luxury": "Towary luksusowe",
+      "money": "Gotówkę"
+    }
   },
   "deals": {
     "title": "Transakcje",

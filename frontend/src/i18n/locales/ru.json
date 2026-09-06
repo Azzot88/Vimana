@@ -678,7 +678,16 @@
     "handoverOrigin": "Приму в",
     "handoverDestination": "Отдам в",
     "handoverPoints": "Места (через запятую)",
-    "handoverPointsPlaceholder": "Фили, центр, аэропорт"
+    "handoverPointsPlaceholder": "Фили, центр, аэропорт",
+    "excludedLabel": "Не беру — необязательно, видно в карточке и работает фильтром",
+    "excludedPrefix": "Не беру:",
+    "excluded": {
+      "tobacco": "Сигареты и табак",
+      "alcohol": "Алкоголь",
+      "food": "Еду",
+      "luxury": "Люкс",
+      "money": "Наличные"
+    }
   },
   "deals": {
     "title": "Сделки",

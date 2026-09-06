@@ -261,6 +261,55 @@ async def test_unknown_declared_value_status_is_refused(client, carrier_headers)
     assert r.status_code == 422
 
 
+# ── what the carrier will not take ────────────────────────────────────────
+
+
+async def test_exclusions_are_stored_and_listed(client, carrier_headers):
+    created = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(excluded=["tobacco", "luxury"]),
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["excluded"] == ["tobacco", "luxury"]
+
+    trip_id = created.json()["id"]
+    listing = await client.get("/api/trips", headers=carrier_headers)
+    mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
+    assert mine["excluded"] == ["tobacco", "luxury"]
+
+
+async def test_saying_nothing_is_not_saying_nothing_is_excluded(
+    client, carrier_headers
+):
+    """94 % of this market states no exclusions at all. That silence is `null`,
+    not an empty list: an empty list claims the carrier considered the question
+    and answered "nothing", which the card would be right to display."""
+    r = await client.post("/api/trips", headers=carrier_headers, json=_payload())
+    assert r.json()["excluded"] is None
+
+
+async def test_unknown_exclusion_is_refused(client, carrier_headers):
+    """The list is closed on purpose: a free-text refusal produced five
+    spellings of "сигареты" and nothing a filter could read."""
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(excluded=["fireworks"])
+    )
+    assert r.status_code == 422
+
+
+async def test_repeated_exclusion_is_deduplicated(client, carrier_headers):
+    """A repeat is a client bug, not a carrier saying it twice — and stored it
+    would draw the same chip twice on the card."""
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(excluded=["alcohol", "alcohol", "food"]),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["excluded"] == ["alcohol", "food"]
+
+
 # ── the two ends of the handover ──────────────────────────────────────────
 
 

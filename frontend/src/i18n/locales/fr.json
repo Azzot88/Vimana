@@ -630,7 +630,16 @@
     "handoverOrigin": "Je récupère à",
     "handoverDestination": "Je remets à",
     "handoverPoints": "Lieux (séparés par des virgules)",
-    "handoverPointsPlaceholder": "centre-ville, aéroport"
+    "handoverPointsPlaceholder": "centre-ville, aéroport",
+    "excludedLabel": "Je ne prends pas — facultatif, affiché sur la fiche et filtrable",
+    "excludedPrefix": "Ne prend pas :",
+    "excluded": {
+      "tobacco": "Cigarettes et tabac",
+      "alcohol": "Alcool",
+      "food": "Nourriture",
+      "luxury": "Produits de luxe",
+      "money": "Espèces"
+    }
   },
   "deals": {
     "title": "Transactions",

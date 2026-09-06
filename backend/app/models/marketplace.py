@@ -113,6 +113,13 @@ class Trip(Base):
     # thing. Shape: {"methods": [...], "points": ["Tustin", "Irvine"]}.
     handover_origin: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     handover_destination: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # T3.11.07 — what this carrier will not take, from a closed list. Only
+    # 5.9 % of real posts state exclusions at all, and when they do the wording
+    # is nearly always one of five things: cigarettes, alcohol, tobacco, food,
+    # luxury goods. A free-text field for that produces five spellings of
+    # "сигареты" and nothing a filter can read; the free text below stays for
+    # everything the list does not cover.
+    excluded: Mapped[list | None] = mapped_column(JSON, nullable=True)
     # T_UX.15 — a copy of the carrier's standing rules, taken at publish time.
     # A copy on purpose: rules edited later must not rewrite what a sender read
     # when they chose this trip.
@@ -150,6 +157,14 @@ SPACE_KINDS = ("cabin", "checked_partial", "checked_full", "unspecified")
 SIZE_HINTS = ("small", "medium", "large")
 DECLARED_VALUE_STATUSES = ("open", "exhausted")
 FLOWN_BY = ("self", "proxy")
+# T3.11.07 — the exclusions carriers actually write, and nothing else. Taken
+# from the market analysis (TASKS.md, «Разбор переписок рынка»): "не беру
+# сигареты", "алкоголь не беру", "люкс НЕ беру", "не беру еду". Cigarettes and
+# tobacco are one entry because they are one refusal written two ways. `money`
+# is here because 2.0 % of posts carry cash outright, so "I do not" is a real
+# thing for a carrier to say; the platform's own position on cash is a separate
+# statement and belongs to T4.0, not to a per-trip column.
+EXCLUSIONS = ("tobacco", "alcohol", "food", "luxury", "money")
 
 
 class TripLeg(Base):

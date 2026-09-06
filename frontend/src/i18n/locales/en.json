@@ -677,7 +677,16 @@
     "handoverOrigin": "Accepting at",
     "handoverDestination": "Handing over at",
     "handoverPoints": "Places (comma-separated)",
-    "handoverPointsPlaceholder": "Tustin, Irvine, the airport"
+    "handoverPointsPlaceholder": "Tustin, Irvine, the airport",
+    "excludedLabel": "Will not take — optional, shown on the card and filterable",
+    "excludedPrefix": "Will not take:",
+    "excluded": {
+      "tobacco": "Cigarettes and tobacco",
+      "alcohol": "Alcohol",
+      "food": "Food",
+      "luxury": "Luxury goods",
+      "money": "Cash"
+    }
   },
   "deals": {
     "title": "Deals",

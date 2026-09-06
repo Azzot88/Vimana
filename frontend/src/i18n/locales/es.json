@@ -630,7 +630,16 @@
     "handoverOrigin": "Recojo en",
     "handoverDestination": "Entrego en",
     "handoverPoints": "Lugares (separados por comas)",
-    "handoverPointsPlaceholder": "centro, aeropuerto"
+    "handoverPointsPlaceholder": "centro, aeropuerto",
+    "excludedLabel": "No llevo — opcional, se ve en la ficha y sirve de filtro",
+    "excludedPrefix": "No lleva:",
+    "excluded": {
+      "tobacco": "Cigarrillos y tabaco",
+      "alcohol": "Alcohol",
+      "food": "Comida",
+      "luxury": "Artículos de lujo",
+      "money": "Efectivo"
+    }
   },
   "deals": {
     "title": "Acuerdos",

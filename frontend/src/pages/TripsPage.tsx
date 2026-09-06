@@ -193,6 +193,17 @@ export default function TripsPage() {
                     {trip.size_hint && (
                       <span>{t(`trips.sizeHint.${trip.size_hint}`)}</span>
                     )}
+                    {/* T3.11.07 — a refusal the sender has to read before
+                        writing, not after. Amber rather than red: it is a
+                        boundary, not an error. */}
+                    {trip.excluded && trip.excluded.length > 0 && (
+                      <span className="text-amber">
+                        {t('trips.excludedPrefix')}{' '}
+                        {trip.excluded
+                          .map((x) => t(`trips.excluded.${x}`))
+                          .join(', ')}
+                      </span>
+                    )}
                     {/* T3.35 — the published baseline, so two trips on one
                         corridor are comparable before anyone opens a chat.
                         Absent price is stated as such rather than hidden. */}
