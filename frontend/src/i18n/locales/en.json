@@ -657,7 +657,7 @@
       "legDate": "Flight {{n}}: choose departure date and time",
       "legOutOfOrder": "Flight {{n}} departs before the one before it",
       "pastDate": "Date must be in the future",
-      "capacity": "Capacity must be at least 0.5 kg",
+      "capacity": "Capacity must be at least 0.5 kg"
     },
     "pricePerKg": "Price per kg",
     "minDealPrice": "Minimum deal",

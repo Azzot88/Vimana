@@ -611,7 +611,7 @@
       "legDate": "Lot {{n}}: wskaż datę i czas wylotu",
       "legOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
       "pastDate": "Data musi być w przyszłości",
-      "capacity": "Waga musi być co najmniej 0.5 kg",
+      "capacity": "Waga musi być co najmniej 0.5 kg"
     },
     "pricePerKg": "Cena za kg",
     "minDealPrice": "Minimalna transakcja",

@@ -610,7 +610,7 @@
       "legDate": "Vuelo {{n}}: elige fecha y hora de salida",
       "legOutOfOrder": "El vuelo {{n}} sale antes que el anterior",
       "pastDate": "La fecha debe ser en el futuro",
-      "capacity": "El peso debe ser al menos 0.5 kg",
+      "capacity": "El peso debe ser al menos 0.5 kg"
     },
     "pricePerKg": "Precio por kg",
     "minDealPrice": "Trato mínimo",
