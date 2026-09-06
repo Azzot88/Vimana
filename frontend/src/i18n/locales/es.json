@@ -623,6 +623,8 @@
     "categoriesNoneChosen": "Nada elegido todavía — pulsa abajo.",
     "rulesHint": "Rellenadas desde tu perfil. Edítalas solo para este viaje; vacío = sin reglas.",
     "hasRules": "con reglas",
+    "sameAsLast": "Como la última vez",
+    "sameAsLastHint": "Rellena todo menos las fechas: esas las pones tú.",
     "routeHint": "Todos los vuelos de este viaje. La búsqueda usa el primero y el último; los intermedios se ven en la ficha.",
     "legNumber": "Vuelo {{n}}",
     "addLeg": "+ Añadir un vuelo",

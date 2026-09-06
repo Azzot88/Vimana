@@ -160,11 +160,18 @@ test.describe('accessibility (WCAG 2.2 AA, machine-checkable subset)', () => {
   })
 
   test('new trip form (carrier)', async ({ page }) => {
-    // The densest form in the product: eleven controls, and the one screen where
-    // an unnamed field costs a carrier a published trip rather than a squint.
+    // The densest form in the product: and the one screen where an unnamed
+    // field costs a carrier a published trip rather than a squint.
+    //
+    // T3.11.20 — every step, not just the first. The form became a four-step
+    // wizard, and a scan of `/trips/new` alone now covers a quarter of it while
+    // still reporting "9 of 9 pages, 0 violations". The step lives in the URL
+    // precisely so it can be visited directly, and this is one of the reasons.
     await signInFixed(page, { mode: 'carrier' })
-    await page.goto('/trips/new')
-    await scan(page, '/trips/new')
+    for (const step of [1, 2, 3, 4]) {
+      await page.goto(`/trips/new?step=${step}`)
+      await scan(page, `/trips/new?step=${step}`)
+    }
   })
 
   test('history (authenticated)', async ({ page }) => {

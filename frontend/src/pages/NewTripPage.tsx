@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import {
   createTrip,
+  listTrips,
   EXCLUSIONS,
   PAYMENT_MODELS,
   TRIP_SERVICES,
   type Exclusion,
   type PaymentModel,
+  type Trip,
   type TripService,
 } from '../api/trips'
 import { listRouteNotes, type RouteNote } from '../api/notices'
@@ -218,6 +220,11 @@ export default function NewTripPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [askingToClose, setAskingToClose] = useState(false)
+  // T3.11.21 — the carrier's last published trip, offered as a starting point.
+  // Fetched once and kept until used: 5.4 % of this market says outright "I fly
+  // every week", and for them the whole wizard is a date change.
+  const [lastTrip, setLastTrip] = useState<Trip | null>(null)
+  const [prefilled, setPrefilled] = useState(false)
 
   // T3.11.20 — the step lives in the URL, not in state.
   //
@@ -254,6 +261,70 @@ export default function NewTripPage() {
   const patch = useCallback((delta: Partial<Draft>) => {
     setDraft((prev) => ({ ...prev, ...delta }))
   }, [])
+
+  /** T3.11.21 — the last published trip, so "same as last time" has something
+   *  to offer. Asked for once, and only when the form is still empty: a carrier
+   *  who has already started typing is not offered a way to overwrite it.
+   *
+   *  `status=all` because the useful precedent is the last trip they published,
+   *  which by now may have flown or been withdrawn — the board filter would
+   *  hide exactly the ones a regular carrier has most of.
+   */
+  useEffect(() => {
+    if (!user?.id) return
+    listTrips({ carrier_id: user.id, status: 'all', limit: 1 })
+      .then(({ data }) => setLastTrip(data.items[0] ?? null))
+      .catch(() => {})
+  }, [user?.id])
+
+  /** Fills everything except the dates from that trip.
+   *
+   *  Dates are the one thing that is never right twice, so they stay empty and
+   *  the carrier lands on step 1 with the route already there and the cursor's
+   *  work reduced to two fields. The route **is** copied: a regular carrier
+   *  flies the same corridor, and clearing it would make them retype the part
+   *  they were most sure about.
+   *
+   *  Called by: the "same as last time" button on step 1.
+   */
+  const prefillFromLast = () => {
+    const trip = lastTrip
+    if (!trip) return
+    setDraft((prev) => ({
+      ...prev,
+      legs: (trip.legs.length > 0
+        ? trip.legs.map((leg) => ({
+            origin: leg.origin,
+            destination: leg.destination,
+            departAt: '',
+          }))
+        : [{ ...EMPTY_LEG, origin: trip.origin, destination: trip.destination }]),
+      flownBy: trip.legs[0]?.flown_by ?? 'self',
+      capacity: trip.capacity != null ? String(trip.capacity) : '',
+      spaceKind: trip.space_kind ?? 'unspecified',
+      sizeHint: trip.size_hint ?? '',
+      declaredValueStatus: trip.declared_value_status ?? 'open',
+      handoverOrigin: {
+        methods: trip.handover_origin?.methods ?? [],
+        points: (trip.handover_origin?.points ?? []).join(', '),
+      },
+      handoverDestination: {
+        methods: trip.handover_destination?.methods ?? [],
+        points: (trip.handover_destination?.points ?? []).join(', '),
+      },
+      excluded: trip.excluded ?? [],
+      services: trip.services ?? [],
+      paymentModel: trip.payment_model ?? '',
+      categories: trip.allowed_categories ?? [],
+      pricePerKg: trip.price_per_kg != null ? String(trip.price_per_kg) : '',
+      minDealPrice: trip.min_deal_price != null ? String(trip.min_deal_price) : '',
+      currency: trip.currency ?? 'USD',
+      maxDeclaredValue:
+        trip.max_declared_value != null ? String(trip.max_declared_value) : '',
+      carriageRules: trip.carriage_rules ?? '',
+    }))
+    setPrefilled(true)
+  }
 
   // T3.11.07 — the chain is edited by index; the three helpers exist so no
   // caller has to copy the array by hand and get the splice wrong.
@@ -727,6 +798,27 @@ export default function NewTripPage() {
       {/* ── Step 1 · where and when ─────────────────────────────────────── */}
       {step === 1 && (
         <>
+          {/* T3.11.21 — offered only while the form is untouched. A carrier who
+              has begun typing is not shown a button that would overwrite it,
+              and one who has already used it is not shown it twice. */}
+          {lastTrip && !prefilled && !draft.legs[0].origin && !draft.legs[0].departAt && (
+            <button
+              type="button"
+              onClick={prefillFromLast}
+              className="w-full border border-cyan/40 bg-cyan/5 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy hover:bg-cyan/10 transition-colors text-left"
+            >
+              <span className="font-display font-semibold">
+                {t('trips.sameAsLast')}
+              </span>
+              <MonoText className="ml-2 text-xs text-navy/50">
+                {lastTrip.origin} → {lastTrip.destination}
+              </MonoText>
+              <span className="block text-[11px] font-body text-navy/50 mt-0.5">
+                {t('trips.sameAsLastHint')}
+              </span>
+            </button>
+          )}
+
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] font-body text-navy/40">
               {t('trips.routeHint')}

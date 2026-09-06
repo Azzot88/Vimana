@@ -623,6 +623,8 @@
     "categoriesNoneChosen": "Rien de choisi — cliquez ci-dessous.",
     "rulesHint": "Pré-remplies depuis votre profil. À modifier pour ce trajet ; vide = aucune règle.",
     "hasRules": "règles définies",
+    "sameAsLast": "Comme la dernière fois",
+    "sameAsLastHint": "Remplit tout sauf les dates — celles-là, vous les mettez.",
     "routeHint": "Tous les vols de ce trajet. La recherche porte sur le premier et le dernier ; les autres figurent sur la fiche.",
     "legNumber": "Vol {{n}}",
     "addLeg": "+ Ajouter un vol",

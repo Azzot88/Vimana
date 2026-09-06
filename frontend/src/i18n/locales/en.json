@@ -670,6 +670,8 @@
     "categoriesNoneChosen": "Nothing chosen yet — pick from below.",
     "rulesHint": "Prefilled from your profile. Edit for this trip only; leave empty for no rules.",
     "hasRules": "has rules",
+    "sameAsLast": "Same as last time",
+    "sameAsLastHint": "Fills everything except the dates — those you set yourself.",
     "routeHint": "Every flight of this trip. Senders search on the first and last of them; the ones in between show on the card.",
     "legNumber": "Flight {{n}}",
     "addLeg": "+ Add a flight",
