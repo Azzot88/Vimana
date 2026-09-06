@@ -463,3 +463,131 @@ async def test_too_many_handover_points_are_refused(client, carrier_headers):
         ),
     )
     assert r.status_code == 422
+
+
+# ── the handover ends point at the carrier's own lists ────────────────────
+
+
+async def _address(client, headers, label="Дом") -> str:
+    r = await client.post(
+        "/api/me/addresses",
+        headers=headers,
+        json={"label": label, "country_iso": "RU", "city": "Moscow"},
+    )
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+async def _place(client, headers, text="У метро Фили") -> str:
+    r = await client.post(
+        "/api/me/meeting-places", headers=headers, json={"description": text}
+    )
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+async def test_handover_points_at_an_address_and_a_place(client, carrier_headers):
+    """Ids, not copies of the text: correcting a typo in an address must not
+    mean republishing every trip that mentions it."""
+    address_id = await _address(client, carrier_headers)
+    place_id = await _place(client, carrier_headers)
+
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_origin={
+                "methods": ["in_person", "courier"],
+                "points": [],
+                "address_id": address_id,
+                "meeting_place_id": place_id,
+            }
+        ),
+    )
+    assert r.status_code == 201, r.text
+    side = r.json()["handover_origin"]
+    assert side["address_id"] == address_id
+    assert side["meeting_place_id"] == place_id
+
+
+async def test_a_stranger_s_address_is_not_found(client, carrier_headers, sender_headers):
+    """An unchecked id is a way to publish somebody else's home address on a
+    public board. 404 rather than 403, like every other row of theirs."""
+    theirs = await _address(client, sender_headers, "Чужой дом")
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_origin={"methods": [], "points": [], "address_id": theirs}
+        ),
+    )
+    assert r.status_code == 404
+
+
+async def test_a_stranger_s_meeting_place_is_not_found(
+    client, carrier_headers, sender_headers
+):
+    theirs = await _place(client, sender_headers, "Чужое место")
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_destination={
+                "methods": [],
+                "points": [],
+                "meeting_place_id": theirs,
+            }
+        ),
+    )
+    assert r.status_code == 404
+
+
+async def test_postal_services_ride_on_the_destination_side(client, carrier_headers):
+    """Third level of the chain, and free strings rather than codes: the
+    catalogue has no external source and must not be able to tell a carrier
+    that the one company collecting parcels in their town does not exist."""
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_destination={
+                "methods": ["local_post"],
+                "points": [],
+                "postal_services": ["USPS", "  UPS  ", "USPS", "Тётя Валя с газелью"],
+            }
+        ),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["handover_destination"]["postal_services"] == [
+        "USPS",
+        "UPS",
+        "Тётя Валя с газелью",
+    ]
+
+
+async def test_posting_it_on_implies_the_service(client, carrier_headers):
+    """T3.11.22 — the carrier answers once and the coarse level is computed.
+
+    Saying the destination handover is `local_post` **is** saying "I post it on",
+    so `domestic_shipping` is derived rather than asked again — and the two can
+    no longer disagree.
+    """
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_destination={"methods": ["local_post"], "points": []}
+        ),
+    )
+    assert "domestic_shipping" in r.json()["services"]
+
+
+async def test_no_local_post_no_derived_service(client, carrier_headers):
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_destination={"methods": ["in_person"], "points": []}
+        ),
+    )
+    assert r.json()["services"] is None

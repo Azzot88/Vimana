@@ -72,10 +72,25 @@ class HandoverSide(BaseModel):
     satellite cities ("Tustin, Irvine or LAX", "Fili, Moscow"), and a picker
     over airports cannot say any of that. Bounded rather than validated — a
     taxonomy of neighbourhoods is not something this task can be right about.
+
+    T3.11.07 — the three references. An address and a meeting place are **ids**
+    into the carrier's own lists rather than copies of their text: a person who
+    corrects a typo in their address should not have to republish every trip
+    that mentions it. Checked for ownership in `api.trips`, not here — a schema
+    cannot know whose row it is.
+
+    `postal_services` is the third level of the chain (service → method →
+    which service), and it is **free strings, not codes**: the catalogue behind
+    it has no external source, covers ~55 countries, and must not be able to
+    tell a carrier that the one company collecting parcels in their town does
+    not exist.
     """
 
     methods: list[str] = Field(default_factory=list, max_length=len(HANDOVER_METHODS))
     points: list[str] = Field(default_factory=list, max_length=6)
+    address_id: uuid.UUID | None = None
+    meeting_place_id: uuid.UUID | None = None
+    postal_services: list[str] = Field(default_factory=list, max_length=8)
 
     @field_validator("methods")
     @classmethod
@@ -85,14 +100,14 @@ class HandoverSide(BaseModel):
             raise ValueError(f"unknown handover methods: {sorted(unknown)}")
         return v
 
-    @field_validator("points")
+    @field_validator("points", "postal_services")
     @classmethod
-    def _trim_points(cls, v: list[str]) -> list[str]:
+    def _trim_free_text(cls, v: list[str]) -> list[str]:
         cleaned = [p.strip() for p in v if p and p.strip()]
-        for point in cleaned:
-            if len(point) > 120:
-                raise ValueError("a handover point is at most 120 characters")
-        return cleaned
+        for item in cleaned:
+            if len(item) > 120:
+                raise ValueError("at most 120 characters")
+        return list(dict.fromkeys(cleaned))
 
 
 class TripCreate(BaseModel):

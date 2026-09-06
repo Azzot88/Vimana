@@ -14,11 +14,79 @@ from app.core.nostr_publish import (
 )
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.trip_legs import LegChainError, head_and_tail, normalise_legs
+from app.models.address import MeetingPlace, ReceivingAddress
 from app.models.marketplace import Trip, TripLeg, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import TripCreate, TripLegOut, TripOut
 
 router = APIRouter()
+
+
+def _services_with_derived(body: TripCreate) -> list[str] | None:
+    """T3.11.22 — `domestic_shipping` follows from the handover method.
+
+    The three levels are a narrowing, not three answers to one question:
+    *what I do* → *how I hand over* → *which service*. But only one of them is
+    worth asking twice, and it is not the coarse one: a carrier who says the
+    destination handover is `local_post` has already said they post it on.
+
+    So the service is **derived on write** rather than gated in the form. The
+    carrier answers once, the coarse level is computed, and the two can no
+    longer contradict each other — which is the actual defect here, not the
+    number of levels.
+
+    Called by: `create_trip`.
+    """
+    services = list(body.services or [])
+    posts_it_on = bool(
+        body.handover_destination
+        and "local_post" in body.handover_destination.methods
+    )
+    if posts_it_on and "domestic_shipping" not in services:
+        services.append("domestic_shipping")
+    return services or None
+
+
+async def _assert_owns_referenced_places(
+    body: TripCreate, user: User, db: AsyncSession
+) -> None:
+    """Every address and meeting place the trip points at belongs to the caller.
+
+    404 rather than 403 for a row that exists under another account, matching
+    the addresses and meeting-places endpoints: telling a stranger "this id is
+    real but not yours" answers a question they had no business asking.
+
+    Called by: `create_trip`.
+    """
+    wanted_addresses: set[uuid.UUID] = set()
+    wanted_places: set[uuid.UUID] = set()
+    for side in (body.handover_origin, body.handover_destination):
+        if side is None:
+            continue
+        if side.address_id:
+            wanted_addresses.add(side.address_id)
+        if side.meeting_place_id:
+            wanted_places.add(side.meeting_place_id)
+
+    for ids, model, what in (
+        (wanted_addresses, ReceivingAddress, "Address"),
+        (wanted_places, MeetingPlace, "Meeting place"),
+    ):
+        if not ids:
+            continue
+        owned = set(
+            (
+                await db.execute(
+                    select(model.id).where(
+                        model.id.in_(ids), model.user_id == user.id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if owned != ids:
+            raise HTTPException(status_code=404, detail=f"{what} not found")
 
 
 @router.post("", response_model=TripOut, status_code=201)
@@ -41,6 +109,12 @@ async def create_trip(
         raise HTTPException(status_code=422, detail=str(exc))
     head_origin, tail_destination, first_departure = head_and_tail(legs)
 
+    # T3.11.07 — a handover end may point at one of the carrier's addresses or
+    # meeting places. Ownership is checked here because a schema cannot know
+    # whose row an id is, and an unchecked id is a way to publish a stranger's
+    # home address on a public board.
+    await _assert_owns_referenced_places(body, current_user, db)
+
     trip = Trip(
         carrier_id=current_user.id,
         # Denormalised head of the chain. Search, the board, the Nostr event and
@@ -60,16 +134,22 @@ async def create_trip(
         # T3.11.15 — the two capacities and the two ends of the handover.
         space_kind=body.space_kind,
         size_hint=body.size_hint,
+        # `mode="json"` because the column is JSON and the side now carries
+        # UUIDs: the default dump keeps them as `UUID` objects, which asyncpg
+        # cannot write into a JSON column and which fail at serialisation, not
+        # at validation.
         handover_origin=(
-            body.handover_origin.model_dump() if body.handover_origin else None
+            body.handover_origin.model_dump(mode="json")
+            if body.handover_origin
+            else None
         ),
         handover_destination=(
-            body.handover_destination.model_dump()
+            body.handover_destination.model_dump(mode="json")
             if body.handover_destination
             else None
         ),
         excluded=body.excluded,
-        services=body.services,
+        services=_services_with_derived(body),
         payment_model=body.payment_model,
         payment_systems=body.payment_systems,
         # T_UX.15 — the carrier's standing rules are **copied** into the trip,
