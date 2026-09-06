@@ -1351,8 +1351,16 @@ async def _ensure_trip_chain(engine) -> None:
         await conn.execute(
             text(
                 "ALTER TABLE trips ADD COLUMN IF NOT EXISTS "
-                "payment_model VARCHAR(16)"
+                "payment_model VARCHAR(24)"
             )
+        )
+        # 0064 widened the column and a test database created before it kept
+        # VARCHAR(16), which was long enough for the old vocabulary and not for
+        # `transfer_on_delivery`. The value is gone again since 0066, but the
+        # width has to match the model or the next longer value fails the same
+        # way — and it failed as a database error inside an unrelated test.
+        await conn.execute(
+            text("ALTER TABLE trips ALTER COLUMN payment_model TYPE VARCHAR(24)")
         )
         await conn.execute(
             text(

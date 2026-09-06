@@ -52,18 +52,25 @@ def _load(path: str) -> dict:
     }
 
 
+def _country_slice(path: str, country_iso: str | None) -> list[Entry]:
+    """Just the rows filed under one country — no global set.
+
+    Separate from `_for_country` because the payment picker walks two countries
+    in order, and folding the global names into each pass would drop them
+    between arrival and departure, breaking the very order that answers the
+    question.
+    """
+    if not country_iso:
+        return []
+    return list(_load(path)["countries"].get(country_iso.upper(), []))
+
+
 def _for_country(path: str, country_iso: str | None) -> list[Entry]:
-    data = _load(path)
     entries: list[Entry] = []
     seen: set[str] = set()
     # Country-specific first: somebody shipping inside Turkey wants PTT above
     # DHL, and the global names are the ones they would have thought of anyway.
-    if country_iso:
-        for entry in data["countries"].get(country_iso.upper(), []):
-            if entry["code"] not in seen:
-                seen.add(entry["code"])
-                entries.append(entry)
-    for entry in data["global"]:
+    for entry in _country_slice(path, country_iso) + _load(path)["global"]:
         if entry["code"] not in seen:
             seen.add(entry["code"])
             entries.append(entry)
@@ -106,22 +113,28 @@ def _hodlhodl() -> tuple[list[Entry], dict[str, list[Entry]]]:
     return world, by_country
 
 
-def payment_systems(country_iso: str | None = None) -> list[Entry]:
-    """How money can move outside the platform, in one country.
+def payment_systems(
+    arrival_iso: str | None = None, departure_iso: str | None = None
+) -> list[Entry]:
+    """How money can move outside the platform, for the two ends of a route.
 
-    One country, not a list (owner's correction 2026-09-06). This is a plain
-    substitution: the airport says the country, the country says the systems.
-    An earlier version took both ends of the route on the reasoning that payment
-    is between two people in different places — true, and beside the point. The
-    trip states which systems **this carrier** accepts, and a carrier settles
-    where they are.
+    **Arrival first, then departure** (owner's decision 2026-09-06). Both, and
+    in that order, because settlement most often happens where the cargo is
+    handed over — at the end of the flight — and because a carrier who lives at
+    the departure end still needs their own systems offered rather than typed
+    out. Neither end alone is enough: this product exists precisely because the
+    two people are in different countries.
 
-    **Two layers, ours first.** Our own file is curated for the corridors this
-    platform actually flies; the vendored HodlHodl catalogue is broad but has
-    holes exactly where we launch — on the day it was fetched it held nothing at
-    all for Russia, one entry for the United States, and neither Zelle nor
-    Venmo. Merging with ours on top means breadth without letting a bitcoin-P2P
-    catalogue decide what a Minsk carrier is offered.
+    Order is the answer here, not just the contents. A picker that mixed the two
+    countries alphabetically would bury the systems of the place the parcel is
+    actually going.
+
+    **Two layers within each country, ours first.** Our own file is curated for
+    the corridors this platform actually flies; the vendored HodlHodl catalogue
+    is broad but has holes exactly where we launch — on the day it was fetched
+    it held nothing at all for Russia, one entry for the United States, and
+    neither Zelle nor Venmo. Merging with ours on top means breadth without
+    letting a bitcoin-P2P catalogue decide what a Minsk carrier is offered.
 
     Called by: `api.directories.list_payment_systems`.
     """
@@ -140,12 +153,20 @@ def payment_systems(country_iso: str | None = None) -> list[Entry]:
             seen_names.add(name_key)
             entries.append(entry)
 
-    iso = country_iso.upper() if country_iso else None
-    add(_for_country(str(PAYMENT_PATH), iso))
-
     vendor_global, vendor_by_country = _hodlhodl()
-    if iso:
-        add(vendor_by_country.get(iso, []))
+    # Deduplicated across the two ends as well: a service both countries list —
+    # SEPA for two EU ends, Wise almost anywhere — appears once, under the
+    # arrival country, which is where it was offered first.
+    for iso in (arrival_iso, departure_iso):
+        if not iso:
+            continue
+        code = iso.upper()
+        # Ours before theirs within each country, and the global names held back
+        # until both countries have had their turn.
+        add(_country_slice(str(PAYMENT_PATH), code))
+        add(vendor_by_country.get(code, []))
+
+    add(list(_load(str(PAYMENT_PATH))["global"]))
     add(vendor_global)
     return entries
 

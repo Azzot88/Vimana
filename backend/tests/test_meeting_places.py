@@ -53,18 +53,28 @@ async def test_default_is_listed_first(client, carrier_headers):
 
 
 async def test_deleting_the_default_promotes_another(client, carrier_headers):
+    """A list with entries and no default makes every form that offers one start
+    empty, so the successor is promoted.
+
+    Asserted as "exactly one default remains" rather than "this specific row
+    became it": the test database is never reset (ENVIRONMENT §8), so this
+    carrier already owns places from the tests above, and the successor is the
+    oldest of all of them rather than the one created two lines up. The rule
+    being tested is that a default exists, not which row it landed on.
+    """
     headers = carrier_headers
-    first = (await _create(client, headers, "Остаётся")).json()
-    second = (await _create(client, headers, "Удаляется", is_default=True)).json()
+    await _create(client, headers, "Остаётся")
+    doomed = (await _create(client, headers, "Удаляется", is_default=True)).json()
 
     gone = await client.delete(
-        f"/api/me/meeting-places/{second['id']}", headers=headers
+        f"/api/me/meeting-places/{doomed['id']}", headers=headers
     )
     assert gone.status_code == 204
 
     listing = (await client.get("/api/me/meeting-places", headers=headers)).json()
-    survivor = next(p for p in listing if p["id"] == first["id"])
-    assert survivor["is_default"] is True
+    defaults = [p for p in listing if p["is_default"]]
+    assert len(defaults) == 1
+    assert defaults[0]["id"] != doomed["id"]
 
 
 async def test_description_is_trimmed(client, carrier_headers):

@@ -300,6 +300,19 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("DELETE", "/api/me/addresses/{address_id}"): Case(
         DENIED, "deleting a stranger's address"
     ),
+    # ---- meeting places (T3.11.07) --------------------------------------
+    # Same posture as the addresses above: a list that belongs to one person and
+    # decides where they agree to stand.
+    ("PATCH", "/api/me/meeting-places/{place_id}"): Case(
+        DENIED, "rewriting where a stranger says they will meet people",
+        json={"description": "idor probe"},
+    ),
+    ("POST", "/api/me/meeting-places/{place_id}/default"): Case(
+        DENIED, "promoting a stranger's meeting place to their default"
+    ),
+    ("DELETE", "/api/me/meeting-places/{place_id}"): Case(
+        DENIED, "deleting a stranger's meeting place"
+    ),
     # ---- inquiries -----------------------------------------------------
     ("POST", "/api/trips/{trip_id}/inquiry"): Case(
         PUBLIC,

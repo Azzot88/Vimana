@@ -71,24 +71,41 @@ async def test_postal_catalogue_is_open_without_a_token(client):
 # ── payment systems ───────────────────────────────────────────────────────
 
 
-async def test_payment_systems_are_a_plain_substitution_by_country(client):
-    """One country, not both ends of the route (owner's correction 2026-09-06).
+async def test_arrival_country_comes_before_departure(client):
+    """Both ends, and in that order (owner's decision 2026-09-06).
 
-    The airport says the country, the country says the systems: a flight out of
-    Minsk offers Belarusian systems, a flight out of New York American ones. The
-    trip states which systems **this carrier** accepts, and a carrier settles
-    where they are.
+    Settlement most often happens where the cargo changes hands — at the end of
+    the flight — so the arrival country is offered first; but a carrier who
+    lives at the departure end still needs their own systems offered rather than
+    typed out. The order is the answer here, not just the contents: mixing the
+    two countries would bury the systems of the place the parcel is going.
     """
+    codes = [
+        s["code"]
+        for s in (
+            await client.get(
+                "/api/payment-systems", params={"arrival": "US", "departure": "BY"}
+            )
+        ).json()
+    ]
+    assert codes.index("zelle") < codes.index("erip")
+    # Global names wait until both countries have had their turn.
+    assert codes.index("erip") < codes.index("wise")
+
+
+async def test_a_country_alone_still_answers(client):
+    """The form asks before the route is finished, and half a route is a real
+    state rather than an error."""
     by = {
         s["code"]
         for s in (
-            await client.get("/api/payment-systems", params={"country": "BY"})
+            await client.get("/api/payment-systems", params={"arrival": "BY"})
         ).json()
     }
     us = {
         s["code"]
         for s in (
-            await client.get("/api/payment-systems", params={"country": "US"})
+            await client.get("/api/payment-systems", params={"arrival": "US"})
         ).json()
     }
     assert "erip" in by
@@ -111,7 +128,7 @@ async def test_a_system_is_never_offered_twice(client):
     """Both layers name some of the same services, and the picker must show
     each once."""
     body = (
-        await client.get("/api/payment-systems", params={"country": "DE"})
+        await client.get("/api/payment-systems", params={"arrival": "DE"})
     ).json()
     codes = [s["code"] for s in body]
     names = [s["name"].casefold() for s in body]
@@ -133,7 +150,7 @@ async def test_vendored_catalogue_adds_breadth(client):
     """Owner's decision 2026-09-06: HodlHodl's public catalogue is stored in the
     image and merged under ours. 432 methods across 114 countries."""
     body = (
-        await client.get("/api/payment-systems", params={"country": "TH"})
+        await client.get("/api/payment-systems", params={"arrival": "TH"})
     ).json()
     assert any(s["code"].startswith("hh:") for s in body)
 
@@ -149,13 +166,13 @@ async def test_our_layer_covers_what_theirs_does_not(client):
     ru = {
         s["code"]
         for s in (
-            await client.get("/api/payment-systems", params={"country": "RU"})
+            await client.get("/api/payment-systems", params={"arrival": "RU"})
         ).json()
     }
     us = {
         s["code"]
         for s in (
-            await client.get("/api/payment-systems", params={"country": "US"})
+            await client.get("/api/payment-systems", params={"arrival": "US"})
         ).json()
     }
     # Neither of these comes from the vendored catalogue — that is the point.
@@ -167,7 +184,7 @@ async def test_our_entry_wins_when_both_name_the_same_service(client):
     """Wise is in both lists. It must appear once, and as ours — a stored value
     should not say `hh:` for something we curate."""
     body = (
-        await client.get("/api/payment-systems", params={"country": "GB"})
+        await client.get("/api/payment-systems", params={"arrival": "GB"})
     ).json()
     wise = [s for s in body if s["name"].casefold() == "wise"]
     assert len(wise) == 1
@@ -177,7 +194,7 @@ async def test_our_entry_wins_when_both_name_the_same_service(client):
 async def test_vendored_codes_are_namespaced(client):
     """`hh:` prefixes every vendored row so it can never collide with ours and
     so a stored answer says where it came from."""
-    body = (await client.get("/api/payment-systems", params={"country": "TH"})).json()
+    body = (await client.get("/api/payment-systems", params={"arrival": "TH"})).json()
     for entry in body:
         assert entry["code"].startswith("hh:") or ":" not in entry["code"]
 

@@ -36,13 +36,18 @@ async def list_postal_services(
 
 @router.get("/payment-systems", response_model=list[DirectoryEntry])
 async def list_payment_systems(
-    country: str | None = Query(default=None, min_length=2, max_length=2),
+    arrival: str | None = Query(default=None, min_length=2, max_length=2),
+    departure: str | None = Query(default=None, min_length=2, max_length=2),
 ):
     """How money can move when it moves outside the platform.
 
-    A plain substitution by country, the same shape as postal services above:
-    the airport says the country, the country says the systems. A flight out of
-    Minsk offers Belarusian systems first, then the global ones, and anything
-    missing is typed by hand.
+    A plain substitution by country, twice: **arrival first, then departure**.
+    Settlement most often happens where the cargo changes hands, at the end of
+    the flight; but a carrier who lives at the departure end still needs their
+    own systems offered rather than typed out. Global names come after both, and
+    anything missing is typed by hand.
     """
-    return [DirectoryEntry(**e) for e in directories.payment_systems(country)]
+    return [
+        DirectoryEntry(**e)
+        for e in directories.payment_systems(arrival, departure)
+    ]
