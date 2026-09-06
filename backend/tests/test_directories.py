@@ -39,7 +39,7 @@ async def test_global_couriers_are_offered_everywhere(client):
         assert {"dhl", "fedex", "ups"} <= codes, country
 
 
-async def test_no_country_answers_with_the_global_set(client):
+async def test_postal_without_a_country_answers_globally(client):
     """The honest answer to "somewhere, I have not said where yet"."""
     body = (await client.get("/api/postal-services")).json()
     assert {s["code"] for s in body} == {"dhl", "fedex", "ups"}
@@ -71,15 +71,30 @@ async def test_postal_catalogue_is_open_without_a_token(client):
 # ── payment systems ───────────────────────────────────────────────────────
 
 
-async def test_payment_systems_span_both_ends_of_the_route(client):
-    """Payment is between two people who are, by the nature of this product, in
-    different countries. Either end's systems may be the one they agree on."""
-    body = (
-        await client.get("/api/payment-systems", params={"countries": "RU,US"})
-    ).json()
-    codes = {s["code"] for s in body}
-    assert "sbp" in codes
-    assert "zelle" in codes
+async def test_payment_systems_are_a_plain_substitution_by_country(client):
+    """One country, not both ends of the route (owner's correction 2026-09-06).
+
+    The airport says the country, the country says the systems: a flight out of
+    Minsk offers Belarusian systems, a flight out of New York American ones. The
+    trip states which systems **this carrier** accepts, and a carrier settles
+    where they are.
+    """
+    by = {
+        s["code"]
+        for s in (
+            await client.get("/api/payment-systems", params={"country": "BY"})
+        ).json()
+    }
+    us = {
+        s["code"]
+        for s in (
+            await client.get("/api/payment-systems", params={"country": "US"})
+        ).json()
+    }
+    assert "erip" in by
+    assert "erip" not in us
+    assert "zelle" in us
+    assert "zelle" not in by
 
 
 async def test_cash_is_a_system_not_a_settlement_model(client):
@@ -92,18 +107,19 @@ async def test_cash_is_a_system_not_a_settlement_model(client):
     assert "cash" in codes
 
 
-async def test_payment_systems_are_not_repeated_across_countries(client):
-    """Several countries list SEPA; the picker must not show it four times."""
+async def test_a_system_is_never_offered_twice(client):
+    """Both layers name some of the same services, and the picker must show
+    each once."""
     body = (
-        await client.get(
-            "/api/payment-systems", params={"countries": "DE,FR,IT,ES"}
-        )
+        await client.get("/api/payment-systems", params={"country": "DE"})
     ).json()
     codes = [s["code"] for s in body]
+    names = [s["name"].casefold() for s in body]
     assert len(codes) == len(set(codes))
+    assert len(names) == len(set(names))
 
 
-async def test_no_countries_answers_with_the_global_set(client):
+async def test_payment_without_a_country_answers_globally(client):
     codes = {s["code"] for s in (await client.get("/api/payment-systems")).json()}
     assert "cash" in codes
     assert "wise" in codes
@@ -117,7 +133,7 @@ async def test_vendored_catalogue_adds_breadth(client):
     """Owner's decision 2026-09-06: HodlHodl's public catalogue is stored in the
     image and merged under ours. 432 methods across 114 countries."""
     body = (
-        await client.get("/api/payment-systems", params={"countries": "TH"})
+        await client.get("/api/payment-systems", params={"country": "TH"})
     ).json()
     assert any(s["code"].startswith("hh:") for s in body)
 
@@ -130,19 +146,28 @@ async def test_our_layer_covers_what_theirs_does_not(client):
     P2P and does not operate in every market we fly to. Replacing our list with
     theirs would have made our launch corridor worse, not better.
     """
-    body = (
-        await client.get("/api/payment-systems", params={"countries": "RU,US"})
-    ).json()
-    codes = {s["code"] for s in body}
-    assert "sbp" in codes
-    assert "zelle" in codes
+    ru = {
+        s["code"]
+        for s in (
+            await client.get("/api/payment-systems", params={"country": "RU"})
+        ).json()
+    }
+    us = {
+        s["code"]
+        for s in (
+            await client.get("/api/payment-systems", params={"country": "US"})
+        ).json()
+    }
+    # Neither of these comes from the vendored catalogue — that is the point.
+    assert "sbp" in ru
+    assert "zelle" in us
 
 
 async def test_our_entry_wins_when_both_name_the_same_service(client):
     """Wise is in both lists. It must appear once, and as ours — a stored value
     should not say `hh:` for something we curate."""
     body = (
-        await client.get("/api/payment-systems", params={"countries": "GB"})
+        await client.get("/api/payment-systems", params={"country": "GB"})
     ).json()
     wise = [s for s in body if s["name"].casefold() == "wise"]
     assert len(wise) == 1
@@ -152,7 +177,7 @@ async def test_our_entry_wins_when_both_name_the_same_service(client):
 async def test_vendored_codes_are_namespaced(client):
     """`hh:` prefixes every vendored row so it can never collide with ours and
     so a stored answer says where it came from."""
-    body = (await client.get("/api/payment-systems", params={"countries": "TH"})).json()
+    body = (await client.get("/api/payment-systems", params={"country": "TH"})).json()
     for entry in body:
         assert entry["code"].startswith("hh:") or ":" not in entry["code"]
 
@@ -171,3 +196,67 @@ def test_vendored_file_records_where_it_came_from():
     assert source["fetched_at"]
     assert source["note"]
     assert len(raw["payment_methods"]) > 300
+
+
+# ── the monthly check ─────────────────────────────────────────────────────
+
+
+def test_monthly_check_reports_and_never_writes(monkeypatch):
+    """The whole design of the check in one test.
+
+    The catalogue was vendored so that changes to it are reviewable; a copy that
+    rewrites itself on a schedule is a copy nobody has read. So the task
+    produces an offer and the file is not touched, whatever upstream says.
+    """
+    import json
+
+    from app.core.directories import HODLHODL_PATH
+    from app.tasks import directories as task
+
+    before = HODLHODL_PATH.read_bytes()
+    stored = json.loads(before)
+    kept = stored["payment_methods"][:2]
+
+    class _Response:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "payment_methods": kept
+                + [{"id": "999999", "name": "Invented Pay", "country_codes": ["ZZ"]}]
+            }
+
+    monkeypatch.setattr(task.httpx, "get", lambda *a, **kw: _Response())
+
+    result = task.check_payment_catalogue()
+    assert result["reachable"] is True
+    assert "Invented Pay" in result["added"]
+    assert result["removed"]
+    assert HODLHODL_PATH.read_bytes() == before
+
+
+def test_unreachable_upstream_is_not_a_failure(monkeypatch):
+    """The stored copy is still serving every request, which is the entire
+    reason it is stored. An unreachable third party is one log line."""
+    from app.tasks import directories as task
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(task.httpx, "get", _boom)
+    assert task.check_payment_catalogue() == {"reachable": False}
+
+
+def test_the_check_is_registered_with_the_worker():
+    """`worker.py` carries a comment about the day beat emitted into a void for
+    weeks because a task module was not listed. This is that guard."""
+    from app.worker import celery_app
+
+    assert "app.tasks.directories.check_payment_catalogue" in celery_app.tasks
+    scheduled = {
+        entry["task"] for entry in celery_app.conf.beat_schedule.values()
+    }
+    assert "app.tasks.directories.check_payment_catalogue" in scheduled

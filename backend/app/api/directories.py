@@ -36,18 +36,13 @@ async def list_postal_services(
 
 @router.get("/payment-systems", response_model=list[DirectoryEntry])
 async def list_payment_systems(
-    countries: str | None = Query(
-        default=None,
-        max_length=64,
-        description="Comma-separated ISO-2 codes, usually both ends of the route.",
-    ),
+    country: str | None = Query(default=None, min_length=2, max_length=2),
 ):
     """How money can move when it moves outside the platform.
 
-    Takes several countries because payment is between two people who are, by
-    the nature of this product, in different places: the sender is at one end of
-    the route and the carrier at the other, and either end's systems may be the
-    one they settle in.
+    A plain substitution by country, the same shape as postal services above:
+    the airport says the country, the country says the systems. A flight out of
+    Minsk offers Belarusian systems first, then the global ones, and anything
+    missing is typed by hand.
     """
-    parsed = [c.strip() for c in (countries or "").split(",") if c.strip()]
-    return [DirectoryEntry(**e) for e in directories.payment_systems(parsed)]
+    return [DirectoryEntry(**e) for e in directories.payment_systems(country)]

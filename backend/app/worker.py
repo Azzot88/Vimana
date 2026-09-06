@@ -24,6 +24,7 @@ _TASK_MODULES = [
     "app.tasks.nostr_whitelist",
     "app.tasks.chain_anchor",
     "app.tasks.malware_rescan",
+    "app.tasks.directories",
 ]
 
 celery_app = Celery(
@@ -66,6 +67,14 @@ celery_app.conf.beat_schedule = {
     "anchor-deal-chains-hourly": {
         "task": "app.tasks.chain_anchor.anchor_deal_chains",
         "schedule": 3600.0,
+    },
+    # T3.11.07 — checks the vendored payment catalogue and **reports**; writing
+    # stays a human act (`app.cli.refresh_payment_systems --write`). Monthly,
+    # because a list of payment services moves at the speed of the payments
+    # industry, not of our deploys.
+    "check-payment-catalogue-monthly": {
+        "task": "app.tasks.directories.check_payment_catalogue",
+        "schedule": 30 * 86400.0,
     },
 }
 celery_app.conf.task_routes = {

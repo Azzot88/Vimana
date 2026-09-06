@@ -106,20 +106,22 @@ def _hodlhodl() -> tuple[list[Entry], dict[str, list[Entry]]]:
     return world, by_country
 
 
-def payment_systems(country_isos: list[str] | None = None) -> list[Entry]:
-    """How money can move outside the platform, for the countries given.
+def payment_systems(country_iso: str | None = None) -> list[Entry]:
+    """How money can move outside the platform, in one country.
 
-    Takes a list rather than one country because payment is between two people
-    who are, by the nature of this product, in different places: the sender is
-    at one end of the route and the carrier at the other, and either end's
-    systems may be the one they agree on.
+    One country, not a list (owner's correction 2026-09-06). This is a plain
+    substitution: the airport says the country, the country says the systems.
+    An earlier version took both ends of the route on the reasoning that payment
+    is between two people in different places — true, and beside the point. The
+    trip states which systems **this carrier** accepts, and a carrier settles
+    where they are.
 
     **Two layers, ours first.** Our own file is curated for the corridors this
     platform actually flies; the vendored HodlHodl catalogue is broad but has
     holes exactly where we launch — on the day it was fetched it held nothing at
     all for Russia, one entry for the United States, and neither Zelle nor
     Venmo. Merging with ours on top means breadth without letting a bitcoin-P2P
-    catalogue decide what a Moscow carrier is offered.
+    catalogue decide what a Minsk carrier is offered.
 
     Called by: `api.directories.list_payment_systems`.
     """
@@ -138,14 +140,11 @@ def payment_systems(country_isos: list[str] | None = None) -> list[Entry]:
             seen_names.add(name_key)
             entries.append(entry)
 
-    isos = [iso.upper() for iso in (country_isos or [])]
-    for iso in isos:
-        add(_for_country(str(PAYMENT_PATH), iso))
-    if not isos:
-        add(list(_load(str(PAYMENT_PATH))["global"]))
+    iso = country_iso.upper() if country_iso else None
+    add(_for_country(str(PAYMENT_PATH), iso))
 
     vendor_global, vendor_by_country = _hodlhodl()
-    for iso in isos:
+    if iso:
         add(vendor_by_country.get(iso, []))
     add(vendor_global)
     return entries
