@@ -561,7 +561,9 @@
       "preview": "Aperçu",
       "alsoOnNostr": "Publier aussi sur le réseau Nostr",
       "terms": "Conditions",
-      "rules": "Règles"
+      "rules": "Règles",
+      "customs": "Franchise douanière",
+      "handover": "Réception et remise"
     },
     "newTripHook": {
       "voice": "Saisie vocale",
@@ -600,7 +602,31 @@
       "self": "Moi",
       "proxy": "Quelqu'un d'autre",
       "proxyChip": "quelqu'un d'autre voyage"
-    }
+    },
+    "spaceHint": "La place dans votre bagage. Affichée sur la fiche ; le filtre de poids s'appuie dessus.",
+    "spaceKind": {
+      "cabin": "Bagage à main",
+      "checked_partial": "Une partie du bagage",
+      "checked_full": "Un bagage entier"
+    },
+    "sizeHint": {
+      "label": "Taille de ce qui rentre",
+      "small": "Petit",
+      "medium": "Moyen",
+      "large": "Grand"
+    },
+    "customsHint": "Votre franchise douanière. Comptée à part du bagage : elle peut être épuisée alors qu'il reste de la place.",
+    "declaredValueStatus": {
+      "label": "État de la franchise",
+      "open": "Encore libre",
+      "exhausted": "Franchise épuisée",
+      "exhaustedNote": "Le trajet se publie quand même — documents et colis de faible valeur ne sont pas concernés."
+    },
+    "handoverHint": "Comment vous récupérez le colis et comment vous le remettez. Une question par extrémité : elles sont rarement organisées pareil.",
+    "handoverOrigin": "Je récupère à",
+    "handoverDestination": "Je remets à",
+    "handoverPoints": "Lieux (séparés par des virgules)",
+    "handoverPointsPlaceholder": "centre-ville, aéroport"
   },
   "deals": {
     "title": "Transactions",

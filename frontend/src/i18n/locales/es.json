@@ -561,7 +561,9 @@
       "preview": "Vista previa",
       "alsoOnNostr": "Publicar también en la red Nostr",
       "terms": "Condiciones",
-      "rules": "Reglas"
+      "rules": "Reglas",
+      "customs": "Franquicia aduanera",
+      "handover": "Recogida y entrega"
     },
     "newTripHook": {
       "voice": "Entrada de voz",
@@ -600,7 +602,31 @@
       "self": "Yo",
       "proxy": "Otra persona",
       "proxyChip": "vuela otra persona"
-    }
+    },
+    "spaceHint": "El sitio en tu equipaje. Se ve en la ficha y el filtro de peso se apoya en él.",
+    "spaceKind": {
+      "cabin": "Equipaje de mano",
+      "checked_partial": "Parte del equipaje",
+      "checked_full": "Una maleta entera"
+    },
+    "sizeHint": {
+      "label": "Tamaño de lo que cabe",
+      "small": "Pequeño",
+      "medium": "Mediano",
+      "large": "Grande"
+    },
+    "customsHint": "Tu franquicia aduanera. Va aparte del equipaje: puede agotarse cuando todavía queda sitio.",
+    "declaredValueStatus": {
+      "label": "Estado de la franquicia",
+      "open": "Aún libre",
+      "exhausted": "Franquicia agotada",
+      "exhaustedNote": "El viaje se publica igual: no afecta a documentos ni a paquetes de poco valor."
+    },
+    "handoverHint": "Cómo recoges la carga y cómo la entregas. Se pregunta por cada extremo, porque suelen organizarse distinto.",
+    "handoverOrigin": "Recojo en",
+    "handoverDestination": "Entrego en",
+    "handoverPoints": "Lugares (separados por comas)",
+    "handoverPointsPlaceholder": "centro, aeropuerto"
   },
   "deals": {
     "title": "Acuerdos",

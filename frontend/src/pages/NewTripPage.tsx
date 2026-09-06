@@ -35,9 +35,45 @@ const EMPTY_LEG: LegDraft = {
 // cities; the limit exists so one listing cannot become a database.
 const MAX_LEGS = 10
 
+/** T3.11.07 — one end of the handover. `points` is one text field rather than a
+ *  repeater: carriers write "Tustin, Irvine or LAX" in one breath, and three
+ *  boxes to fill would be three boxes left empty. Split on commas on submit. */
+interface HandoverDraft {
+  methods: string[]
+  points: string
+}
+
+const EMPTY_HANDOVER: HandoverDraft = { methods: [], points: '' }
+
+// Matches `schemas.marketplace.HANDOVER_METHODS` and reuses the card labels
+// (`cards.opt.*`): one vocabulary, named once, so a carrier cannot advertise a
+// method no deal card can ever name.
+const HANDOVER_METHODS = [
+  'in_person',
+  'local_post',
+  'courier',
+  'parcel_locker',
+  'poste_restante',
+] as const
+
+const SPACE_KINDS = ['cabin', 'checked_partial', 'checked_full'] as const
+const SIZE_HINTS = ['small', 'medium', 'large'] as const
+
 interface Draft {
   legs: LegDraft[]
   capacity: string
+  // T3.11.15 — the physical half of the capacity: what kind of room, and how
+  // big a thing fits. Kilograms are named in 2.4 % of real posts and
+  // "small / not big" in 9.9 %, so the number alone asks a question most
+  // carriers do not answer.
+  spaceKind: 'unspecified' | (typeof SPACE_KINDS)[number]
+  sizeHint: '' | (typeof SIZE_HINTS)[number]
+  // T3.11.15 — the customs half. The ceiling and whether it is spent are two
+  // separate facts: "the luxury allowance is used up" appears in posts that
+  // still take documents on the same flight.
+  declaredValueStatus: 'open' | 'exhausted'
+  handoverOrigin: HandoverDraft
+  handoverDestination: HandoverDraft
   categories: string[]
   alsoOnNostr: boolean
   // T3.35 — the carrier's baseline terms. Strings because they come from
@@ -52,6 +88,11 @@ interface Draft {
 const EMPTY: Draft = {
   legs: [{ ...EMPTY_LEG }],
   capacity: '',
+  spaceKind: 'unspecified',
+  sizeHint: '',
+  declaredValueStatus: 'open',
+  handoverOrigin: { ...EMPTY_HANDOVER },
+  handoverDestination: { ...EMPTY_HANDOVER },
   categories: [],
   alsoOnNostr: true,
   pricePerKg: '',
@@ -73,10 +114,31 @@ function loadDraft(): Draft {
       // A saved draft with an empty chain would render a route cell with no
       // rows and no way to add one.
       legs: parsed.legs?.length ? parsed.legs : [{ ...EMPTY_LEG }],
+      handoverOrigin: { ...EMPTY_HANDOVER, ...parsed.handoverOrigin },
+      handoverDestination: { ...EMPTY_HANDOVER, ...parsed.handoverDestination },
     }
   } catch {
     return EMPTY
   }
+}
+
+/** T3.11.07 — a handover end for the wire, or `null` when the carrier said
+ *  nothing about it. Sending `{methods: [], points: []}` would record silence as
+ *  an answer, and the card that reads it later could not tell the two apart.
+ *
+ *  Called by: `NewTripPage.handleSubmit`.
+ */
+function toHandover(side: HandoverDraft) {
+  const points = side.points
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    // The API caps this at six; trimming here means a carrier who typed seven
+    // gets a published trip rather than a validation error about a field they
+    // filled in generously.
+    .slice(0, 6)
+  if (side.methods.length === 0 && points.length === 0) return null
+  return { methods: side.methods, points }
 }
 
 // Feature flags for experimental input methods (voice / ticket scan).
@@ -146,6 +208,19 @@ export default function NewTripPage() {
       }
     })
   }, [])
+
+  // T3.11.07 — the two ends are edited through one helper so the cell can be
+  // written once and rendered twice. A computed key straight into `patch` would
+  // widen to an index signature and need a cast to get back to `Draft`.
+  const patchHandover = useCallback(
+    (
+      field: 'handoverOrigin' | 'handoverDestination',
+      delta: Partial<HandoverDraft>,
+    ) => {
+      setDraft((prev) => ({ ...prev, [field]: { ...prev[field], ...delta } }))
+    },
+    [],
+  )
 
   const removeLeg = useCallback((index: number) => {
     setDraft((prev) =>
@@ -252,6 +327,14 @@ export default function NewTripPage() {
         max_declared_value: draft.maxDeclaredValue
           ? Number(draft.maxDeclaredValue)
           : null,
+        // T3.11.07 — the two capacities and the two ends of the handover.
+        // `sizeHint` empty stays null: "did not say" and "small" are different
+        // answers and the API keeps them apart.
+        declared_value_status: draft.declaredValueStatus,
+        space_kind: draft.spaceKind,
+        size_hint: draft.sizeHint || null,
+        handover_origin: toHandover(draft.handoverOrigin),
+        handover_destination: toHandover(draft.handoverDestination),
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
         // rules" rather than "fall back to my template".
         carriage_rules: draft.carriageRules,
@@ -312,6 +395,11 @@ export default function NewTripPage() {
       </div>
     )
   }
+
+  // The two ends of the chain, named on the handover cell so "where you accept"
+  // is not an abstract question. Empty until the carrier has typed the route.
+  const firstOrigin = draft.legs[0]?.origin ?? ''
+  const lastDestination = draft.legs[draft.legs.length - 1]?.destination ?? ''
 
   const formatDeparture = (value: string) =>
     value
@@ -479,11 +567,10 @@ export default function NewTripPage() {
           )}
         </div>
 
-        {/* Terms cell 2x1 — T3.35. Widened in T3.11.07 so the Bento rows close:
-            route 3 · terms 2 + capacity 1 · categories 3 · rules 2 + publish 1 ·
-            preview 3. The date cell that used to sit beside the route moved
-            inside each leg, and without this the grid left holes. */}
-        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
+        {/* Terms cell 1x1 — T3.35. Bento rows close as: route 3 ·
+            capacity 2 + terms 1 · categories 3 · handover 3 ·
+            rules 2 + publish 1 · preview 3. */}
+        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.terms')}
           </p>
@@ -531,55 +618,165 @@ export default function NewTripPage() {
               />
             </label>
           </div>
-          <label className="block">
-            <span className="block text-[11px] font-body text-navy/40 mb-1">
-              {t('trips.maxDeclaredValue')}
-            </span>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              value={draft.maxDeclaredValue}
-              onChange={(e) => patch({ maxDeclaredValue: e.target.value })}
-              className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-            />
-          </label>
         </div>
 
-        {/* Capacity cell 1x1 */}
-        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <label
-            id={capacityLabelId}
-            htmlFor={capacityId}
-            className="block text-xs font-display font-semibold text-navy/50 uppercase tracking-wide"
-          >
-            {t('trips.newTripCell.capacity')}
-          </label>
-          <div className="flex items-baseline gap-2">
+        {/* Capacity cell 2x1 — T3.11.07. Two capacities, not one: room in the
+            bag and headroom under the customs allowance. They run out
+            separately, and the market says so outright — "the luxury limit is
+            already taken" sits in posts that still carry documents that day. */}
+        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <label
+              id={capacityLabelId}
+              htmlFor={capacityId}
+              className="block text-xs font-display font-semibold text-navy/50 uppercase tracking-wide"
+            >
+              {t('trips.newTripCell.capacity')}
+            </label>
+            {/* §9b */}
+            <p className="text-[11px] font-body text-navy/40 -mt-1">
+              {t('trips.spaceHint')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {SPACE_KINDS.map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  aria-pressed={draft.spaceKind === kind}
+                  onClick={() =>
+                    patch({
+                      spaceKind: draft.spaceKind === kind ? 'unspecified' : kind,
+                    })
+                  }
+                  className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                    draft.spaceKind === kind
+                      ? 'border-cyan bg-cyan/10 text-navy'
+                      : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                  }`}
+                >
+                  {t(`trips.spaceKind.${kind}`)}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <input
+                id={capacityId}
+                type="number"
+                step="0.5"
+                min="0.5"
+                max="20"
+                value={draft.capacity}
+                onChange={(e) => patch({ capacity: e.target.value })}
+                required
+                placeholder="5"
+                className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
+              />
+              <MonoText className="text-sm text-navy/60">kg</MonoText>
+            </div>
             <input
-              id={capacityId}
-              type="number"
-              step="0.5"
+              type="range"
+              aria-labelledby={capacityLabelId}
               min="0.5"
               max="20"
-              value={draft.capacity}
+              step="0.5"
+              value={draft.capacity || 0.5}
               onChange={(e) => patch({ capacity: e.target.value })}
-              required
-              placeholder="5"
-              className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
+              className="w-full accent-cyan"
             />
-            <MonoText className="text-sm text-navy/60">kg</MonoText>
+            {/* The second way to answer the same question. Kilograms are named
+                in 2.4 % of real posts and "small / not big" in 9.9 %, so the
+                scale is not a decoration on the number — for most carriers it
+                is the answer they actually have. */}
+            <fieldset>
+              <legend className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.sizeHint.label')}
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {SIZE_HINTS.map((size) => (
+                  <label
+                    key={size}
+                    className={`text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center rounded-field border cursor-pointer transition-colors ${
+                      draft.sizeHint === size
+                        ? 'border-cyan bg-cyan/10 text-navy'
+                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sizeHint"
+                      value={size}
+                      checked={draft.sizeHint === size}
+                      onChange={() => patch({ sizeHint: size })}
+                      className="sr-only"
+                    />
+                    {t(`trips.sizeHint.${size}`)}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </div>
-          <input
-            type="range"
-            aria-labelledby={capacityLabelId}
-            min="0.5"
-            max="20"
-            step="0.5"
-            value={draft.capacity || 0.5}
-            onChange={(e) => patch({ capacity: e.target.value })}
-            className="w-full accent-cyan"
-          />
+
+          {/* The customs allowance — the other capacity. A ceiling alone cannot
+              say "spent", and "spent" is what carriers announce. */}
+          <div className="space-y-3 sm:border-l sm:border-navy/10 sm:pl-4">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.customs')}
+            </p>
+            {/* §9b */}
+            <p className="text-[11px] font-body text-navy/40 -mt-1">
+              {t('trips.customsHint')}
+            </p>
+            <label className="block">
+              <span className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.maxDeclaredValue')}
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={draft.maxDeclaredValue}
+                onChange={(e) => patch({ maxDeclaredValue: e.target.value })}
+                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              />
+            </label>
+            <fieldset>
+              <legend className="block text-[11px] font-body text-navy/40 mb-1">
+                {t('trips.declaredValueStatus.label')}
+              </legend>
+              <div className="flex gap-2">
+                {(['open', 'exhausted'] as const).map((state) => (
+                  <label
+                    key={state}
+                    className={`flex-1 text-center text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center justify-center rounded-field border cursor-pointer transition-colors ${
+                      draft.declaredValueStatus === state
+                        ? state === 'exhausted'
+                          ? 'border-amber bg-amber/10 text-navy'
+                          : 'border-cyan bg-cyan/10 text-navy'
+                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="declaredValueStatus"
+                      value={state}
+                      checked={draft.declaredValueStatus === state}
+                      onChange={() => patch({ declaredValueStatus: state })}
+                      className="sr-only"
+                    />
+                    {t(`trips.declaredValueStatus.${state}`)}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {/* Says outright that the trip is still publishable. The whole point
+                of a separate state is that a spent allowance closes one
+                capacity and not the other. */}
+            {draft.declaredValueStatus === 'exhausted' && (
+              <p className="text-[11px] font-body text-navy/50">
+                {t('trips.declaredValueStatus.exhaustedNote')}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Categories cell — full row */}
@@ -591,6 +788,80 @@ export default function NewTripPage() {
             selected={draft.categories}
             onChange={(next) => patch({ categories: next })}
           />
+        </div>
+
+        {/* Handover cell — full row, T3.11.07. Two ends, not one list. Carriers
+            arrange the two differently as a matter of course: "in Italy I take
+            it at my address or meet in Milan, Turin, Genoa; in Russia I accept
+            a courier at home". One combined list cannot say that. */}
+        <div className="md:col-span-3 bg-white rounded-card border border-navy/10 p-4 space-y-3">
+          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+            {t('trips.newTripCell.handover')}
+          </p>
+          {/* §9b */}
+          <p className="text-[11px] font-body text-navy/40 -mt-1">
+            {t('trips.handoverHint')}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {(
+              [
+                ['handoverOrigin', firstOrigin] as const,
+                ['handoverDestination', lastDestination] as const,
+              ]
+            ).map(([field, place]) => (
+              <fieldset
+                key={field}
+                className="border border-navy/10 rounded-field p-3 space-y-3"
+              >
+                <legend className="px-1 text-[11px] font-mono text-navy/40">
+                  {t(`trips.${field}`)}
+                  {place && <span className="ml-1 text-cyan">{place}</span>}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {HANDOVER_METHODS.map((method) => {
+                    const chosen = draft[field].methods.includes(method)
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        aria-pressed={chosen}
+                        onClick={() =>
+                          patchHandover(field, {
+                            methods: chosen
+                              ? draft[field].methods.filter((m) => m !== method)
+                              : [...draft[field].methods, method],
+                          })
+                        }
+                        className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                          chosen
+                            ? 'border-cyan bg-cyan/10 text-navy'
+                            : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                        }`}
+                      >
+                        {t(`cards.opt.${method}`)}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* Free text, and deliberately so: the market names districts,
+                    suburbs and satellite cities — "Tustin, Irvine or LAX",
+                    "Fili, Moscow" — and an airport picker cannot say any of
+                    that. */}
+                <label className="block">
+                  <span className="block text-[11px] font-body text-navy/40 mb-1">
+                    {t('trips.handoverPoints')}
+                  </span>
+                  <input
+                    type="text"
+                    value={draft[field].points}
+                    onChange={(e) => patchHandover(field, { points: e.target.value })}
+                    placeholder={t('trips.handoverPointsPlaceholder') as string}
+                    className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                  />
+                </label>
+              </fieldset>
+            ))}
+          </div>
         </div>
 
         {/* Carriage rules cell 1x2 — T_UX.15 */}
@@ -671,7 +942,21 @@ export default function NewTripPage() {
               <span>
                 {t('trips.capacity')}:{' '}
                 <MonoText className="text-xs">{draft.capacity ? prefs.weight(Number(draft.capacity)) : '?'}</MonoText>
+                {draft.spaceKind !== 'unspecified' && (
+                  <span className="ml-1">· {t(`trips.spaceKind.${draft.spaceKind}`)}</span>
+                )}
+                {draft.sizeHint && (
+                  <span className="ml-1">· {t(`trips.sizeHint.${draft.sizeHint}`)}</span>
+                )}
               </span>
+              {/* The one state a sender has to see before writing: the allowance
+                  is spent, so a valuable parcel is not what this flight can take
+                  even though the bag is not full. */}
+              {draft.declaredValueStatus === 'exhausted' && (
+                <span className="text-amber">
+                  {t('trips.declaredValueStatus.exhausted')}
+                </span>
+              )}
               {draft.categories.length > 0 && (
                 <span className="flex flex-wrap gap-1">
                   {draft.categories.map((c) => (

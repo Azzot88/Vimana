@@ -562,7 +562,9 @@
       "preview": "Podgląd",
       "alsoOnNostr": "Opublikuj także w sieci Nostr",
       "terms": "Warunki",
-      "rules": "Zasady"
+      "rules": "Zasady",
+      "customs": "Limit celny",
+      "handover": "Odbiór i przekazanie"
     },
     "newTripHook": {
       "voice": "Wprowadzanie głosowe",
@@ -601,7 +603,31 @@
       "self": "Lecę ja",
       "proxy": "Leci ktoś inny",
       "proxyChip": "leci ktoś inny"
-    }
+    },
+    "spaceHint": "Miejsce w Twoim bagażu. Widoczne na karcie, działa na nim filtr wagi.",
+    "spaceKind": {
+      "cabin": "Bagaż podręczny",
+      "checked_partial": "Część bagażu",
+      "checked_full": "Całe miejsce bagażowe"
+    },
+    "sizeHint": {
+      "label": "Jak duża rzecz się zmieści",
+      "small": "Mała",
+      "medium": "Średnia",
+      "large": "Duża"
+    },
+    "customsHint": "Twój limit bezcłowy. Liczony osobno od bagażu: może się skończyć, gdy miejsce jeszcze jest.",
+    "declaredValueStatus": {
+      "label": "Stan limitu",
+      "open": "Jeszcze wolny",
+      "exhausted": "Limit zajęty",
+      "exhaustedNote": "Lot i tak zostanie opublikowany — dokumentów i tanich paczek to nie dotyczy."
+    },
+    "handoverHint": "Jak odbierasz przesyłkę i jak ją przekazujesz. Pytamy osobno o każdy koniec, bo zwykle wygląda to inaczej.",
+    "handoverOrigin": "Odbieram w",
+    "handoverDestination": "Przekazuję w",
+    "handoverPoints": "Miejsca (po przecinku)",
+    "handoverPointsPlaceholder": "centrum, lotnisko"
   },
   "deals": {
     "title": "Transakcje",

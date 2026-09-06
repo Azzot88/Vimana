@@ -608,7 +608,9 @@
       "preview": "Preview",
       "alsoOnNostr": "Also publish to Nostr network",
       "terms": "Terms",
-      "rules": "Rules"
+      "rules": "Rules",
+      "customs": "Customs allowance",
+      "handover": "Accepting and handing over"
     },
     "newTripHook": {
       "voice": "Voice input",
@@ -647,7 +649,31 @@
       "self": "I am",
       "proxy": "Someone else",
       "proxyChip": "someone else flying"
-    }
+    },
+    "spaceHint": "Room in your bag. Shown on the card and used by the weight filter.",
+    "spaceKind": {
+      "cabin": "Cabin bag",
+      "checked_partial": "Part of a checked bag",
+      "checked_full": "A whole checked bag"
+    },
+    "sizeHint": {
+      "label": "Size of thing that fits",
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
+    },
+    "customsHint": "Your duty-free headroom. Separate from the bag: it can be spent while there is still room.",
+    "declaredValueStatus": {
+      "label": "State of the allowance",
+      "open": "Still free",
+      "exhausted": "Allowance spent",
+      "exhaustedNote": "The trip still publishes — documents and low-value parcels are unaffected."
+    },
+    "handoverHint": "How you take cargo and how you hand it over. Asked separately for each end, because they are usually arranged differently.",
+    "handoverOrigin": "Accepting at",
+    "handoverDestination": "Handing over at",
+    "handoverPoints": "Places (comma-separated)",
+    "handoverPointsPlaceholder": "Tustin, Irvine, the airport"
   },
   "deals": {
     "title": "Deals",
