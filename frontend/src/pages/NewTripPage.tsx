@@ -545,7 +545,9 @@ export default function NewTripPage() {
           // per leg so a chain flown by two people stays expressible later.
           flown_by: draft.flownBy,
         })),
-        capacity: cap,
+        // Empty means "not stated" and travels as `null`: the express path made
+        // weight optional, and a zero here would be a claim nobody made.
+        capacity: draft.capacity ? Number(draft.capacity) : null,
         allowed_categories: draft.categories,
         // Empty stays empty: a trip without a stated price is "price on
         // request", not a trip priced at zero.
