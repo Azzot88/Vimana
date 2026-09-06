@@ -1261,6 +1261,29 @@ async def _ensure_trip_chain(engine) -> None:
         await conn.execute(
             text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS excluded JSON")
         )
+        # 0062 — services around the flight and the settlement model. `money`
+        # left the exclusions vocabulary in the same revision; a test database
+        # created before it may hold the value.
+        await conn.execute(
+            text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS services JSON")
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD COLUMN IF NOT EXISTS "
+                "payment_model VARCHAR(16)"
+            )
+        )
+        await conn.execute(
+            text(
+                "UPDATE trips SET excluded = (SELECT COALESCE(json_agg(value), "
+                "'[]'::json) FROM json_array_elements_text(excluded) AS value "
+                "WHERE value <> 'money') "
+                "WHERE excluded IS NOT NULL AND excluded::text LIKE '%money%'"
+            )
+        )
+        await conn.execute(
+            text("UPDATE trips SET excluded = NULL WHERE excluded::text = '[]'")
+        )
         await conn.execute(
             text(
                 "CREATE TABLE IF NOT EXISTS trip_legs ("

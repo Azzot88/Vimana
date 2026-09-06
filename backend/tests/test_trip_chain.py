@@ -289,6 +289,61 @@ async def test_saying_nothing_is_not_saying_nothing_is_excluded(
     assert r.json()["excluded"] is None
 
 
+async def test_cash_is_not_in_the_vocabulary(client, carrier_headers):
+    """Owner's decision 2026-09-06: the platform takes no position on cash in
+    either direction. It was in the list between 0061 and 0062; a client still
+    sending it is refused rather than silently ignored."""
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(excluded=["money"])
+    )
+    assert r.status_code == 422
+
+
+async def test_services_are_stored_and_listed(client, carrier_headers):
+    """44.9 % of real posts offer onward shipping inside the destination
+    country and 19 % marketplace pickup — and until now a sender looking for
+    either had nothing to search."""
+    created = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(services=["domestic_shipping", "marketplace_pickup"]),
+    )
+    assert created.status_code == 201, created.text
+    trip_id = created.json()["id"]
+    listing = await client.get("/api/trips", headers=carrier_headers)
+    mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
+    assert mine["services"] == ["domestic_shipping", "marketplace_pickup"]
+
+
+async def test_unknown_service_is_refused(client, carrier_headers):
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(services=["dog_walking"])
+    )
+    assert r.status_code == 422
+
+
+async def test_payment_model_is_stored_and_silence_stays_silence(
+    client, carrier_headers
+):
+    """The settlement model is stated by 61.7 % of this market and a price by
+    0.1 %, so this is the field that carries the real answer. Saying nothing is
+    still not the same as "on delivery", however common that answer is."""
+    said = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(payment_model="escrow")
+    )
+    assert said.json()["payment_model"] == "escrow"
+
+    silent = await client.post("/api/trips", headers=carrier_headers, json=_payload())
+    assert silent.json()["payment_model"] is None
+
+
+async def test_unknown_payment_model_is_refused(client, carrier_headers):
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(payment_model="barter")
+    )
+    assert r.status_code == 422
+
+
 async def test_unknown_exclusion_is_refused(client, carrier_headers):
     """The list is closed on purpose: a free-text refusal produced five
     spellings of "сигареты" and nothing a filter could read."""

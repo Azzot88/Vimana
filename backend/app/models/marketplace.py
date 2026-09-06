@@ -63,6 +63,11 @@ class Trip(Base):
             "declared_value_status IN ('open','exhausted')",
             name="ck_trips_declared_value_status",
         ),
+        CheckConstraint(
+            "payment_model IS NULL OR "
+            "payment_model IN ('on_delivery','escrow','prepaid')",
+            name="ck_trips_payment_model",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -120,6 +125,12 @@ class Trip(Base):
     # "сигареты" and nothing a filter can read; the free text below stays for
     # everything the list does not cover.
     excluded: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # T3.11.07 — what the carrier does around the flight. See `TRIP_SERVICES`.
+    services: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # T3.11.07 — the settlement model, which the market states far more often
+    # than it states a price. NULL is "did not say", and that is not the same
+    # as `on_delivery`, however common that answer is.
+    payment_model: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # T_UX.15 — a copy of the carrier's standing rules, taken at publish time.
     # A copy on purpose: rules edited later must not rewrite what a sender read
     # when they chose this trip.
@@ -160,11 +171,33 @@ FLOWN_BY = ("self", "proxy")
 # T3.11.07 — the exclusions carriers actually write, and nothing else. Taken
 # from the market analysis (TASKS.md, «Разбор переписок рынка»): "не беру
 # сигареты", "алкоголь не беру", "люкс НЕ беру", "не беру еду". Cigarettes and
-# tobacco are one entry because they are one refusal written two ways. `money`
-# is here because 2.0 % of posts carry cash outright, so "I do not" is a real
-# thing for a carrier to say; the platform's own position on cash is a separate
-# statement and belongs to T4.0, not to a per-trip column.
-EXCLUSIONS = ("tobacco", "alcohol", "food", "luxury", "money")
+# tobacco are one entry because they are one refusal written two ways.
+#
+# Cash is deliberately absent (owner's decision 2026-09-06). The platform takes
+# no position on it in either direction — neither a ban nor an advertised
+# option — and a carrier with something to say about it says it in the trip's
+# free-text description. It was briefly present in 0061 and removed in 0062.
+EXCLUSIONS = ("tobacco", "alcohol", "food", "luxury")
+
+# T3.11.07 — what the carrier does around the flight, not on it. Every one of
+# these is something the market already sells and the platform could not see:
+# onward shipping inside the destination country appears in 44.9 % of posts,
+# marketplace pickup in 19 %, buying goods to order in 18 %, door delivery in
+# 8 %, photo reports in 1.7 %. Declared on the trip so the search can find them;
+# what they mean for a deal's lifecycle is T3.11.17.
+TRIP_SERVICES = (
+    "domestic_shipping",
+    "marketplace_pickup",
+    "purchase_on_request",
+    "door_delivery",
+    "photo_report",
+)
+
+# T3.11.07 — how the carrier expects to be paid. A concrete sum appears in
+# 0.1 % of posts while the settlement model appears in 61.7 % ("без предоплаты"
+# 42.6, "оплата при получении" 19.1), so this — not the number — is the field
+# that carries the market's actual answer. NULL means the carrier did not say.
+PAYMENT_MODELS = ("on_delivery", "escrow", "prepaid")
 
 
 class TripLeg(Base):

@@ -31,8 +31,26 @@ export type SizeHint = 'small' | 'medium' | 'large'
 /** T3.11.07 — the exclusions carriers actually write, and nothing else. Mirrors
  *  `models.marketplace.EXCLUSIONS`. Cigarettes and tobacco are one entry: they
  *  are one refusal written two ways. */
-export const EXCLUSIONS = ['tobacco', 'alcohol', 'food', 'luxury', 'money'] as const
+export const EXCLUSIONS = ['tobacco', 'alcohol', 'food', 'luxury'] as const
 export type Exclusion = (typeof EXCLUSIONS)[number]
+
+/** T3.11.07 — what the carrier does around the flight rather than on it.
+ *  Mirrors `models.marketplace.TRIP_SERVICES`. Onward shipping inside the
+ *  destination country appears in 44.9 % of real posts, marketplace pickup in
+ *  19 %, buying to order in 18 %. */
+export const TRIP_SERVICES = [
+  'domestic_shipping',
+  'marketplace_pickup',
+  'purchase_on_request',
+  'door_delivery',
+  'photo_report',
+] as const
+export type TripService = (typeof TRIP_SERVICES)[number]
+
+/** T3.11.07 — the settlement model. Stated by 61.7 % of this market; a concrete
+ *  price by 0.1 %. Null is "did not say", not "on delivery". */
+export const PAYMENT_MODELS = ['on_delivery', 'escrow', 'prepaid'] as const
+export type PaymentModel = (typeof PAYMENT_MODELS)[number]
 
 export interface Trip {
   id: string
@@ -70,6 +88,8 @@ export interface Trip {
   /** T3.11.07 — null means the carrier said nothing about exclusions, which is
    *  what 94 % of this market does. An empty array would claim otherwise. */
   excluded?: Exclusion[] | null
+  services?: TripService[] | null
+  payment_model?: PaymentModel | null
   /** T_UX.15 — the rules copied into this trip when it was published. */
   carriage_rules?: string | null
   status: string
@@ -96,6 +116,8 @@ export interface CreateTripPayload {
   handover_origin?: HandoverSide | null
   handover_destination?: HandoverSide | null
   excluded?: Exclusion[] | null
+  services?: TripService[] | null
+  payment_model?: PaymentModel | null
   /** Sent explicitly: an emptied field means "this trip has no rules", not
    *  "fall back to my profile template". */
   carriage_rules?: string | null

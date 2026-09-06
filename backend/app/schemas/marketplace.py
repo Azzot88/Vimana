@@ -11,7 +11,7 @@ from pydantic import (
 )
 
 from app.core.trip_legs import MAX_LEGS
-from app.models.marketplace import EXCLUSIONS
+from app.models.marketplace import EXCLUSIONS, TRIP_SERVICES
 
 
 # Mirrors `schemas.cards.HandoverMethod`. Kept as a set here rather than
@@ -19,6 +19,26 @@ from app.models.marketplace import EXCLUSIONS
 HANDOVER_METHODS = {
     "in_person", "local_post", "courier", "parcel_locker", "poste_restante",
 }
+
+
+def _closed_list(
+    value: list[str] | None, vocabulary: tuple[str, ...], what: str
+) -> list[str] | None:
+    """T3.11.07 — validate one of the trip's closed-vocabulary lists.
+
+    Deduplicates rather than refuses a repeat: a repeated value is a client bug,
+    not a carrier saying something twice, and stored it would draw the same chip
+    twice on the card. `None` passes through untouched — "said nothing" is a
+    real answer and a different one from an empty list.
+
+    Called by: `TripCreate._known_exclusions`, `TripCreate._known_services`.
+    """
+    if value is None:
+        return None
+    unknown = set(value) - set(vocabulary)
+    if unknown:
+        raise ValueError(f"unknown {what}: {sorted(unknown)}")
+    return list(dict.fromkeys(value))
 
 
 class TripLegIn(BaseModel):
@@ -99,6 +119,12 @@ class TripCreate(BaseModel):
     # carrier said nothing, which is what 94 % of this market does; an empty
     # list would claim they considered the question and had no exclusions.
     excluded: list[str] | None = Field(default=None, max_length=len(EXCLUSIONS))
+    # T3.11.07 — what the carrier does around the flight, and how they expect to
+    # be paid. Both nullable: the settlement model is stated by 61.7 % of this
+    # market and a price by 0.1 %, so the model is the field that matters — but
+    # silence still has to stay distinguishable from the commonest answer.
+    services: list[str] | None = Field(default=None, max_length=len(TRIP_SERVICES))
+    payment_model: Literal["on_delivery", "escrow", "prepaid"] | None = None
     # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
     carriage_rules: str | None = Field(default=None, max_length=4000)
@@ -124,15 +150,12 @@ class TripCreate(BaseModel):
     @field_validator("excluded")
     @classmethod
     def _known_exclusions(cls, v: list[str] | None) -> list[str] | None:
-        if v is None:
-            return None
-        unknown = set(v) - set(EXCLUSIONS)
-        if unknown:
-            raise ValueError(f"unknown exclusions: {sorted(unknown)}")
-        # Deduplicated rather than refused: a repeated value is a client bug,
-        # not a carrier saying something twice, and storing it would show the
-        # same chip twice on the card.
-        return list(dict.fromkeys(v))
+        return _closed_list(v, EXCLUSIONS, "exclusions")
+
+    @field_validator("services")
+    @classmethod
+    def _known_services(cls, v: list[str] | None) -> list[str] | None:
+        return _closed_list(v, TRIP_SERVICES, "services")
 
 
 class TripOut(BaseModel):
@@ -165,6 +188,8 @@ class TripOut(BaseModel):
     handover_destination: dict | None = None
     legs: list[TripLegOut] = Field(default_factory=list)
     excluded: list[str] | None = None
+    services: list[str] | None = None
+    payment_model: str | None = None
     carriage_rules: str | None = None
     status: str
     created_at: datetime
