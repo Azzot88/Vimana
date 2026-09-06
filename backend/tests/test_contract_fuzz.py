@@ -30,12 +30,37 @@ import warnings
 import pytest
 import pytest_asyncio
 import schemathesis
-from hypothesis import settings
+from hypothesis import HealthCheck, settings
 
 from app.core.keypair import encrypt_nsec, generate_keypair
 from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models.user import User
+
+# T3.11.15 / T3.11.07 — `filter_too_much` is suppressed, and it is worth being
+# precise about what that does and does not mean.
+#
+# The health check fires when Hypothesis discards far more generated examples
+# than it keeps. It started firing on `POST /api/trips` when the trip body grew
+# a **required array of nested objects** (`legs`) alongside several nullable
+# `$ref` objects (`handover_origin`, `handover_destination`): that shape is more
+# than `hypothesis-jsonschema` can encode directly, so it falls back to
+# generating and filtering, and the keep rate collapses. Measured on the run
+# that caught it: 50 discarded against 4–8 kept.
+#
+# This is a statement about generation efficiency, not about the product. The
+# assertion these tests make — no endpoint returns a 5xx — is unchanged, and the
+# suppression does not weaken it. What it does cost is **coverage on that one
+# endpoint**: fewer distinct bodies actually reach the handler per run, so the
+# fuzz is thinner there than the `max_examples` number suggests. Named here so
+# nobody reads a green fuzz run as more than it is.
+#
+# `deadline=None` for the reason it always was: Hypothesis's 200 ms default is
+# too tight for ASGI plus a database round trip.
+#
+# The alternative was to flatten a schema that is correct in order to please a
+# generator, which is the wrong way round.
+FUZZ = settings(deadline=None, suppress_health_check=[HealthCheck.filter_too_much])
 
 # Excluded from everyday runs via `-m "not fuzz"` (registered in pytest.ini).
 # schemathesis drives the ASGI app from sync code, spinning up a fresh event
@@ -75,13 +100,13 @@ schema = schemathesis.from_dict(_raw_schema, app=app, force_schema_version="30")
 
 
 @schema.parametrize()
-@settings(max_examples=15, deadline=None)
+@settings(FUZZ, max_examples=15)
 def test_no_server_errors_unauthed(case):
     """No endpoint returns 500 for any generated input.
 
-    `deadline=None` because Hypothesis's default 200ms deadline is too tight
-    for ASGI + DB roundtrips. `case.call()` uses the ASGI transport
-    automatically because the schema was created with `app=app`.
+    Settings come from `FUZZ` above, which explains both of them.
+    `case.call()` uses the ASGI transport automatically because the schema was
+    created with `app=app`.
     """
     response = case.call()
     # 503 is a legitimate documented state (e.g. "telegram not configured",
@@ -151,7 +176,7 @@ async def fuzz_superuser_token(session_maker):
 
 
 @schema.parametrize()
-@settings(max_examples=10, deadline=None)
+@settings(FUZZ, max_examples=10)
 def test_no_server_errors_authed_user(case, fuzz_user_token):
     """Same fuzz as pt.1 but as a plain authenticated user. Exercises
     handler bodies past the 401 wall — catches bugs that only trip when a
@@ -173,7 +198,7 @@ def test_no_server_errors_authed_user(case, fuzz_user_token):
 
 
 @schema.parametrize()
-@settings(max_examples=10, deadline=None)
+@settings(FUZZ, max_examples=10)
 def test_no_server_errors_authed_superuser(case, fuzz_superuser_token):
     """Same fuzz as authed_user but as superuser. Hits `/admin/*` handlers
     that regular users get 403 on — most 5xx bugs in admin land will only
