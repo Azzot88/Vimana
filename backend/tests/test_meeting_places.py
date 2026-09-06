@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import uuid
 
+from tests.conftest import SEED_PASSWORD, make_account, unique_email
+
 
 async def _create(client, headers, description: str, is_default: bool = False):
     return await client.post(
@@ -19,12 +21,36 @@ async def _create(client, headers, description: str, is_default: bool = False):
     )
 
 
-async def test_first_place_becomes_the_default(client, carrier_headers):
+async def _fresh_headers(client) -> dict[str, str]:
+    """A person who owns nothing yet.
+
+    Needed because `vimana_test` is never reset (ENVIRONMENT §8): the shared
+    carrier accumulates rows from every test above, so "the first one" is only
+    the first for somebody who has just arrived. Asserting a first-time rule
+    against a shared account is how a test passes on a clean database and fails
+    on the second run — which is exactly how this one failed.
+    """
+    email = unique_email("places")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Places"}
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+async def test_first_place_becomes_the_default(client):
     """A list with entries and no default makes every form that offers one
-    start empty."""
-    r = await _create(client, carrier_headers, "У метро Фили, выход №3")
+    start empty, so the first row is promoted on the way in."""
+    headers = await _fresh_headers(client)
+    r = await _create(client, headers, "У метро Фили, выход №3")
     assert r.status_code == 201, r.text
     assert r.json()["is_default"] is True
+
+    # And only the first: the second is an ordinary row.
+    second = await _create(client, headers, "Terminal D, departures")
+    assert second.json()["is_default"] is False
 
 
 async def test_a_second_default_unseats_the_first(client, carrier_headers):

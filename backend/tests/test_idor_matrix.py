@@ -520,6 +520,14 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
     assert address.status_code == 201, address.text
     address_id = address.json()["id"]
 
+    place = await client.post(
+        "/api/me/meeting-places",
+        headers=sender_headers,
+        json={"description": "Victim meets by the fountain"},
+    )
+    assert place.status_code == 201, place.text
+    place_id = place.json()["id"]
+
     inquiry = await client.post(
         f"/api/trips/{trip_id}/inquiry", headers=sender_headers
     )
@@ -582,6 +590,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "req_id": req_id,
         "dispute_id": dispute_id,
         "address_id": address_id,
+        "place_id": place_id,
         "inquiry_id": inquiry_id,
         "badge_id": str(badge_id),
         "note_id": str(note_id),
