@@ -128,8 +128,17 @@ async def test_own_traffic_outranks_the_seed(client, session_maker):
     """The seed decides the cold start and nothing after it: a category this
     platform actually uses climbs above one the market talks about more.
 
-    Put back afterwards — the test database is never reset (ENVIRONMENT §8), so
-    a count left behind would reorder every later test's picker.
+    Two things this test learned the hard way, both worth keeping.
+
+    The count is read from the API rather than assumed. `api/deals` increments
+    `usage_count` on every match, and the test database is never reset
+    (ENVIRONMENT §8) — so `document` carries the accumulated total of every deal
+    ever created by this suite, and a hard-coded ceiling is a number that works
+    until it does not.
+
+    And the claim is "art overtakes document", not "art is first": something
+    outside the defaults could legitimately sit on top, and an absolute
+    assertion would fail for a reason that has nothing to do with ordering.
     """
     from sqlalchemy import select
 
@@ -143,10 +152,18 @@ async def test_own_traffic_outranks_the_seed(client, session_maker):
             row.usage_count = value
             await db.commit()
 
-    await set_usage("art", 999)
+    before = (await client.get("/api/categories")).json()
+    art = next(c for c in before if c["name_key"] == "art")
+    # If this ever fails, the ordering is fine and the seed is not: `is_default`
+    # sorts first, so a default that lost the flag can never climb.
+    assert art["is_default"] is True
+    ceiling = max(c["usage_count"] for c in before)
+
+    await set_usage("art", ceiling + 1)
     try:
-        resp = await client.get("/api/categories")
-        order = [c["name_key"] for c in resp.json()]
-        assert order[0] == "art"
+        order = [c["name_key"] for c in (await client.get("/api/categories")).json()]
+        # `document` is seeded first (86.2 % of the market names it) and is the
+        # thing the seed would keep on top if the seed still decided.
+        assert order.index("art") < order.index("document")
     finally:
-        await set_usage("art", 0)
+        await set_usage("art", art["usage_count"])

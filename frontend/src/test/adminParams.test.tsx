@@ -29,6 +29,16 @@ vi.mock('../api/terms', async () => {
 import { listParams, paramHistory, setParam } from '../api/platformParams'
 import { proposeTerms } from '../api/terms'
 
+/** `roles` as an array, not `role` as a string.
+ *
+ *  `D-ROLES-ADD-UP` replaced the single column with an array and deleted
+ *  `users.role`; `lib/permissions.hasRole` has read `user.roles` ever since.
+ *  This fixture kept building the old shape, so `isSuperuser` was false, the
+ *  page redirected, and four tests asserted against an empty document —
+ *  reporting the screen broken while it worked. The `as unknown as User` cast
+ *  is what let it through: it silences exactly the check that would have
+ *  caught the rename.
+ */
 const user = (role: string): User =>
   ({
     id: 'u1',
@@ -38,7 +48,7 @@ const user = (role: string): User =>
     can_carry: false,
     can_send: true,
     active_mode: 'sender',
-    role,
+    roles: [role],
     nostr_pubkey: null,
     business_activity_level: null,
   }) as unknown as User
