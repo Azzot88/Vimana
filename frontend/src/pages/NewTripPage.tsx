@@ -9,12 +9,34 @@ import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import { usePrefs } from '../hooks/usePrefs'
 
-const DRAFT_KEY = 'trips:draft:v1'
+// T3.11.07 — bumped from v1 when the route became a chain. A draft saved under
+// the old shape carries a flat origin/destination/date and cannot be read as
+// legs; a stale one is a lost half-filled form, a misread one is a form that
+// looks filled and is not.
+const DRAFT_KEY = 'trips:draft:v2'
 
-interface Draft {
+/** T3.11.15 — one flight. Strings throughout: these come from inputs, and an
+ *  empty string is a real answer ("not stated yet") that a number is not. */
+interface LegDraft {
   origin: string
   destination: string
   departAt: string
+  flownBy: 'self' | 'proxy'
+}
+
+const EMPTY_LEG: LegDraft = {
+  origin: '',
+  destination: '',
+  departAt: '',
+  flownBy: 'self',
+}
+
+// Matches `core.trip_legs.MAX_LEGS` on the server. Real posts top out at six
+// cities; the limit exists so one listing cannot become a database.
+const MAX_LEGS = 10
+
+interface Draft {
+  legs: LegDraft[]
   capacity: string
   categories: string[]
   alsoOnNostr: boolean
@@ -28,9 +50,7 @@ interface Draft {
 }
 
 const EMPTY: Draft = {
-  origin: '',
-  destination: '',
-  departAt: '',
+  legs: [{ ...EMPTY_LEG }],
   capacity: '',
   categories: [],
   alsoOnNostr: true,
@@ -46,7 +66,14 @@ function loadDraft(): Draft {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (!raw) return EMPTY
     const parsed = JSON.parse(raw) as Partial<Draft>
-    return { ...EMPTY, ...parsed, categories: parsed.categories ?? [] }
+    return {
+      ...EMPTY,
+      ...parsed,
+      categories: parsed.categories ?? [],
+      // A saved draft with an empty chain would render a route cell with no
+      // rows and no way to add one.
+      legs: parsed.legs?.length ? parsed.legs : [{ ...EMPTY_LEG }],
+    }
   } catch {
     return EMPTY
   }
@@ -97,13 +124,61 @@ export default function NewTripPage() {
     setDraft((prev) => ({ ...prev, ...delta }))
   }, [])
 
+  // T3.11.07 — the chain is edited by index; the three helpers exist so no
+  // caller has to copy the array by hand and get the splice wrong.
+  const patchLeg = useCallback((index: number, delta: Partial<LegDraft>) => {
+    setDraft((prev) => ({
+      ...prev,
+      legs: prev.legs.map((leg, i) => (i === index ? { ...leg, ...delta } : leg)),
+    }))
+  }, [])
+
+  const addLeg = useCallback(() => {
+    setDraft((prev) => {
+      if (prev.legs.length >= MAX_LEGS) return prev
+      const last = prev.legs[prev.legs.length - 1]
+      // The next flight starts where the last one landed far more often than
+      // not — «Москва — Майами — Лос-Анджелес», «Дубай — Москва — Дубай». It
+      // stays editable, so guessing costs a keystroke and saves several.
+      return {
+        ...prev,
+        legs: [...prev.legs, { ...EMPTY_LEG, origin: last?.destination ?? '' }],
+      }
+    })
+  }, [])
+
+  const removeLeg = useCallback((index: number) => {
+    setDraft((prev) =>
+      prev.legs.length <= 1
+        ? prev
+        : { ...prev, legs: prev.legs.filter((_, i) => i !== index) },
+    )
+  }, [])
+
   const validate = (): string | null => {
-    if (!draft.origin || !draft.destination) return t('trips.newTripValidation.route') as string
-    if (draft.origin === draft.destination) return t('trips.newTripValidation.sameRoute') as string
-    if (!draft.departAt) return t('trips.newTripValidation.date') as string
-    const departDate = new Date(draft.departAt)
-    if (Number.isNaN(departDate.getTime()) || departDate.getTime() < Date.now()) {
-      return t('trips.newTripValidation.pastDate') as string
+    for (const [index, leg] of draft.legs.entries()) {
+      const at = { n: index + 1 }
+      if (!leg.origin || !leg.destination) {
+        return t('trips.newTripValidation.legRoute', at) as string
+      }
+      if (leg.origin === leg.destination) {
+        return t('trips.newTripValidation.legSameRoute', at) as string
+      }
+      if (!leg.departAt) return t('trips.newTripValidation.legDate', at) as string
+      const departure = new Date(leg.departAt)
+      if (Number.isNaN(departure.getTime())) {
+        return t('trips.newTripValidation.legDate', at) as string
+      }
+      // Only the first flight has to be ahead of now: a chain published on the
+      // day of departure is 11.8 % of this market, and the later legs are
+      // constrained by the one before them rather than by the clock.
+      if (index === 0 && departure.getTime() < Date.now()) {
+        return t('trips.newTripValidation.pastDate') as string
+      }
+      const previous = draft.legs[index - 1]
+      if (previous?.departAt && departure < new Date(previous.departAt)) {
+        return t('trips.newTripValidation.legOutOfOrder', at) as string
+      }
     }
     const cap = parseFloat(draft.capacity)
     if (!cap || cap < 0.5) return t('trips.newTripValidation.capacity') as string
@@ -126,15 +201,27 @@ export default function NewTripPage() {
       return
     }
     // T_UX.2 pt.3 — pre-flight warning for complex/restricted corridors.
+    // T3.11.07 — asked for **every** leg, not just the endpoints. A chain
+    // through Istanbul is subject to Turkish transit rules, and PRD §3.11.1 is
+    // explicit that the transit node is present in the main corridor always
+    // rather than occasionally: checking only first-to-last would skip the leg
+    // most likely to carry a restriction.
     if (!ackedPreflight) {
       try {
-        const { data: notes } = await listRouteNotes({
-          origin: draft.origin,
-          destination: draft.destination,
-        })
-        const critical = notes.filter(
-          (n) => n.status === 'complex' || n.status === 'restricted',
+        const perLeg = await Promise.all(
+          draft.legs.map((leg) =>
+            listRouteNotes({ origin: leg.origin, destination: leg.destination }),
+          ),
         )
+        // A corridor flown twice (there and back) would otherwise warn twice
+        // about the same thing, so the notes are collected by id.
+        const byId = new Map<string, RouteNote>()
+        for (const note of perLeg.flatMap((r) => r.data)) {
+          if (note.status === 'complex' || note.status === 'restricted') {
+            byId.set(note.id, note)
+          }
+        }
+        const critical = [...byId.values()]
         if (critical.length > 0) {
           setPreflightNotes(critical)
           return
@@ -146,17 +233,15 @@ export default function NewTripPage() {
     setLoading(true)
     try {
       await createTrip({
-        // T3.11.15 — the route travels as a chain. This form still collects one
-        // leg; the multi-leg input is T3.11.07, and until then a one-element
-        // array says exactly what the three fields used to.
-        legs: [
-          {
-            origin: draft.origin,
-            destination: draft.destination,
-            depart_at: draft.departAt,
-            flown_by: 'self',
-          },
-        ],
+        // T3.11.07 — the route travels as the chain the carrier typed. Order is
+        // the array order; the server assigns it and derives the trip's
+        // origin, destination and date from the first and last leg.
+        legs: draft.legs.map((leg) => ({
+          origin: leg.origin,
+          destination: leg.destination,
+          depart_at: leg.departAt,
+          flown_by: leg.flownBy,
+        })),
         capacity: cap,
         allowed_categories: draft.categories,
         // Empty stays empty: a trip without a stated price is "price on
@@ -228,12 +313,13 @@ export default function NewTripPage() {
     )
   }
 
-  const previewDate = draft.departAt
-    ? new Date(draft.departAt).toLocaleString(i18n.language, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : '—'
+  const formatDeparture = (value: string) =>
+    value
+      ? new Date(value).toLocaleString(i18n.language, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })
+      : '—'
 
   return (
     <div className="max-w-4xl space-y-4">
@@ -258,68 +344,146 @@ export default function NewTripPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Route cell 2x1 */}
-        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-            {t('trips.newTripCell.route')}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
-            <div>
-              <label
-                htmlFor={originId}
-                className="block text-xs font-body font-medium text-navy/60 mb-1"
-              >
-                {t('trips.from')}
-              </label>
-              <AirportSelect
-                inputId={originId}
-                value={draft.origin}
-                onChange={(v) => patch({ origin: v })}
-                required
-                placeholder="DXB"
-              />
-            </div>
-            <MonoText className="text-2xl text-cyan text-center pb-2 hidden sm:block">
-              →
+        {/* Route cell — the whole chain, T3.11.07 */}
+        <div className="md:col-span-3 bg-white rounded-card border border-navy/10 p-4 space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.newTripCell.route')}
+            </p>
+            <MonoText className="text-[11px] text-navy/40">
+              {draft.legs.length}/{MAX_LEGS}
             </MonoText>
-            <div>
-              <label
-                htmlFor={destId}
-                className="block text-xs font-body font-medium text-navy/60 mb-1"
-              >
-                {t('trips.to')}
-              </label>
-              <AirportSelect
-                inputId={destId}
-                value={draft.destination}
-                onChange={(v) => patch({ destination: v })}
-                required
-                placeholder="JFK"
-              />
-            </div>
           </div>
+          {/* DESIGNGUIDELINES §9b — what this field changes and where it shows. */}
+          <p className="text-[11px] font-body text-navy/40 -mt-1">
+            {t('trips.routeHint')}
+          </p>
+
+          {draft.legs.map((leg, index) => (
+            <fieldset
+              key={index}
+              className="border border-navy/10 rounded-field p-3 space-y-3"
+            >
+              <legend className="px-1 text-[11px] font-mono text-navy/40">
+                {t('trips.legNumber', { n: index + 1 })}
+              </legend>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
+                <div>
+                  <label
+                    htmlFor={`${originId}-${index}`}
+                    className="block text-xs font-body font-medium text-navy/60 mb-1"
+                  >
+                    {t('trips.from')}
+                  </label>
+                  <AirportSelect
+                    inputId={`${originId}-${index}`}
+                    value={leg.origin}
+                    onChange={(v) => patchLeg(index, { origin: v })}
+                    required
+                    placeholder="DXB"
+                  />
+                </div>
+                <MonoText className="text-2xl text-cyan text-center pb-2 hidden sm:block">
+                  →
+                </MonoText>
+                <div>
+                  <label
+                    htmlFor={`${destId}-${index}`}
+                    className="block text-xs font-body font-medium text-navy/60 mb-1"
+                  >
+                    {t('trips.to')}
+                  </label>
+                  <AirportSelect
+                    inputId={`${destId}-${index}`}
+                    value={leg.destination}
+                    onChange={(v) => patchLeg(index, { destination: v })}
+                    required
+                    placeholder="JFK"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                <div>
+                  <label
+                    htmlFor={`${departId}-${index}`}
+                    className="block text-xs font-body font-medium text-navy/60 mb-1"
+                  >
+                    {t('trips.newTripCell.date')}
+                  </label>
+                  {/* Time is part of the answer, not a tail on the date: 29.8 %
+                      of real posts state the hour, and the handover window is
+                      counted back from it. */}
+                  <input
+                    id={`${departId}-${index}`}
+                    type="datetime-local"
+                    value={leg.departAt}
+                    onChange={(e) => patchLeg(index, { departAt: e.target.value })}
+                    required
+                    className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                  />
+                </div>
+                <fieldset>
+                  <legend className="block text-xs font-body font-medium text-navy/60 mb-1">
+                    {t('trips.flownBy.label')}
+                  </legend>
+                  {/* Asked outright rather than assumed. "Flying in person" is
+                      the most valuable claim on this market, and it appears in
+                      the same posts as "(a friend is flying)" — so the platform
+                      does not let it be implied by silence. */}
+                  <div className="flex gap-2">
+                    {(['self', 'proxy'] as const).map((who) => (
+                      <label
+                        key={who}
+                        className={`flex-1 text-center text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center justify-center rounded-field border cursor-pointer transition-colors ${
+                          leg.flownBy === who
+                            ? 'border-cyan bg-cyan/10 text-navy'
+                            : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`${departId}-flownBy-${index}`}
+                          value={who}
+                          checked={leg.flownBy === who}
+                          onChange={() => patchLeg(index, { flownBy: who })}
+                          className="sr-only"
+                        />
+                        {t(`trips.flownBy.${who}`)}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+
+              {draft.legs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeLeg(index)}
+                  className="text-xs font-body text-navy/40 hover:text-danger transition-colors"
+                >
+                  {t('trips.removeLeg')}
+                </button>
+              )}
+            </fieldset>
+          ))}
+
+          {draft.legs.length < MAX_LEGS && (
+            <button
+              type="button"
+              onClick={addLeg}
+              className="w-full border border-dashed border-navy/25 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy/60 hover:border-cyan hover:text-navy transition-colors"
+            >
+              {t('trips.addLeg')}
+            </button>
+          )}
         </div>
 
-        {/* Date cell 1x1 */}
-        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <label
-            htmlFor={departId}
-            className="block text-xs font-display font-semibold text-navy/50 uppercase tracking-wide"
-          >
-            {t('trips.newTripCell.date')}
-          </label>
-          <input
-            id={departId}
-            type="datetime-local"
-            value={draft.departAt}
-            onChange={(e) => patch({ departAt: e.target.value })}
-            required
-            className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-          />
-        </div>
-
-        {/* Terms cell 1x1 — T3.35 */}
-        <div className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
+        {/* Terms cell 2x1 — T3.35. Widened in T3.11.07 so the Bento rows close:
+            route 3 · terms 2 + capacity 1 · categories 3 · rules 2 + publish 1 ·
+            preview 3. The date cell that used to sit beside the route moved
+            inside each leg, and without this the grid left holes. */}
+        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.terms')}
           </p>
@@ -418,8 +582,8 @@ export default function NewTripPage() {
           />
         </div>
 
-        {/* Categories cell 1x2 (full row) */}
-        <div className="md:col-span-2 bg-white rounded-card border border-navy/10 p-4 space-y-3">
+        {/* Categories cell — full row */}
+        <div className="md:col-span-3 bg-white rounded-card border border-navy/10 p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
             {t('trips.newTripCell.categories')}
           </p>
@@ -480,11 +644,28 @@ export default function NewTripPage() {
             {t('trips.newTripCell.preview')}
           </p>
           <div className="bg-white rounded-card border border-navy/10 p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <MonoText className="text-lg text-navy font-medium">
-                {draft.origin || '???'} → {draft.destination || '???'}
-              </MonoText>
-              <MonoText className="text-sm text-navy/60">{previewDate}</MonoText>
+            {/* One row per flight. Carriers are used to seeing their whole post
+                before it goes out, and a chain summarised as first→last would
+                hide the very segment they added the chain for. */}
+            <div className="space-y-1">
+              {draft.legs.map((leg, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2"
+                >
+                  <MonoText className="text-lg text-navy font-medium">
+                    {leg.origin || '???'} → {leg.destination || '???'}
+                    {leg.flownBy === 'proxy' && (
+                      <span className="ml-2 text-xs font-body text-navy/50">
+                        {t('trips.flownBy.proxyChip')}
+                      </span>
+                    )}
+                  </MonoText>
+                  <MonoText className="text-sm text-navy/60">
+                    {formatDeparture(leg.departAt)}
+                  </MonoText>
+                </div>
+              ))}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
               <span>

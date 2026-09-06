@@ -570,9 +570,10 @@
     },
     "newTripHookComingSoon": "{{feature}} — bientôt",
     "newTripValidation": {
-      "route": "Choisissez origine et destination",
-      "sameRoute": "L'origine et la destination doivent différer",
-      "date": "Choisissez la date et l'heure de départ",
+      "legRoute": "Vol {{n}} : choisissez origine et destination",
+      "legSameRoute": "Vol {{n}} : l'origine et la destination doivent différer",
+      "legDate": "Vol {{n}} : choisissez la date et l'heure de départ",
+      "legOutOfOrder": "Le vol {{n}} part avant celui qui le précède",
       "pastDate": "La date doit être dans le futur",
       "capacity": "Le poids doit être d'au moins 0.5 kg",
       "capacityWarning": "Un poids supérieur à 15 kg est inhabituel pour bagage à main. Publier ?"
@@ -589,7 +590,17 @@
     "categoriesAllChosen": "Tout est choisi.",
     "categoriesRemove": "retirer",
     "rulesHint": "Pré-remplies depuis votre profil. À modifier pour ce trajet ; vide = aucune règle.",
-    "hasRules": "règles définies"
+    "hasRules": "règles définies",
+    "routeHint": "Tous les vols de ce trajet. La recherche porte sur le premier et le dernier ; les autres figurent sur la fiche.",
+    "legNumber": "Vol {{n}}",
+    "addLeg": "+ Ajouter un vol",
+    "removeLeg": "Retirer ce vol",
+    "flownBy": {
+      "label": "Qui voyage",
+      "self": "Moi",
+      "proxy": "Quelqu'un d'autre",
+      "proxyChip": "quelqu'un d'autre voyage"
+    }
   },
   "deals": {
     "title": "Transactions",

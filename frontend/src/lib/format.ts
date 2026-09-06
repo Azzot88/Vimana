@@ -97,3 +97,27 @@ export function freshnessOf(iso: string | null | undefined): Freshness | null {
   const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000))
   return { days, stale: days > STALE_AFTER_DAYS }
 }
+
+/** T3.11.07 — a trip's route as the carrier stated it.
+ *
+ *  `Trip.origin` / `destination` are the denormalised head and tail of the
+ *  chain, which is the right headline for a single flight and a lie of omission
+ *  for a chain: `Москва → Портленд` hides that the carrier also lands in Miami
+ *  and Los Angeles, and 15 % of real listings on this market are exactly that
+ *  shape. So a multi-leg trip prints every node.
+ *
+ *  Lives here rather than in each card because three pages render the same
+ *  line, and a fourth will; the version that got left behind would keep showing
+ *  the two-city summary next to the ones that show the chain.
+ *
+ *  Called by: `pages/TripsPage`, `pages/CarrierPage`, `pages/DashboardPage`.
+ */
+export function routeChain(trip: {
+  origin: string
+  destination: string
+  legs?: { origin: string; destination: string }[]
+}): string {
+  const legs = trip.legs ?? []
+  if (legs.length < 2) return `${trip.origin} → ${trip.destination}`
+  return [legs[0].origin, ...legs.map((leg) => leg.destination)].join(' → ')
+}

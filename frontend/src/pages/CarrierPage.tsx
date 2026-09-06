@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import UBAChip from '../components/UBAChip'
+import { routeChain } from '../lib/format'
 
 /** T_UX.18 — the person behind a trip.
  *
@@ -89,7 +90,7 @@ export default function CarrierPage() {
             className="bg-white rounded-card border border-navy/10 p-4 flex flex-wrap items-center gap-x-4 gap-y-2"
           >
             <MonoText className="text-sm text-navy font-medium">
-              {trip.origin} → {trip.destination}
+              {routeChain(trip)}
             </MonoText>
             <MonoText className="text-xs text-navy/50">
               {prefs.dateTime(trip.depart_at)}

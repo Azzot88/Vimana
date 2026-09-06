@@ -571,9 +571,10 @@
     },
     "newTripHookComingSoon": "{{feature}} — wkrótce",
     "newTripValidation": {
-      "route": "Wskaż skąd i dokąd",
-      "sameRoute": "Skąd i dokąd muszą się różnić",
-      "date": "Wskaż datę i czas wylotu",
+      "legRoute": "Lot {{n}}: wskaż skąd i dokąd",
+      "legSameRoute": "Lot {{n}}: skąd i dokąd muszą się różnić",
+      "legDate": "Lot {{n}}: wskaż datę i czas wylotu",
+      "legOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
       "pastDate": "Data musi być w przyszłości",
       "capacity": "Waga musi być co najmniej 0.5 kg",
       "capacityWarning": "Waga powyżej 15 kg jest nietypowa dla bagażu podręcznego. Opublikować?"
@@ -590,7 +591,17 @@
     "categoriesAllChosen": "Wybrano wszystko.",
     "categoriesRemove": "usuń",
     "rulesHint": "Wypełnione z profilu. Edytuj tylko dla tego lotu; puste = brak zasad.",
-    "hasRules": "są zasady"
+    "hasRules": "są zasady",
+    "routeHint": "Wszystkie loty tej podróży. Po pierwszym i ostatnim znajdą Cię w wyszukiwarce, pośrednie widać na karcie.",
+    "legNumber": "Lot {{n}}",
+    "addLeg": "+ Dodaj lot",
+    "removeLeg": "Usuń ten lot",
+    "flownBy": {
+      "label": "Kto leci",
+      "self": "Lecę ja",
+      "proxy": "Leci ktoś inny",
+      "proxyChip": "leci ktoś inny"
+    }
   },
   "deals": {
     "title": "Transakcje",

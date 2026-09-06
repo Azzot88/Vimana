@@ -570,9 +570,10 @@
     },
     "newTripHookComingSoon": "{{feature}} — próximamente",
     "newTripValidation": {
-      "route": "Elige origen y destino",
-      "sameRoute": "Origen y destino deben ser diferentes",
-      "date": "Elige fecha y hora de salida",
+      "legRoute": "Vuelo {{n}}: elige origen y destino",
+      "legSameRoute": "Vuelo {{n}}: origen y destino deben ser diferentes",
+      "legDate": "Vuelo {{n}}: elige fecha y hora de salida",
+      "legOutOfOrder": "El vuelo {{n}} sale antes que el anterior",
       "pastDate": "La fecha debe ser en el futuro",
       "capacity": "El peso debe ser al menos 0.5 kg",
       "capacityWarning": "Un peso mayor a 15 kg es inusual para equipaje de mano. ¿Publicar?"
@@ -589,7 +590,17 @@
     "categoriesAllChosen": "Todo elegido.",
     "categoriesRemove": "quitar",
     "rulesHint": "Rellenadas desde tu perfil. Edítalas solo para este viaje; vacío = sin reglas.",
-    "hasRules": "con reglas"
+    "hasRules": "con reglas",
+    "routeHint": "Todos los vuelos de este viaje. La búsqueda usa el primero y el último; los intermedios se ven en la ficha.",
+    "legNumber": "Vuelo {{n}}",
+    "addLeg": "+ Añadir un vuelo",
+    "removeLeg": "Quitar este vuelo",
+    "flownBy": {
+      "label": "Quién vuela",
+      "self": "Yo",
+      "proxy": "Otra persona",
+      "proxyChip": "vuela otra persona"
+    }
   },
   "deals": {
     "title": "Acuerdos",

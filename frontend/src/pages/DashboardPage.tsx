@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
 import MonoText from '../components/MonoText'
 import StatusBadge from '../components/StatusBadge'
+import { routeChain } from '../lib/format'
 
 /** T_UX.19 — the panel answers one question, and which one depends on the mode.
  *
@@ -180,7 +181,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex flex-wrap items-center gap-3">
                         <MonoText className="text-sm text-navy font-medium">
-                          {trip.origin} → {trip.destination}
+                          {routeChain(trip)}
                         </MonoText>
                         <MonoText className="text-xs text-navy/50">
                           {prefs.dateTime(trip.depart_at)}

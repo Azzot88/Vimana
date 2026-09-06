@@ -617,9 +617,10 @@
     },
     "newTripHookComingSoon": "{{feature}} — coming soon",
     "newTripValidation": {
-      "route": "Choose origin and destination",
-      "sameRoute": "Origin and destination must differ",
-      "date": "Choose departure date and time",
+      "legRoute": "Flight {{n}}: choose origin and destination",
+      "legSameRoute": "Flight {{n}}: origin and destination must differ",
+      "legDate": "Flight {{n}}: choose departure date and time",
+      "legOutOfOrder": "Flight {{n}} departs before the one before it",
       "pastDate": "Date must be in the future",
       "capacity": "Capacity must be at least 0.5 kg",
       "capacityWarning": "Capacity above 15 kg is unusual for hand luggage — publish anyway?"
@@ -636,7 +637,17 @@
     "categoriesAllChosen": "Everything is chosen.",
     "categoriesRemove": "remove",
     "rulesHint": "Prefilled from your profile. Edit for this trip only; leave empty for no rules.",
-    "hasRules": "has rules"
+    "hasRules": "has rules",
+    "routeHint": "Every flight of this trip. Senders search on the first and last of them; the ones in between show on the card.",
+    "legNumber": "Flight {{n}}",
+    "addLeg": "+ Add a flight",
+    "removeLeg": "Remove this flight",
+    "flownBy": {
+      "label": "Who is flying",
+      "self": "I am",
+      "proxy": "Someone else",
+      "proxyChip": "someone else flying"
+    }
   },
   "deals": {
     "title": "Deals",

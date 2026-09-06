@@ -12,6 +12,7 @@ import NostrBadge from '../components/NostrBadge'
 import RouteNoteBadge from '../components/RouteNoteBadge'
 import UBAChip from '../components/UBAChip'
 import { filterNotesForCorridor, useRouteNotes } from '../hooks/useRouteNotes'
+import { routeChain } from '../lib/format'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { usePrefs } from '../hooks/usePrefs'
 
@@ -148,7 +149,7 @@ export default function TripsPage() {
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="space-y-2">
                   <MonoText className="text-base text-navy font-medium">
-                    {trip.origin} → {trip.destination}
+                    {routeChain(trip)}
                   </MonoText>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
