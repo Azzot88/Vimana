@@ -1,4 +1,4 @@
-from app.models.address import ReceivingAddress
+from app.models.address import MeetingPlace, ReceivingAddress
 from app.models.user import RecoveryCode, User
 from app.models.social import InviteLink, Connection
 from app.models.marketplace import Trip, TripLeg, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
@@ -17,7 +17,7 @@ from app.models.waitlist import WaitlistEntry
 from app.models.webauthn import WebAuthnCredential
 
 __all__ = [
-    "User", "RecoveryCode", "ReceivingAddress",
+    "User", "RecoveryCode", "ReceivingAddress", "MeetingPlace",
     "InviteLink", "Connection",
     "Trip", "TripLeg", "Order", "TripStatus", "OrderStatus", "Category", "DEFAULT_CATEGORIES",
     "TripInquiry", "InquiryMessage",

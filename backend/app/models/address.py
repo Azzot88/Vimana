@@ -45,3 +45,43 @@ class ReceivingAddress(Base):
             postgresql_where=(is_default.is_(True)),
         ),
     )
+
+
+class MeetingPlace(Base):
+    """T3.11.07 — where this person is willing to meet, in their own words.
+
+    Deliberately *not* an address. An address is a place a parcel is sent to and
+    has the structure the post office needs; a meeting place is «у метро Фили,
+    у выхода №3» or «Terminal D, departures, by the Costa» — a sentence one
+    human says to another, and any attempt to make it a country/city/street
+    would either refuse it or throw away the half that matters.
+
+    A list with one default, like the addresses above and for the same reason:
+    a carrier meets people in two or three usual spots, and picking one per trip
+    is a choice, not a form to fill in again.
+
+    Owner's decision 2026-09-06.
+    """
+
+    __tablename__ = "meeting_places"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # Long enough for a sentence with landmarks, short enough not to become a
+    # second free-text field for carriage rules.
+    description: Mapped[str] = mapped_column(String(300))
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_meeting_places_user_default",
+            "user_id",
+            unique=True,
+            postgresql_where=(is_default.is_(True)),
+        ),
+    )

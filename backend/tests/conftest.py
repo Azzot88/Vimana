@@ -678,6 +678,38 @@ async def _ensure_notices_tables(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE route_notes DROP COLUMN {legacy_col}"))
 
 
+async def _ensure_meeting_places(engine) -> None:
+    """T3.11.07: `meeting_places` + its partial-unique default index. Mirrors
+    0065. Idempotent — `create_all` covers a fresh database, this covers one
+    that predates the table."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS meeting_places (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    description VARCHAR(300) NOT NULL,
+                    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_meeting_places_user_id "
+                "ON meeting_places(user_id)"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_meeting_places_user_default "
+                "ON meeting_places(user_id) WHERE is_default"
+            )
+        )
+
+
 async def _ensure_receiving_addresses(engine) -> None:
     """T_UX.4 A schema fix: `receiving_addresses` table + partial-unique
     index on (user_id) WHERE is_default. Idempotent."""
@@ -1642,6 +1674,7 @@ async def test_engine():
     await _ensure_deal_participants(engine)
     await _ensure_notices_tables(engine)
     await _ensure_receiving_addresses(engine)
+    await _ensure_meeting_places(engine)
     await _ensure_verification_tables(engine)
     await _ensure_trust_tables(engine)
     await _ensure_recovery_codes(engine)

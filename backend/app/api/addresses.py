@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.address import ReceivingAddress
+from app.models.address import MeetingPlace, ReceivingAddress
 from app.models.user import User
 
 router = APIRouter()
@@ -192,5 +192,174 @@ async def delete_address(
         ).scalar_one_or_none()
         if next_addr is not None:
             next_addr.is_default = True
+    await db.commit()
+    return
+
+
+# ─────────────────────────────────────────────────────────────
+# T3.11.07 — meeting places (owner's decision 2026-09-06)
+#
+# Lives in this module rather than its own because it is the same shape as the
+# addresses above and shares the one rule that is easy to get wrong: several per
+# user, at most one default, and deleting the default promotes another. Two
+# files would mean two copies of that rule, and the copy that drifts is the one
+# nobody is looking at.
+#
+# What it is *not* is an address. An address is where a parcel is sent and has
+# the structure the post office needs; a meeting place is «у метро Фили, у
+# выхода №3» — a sentence one person says to another. Same list mechanics,
+# different thing.
+# ─────────────────────────────────────────────────────────────
+
+
+class MeetingPlaceOut(BaseModel):
+    id: uuid.UUID
+    description: str
+    is_default: bool
+    created_at: datetime
+
+
+class MeetingPlaceCreate(BaseModel):
+    description: str = Field(min_length=1, max_length=300)
+    is_default: bool = False
+
+
+class MeetingPlaceUpdate(BaseModel):
+    description: str | None = Field(default=None, min_length=1, max_length=300)
+
+
+def _place_out(p: MeetingPlace) -> MeetingPlaceOut:
+    return MeetingPlaceOut(
+        id=p.id,
+        description=p.description,
+        is_default=p.is_default,
+        created_at=p.created_at,
+    )
+
+
+async def _owned_place(
+    place_id: uuid.UUID, user: User, db: AsyncSession
+) -> MeetingPlace:
+    """The row, or a 404 — never somebody else's row.
+
+    404 rather than 403 for a place that exists under another account: telling
+    a stranger "this id is real but not yours" answers a question they had no
+    business asking.
+
+    Called by: `update_meeting_place`, `make_place_default`, `delete_meeting_place`.
+    """
+    place = await db.get(MeetingPlace, place_id)
+    if place is None or place.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Meeting place not found")
+    return place
+
+
+@router.get("/me/meeting-places", response_model=list[MeetingPlaceOut])
+async def list_meeting_places(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = (
+        await db.execute(
+            select(MeetingPlace)
+            .where(MeetingPlace.user_id == current_user.id)
+            .order_by(MeetingPlace.is_default.desc(), MeetingPlace.created_at)
+        )
+    ).scalars().all()
+    return [_place_out(p) for p in rows]
+
+
+@router.post("/me/meeting-places", response_model=MeetingPlaceOut, status_code=201)
+async def create_meeting_place(
+    body: MeetingPlaceCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Counted before the insert, exactly as for addresses: autoflush after
+    # `db.add()` would include the new row and defeat "the first one is the
+    # default".
+    prior_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(MeetingPlace)
+            .where(MeetingPlace.user_id == current_user.id)
+        )
+    ).scalar_one()
+
+    is_default = body.is_default or prior_count == 0
+    if is_default and prior_count > 0:
+        await db.execute(
+            update(MeetingPlace)
+            .where(MeetingPlace.user_id == current_user.id)
+            .values(is_default=False)
+        )
+
+    place = MeetingPlace(
+        user_id=current_user.id,
+        description=body.description.strip(),
+        is_default=is_default,
+    )
+    db.add(place)
+    await db.commit()
+    await db.refresh(place)
+    return _place_out(place)
+
+
+@router.patch("/me/meeting-places/{place_id}", response_model=MeetingPlaceOut)
+async def update_meeting_place(
+    place_id: uuid.UUID,
+    body: MeetingPlaceUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    place = await _owned_place(place_id, current_user, db)
+    if body.description is not None:
+        place.description = body.description.strip()
+    await db.commit()
+    await db.refresh(place)
+    return _place_out(place)
+
+
+@router.post("/me/meeting-places/{place_id}/default", response_model=MeetingPlaceOut)
+async def make_place_default(
+    place_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    place = await _owned_place(place_id, current_user, db)
+    await db.execute(
+        update(MeetingPlace)
+        .where(MeetingPlace.user_id == current_user.id)
+        .values(is_default=False)
+    )
+    place.is_default = True
+    await db.commit()
+    await db.refresh(place)
+    return _place_out(place)
+
+
+@router.delete("/me/meeting-places/{place_id}", status_code=204)
+async def delete_meeting_place(
+    place_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    place = await _owned_place(place_id, current_user, db)
+    was_default = place.is_default
+    await db.delete(place)
+    await db.flush()
+    # Deleting the default promotes the next one, same as for addresses: a list
+    # with entries and no default makes every form that offers one start empty.
+    if was_default:
+        successor = (
+            await db.execute(
+                select(MeetingPlace)
+                .where(MeetingPlace.user_id == current_user.id)
+                .order_by(MeetingPlace.created_at)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if successor is not None:
+            successor.is_default = True
     await db.commit()
     return
