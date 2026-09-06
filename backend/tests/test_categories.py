@@ -101,14 +101,26 @@ async def test_usage_count_increments_on_reuse(client, carrier_headers, sender_h
 # ── T3.11.07 · the two commonest words on this market ──────────────────────
 
 
-async def test_parcel_and_clothing_exist(client):
-    """«Возьму посылки» is the second most common sentence on this market
-    (≈71 % of carrier posts) and «вещи» the third (34 %). Until 0063 neither had
-    a key, so neither could be said here or searched for."""
+async def test_clothing_exists(client):
+    """«Вещи» is the third most common thing carriers name (34 % of posts) and
+    had no key until 0063."""
     resp = await client.get("/api/categories")
     keys = {c["name_key"] for c in resp.json()}
-    assert "parcel" in keys
     assert "clothing" in keys
+
+
+async def test_retired_categories_leave_the_picker(client):
+    """0064 — `parcel` and `gift` are retired, not deleted.
+
+    `parcel` was added off the market analysis (≈71 % of posts say «возьму
+    посылки») and taken back out because a parcel is the container, not the
+    cargo: everything here is a parcel, so as a category it says nothing. The
+    rows stay because trips published with them still need a label.
+    """
+    resp = await client.get("/api/categories")
+    keys = {c["name_key"] for c in resp.json()}
+    assert "parcel" not in keys
+    assert "gift" not in keys
 
 
 async def test_cold_start_order_follows_the_market(client):
@@ -116,11 +128,10 @@ async def test_cold_start_order_follows_the_market(client):
     an order about spelling rather than about cargo. `sort_order` seeds the
     market's own frequency instead."""
     resp = await client.get("/api/categories")
-    body = [c for c in resp.json() if c["is_default"]]
-    order = [c["name_key"] for c in body]
-    assert order.index("document") < order.index("parcel")
-    assert order.index("parcel") < order.index("clothing")
-    assert order.index("clothing") < order.index("medicine")
+    order = [c["name_key"] for c in resp.json() if c["is_default"]]
+    assert order.index("document") < order.index("clothing")
+    assert order.index("clothing") < order.index("electronics")
+    assert order.index("electronics") < order.index("medicine")
     assert order.index("other") == len(order) - 1
 
 

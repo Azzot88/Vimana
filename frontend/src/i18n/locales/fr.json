@@ -587,9 +587,9 @@
     },
     "paymentHint": "Comment vous êtes payé. Affiché sur la fiche ; le montant est facultatif.",
     "paymentModel": {
-      "on_delivery": "À la remise",
-      "escrow": "Séquestre",
-      "prepaid": "D'avance"
+      "on_platform": "Sur la plateforme",
+      "cash_on_delivery": "En espèces après livraison",
+      "transfer_on_delivery": "Par virement après livraison"
     },
     "servicesHint": "Facultatif. Chacun est cherchable : ceux qui en ont besoin vous trouvent.",
     "services": {
@@ -611,12 +611,11 @@
       "legOutOfOrder": "Le vol {{n}} part avant celui qui le précède",
       "pastDate": "La date doit être dans le futur",
       "capacity": "Le poids doit être d'au moins 0.5 kg",
-      "capacityWarning": "Un poids supérieur à 15 kg est inhabituel pour bagage à main. Publier ?"
     },
     "pricePerKg": "Prix par kg",
     "minDealPrice": "Transaction minimale",
     "currency": "Devise",
-    "maxDeclaredValue": "Valeur déclarée max.",
+    "maxDeclaredValue": "Franchise douanière restante",
     "priceOnRequest": "sur demande",
     "termsHint": "Votre base. L'expéditeur peut toujours faire une contre-offre.",
     "categoriesMore": "+ {{count}} autres",
@@ -648,13 +647,12 @@
       "medium": "Moyen",
       "large": "Grand"
     },
+    "customsAutofill": "Remplir",
+    "customsAutofillPremium": "Calcule la franchise restante d'après votre trajet — fonction premium.",
+    "customsNoneLeft": "franchise épuisée",
+    "paymentSystems": "Par quels systèmes (séparés par des virgules)",
+    "paymentSystemsPlaceholder": "Revolut, Wise, Zelle",
     "customsHint": "Votre franchise douanière. Comptée à part du bagage : elle peut être épuisée alors qu'il reste de la place.",
-    "declaredValueStatus": {
-      "label": "État de la franchise",
-      "open": "Encore libre",
-      "exhausted": "Franchise épuisée",
-      "exhaustedNote": "Le trajet se publie quand même — documents et colis de faible valeur ne sont pas concernés."
-    },
     "handoverHint": "Comment vous récupérez le colis et comment vous le remettez. Une question par extrémité : elles sont rarement organisées pareil.",
     "handoverOrigin": "Je récupère à",
     "handoverDestination": "Je remets à",

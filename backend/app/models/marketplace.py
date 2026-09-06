@@ -28,15 +28,25 @@ class TripStatus(str, enum.Enum):
 # `usage_count` wins and this list stops deciding anything.
 DEFAULT_CATEGORIES = (
     "document",
-    "parcel",
     "clothing",
-    "medicine",
     "electronics",
+    "medicine",
     "animal",
-    "gift",
     "art",
     "other",
 )
+
+# T3.11.07 — retired from the picker (owner's decision 2026-09-06), not deleted.
+# `parcel` was added the same day off the market analysis (≈71 % of posts say
+# «возьму посылки») and taken back out because a parcel is the container, not the
+# cargo: everything on this market is a parcel, so as a category it says nothing
+# and would be ticked by everyone. `gift` has existed since 0003 and real trips
+# may carry it.
+#
+# Rows stay so those trips keep a label; `is_active` is what removes them from
+# the picker. Deleting them would leave `allowed_categories` pointing at keys
+# with nothing behind them.
+RETIRED_CATEGORIES = ("parcel", "gift")
 
 
 class Category(Base):
@@ -51,6 +61,13 @@ class Category(Base):
     # soon as there is any, so the seed decides only the cold start. Carrier-
     # added categories default to the end.
     sort_order: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
+    # T3.11.07 — offered in the picker. Separate from `is_default`, which means
+    # "shipped with the product": a category can be ours and retired at the same
+    # time, and overloading one flag with both meanings would lose the
+    # difference the first time somebody asked why `gift` is still in the list.
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -85,12 +102,8 @@ class Trip(Base):
             name="ck_trips_size_hint",
         ),
         CheckConstraint(
-            "declared_value_status IN ('open','exhausted')",
-            name="ck_trips_declared_value_status",
-        ),
-        CheckConstraint(
-            "payment_model IS NULL OR "
-            "payment_model IN ('on_delivery','escrow','prepaid')",
+            "payment_model IS NULL OR payment_model IN "
+            "('on_platform','cash_on_delivery','transfer_on_delivery')",
             name="ck_trips_payment_model",
         ),
     )
@@ -114,17 +127,15 @@ class Trip(Base):
     price_per_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     min_deal_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD")
-    # Informational until the standing bond exists (T5.1a): declares what the
-    # carrier is prepared to cover, so a sender can filter before matching.
+    # T3.11.07 — the customs allowance the carrier has **left** on this flight,
+    # not a ceiling they are prepared to cover.
+    #
+    # It carried a companion `declared_value_status ∈ {open, exhausted}` for a
+    # few hours; the owner removed it (2026-09-06) and the reason holds: once
+    # the number means "free", zero already says "spent", and a separate state
+    # is a second place for the same fact to be wrong. The label the carrier
+    # reads says «свободный таможенный лимит» for exactly that reason.
     max_declared_value: Mapped[float | None] = mapped_column(Float, nullable=True)
-    # T3.11.15 — the customs allowance is a *balance the carrier spends*, not a
-    # threshold. The market says so in as many words: "лимит на люкс уже занят"
-    # sits in posts that still take documents on the same flight. So the ceiling
-    # (`max_declared_value`) and whether it is used up are two facts, and one
-    # number cannot carry both.
-    declared_value_status: Mapped[str] = mapped_column(
-        String(10), default="open", server_default="open", nullable=False
-    )
     bond_tier: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # T3.11.15 — physical room, the other capacity. `capacity` stays the number
     # of kilograms; these two say what kind of room it is and how big a thing
@@ -155,7 +166,13 @@ class Trip(Base):
     # T3.11.07 — the settlement model, which the market states far more often
     # than it states a price. NULL is "did not say", and that is not the same
     # as `on_delivery`, however common that answer is.
-    payment_model: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    payment_model: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    # T3.11.07 — which transfer systems, when the model is a transfer after
+    # delivery. Free text turned into chips rather than a closed list: what
+    # people transfer through is local and changes faster than any vocabulary
+    # we could ship, and a carrier naming one we had not heard of would
+    # otherwise be told they are wrong.
+    payment_systems: Mapped[list | None] = mapped_column(JSON, nullable=True)
     # T_UX.15 — a copy of the carrier's standing rules, taken at publish time.
     # A copy on purpose: rules edited later must not rewrite what a sender read
     # when they chose this trip.
@@ -218,11 +235,16 @@ TRIP_SERVICES = (
     "photo_report",
 )
 
-# T3.11.07 — how the carrier expects to be paid. A concrete sum appears in
-# 0.1 % of posts while the settlement model appears in 61.7 % ("без предоплаты"
-# 42.6, "оплата при получении" 19.1), so this — not the number — is the field
-# that carries the market's actual answer. NULL means the carrier did not say.
-PAYMENT_MODELS = ("on_delivery", "escrow", "prepaid")
+# T3.11.07 — how the carrier expects to be paid (vocabulary set by the owner
+# 2026-09-06). A concrete sum appears in 0.1 % of posts while the settlement
+# model appears in 61.7 % ("без предоплаты" 42.6, "оплата при получении" 19.1),
+# so this — not the number — is the field that carries the market's actual
+# answer. NULL means the carrier did not say.
+#
+# Replaces `on_delivery / escrow / prepaid`. That earlier list mixed two
+# questions: *when* money moves and *through what*. The market answers both, and
+# separately — "оплата при получении" says when, "переводом" says through what.
+PAYMENT_MODELS = ("on_platform", "cash_on_delivery", "transfer_on_delivery")
 
 
 class TripLeg(Base):

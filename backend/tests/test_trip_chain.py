@@ -206,28 +206,32 @@ async def test_unknown_flown_by_is_refused(client, carrier_headers):
 async def test_spent_allowance_does_not_close_the_bag(client, carrier_headers):
     """"Лимит на люкс уже занят" sits in posts that still take documents on the
     same flight. The two capacities are independent, and a trip whose allowance
-    is spent is still a publishable trip."""
+    is spent is still a publishable trip.
+
+    Since 0064 "spent" is written as a zero rather than as a separate state: the
+    number means the allowance **left**, so zero already says it, and a second
+    field would be a second place for the same fact to be wrong.
+    """
     r = await client.post(
         "/api/trips",
         headers=carrier_headers,
         json=_payload(
             capacity=20.0,
-            max_declared_value=10_000,
-            declared_value_status="exhausted",
+            max_declared_value=0,
             space_kind="checked_partial",
         ),
     )
     assert r.status_code == 201, r.text
     body = r.json()
-    assert body["declared_value_status"] == "exhausted"
+    assert body["max_declared_value"] == 0
     assert body["capacity"] == 20.0
     assert body["status"] == "open"
 
 
-async def test_capacity_state_defaults_to_open(client, carrier_headers):
+async def test_capacity_defaults_are_unstated(client, carrier_headers):
     r = await client.post("/api/trips", headers=carrier_headers, json=_payload())
     body = r.json()
-    assert body["declared_value_status"] == "open"
+    assert body["max_declared_value"] is None
     assert body["space_kind"] == "unspecified"
     assert body["size_hint"] is None
 
@@ -254,9 +258,10 @@ async def test_unknown_size_hint_is_refused(client, carrier_headers):
     assert r.status_code == 422
 
 
-async def test_unknown_declared_value_status_is_refused(client, carrier_headers):
+async def test_negative_customs_allowance_is_refused(client, carrier_headers):
+    """The field is "how much is left", and less than nothing is not an amount."""
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(declared_value_status="maybe")
+        "/api/trips", headers=carrier_headers, json=_payload(max_declared_value=-1)
     )
     assert r.status_code == 422
 
@@ -329,19 +334,47 @@ async def test_payment_model_is_stored_and_silence_stays_silence(
     0.1 %, so this is the field that carries the real answer. Saying nothing is
     still not the same as "on delivery", however common that answer is."""
     said = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(payment_model="escrow")
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(payment_model="cash_on_delivery"),
     )
-    assert said.json()["payment_model"] == "escrow"
+    assert said.json()["payment_model"] == "cash_on_delivery"
 
     silent = await client.post("/api/trips", headers=carrier_headers, json=_payload())
     assert silent.json()["payment_model"] is None
 
 
 async def test_unknown_payment_model_is_refused(client, carrier_headers):
+    """`escrow` and `prepaid` were the vocabulary until 0064 and are not it any
+    more — a client still sending them is refused rather than quietly stored."""
+    for model in ("barter", "escrow", "prepaid"):
+        r = await client.post(
+            "/api/trips", headers=carrier_headers, json=_payload(payment_model=model)
+        )
+        assert r.status_code == 422, model
+
+
+async def test_transfer_systems_become_a_clean_list(client, carrier_headers):
+    """Typed as text and turned into chips by the form, so what arrives is
+    whatever the carrier called it. Blanks are dropped rather than refused: a
+    trailing comma is a typo, not an answer."""
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(payment_model="barter")
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            payment_model="transfer_on_delivery",
+            payment_systems=["  Revolut ", "Wise", "", "Wise", "   "],
+        ),
     )
-    assert r.status_code == 422
+    assert r.status_code == 201, r.text
+    assert r.json()["payment_systems"] == ["Revolut", "Wise"]
+
+
+async def test_only_blank_systems_are_the_same_as_none(client, carrier_headers):
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(payment_systems=["  ", ""])
+    )
+    assert r.json()["payment_systems"] is None
 
 
 async def test_unknown_exclusion_is_refused(client, carrier_headers):

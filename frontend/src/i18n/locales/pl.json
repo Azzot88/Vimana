@@ -588,9 +588,9 @@
     },
     "paymentHint": "Jak się rozliczasz. Widoczne na karcie; kwota jest opcjonalna.",
     "paymentModel": {
-      "on_delivery": "Przy odbiorze",
-      "escrow": "Escrow",
-      "prepaid": "Z góry"
+      "on_platform": "Na platformie",
+      "cash_on_delivery": "Gotówką po dostawie",
+      "transfer_on_delivery": "Przelewem po dostawie"
     },
     "servicesHint": "Opcjonalne. Po każdej można wyszukiwać — znajdą Cię ci, którzy jej szukają.",
     "services": {
@@ -612,12 +612,11 @@
       "legOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
       "pastDate": "Data musi być w przyszłości",
       "capacity": "Waga musi być co najmniej 0.5 kg",
-      "capacityWarning": "Waga powyżej 15 kg jest nietypowa dla bagażu podręcznego. Opublikować?"
     },
     "pricePerKg": "Cena za kg",
     "minDealPrice": "Minimalna transakcja",
     "currency": "Waluta",
-    "maxDeclaredValue": "Maks. wartość deklarowana",
+    "maxDeclaredValue": "Wolny limit celny",
     "priceOnRequest": "na zapytanie",
     "termsHint": "Twoja baza. Nadawca i tak może zaproponować swoje w czacie.",
     "categoriesMore": "Jeszcze {{count}}",
@@ -649,13 +648,12 @@
       "medium": "Średnia",
       "large": "Duża"
     },
+    "customsAutofill": "Wypełnij",
+    "customsAutofillPremium": "Wyliczy wolny limit na podstawie trasy — funkcja premium.",
+    "customsNoneLeft": "limit wyczerpany",
+    "paymentSystems": "Przez jakie systemy (po przecinku)",
+    "paymentSystemsPlaceholder": "Revolut, Wise, Zelle",
     "customsHint": "Twój limit bezcłowy. Liczony osobno od bagażu: może się skończyć, gdy miejsce jeszcze jest.",
-    "declaredValueStatus": {
-      "label": "Stan limitu",
-      "open": "Jeszcze wolny",
-      "exhausted": "Limit zajęty",
-      "exhaustedNote": "Lot i tak zostanie opublikowany — dokumentów i tanich paczek to nie dotyczy."
-    },
     "handoverHint": "Jak odbierasz przesyłkę i jak ją przekazujesz. Pytamy osobno o każdy koniec, bo zwykle wygląda to inaczej.",
     "handoverOrigin": "Odbieram w",
     "handoverDestination": "Przekazuję w",

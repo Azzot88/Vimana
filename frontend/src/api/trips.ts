@@ -49,7 +49,11 @@ export type TripService = (typeof TRIP_SERVICES)[number]
 
 /** T3.11.07 — the settlement model. Stated by 61.7 % of this market; a concrete
  *  price by 0.1 %. Null is "did not say", not "on delivery". */
-export const PAYMENT_MODELS = ['on_delivery', 'escrow', 'prepaid'] as const
+export const PAYMENT_MODELS = [
+  'on_platform',
+  'cash_on_delivery',
+  'transfer_on_delivery',
+] as const
 export type PaymentModel = (typeof PAYMENT_MODELS)[number]
 
 export interface Trip {
@@ -78,9 +82,6 @@ export interface Trip {
   min_deal_price?: number | null
   currency?: string
   max_declared_value?: number | null
-  /** T3.11.15 — the customs allowance is a balance the carrier spends, not just
-   *  a ceiling: "the luxury limit is used up" while documents still fit. */
-  declared_value_status?: 'open' | 'exhausted'
   space_kind?: SpaceKind
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
@@ -90,6 +91,7 @@ export interface Trip {
   excluded?: Exclusion[] | null
   services?: TripService[] | null
   payment_model?: PaymentModel | null
+  payment_systems?: string[] | null
   /** T_UX.15 — the rules copied into this trip when it was published. */
   carriage_rules?: string | null
   status: string
@@ -110,7 +112,6 @@ export interface CreateTripPayload {
   min_deal_price?: number | null
   currency?: string
   max_declared_value?: number | null
-  declared_value_status?: 'open' | 'exhausted'
   space_kind?: SpaceKind
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
@@ -118,6 +119,7 @@ export interface CreateTripPayload {
   excluded?: Exclusion[] | null
   services?: TripService[] | null
   payment_model?: PaymentModel | null
+  payment_systems?: string[] | null
   /** Sent explicitly: an emptied field means "this trip has no rules", not
    *  "fall back to my profile template". */
   carriage_rules?: string | null

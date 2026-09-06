@@ -24,7 +24,10 @@ async def list_categories(
     q: str = Query("", max_length=50),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Category)
+    # T3.11.07 — retired vocabulary stays in the table and leaves the picker.
+    # `parcel` and `gift` still label trips that were published with them; a
+    # category nobody can pick any more is not a category that stops existing.
+    stmt = select(Category).where(Category.is_active.is_(True))
     q_norm = q.strip().lower()
     if q_norm:
         stmt = stmt.where(Category.name_key.ilike(f"%{q_norm}%"))

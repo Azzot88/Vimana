@@ -126,6 +126,19 @@ async def _ensure_category_order(engine) -> None:
                 "sort_order INTEGER NOT NULL DEFAULT 100"
             )
         )
+        # 0064 — retired vocabulary leaves the picker without leaving the table.
+        await conn.execute(
+            text(
+                "ALTER TABLE categories ADD COLUMN IF NOT EXISTS "
+                "is_active BOOLEAN NOT NULL DEFAULT true"
+            )
+        )
+        await conn.execute(
+            text(
+                "UPDATE categories SET is_active = false "
+                "WHERE name_key IN ('parcel', 'gift')"
+            )
+        )
 
 
 async def _seed_default_categories(engine) -> None:
@@ -1288,6 +1301,14 @@ async def _ensure_trip_chain(engine) -> None:
         # 0061 — what the carrier will not take.
         await conn.execute(
             text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS excluded JSON")
+        )
+        # 0064 — the customs allowance carries "how much is left", so the
+        # separate state column is gone; settlement gained the transfer systems.
+        await conn.execute(
+            text("ALTER TABLE trips DROP COLUMN IF EXISTS declared_value_status")
+        )
+        await conn.execute(
+            text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS payment_systems JSON")
         )
         # 0062 — services around the flight and the settlement model. `money`
         # left the exclusions vocabulary in the same revision; a test database

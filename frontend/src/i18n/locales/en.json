@@ -634,9 +634,9 @@
     },
     "paymentHint": "How you expect to be paid. Shown on the card; the amount is optional.",
     "paymentModel": {
-      "on_delivery": "On delivery",
-      "escrow": "Escrow",
-      "prepaid": "Paid up front"
+      "on_platform": "On the platform",
+      "cash_on_delivery": "Cash after delivery",
+      "transfer_on_delivery": "Transfer after delivery"
     },
     "servicesHint": "Optional. Each one is searchable, so senders looking for it find you.",
     "services": {
@@ -658,12 +658,11 @@
       "legOutOfOrder": "Flight {{n}} departs before the one before it",
       "pastDate": "Date must be in the future",
       "capacity": "Capacity must be at least 0.5 kg",
-      "capacityWarning": "Capacity above 15 kg is unusual for hand luggage — publish anyway?"
     },
     "pricePerKg": "Price per kg",
     "minDealPrice": "Minimum deal",
     "currency": "Currency",
-    "maxDeclaredValue": "Max declared value",
+    "maxDeclaredValue": "Free customs allowance",
     "priceOnRequest": "on request",
     "termsHint": "Your baseline. A sender may still counter in chat.",
     "categoriesMore": "+ {{count}} more",
@@ -695,13 +694,12 @@
       "medium": "Medium",
       "large": "Large"
     },
+    "customsAutofill": "Fill in",
+    "customsAutofillPremium": "Works out the free allowance from your route — a premium feature.",
+    "customsNoneLeft": "no allowance left",
+    "paymentSystems": "Which transfer systems (comma-separated)",
+    "paymentSystemsPlaceholder": "Revolut, Wise, Zelle",
     "customsHint": "Your duty-free headroom. Separate from the bag: it can be spent while there is still room.",
-    "declaredValueStatus": {
-      "label": "State of the allowance",
-      "open": "Still free",
-      "exhausted": "Allowance spent",
-      "exhaustedNote": "The trip still publishes — documents and low-value parcels are unaffected."
-    },
     "handoverHint": "How you take cargo and how you hand it over. Asked separately for each end, because they are usually arranged differently.",
     "handoverOrigin": "Accepting at",
     "handoverDestination": "Handing over at",

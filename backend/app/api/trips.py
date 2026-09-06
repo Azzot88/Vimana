@@ -58,7 +58,6 @@ async def create_trip(
         currency=body.currency,
         max_declared_value=body.max_declared_value,
         # T3.11.15 — the two capacities and the two ends of the handover.
-        declared_value_status=body.declared_value_status,
         space_kind=body.space_kind,
         size_hint=body.size_hint,
         handover_origin=(
@@ -72,6 +71,7 @@ async def create_trip(
         excluded=body.excluded,
         services=body.services,
         payment_model=body.payment_model,
+        payment_systems=body.payment_systems,
         # T_UX.15 — the carrier's standing rules are **copied** into the trip,
         # not referenced. Edited later they must not rewrite what a sender read
         # when they chose this trip. `None` means "use my template"; an explicit
@@ -250,7 +250,6 @@ async def list_trips(
                     # T3.11.15 — a trip whose chain is invisible in the listing
                     # is a trip whose second flight nobody can find, and the
                     # second flight is present in 36.6 % of real posts.
-                    declared_value_status=t.declared_value_status,
                     space_kind=t.space_kind,
                     size_hint=t.size_hint,
                     handover_origin=t.handover_origin,
@@ -259,6 +258,7 @@ async def list_trips(
                     excluded=t.excluded,
                     services=t.services,
                     payment_model=t.payment_model,
+                    payment_systems=t.payment_systems,
                     carriage_rules=t.carriage_rules,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,

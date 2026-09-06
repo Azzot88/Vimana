@@ -90,6 +90,17 @@ const HANDOVER_METHODS = [
 const SPACE_KINDS = ['cabin', 'checked_partial', 'checked_full'] as const
 const SIZE_HINTS = ['small', 'medium', 'large'] as const
 
+/** T3.11.07 — the weight scale runs to 32 kg (owner's decision 2026-09-06).
+ *
+ *  32 is the airline ceiling for a single checked bag, and 23 is the ordinary
+ *  one; the old maximum of 20 could not express either. The scale is a real
+ *  ruler — a tick every kilogram, so a carrier can see where 7 sits — but only
+ *  the numbers people actually say are printed. Labelling all 33 would turn a
+ *  scale into a wall of digits and make the eight that matter unfindable.
+ */
+const CAPACITY_MAX = 32
+const CAPACITY_LABELLED = [0, 5, 10, 15, 20, 23, 25, 32] as const
+
 interface Draft {
   legs: LegDraft[]
   // T3.11.15 — asked once for the trip and written onto every leg. "Flying in
@@ -104,10 +115,6 @@ interface Draft {
   // carriers do not answer.
   spaceKind: 'unspecified' | (typeof SPACE_KINDS)[number]
   sizeHint: '' | (typeof SIZE_HINTS)[number]
-  // T3.11.15 — the customs half. The ceiling and whether it is spent are two
-  // separate facts: "the luxury allowance is used up" appears in posts that
-  // still take documents on the same flight.
-  declaredValueStatus: 'open' | 'exhausted'
   handoverOrigin: HandoverDraft
   handoverDestination: HandoverDraft
   // T3.11.07 — a closed list, so a sender can filter on it. Empty means the
@@ -119,6 +126,9 @@ interface Draft {
   // as `null` — not as the commonest answer.
   services: TripService[]
   paymentModel: '' | PaymentModel
+  // Typed as one comma-separated line and shown as chips: what people transfer
+  // through is local and changes faster than any list we could ship.
+  paymentSystems: string
   categories: string[]
   alsoOnNostr: boolean
   // T3.35 — the carrier's baseline terms. Strings because they come from
@@ -136,12 +146,12 @@ const EMPTY: Draft = {
   capacity: '',
   spaceKind: 'unspecified',
   sizeHint: '',
-  declaredValueStatus: 'open',
   handoverOrigin: { ...EMPTY_HANDOVER },
   handoverDestination: { ...EMPTY_HANDOVER },
   excluded: [],
   services: [],
   paymentModel: '',
+  paymentSystems: '',
   categories: [],
   alsoOnNostr: true,
   pricePerKg: '',
@@ -179,6 +189,23 @@ function loadDraft(): Draft {
  *
  *  Called by: `NewTripPage.handleSubmit`.
  */
+/** T3.11.07 — one comma-separated line into the chips behind it.
+ *
+ *  Shared by the handover points and the transfer systems: both are "type what
+ *  you mean, separated by commas", and two implementations of that would drift
+ *  on the first edge case.
+ *
+ *  Called by: `toHandover`, `NewTripPage.handleSubmit`.
+ */
+function splitChips(value: string, limit = 8): string[] | null {
+  const parts = value
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .slice(0, limit)
+  return parts.length > 0 ? parts : null
+}
+
 function toHandover(side: HandoverDraft) {
   const points = side.points
     .split(',')
@@ -303,7 +330,6 @@ export default function NewTripPage() {
       capacity: trip.capacity != null ? String(trip.capacity) : '',
       spaceKind: trip.space_kind ?? 'unspecified',
       sizeHint: trip.size_hint ?? '',
-      declaredValueStatus: trip.declared_value_status ?? 'open',
       handoverOrigin: {
         methods: trip.handover_origin?.methods ?? [],
         points: (trip.handover_origin?.points ?? []).join(', '),
@@ -315,6 +341,7 @@ export default function NewTripPage() {
       excluded: trip.excluded ?? [],
       services: trip.services ?? [],
       paymentModel: trip.payment_model ?? '',
+      paymentSystems: (trip.payment_systems ?? []).join(', '),
       categories: trip.allowed_categories ?? [],
       pricePerKg: trip.price_per_kg != null ? String(trip.price_per_kg) : '',
       minDealPrice: trip.min_deal_price != null ? String(trip.min_deal_price) : '',
@@ -468,14 +495,12 @@ export default function NewTripPage() {
       setError(validationError)
       return
     }
-    const cap = draft.capacity ? parseFloat(draft.capacity) : null
-    if (
-      cap !== null &&
-      cap > 15 &&
-      !window.confirm(t('trips.newTripValidation.capacityWarning') as string)
-    ) {
-      return
-    }
+    // T3.11.07 — the "over 15 kg is unusual for hand luggage" confirmation is
+    // gone. The scale now runs to 32, because 23 kg is an ordinary checked bag
+    // and 32 the airline ceiling for one; asking a carrier to confirm the most
+    // common answer on the market was the prompt teaching people to click
+    // through prompts.
+    //
     // T_UX.2 pt.3 — pre-flight warning for complex/restricted corridors.
     // T3.11.07 — asked for **every** leg, not just the endpoints. A chain
     // through Istanbul is subject to Turkish transit rules, and PRD §3.11.1 is
@@ -533,7 +558,6 @@ export default function NewTripPage() {
         // T3.11.07 — the two capacities and the two ends of the handover.
         // `sizeHint` empty stays null: "did not say" and "small" are different
         // answers and the API keeps them apart.
-        declared_value_status: draft.declaredValueStatus,
         space_kind: draft.spaceKind,
         size_hint: draft.sizeHint || null,
         handover_origin: toHandover(draft.handoverOrigin),
@@ -544,6 +568,12 @@ export default function NewTripPage() {
         excluded: draft.excluded.length > 0 ? draft.excluded : null,
         services: draft.services.length > 0 ? draft.services : null,
         payment_model: draft.paymentModel || null,
+        // Only meaningful for a transfer; sending it with another model would
+        // store an answer to a question that was not asked.
+        payment_systems:
+          draft.paymentModel === 'transfer_on_delivery'
+            ? splitChips(draft.paymentSystems)
+            : null,
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
         // rules" rather than "fall back to my template".
         carriage_rules: draft.carriageRules,
@@ -666,10 +696,11 @@ export default function NewTripPage() {
           {draft.flownBy === 'proxy' && (
             <span>{t('trips.flownBy.proxyChip')}</span>
           )}
-          {draft.declaredValueStatus === 'exhausted' && (
-            <span className="text-amber">
-              {t('trips.declaredValueStatus.exhausted')}
-            </span>
+          {/* Zero free allowance is the one number a sender has to see before
+              writing: the bag is not full, but a valuable parcel is not what
+              this flight can take. */}
+          {draft.maxDeclaredValue !== '' && Number(draft.maxDeclaredValue) === 0 && (
+            <span className="text-amber">{t('trips.customsNoneLeft')}</span>
           )}
           {draft.excluded.length > 0 && (
             <span className="text-amber">
@@ -1025,25 +1056,60 @@ export default function NewTripPage() {
                 id={capacityId}
                 type="number"
                 step="0.5"
-                min="0.5"
-                max="20"
+                min="0"
+                max={CAPACITY_MAX}
                 value={draft.capacity}
                 onChange={(e) => patch({ capacity: e.target.value })}
-                placeholder="5"
+                placeholder="23"
                 className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
               />
               <MonoText className="text-sm text-navy/60">kg</MonoText>
             </div>
-            <input
-              type="range"
-              aria-labelledby={capacityLabelId}
-              min="0.5"
-              max="20"
-              step="0.5"
-              value={draft.capacity || 0.5}
-              onChange={(e) => patch({ capacity: e.target.value })}
-              className="w-full accent-cyan"
-            />
+            <div>
+              <input
+                type="range"
+                aria-labelledby={capacityLabelId}
+                min="0"
+                max={CAPACITY_MAX}
+                step="0.5"
+                value={draft.capacity || 0}
+                onChange={(e) =>
+                  // Zero on the scale is "not stated", not "nothing fits": the
+                  // field is optional, and `null` is what the API stores for it.
+                  patch({ capacity: e.target.value === '0' ? '' : e.target.value })
+                }
+                className="w-full accent-cyan"
+              />
+              {/* A ruler, not a caption. Every kilogram gets a tick so 7 is
+                  findable by eye; only the eight numbers people actually say
+                  are printed, because labelling all 33 hides the eight. */}
+              <div
+                aria-hidden="true"
+                className="relative h-7 mt-1 select-none"
+              >
+                {Array.from({ length: CAPACITY_MAX + 1 }, (_, kg) => {
+                  const labelled = (CAPACITY_LABELLED as readonly number[]).includes(kg)
+                  return (
+                    <span
+                      key={kg}
+                      style={{ left: `${(kg / CAPACITY_MAX) * 100}%` }}
+                      className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
+                    >
+                      <span
+                        className={
+                          labelled ? 'w-px h-2 bg-navy/40' : 'w-px h-1 bg-navy/15'
+                        }
+                      />
+                      {labelled && (
+                        <span className="mt-0.5 text-[10px] font-mono text-navy/40">
+                          {kg}
+                        </span>
+                      )}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
             {/* The second way to answer the same question. Kilograms are named
                 in 2.4 % of real posts and "small / not big" in 9.9 %. */}
             <fieldset>
@@ -1084,53 +1150,36 @@ export default function NewTripPage() {
             <p className="text-[11px] font-body text-navy/40 -mt-1">
               {t('trips.customsHint')}
             </p>
-            <label className="block">
-              <span className="block text-[11px] font-body text-navy/40 mb-1">
-                {t('trips.maxDeclaredValue')}
-              </span>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={draft.maxDeclaredValue}
-                onChange={(e) => patch({ maxDeclaredValue: e.target.value })}
-                className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-              />
-            </label>
-            <fieldset>
-              <legend className="block text-[11px] font-body text-navy/40 mb-1">
-                {t('trips.declaredValueStatus.label')}
-              </legend>
-              <div className="flex gap-2">
-                {(['open', 'exhausted'] as const).map((state) => (
-                  <label
-                    key={state}
-                    className={`flex-1 text-center text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center justify-center rounded-field border cursor-pointer transition-colors ${
-                      draft.declaredValueStatus === state
-                        ? state === 'exhausted'
-                          ? 'border-amber bg-amber/10 text-navy'
-                          : 'border-cyan bg-cyan/10 text-navy'
-                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="declaredValueStatus"
-                      value={state}
-                      checked={draft.declaredValueStatus === state}
-                      onChange={() => patch({ declaredValueStatus: state })}
-                      className="sr-only"
-                    />
-                    {t(`trips.declaredValueStatus.${state}`)}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            {draft.declaredValueStatus === 'exhausted' && (
-              <p className="text-[11px] font-body text-navy/50">
-                {t('trips.declaredValueStatus.exhaustedNote')}
-              </p>
-            )}
+            {/* T3.11.07 — the number is what is **left**, not a ceiling. It
+                carried a separate `open / exhausted` state for a few hours;
+                once the label says "free", zero already says "spent", and the
+                second field was a second place for one fact to be wrong. */}
+            <div className="flex items-end gap-2">
+              <label className="flex-1">
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t('trips.maxDeclaredValue')}
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={draft.maxDeclaredValue}
+                  onChange={(e) => patch({ maxDeclaredValue: e.target.value })}
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                />
+              </label>
+              {/* Premium, and said so plainly rather than shown as a working
+                  button. `§9.1`: a control that looks live and is not is worse
+                  than one that names its price. The feature itself is T6.1. */}
+              <button
+                type="button"
+                disabled
+                title={t('trips.customsAutofillPremium') as string}
+                className="px-3 py-2 min-h-[2.75rem] rounded-field border border-navy/15 text-[11px] font-body text-navy/30 cursor-not-allowed shrink-0"
+              >
+                {t('trips.customsAutofill')} ★
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -1240,6 +1289,39 @@ export default function NewTripPage() {
                 </button>
               ))}
             </div>
+
+            {/* Only asked when it applies. A transfer needs to say through
+                what; the other two models do not, and a field that is always
+                on screen teaches people to skip the whole block. */}
+            {draft.paymentModel === 'transfer_on_delivery' && (
+              <label className="block">
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t('trips.paymentSystems')}
+                </span>
+                <input
+                  type="text"
+                  value={draft.paymentSystems}
+                  onChange={(e) => patch({ paymentSystems: e.target.value })}
+                  placeholder={t('trips.paymentSystemsPlaceholder') as string}
+                  className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
+                />
+                {/* The chips are shown as they are typed, so the comma is
+                    visibly doing something rather than being a convention the
+                    carrier has to trust. */}
+                {splitChips(draft.paymentSystems) && (
+                  <span className="flex flex-wrap gap-1 mt-2">
+                    {splitChips(draft.paymentSystems)!.map((system) => (
+                      <span
+                        key={system}
+                        className="text-xs font-mono bg-cyan/10 border border-cyan/30 px-2 py-0.5 rounded-full text-navy"
+                      >
+                        {system}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </label>
+            )}
 
             <p className="text-[11px] font-body text-navy/40">
               {t('trips.termsHint')}

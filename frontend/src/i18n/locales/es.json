@@ -587,9 +587,9 @@
     },
     "paymentHint": "Cómo cobras. Se ve en la ficha; el importe es opcional.",
     "paymentModel": {
-      "on_delivery": "Al entregar",
-      "escrow": "Depósito en garantía",
-      "prepaid": "Por adelantado"
+      "on_platform": "En la plataforma",
+      "cash_on_delivery": "En efectivo tras la entrega",
+      "transfer_on_delivery": "Por transferencia tras la entrega"
     },
     "servicesHint": "Opcional. Cada uno se puede buscar: quien lo necesita te encuentra.",
     "services": {
@@ -611,12 +611,11 @@
       "legOutOfOrder": "El vuelo {{n}} sale antes que el anterior",
       "pastDate": "La fecha debe ser en el futuro",
       "capacity": "El peso debe ser al menos 0.5 kg",
-      "capacityWarning": "Un peso mayor a 15 kg es inusual para equipaje de mano. ¿Publicar?"
     },
     "pricePerKg": "Precio por kg",
     "minDealPrice": "Trato mínimo",
     "currency": "Moneda",
-    "maxDeclaredValue": "Valor declarado máx.",
+    "maxDeclaredValue": "Franquicia aduanera libre",
     "priceOnRequest": "a consultar",
     "termsHint": "Tu base. El remitente aún puede contraofertar en el chat.",
     "categoriesMore": "+ {{count}} más",
@@ -648,13 +647,12 @@
       "medium": "Mediano",
       "large": "Grande"
     },
+    "customsAutofill": "Rellenar",
+    "customsAutofillPremium": "Calcula la franquicia libre según tu ruta: función premium.",
+    "customsNoneLeft": "franquicia agotada",
+    "paymentSystems": "Por qué sistemas (separados por comas)",
+    "paymentSystemsPlaceholder": "Revolut, Wise, Zelle",
     "customsHint": "Tu franquicia aduanera. Va aparte del equipaje: puede agotarse cuando todavía queda sitio.",
-    "declaredValueStatus": {
-      "label": "Estado de la franquicia",
-      "open": "Aún libre",
-      "exhausted": "Franquicia agotada",
-      "exhaustedNote": "El viaje se publica igual: no afecta a documentos ni a paquetes de poco valor."
-    },
     "handoverHint": "Cómo recoges la carga y cómo la entregas. Se pregunta por cada extremo, porque suelen organizarse distinto.",
     "handoverOrigin": "Recojo en",
     "handoverDestination": "Entrego en",

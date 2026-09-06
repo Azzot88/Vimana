@@ -124,14 +124,17 @@ class TripCreate(BaseModel):
     # market and a price by 0.1 %, so the model is the field that matters — but
     # silence still has to stay distinguishable from the commonest answer.
     services: list[str] | None = Field(default=None, max_length=len(TRIP_SERVICES))
-    payment_model: Literal["on_delivery", "escrow", "prepaid"] | None = None
+    payment_model: (
+        Literal["on_platform", "cash_on_delivery", "transfer_on_delivery"] | None
+    ) = None
+    # Free text turned into chips by the form, not a closed list: what people
+    # transfer through is local and changes faster than a vocabulary we could
+    # ship, and a carrier naming one we had not heard of would be told they are
+    # wrong.
+    payment_systems: list[str] | None = Field(default=None, max_length=8)
     # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
     carriage_rules: str | None = Field(default=None, max_length=4000)
-    # T3.11.15 — the second capacity, and its state. A ceiling alone cannot say
-    # "the luxury allowance is spent but documents still fit", which is how
-    # carriers actually report it.
-    declared_value_status: Literal["open", "exhausted"] = "open"
     space_kind: Literal[
         "cabin", "checked_partial", "checked_full", "unspecified"
     ] = "unspecified"
@@ -157,6 +160,24 @@ class TripCreate(BaseModel):
     def _known_services(cls, v: list[str] | None) -> list[str] | None:
         return _closed_list(v, TRIP_SERVICES, "services")
 
+    @field_validator("payment_systems")
+    @classmethod
+    def _clean_systems(cls, v: list[str] | None) -> list[str] | None:
+        """Trimmed, deduplicated, bounded — but not checked against a list.
+
+        The form turns typed text into chips, so what arrives is whatever the
+        carrier called it. Blanks are dropped rather than rejected: a trailing
+        comma is a typo, not an answer, and refusing the whole trip over one is
+        the wrong trade.
+        """
+        if v is None:
+            return None
+        cleaned = [s.strip() for s in v if s and s.strip()]
+        for system in cleaned:
+            if len(system) > 40:
+                raise ValueError("a payment system name is at most 40 characters")
+        return list(dict.fromkeys(cleaned)) or None
+
 
 class TripOut(BaseModel):
     id: uuid.UUID
@@ -179,9 +200,8 @@ class TripOut(BaseModel):
     price_per_kg: float | None = None
     min_deal_price: float | None = None
     currency: str = "USD"
+    # T3.11.07 — the customs allowance the carrier has left, not a ceiling.
     max_declared_value: float | None = None
-    # T3.11.15
-    declared_value_status: str = "open"
     space_kind: str = "unspecified"
     size_hint: str | None = None
     handover_origin: dict | None = None
@@ -190,6 +210,7 @@ class TripOut(BaseModel):
     excluded: list[str] | None = None
     services: list[str] | None = None
     payment_model: str | None = None
+    payment_systems: list[str] | None = None
     carriage_rules: str | None = None
     status: str
     created_at: datetime
