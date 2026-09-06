@@ -102,8 +102,8 @@ class Trip(Base):
             name="ck_trips_size_hint",
         ),
         CheckConstraint(
-            "payment_model IS NULL OR payment_model IN "
-            "('on_platform','cash_on_delivery','transfer_on_delivery')",
+            "payment_model IS NULL OR "
+            "payment_model IN ('on_platform','off_platform')",
             name="ck_trips_payment_model",
         ),
     )
@@ -244,7 +244,23 @@ TRIP_SERVICES = (
 # Replaces `on_delivery / escrow / prepaid`. That earlier list mixed two
 # questions: *when* money moves and *through what*. The market answers both, and
 # separately — "оплата при получении" says when, "переводом" says through what.
-PAYMENT_MODELS = ("on_platform", "cash_on_delivery", "transfer_on_delivery")
+PAYMENT_MODELS = ("on_platform", "off_platform")
+
+# T3.11.07 — which system, when the money moves outside the platform.
+#
+# The vocabulary went `on_delivery / escrow / prepaid`, then
+# `on_platform / cash_on_delivery / transfer_on_delivery`, and is now two
+# (owner's correction 2026-09-06). The reason the middle version was wrong is
+# worth keeping: cash is not a peer of "transfer", it is **one of the systems**
+# people settle in outside the platform, alongside a bank app, a remittance
+# service or a stablecoin. Listing it as a model made the question "cash or
+# transfer?" — which is the same question as "which system?", asked twice and
+# answered inconsistently.
+#
+# So there are two models, and `payment_systems` says which systems the carrier
+# accepts when the answer is `off_platform`. The catalogue lives in
+# `core/payment_systems.py`; free text stays allowed, because what people settle
+# through is local and outlives any list we ship.
 
 
 class TripLeg(Base):

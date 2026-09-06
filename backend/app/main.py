@@ -16,6 +16,7 @@ from starlette.responses import JSONResponse
 from app.api.addresses import router as addresses_router
 from app.api.admin import router as admin_router
 from app.api.airports import router as airports_router
+from app.api.directories import router as directories_router
 from app.api.auth import router as auth_router
 from app.api.avatar import router as avatar_router
 from app.api.categories import router as categories_router
@@ -253,6 +254,9 @@ app.include_router(notices_router, prefix="/api", tags=["notices"])
 app.include_router(uba_router, prefix="/api", tags=["uba"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
 app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
+# T3.11.07 — postal services and payment systems, both country-scoped and both
+# read from files in the image. No prefix: the two paths are unrelated nouns.
+app.include_router(directories_router, prefix="/api", tags=["directories"])
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
 app.include_router(cities_router, prefix="/api/cities", tags=["cities"])
 app.include_router(verification_router, prefix="/api", tags=["verification"])

@@ -336,9 +336,9 @@ async def test_payment_model_is_stored_and_silence_stays_silence(
     said = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json=_payload(payment_model="cash_on_delivery"),
+        json=_payload(payment_model="off_platform"),
     )
-    assert said.json()["payment_model"] == "cash_on_delivery"
+    assert said.json()["payment_model"] == "off_platform"
 
     silent = await client.post("/api/trips", headers=carrier_headers, json=_payload())
     assert silent.json()["payment_model"] is None
@@ -347,7 +347,7 @@ async def test_payment_model_is_stored_and_silence_stays_silence(
 async def test_unknown_payment_model_is_refused(client, carrier_headers):
     """`escrow` and `prepaid` were the vocabulary until 0064 and are not it any
     more — a client still sending them is refused rather than quietly stored."""
-    for model in ("barter", "escrow", "prepaid"):
+    for model in ("barter", "escrow", "cash_on_delivery", "transfer_on_delivery"):
         r = await client.post(
             "/api/trips", headers=carrier_headers, json=_payload(payment_model=model)
         )
@@ -362,7 +362,7 @@ async def test_transfer_systems_become_a_clean_list(client, carrier_headers):
         "/api/trips",
         headers=carrier_headers,
         json=_payload(
-            payment_model="transfer_on_delivery",
+            payment_model="off_platform",
             payment_systems=["  Revolut ", "Wise", "", "Wise", "   "],
         ),
     )

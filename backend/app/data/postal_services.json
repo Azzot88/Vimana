@@ -1,0 +1,187 @@
+{
+  "_comment": [
+    "T3.11.07 — postal and courier services that can carry a parcel onward",
+    "INSIDE the destination country, after the carrier has landed in the hub",
+    "city. This is the 44.9 % of the market that writes «отправлю СДЭК» or",
+    "«will post it on USPS».",
+    "",
+    "What is deliberately NOT here: marketplace pickup (Ozon, Wildberries,",
+    "Amazon). Collecting an order by its number is a purchase-and-collect",
+    "errand, not onward shipping — it already has its own service key,",
+    "`marketplace_pickup`. Listing them here would put the same thing in two",
+    "vocabularies and let a carrier answer one question twice.",
+    "",
+    "`global` are the couriers that operate across borders everywhere and are",
+    "offered for every country. `countries` adds the national operator and the",
+    "domestic carriers people actually name. Order within a list is the order",
+    "shown: national post first where it is the common answer, otherwise the",
+    "carrier the market names most.",
+    "",
+    "Not exhaustive and not pretending to be. The form keeps free text, so a",
+    "service missing here costs a carrier nothing; adding one is a line in this",
+    "file and no migration."
+  ],
+  "global": [
+    { "code": "dhl", "name": "DHL" },
+    { "code": "fedex", "name": "FedEx" },
+    { "code": "ups", "name": "UPS" }
+  ],
+  "countries": {
+    "RU": [
+      { "code": "cdek", "name": "СДЭК" },
+      { "code": "pochta_rossii", "name": "Почта России" },
+      { "code": "boxberry", "name": "Boxberry" },
+      { "code": "yandex_delivery", "name": "Яндекс Доставка" },
+      { "code": "sber_logistics", "name": "СберЛогистика" }
+    ],
+    "US": [
+      { "code": "usps", "name": "USPS" }
+    ],
+    "AE": [
+      { "code": "emirates_post", "name": "Emirates Post" },
+      { "code": "aramex", "name": "Aramex" }
+    ],
+    "TR": [
+      { "code": "ptt", "name": "PTT" },
+      { "code": "yurtici_kargo", "name": "Yurtiçi Kargo" },
+      { "code": "aras_kargo", "name": "Aras Kargo" },
+      { "code": "mng_kargo", "name": "MNG Kargo" }
+    ],
+    "GB": [
+      { "code": "royal_mail", "name": "Royal Mail" },
+      { "code": "parcelforce", "name": "Parcelforce" },
+      { "code": "evri", "name": "Evri" },
+      { "code": "dpd_uk", "name": "DPD" }
+    ],
+    "DE": [
+      { "code": "deutsche_post", "name": "Deutsche Post" },
+      { "code": "hermes_de", "name": "Hermes" },
+      { "code": "gls_de", "name": "GLS" },
+      { "code": "dpd_de", "name": "DPD" }
+    ],
+    "IT": [
+      { "code": "poste_italiane", "name": "Poste Italiane" },
+      { "code": "brt", "name": "BRT" },
+      { "code": "sda", "name": "SDA" },
+      { "code": "gls_it", "name": "GLS" }
+    ],
+    "FR": [
+      { "code": "la_poste", "name": "La Poste" },
+      { "code": "colissimo", "name": "Colissimo" },
+      { "code": "chronopost", "name": "Chronopost" },
+      { "code": "mondial_relay", "name": "Mondial Relay" }
+    ],
+    "ES": [
+      { "code": "correos", "name": "Correos" },
+      { "code": "seur", "name": "SEUR" },
+      { "code": "mrw", "name": "MRW" }
+    ],
+    "PL": [
+      { "code": "poczta_polska", "name": "Poczta Polska" },
+      { "code": "inpost", "name": "InPost" },
+      { "code": "dpd_pl", "name": "DPD" }
+    ],
+    "NL": [
+      { "code": "postnl", "name": "PostNL" },
+      { "code": "dhl_parcel_nl", "name": "DHL Parcel" }
+    ],
+    "BE": [{ "code": "bpost", "name": "bpost" }],
+    "AT": [{ "code": "post_at", "name": "Österreichische Post" }],
+    "CH": [{ "code": "swiss_post", "name": "Swiss Post" }],
+    "CZ": [
+      { "code": "ceska_posta", "name": "Česká pošta" },
+      { "code": "zasilkovna", "name": "Zásilkovna" }
+    ],
+    "PT": [{ "code": "ctt", "name": "CTT" }],
+    "GR": [{ "code": "elta", "name": "ELTA" }],
+    "SE": [{ "code": "postnord_se", "name": "PostNord" }],
+    "NO": [{ "code": "posten_no", "name": "Posten" }],
+    "FI": [{ "code": "posti", "name": "Posti" }],
+    "DK": [{ "code": "postnord_dk", "name": "PostNord" }],
+    "IE": [{ "code": "an_post", "name": "An Post" }],
+    "HU": [{ "code": "magyar_posta", "name": "Magyar Posta" }],
+    "RO": [
+      { "code": "posta_romana", "name": "Poșta Română" },
+      { "code": "fan_courier", "name": "FAN Courier" }
+    ],
+    "BG": [
+      { "code": "bulgarian_posts", "name": "Български пощи" },
+      { "code": "econt", "name": "Econt" },
+      { "code": "speedy_bg", "name": "Speedy" }
+    ],
+    "HR": [{ "code": "hrvatska_posta", "name": "Hrvatska pošta" }],
+    "RS": [{ "code": "posta_srbije", "name": "Пошта Србије" }],
+    "UA": [
+      { "code": "nova_poshta", "name": "Нова Пошта" },
+      { "code": "ukrposhta", "name": "Укрпошта" }
+    ],
+    "BY": [
+      { "code": "belpochta", "name": "Белпочта" },
+      { "code": "evropochta", "name": "Европочта" }
+    ],
+    "KZ": [
+      { "code": "kazpost", "name": "Казпочта" },
+      { "code": "cdek_kz", "name": "СДЭК" }
+    ],
+    "UZ": [{ "code": "uzbekiston_pochtasi", "name": "Uzbekiston Pochtasi" }],
+    "KG": [{ "code": "kyrgyz_pochtasy", "name": "Кыргыз почтасы" }],
+    "AM": [{ "code": "haypost", "name": "Haypost" }],
+    "GE": [{ "code": "georgian_post", "name": "Georgian Post" }],
+    "AZ": [{ "code": "azerpocht", "name": "Azərpoçt" }],
+    "MD": [{ "code": "posta_moldovei", "name": "Poșta Moldovei" }],
+    "IL": [{ "code": "israel_post", "name": "Israel Post" }],
+    "SA": [{ "code": "saudi_post", "name": "Saudi Post (SPL)" }],
+    "QA": [{ "code": "qatar_post", "name": "Qatar Post" }],
+    "EG": [{ "code": "egypt_post", "name": "Egypt Post" }],
+    "ZA": [{ "code": "sapo", "name": "South African Post Office" }],
+    "CA": [
+      { "code": "canada_post", "name": "Canada Post" },
+      { "code": "purolator", "name": "Purolator" }
+    ],
+    "MX": [
+      { "code": "correos_mx", "name": "Correos de México" },
+      { "code": "estafeta", "name": "Estafeta" }
+    ],
+    "BR": [{ "code": "correios", "name": "Correios" }],
+    "AR": [{ "code": "correo_argentino", "name": "Correo Argentino" }],
+    "IN": [
+      { "code": "india_post", "name": "India Post" },
+      { "code": "delhivery", "name": "Delhivery" },
+      { "code": "blue_dart", "name": "Blue Dart" }
+    ],
+    "CN": [
+      { "code": "china_post", "name": "China Post" },
+      { "code": "sf_express", "name": "SF Express" }
+    ],
+    "JP": [
+      { "code": "japan_post", "name": "Japan Post" },
+      { "code": "yamato", "name": "Yamato" },
+      { "code": "sagawa", "name": "Sagawa" }
+    ],
+    "KR": [
+      { "code": "korea_post", "name": "Korea Post" },
+      { "code": "cj_logistics", "name": "CJ Logistics" }
+    ],
+    "TH": [
+      { "code": "thailand_post", "name": "Thailand Post" },
+      { "code": "kerry_express", "name": "Kerry Express" },
+      { "code": "flash_express", "name": "Flash Express" }
+    ],
+    "VN": [
+      { "code": "vietnam_post", "name": "Vietnam Post" },
+      { "code": "viettel_post", "name": "Viettel Post" }
+    ],
+    "ID": [
+      { "code": "pos_indonesia", "name": "Pos Indonesia" },
+      { "code": "jne", "name": "JNE" }
+    ],
+    "MY": [{ "code": "pos_malaysia", "name": "Pos Malaysia" }],
+    "SG": [{ "code": "singpost", "name": "SingPost" }],
+    "PH": [
+      { "code": "phlpost", "name": "PHLPost" },
+      { "code": "lbc", "name": "LBC" }
+    ],
+    "AU": [{ "code": "australia_post", "name": "Australia Post" }],
+    "NZ": [{ "code": "nz_post", "name": "NZ Post" }]
+  }
+}

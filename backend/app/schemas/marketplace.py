@@ -124,9 +124,7 @@ class TripCreate(BaseModel):
     # market and a price by 0.1 %, so the model is the field that matters — but
     # silence still has to stay distinguishable from the commonest answer.
     services: list[str] | None = Field(default=None, max_length=len(TRIP_SERVICES))
-    payment_model: (
-        Literal["on_platform", "cash_on_delivery", "transfer_on_delivery"] | None
-    ) = None
+    payment_model: Literal["on_platform", "off_platform"] | None = None
     # Free text turned into chips by the form, not a closed list: what people
     # transfer through is local and changes faster than a vocabulary we could
     # ship, and a carrier naming one we had not heard of would be told they are

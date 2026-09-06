@@ -1,0 +1,135 @@
+{
+  "_comment": [
+    "T3.11.07 — how money moves when it moves OUTSIDE the platform.",
+    "",
+    "There are two settlement models, not three: on the platform, or off it.",
+    "Cash is not a peer of «transfer» — it is one of the systems people settle",
+    "in outside the platform, alongside a bank app, a remittance service or a",
+    "stablecoin. That is why `cash` is the first entry in `global` and not a",
+    "model of its own.",
+    "",
+    "`global` is offered everywhere; `countries` adds what works in one place.",
+    "Payment is between two people who may be in different countries, so the",
+    "form offers the systems of BOTH ends of the route plus the global set.",
+    "",
+    "Seeded from our own corpus and from the corridors we serve, not imported",
+    "from anyone else's catalogue. Our 15 128-message analysis names almost",
+    "nothing here — «наличные» 96, USDT 23, everything else at or near zero —",
+    "so breadth is a bet on the market we want, not a description of the one we",
+    "measured. Free text stays in the form for exactly that reason: a list this",
+    "young must not be able to tell a carrier they are wrong."
+  ],
+  "global": [
+    { "code": "cash", "name": "Cash" },
+    { "code": "bank_transfer", "name": "Bank transfer" },
+    { "code": "wise", "name": "Wise" },
+    { "code": "revolut", "name": "Revolut" },
+    { "code": "paypal", "name": "PayPal" },
+    { "code": "western_union", "name": "Western Union" },
+    { "code": "moneygram", "name": "MoneyGram" },
+    { "code": "remitly", "name": "Remitly" },
+    { "code": "usdt", "name": "USDT" },
+    { "code": "bitcoin", "name": "Bitcoin" }
+  ],
+  "countries": {
+    "US": [
+      { "code": "zelle", "name": "Zelle" },
+      { "code": "venmo", "name": "Venmo" },
+      { "code": "cash_app", "name": "Cash App" },
+      { "code": "ach", "name": "ACH" }
+    ],
+    "RU": [
+      { "code": "sbp", "name": "СБП" },
+      { "code": "sberbank", "name": "Сбербанк" },
+      { "code": "tbank", "name": "Т-Банк" },
+      { "code": "yoomoney", "name": "ЮMoney" }
+    ],
+    "AE": [
+      { "code": "careem_pay", "name": "Careem Pay" },
+      { "code": "iban_ae", "name": "IBAN" }
+    ],
+    "TR": [
+      { "code": "papara", "name": "Papara" },
+      { "code": "iban_tr", "name": "IBAN" }
+    ],
+    "GB": [
+      { "code": "faster_payments", "name": "Faster Payments" },
+      { "code": "monzo", "name": "Monzo" }
+    ],
+    "DE": [
+      { "code": "sepa_de", "name": "SEPA" },
+      { "code": "wero_de", "name": "Wero" }
+    ],
+    "FR": [
+      { "code": "sepa_fr", "name": "SEPA" },
+      { "code": "lydia", "name": "Lydia" }
+    ],
+    "IT": [
+      { "code": "sepa_it", "name": "SEPA" },
+      { "code": "satispay", "name": "Satispay" }
+    ],
+    "ES": [
+      { "code": "sepa_es", "name": "SEPA" },
+      { "code": "bizum", "name": "Bizum" }
+    ],
+    "PL": [
+      { "code": "blik", "name": "BLIK" },
+      { "code": "sepa_pl", "name": "SEPA" }
+    ],
+    "NL": [{ "code": "ideal", "name": "iDEAL" }],
+    "BE": [{ "code": "bancontact", "name": "Bancontact" }],
+    "CH": [{ "code": "twint", "name": "TWINT" }],
+    "SE": [{ "code": "swish", "name": "Swish" }],
+    "DK": [{ "code": "mobilepay_dk", "name": "MobilePay" }],
+    "FI": [{ "code": "mobilepay_fi", "name": "MobilePay" }],
+    "NO": [{ "code": "vipps", "name": "Vipps" }],
+    "CZ": [{ "code": "sepa_cz", "name": "SEPA" }],
+    "PT": [{ "code": "mbway", "name": "MB WAY" }],
+    "RO": [{ "code": "sepa_ro", "name": "SEPA" }],
+    "UA": [
+      { "code": "privat24", "name": "Приват24" },
+      { "code": "monobank", "name": "monobank" }
+    ],
+    "BY": [{ "code": "erip", "name": "ЕРИП" }],
+    "KZ": [{ "code": "kaspi", "name": "Kaspi" }],
+    "UZ": [{ "code": "click_uz", "name": "Click" }],
+    "GE": [{ "code": "bog", "name": "Bank of Georgia" }],
+    "AM": [{ "code": "idram", "name": "Idram" }],
+    "IL": [{ "code": "bit_il", "name": "Bit" }],
+    "IN": [
+      { "code": "upi", "name": "UPI" },
+      { "code": "paytm", "name": "Paytm" }
+    ],
+    "CN": [
+      { "code": "alipay", "name": "Alipay" },
+      { "code": "wechat_pay", "name": "WeChat Pay" }
+    ],
+    "JP": [{ "code": "paypay", "name": "PayPay" }],
+    "KR": [
+      { "code": "kakaopay", "name": "KakaoPay" },
+      { "code": "toss", "name": "Toss" }
+    ],
+    "TH": [{ "code": "promptpay", "name": "PromptPay" }],
+    "VN": [{ "code": "momo", "name": "MoMo" }],
+    "ID": [
+      { "code": "gopay", "name": "GoPay" },
+      { "code": "ovo", "name": "OVO" }
+    ],
+    "PH": [
+      { "code": "gcash", "name": "GCash" },
+      { "code": "maya", "name": "Maya" }
+    ],
+    "MY": [{ "code": "duitnow", "name": "DuitNow" }],
+    "SG": [{ "code": "paynow", "name": "PayNow" }],
+    "BR": [{ "code": "pix", "name": "PIX" }],
+    "MX": [{ "code": "spei", "name": "SPEI" }],
+    "AR": [{ "code": "mercado_pago", "name": "Mercado Pago" }],
+    "CA": [{ "code": "interac", "name": "Interac e-Transfer" }],
+    "AU": [{ "code": "payid", "name": "PayID" }],
+    "NZ": [{ "code": "bank_transfer_nz", "name": "Bank transfer" }],
+    "ZA": [{ "code": "eft_za", "name": "EFT" }],
+    "EG": [{ "code": "instapay", "name": "InstaPay" }],
+    "SA": [{ "code": "stc_pay", "name": "STC Pay" }],
+    "QA": [{ "code": "fawran", "name": "Fawran" }]
+  }
+}
