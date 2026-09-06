@@ -15,9 +15,15 @@ from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 def _payload(**overrides):
     body = {
-        "origin": "DXB",
-        "destination": "JFK",
-        "depart_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "legs": [
+            {
+                "origin": "DXB",
+                "destination": "JFK",
+                "depart_at": (
+                    datetime.now(timezone.utc) + timedelta(days=7)
+                ).isoformat(),
+            }
+        ],
         "capacity": 5.0,
         "allowed_categories": ["document"],
     }

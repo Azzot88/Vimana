@@ -1,6 +1,33 @@
 import api from './client'
 import type { Page } from './pagination'
 
+/** T3.11.15 — one flight of a trip. `order` is assigned on write; the client
+ *  sends the chain in the order it means. */
+export interface TripLeg {
+  order: number
+  origin: string
+  destination: string
+  depart_at: string
+  /** Who is actually on the plane. 16.9 % of real posts claim "in person" and
+   *  some of those same posts add "(a friend is flying)" — so it is declared,
+   *  not inferred, and `proxy` is a normal answer rather than a confession. */
+  flown_by: 'self' | 'proxy'
+}
+
+export type TripLegInput = Omit<TripLeg, 'order'>
+
+/** T3.11.15 — how cargo is taken at one end of the route. Separate at each end:
+ *  carriers routinely accept at an address in one country and meet in person in
+ *  the other. `points` is free text — districts and satellite cities, which an
+ *  airport picker cannot express. */
+export interface HandoverSide {
+  methods: string[]
+  points: string[]
+}
+
+export type SpaceKind = 'cabin' | 'checked_partial' | 'checked_full' | 'unspecified'
+export type SizeHint = 'small' | 'medium' | 'large'
+
 export interface Trip {
   id: string
   carrier_id: string
@@ -10,9 +37,12 @@ export interface Trip {
   /** T3.17 — the carrier declared their key lost: the account can be signed
    *  into but can no longer act. Shown before a deal is offered, not after. */
   carrier_key_lost?: boolean
+  /** T3.11.15 — the denormalised head and tail of `legs`. Derived on write, so
+   *  they never disagree with the chain. Search and the board stand on them. */
   origin: string
   destination: string
   depart_at: string
+  legs: TripLeg[]
   capacity: number
   allowed_categories: string[]
   /** T3.35 — the carrier's published baseline. Null means "price on request",
@@ -20,8 +50,14 @@ export interface Trip {
   price_per_kg?: number | null
   min_deal_price?: number | null
   currency?: string
-  allowed_handover_methods?: string[] | null
   max_declared_value?: number | null
+  /** T3.11.15 — the customs allowance is a balance the carrier spends, not just
+   *  a ceiling: "the luxury limit is used up" while documents still fit. */
+  declared_value_status?: 'open' | 'exhausted'
+  space_kind?: SpaceKind
+  size_hint?: SizeHint | null
+  handover_origin?: HandoverSide | null
+  handover_destination?: HandoverSide | null
   /** T_UX.15 — the rules copied into this trip when it was published. */
   carriage_rules?: string | null
   status: string
@@ -31,16 +67,21 @@ export interface Trip {
 }
 
 export interface CreateTripPayload {
-  origin: string
-  destination: string
-  depart_at: string
+  /** T3.11.15 — the route goes on the wire as a chain and only as a chain. A
+   *  single-leg array is the ordinary case; the flat origin/destination/date
+   *  trio no longer exists as an input. */
+  legs: TripLegInput[]
   capacity: number
   allowed_categories: string[]
   price_per_kg?: number | null
   min_deal_price?: number | null
   currency?: string
-  allowed_handover_methods?: string[] | null
   max_declared_value?: number | null
+  declared_value_status?: 'open' | 'exhausted'
+  space_kind?: SpaceKind
+  size_hint?: SizeHint | null
+  handover_origin?: HandoverSide | null
+  handover_destination?: HandoverSide | null
   /** Sent explicitly: an emptied field means "this trip has no rules", not
    *  "fall back to my profile template". */
   carriage_rules?: string | null

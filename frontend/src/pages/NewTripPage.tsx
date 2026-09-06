@@ -146,9 +146,17 @@ export default function NewTripPage() {
     setLoading(true)
     try {
       await createTrip({
-        origin: draft.origin,
-        destination: draft.destination,
-        depart_at: draft.departAt,
+        // T3.11.15 — the route travels as a chain. This form still collects one
+        // leg; the multi-leg input is T3.11.07, and until then a one-element
+        // array says exactly what the three fields used to.
+        legs: [
+          {
+            origin: draft.origin,
+            destination: draft.destination,
+            depart_at: draft.departAt,
+            flown_by: 'self',
+          },
+        ],
         capacity: cap,
         allowed_categories: draft.categories,
         // Empty stays empty: a trip without a stated price is "price on

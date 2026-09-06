@@ -13,9 +13,10 @@ from app.core.nostr_publish import (
     is_publish_enabled,
 )
 from app.core.pagination import Page, clamp_limit, paginate_desc
-from app.models.marketplace import Trip, TripStatus
+from app.core.trip_legs import LegChainError, head_and_tail, normalise_legs
+from app.models.marketplace import Trip, TripLeg, TripStatus
 from app.models.user import User
-from app.schemas.marketplace import TripCreate, TripOut
+from app.schemas.marketplace import TripCreate, TripLegOut, TripOut
 
 router = APIRouter()
 
@@ -30,16 +31,24 @@ async def create_trip(
         raise HTTPException(status_code=403, detail="Carrier capability required")
     require_live_identity(current_user)  # T3.12 — a lost key cannot sign a trip
 
-    # Normalised on write (T_PERF.1). The filter compares codes exactly, so the
-    # column has to hold one canonical form — otherwise a trip stored as `dxb`
-    # is invisible to every search for `DXB`, which is what the API accepts.
-    # `AirportSelect` already sends upper-case; this covers a direct POST, and
-    # it is the write side that should decide the shape, not each reader.
+    # T3.11.15 — the chain is normalised before anything is built from it:
+    # codes upper-cased (T_PERF.1 — the filter compares exactly, so a leg stored
+    # as `dxb` is invisible to every search for `DXB`), order assigned densely,
+    # legs checked not to travel backwards in time.
+    try:
+        legs = normalise_legs([leg.model_dump() for leg in body.legs])
+    except LegChainError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    head_origin, tail_destination, first_departure = head_and_tail(legs)
+
     trip = Trip(
         carrier_id=current_user.id,
-        origin=body.origin.strip().upper(),
-        destination=body.destination.strip().upper(),
-        depart_at=body.depart_at,
+        # Denormalised head of the chain. Search, the board, the Nostr event and
+        # the T3.11.06 countdown all stand on these three; they are derived, not
+        # submitted, so they cannot disagree with the legs.
+        origin=head_origin,
+        destination=tail_destination,
+        depart_at=first_departure,
         capacity=body.capacity,
         allowed_categories=body.allowed_categories,
         # T3.35 — the carrier's baseline terms travel with the listing, so a
@@ -47,8 +56,19 @@ async def create_trip(
         price_per_kg=body.price_per_kg,
         min_deal_price=body.min_deal_price,
         currency=body.currency,
-        allowed_handover_methods=body.allowed_handover_methods,
         max_declared_value=body.max_declared_value,
+        # T3.11.15 — the two capacities and the two ends of the handover.
+        declared_value_status=body.declared_value_status,
+        space_kind=body.space_kind,
+        size_hint=body.size_hint,
+        handover_origin=(
+            body.handover_origin.model_dump() if body.handover_origin else None
+        ),
+        handover_destination=(
+            body.handover_destination.model_dump()
+            if body.handover_destination
+            else None
+        ),
         # T_UX.15 — the carrier's standing rules are **copied** into the trip,
         # not referenced. Edited later they must not rewrite what a sender read
         # when they chose this trip. `None` means "use my template"; an explicit
@@ -60,8 +80,17 @@ async def create_trip(
         ),
         status=TripStatus.open,
     )
+    # Cascade `all, delete-orphan`: the legs are written by the same commit and
+    # a leg outliving its trip would be a record of nothing.
+    trip.legs = [TripLeg(**leg) for leg in legs]
     db.add(trip)
     await db.commit()
+    # Full refresh rather than `refresh(trip, ["legs"])`. Naming attributes
+    # would refresh only those and leave `created_at` — a server-side default
+    # never loaded on this instance — unloaded, which in an async session
+    # raises at serialisation instead of lazy-loading. The `legs` collection
+    # comes along regardless: refresh honours the `selectin` loader on the
+    # mapper.
     await db.refresh(trip)
 
     # T3.5 — fire-and-forget publish. Task itself checks the flag; enqueuing
@@ -214,8 +243,16 @@ async def list_trips(
                     price_per_kg=t.price_per_kg,
                     min_deal_price=t.min_deal_price,
                     currency=t.currency,
-                    allowed_handover_methods=t.allowed_handover_methods,
                     max_declared_value=t.max_declared_value,
+                    # T3.11.15 — a trip whose chain is invisible in the listing
+                    # is a trip whose second flight nobody can find, and the
+                    # second flight is present in 36.6 % of real posts.
+                    declared_value_status=t.declared_value_status,
+                    space_kind=t.space_kind,
+                    size_hint=t.size_hint,
+                    handover_origin=t.handover_origin,
+                    handover_destination=t.handover_destination,
+                    legs=[TripLegOut.model_validate(leg) for leg in t.legs],
                     carriage_rules=t.carriage_rules,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,

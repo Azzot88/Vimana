@@ -1201,11 +1201,92 @@ async def _ensure_trip_terms_columns(engine) -> None:
             "ADD COLUMN IF NOT EXISTS price_per_kg DOUBLE PRECISION",
             "ADD COLUMN IF NOT EXISTS min_deal_price DOUBLE PRECISION",
             "ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'USD'",
-            "ADD COLUMN IF NOT EXISTS allowed_handover_methods JSON",
+            # `allowed_handover_methods` was here until T3.11.15 replaced it
+            # with the two ends of the handover. These helpers bring an old test
+            # database to the *current* schema, not through the history, so a
+            # column that no longer exists is not re-added — `_ensure_trip_chain`
+            # carries its content over and drops it.
             "ADD COLUMN IF NOT EXISTS max_declared_value DOUBLE PRECISION",
             "ADD COLUMN IF NOT EXISTS bond_tier VARCHAR(16)",
         ):
             await conn.execute(text(f"ALTER TABLE trips {ddl}"))
+
+
+async def _ensure_trip_chain(engine) -> None:
+    """T3.11.15: the leg chain and the second capacity on an existing `trips`
+    table. Mirrors migration 0059.
+
+    The backfill is here too, and for the same reason it is in the migration: a
+    trip row that predates the chain still has a route, and an empty `legs` in
+    the response would misreport it as having none.
+    """
+    async with engine.begin() as conn:
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS declared_value_status VARCHAR(10) "
+            "NOT NULL DEFAULT 'open'",
+            "ADD COLUMN IF NOT EXISTS space_kind VARCHAR(16) "
+            "NOT NULL DEFAULT 'unspecified'",
+            "ADD COLUMN IF NOT EXISTS size_hint VARCHAR(8)",
+            "ADD COLUMN IF NOT EXISTS handover_origin JSON",
+            "ADD COLUMN IF NOT EXISTS handover_destination JSON",
+        ):
+            await conn.execute(text(f"ALTER TABLE trips {ddl}"))
+        # 0059 replaces the single list with the two ends. Guarded by a lookup
+        # rather than a bare UPDATE: on a database created from the current
+        # models the column is simply absent, and referring to it would fail.
+        has_old = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns WHERE "
+                    "table_name='trips' AND column_name='allowed_handover_methods'"
+                )
+            )
+        ).fetchone()
+        if has_old:
+            await conn.execute(
+                text(
+                    "UPDATE trips SET handover_origin = json_build_object("
+                    "'methods', allowed_handover_methods, "
+                    "'points', json_build_array()) "
+                    "WHERE allowed_handover_methods IS NOT NULL"
+                )
+            )
+            await conn.execute(
+                text("ALTER TABLE trips DROP COLUMN allowed_handover_methods")
+            )
+        await conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS trip_legs ("
+                "id UUID PRIMARY KEY, "
+                "trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE, "
+                "leg_order INTEGER NOT NULL, "
+                "origin VARCHAR(100) NOT NULL, "
+                "destination VARCHAR(100) NOT NULL, "
+                "depart_at TIMESTAMPTZ NOT NULL, "
+                "flown_by VARCHAR(8) NOT NULL DEFAULT 'self', "
+                "CONSTRAINT uq_trip_legs_order UNIQUE (trip_id, leg_order), "
+                "CONSTRAINT ck_trip_legs_order_nonneg CHECK (leg_order >= 0), "
+                "CONSTRAINT ck_trip_legs_distinct CHECK (origin <> destination), "
+                "CONSTRAINT ck_trip_legs_flown_by "
+                "CHECK (flown_by IN ('self','proxy')))"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_trip_legs_trip_order "
+                "ON trip_legs (trip_id, leg_order)"
+            )
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO trip_legs (id, trip_id, leg_order, origin, "
+                "destination, depart_at, flown_by) "
+                "SELECT gen_random_uuid(), t.id, 0, t.origin, t.destination, "
+                "t.depart_at, 'self' FROM trips t "
+                "WHERE t.origin <> t.destination AND NOT EXISTS "
+                "(SELECT 1 FROM trip_legs l WHERE l.trip_id = t.id)"
+            )
+        )
 
 
 async def _ensure_platform_parameters(engine) -> None:
@@ -1496,6 +1577,7 @@ async def test_engine():
     await _ensure_vault_card_columns(engine)
     await _ensure_platform_parameters(engine)
     await _ensure_trip_terms_columns(engine)
+    await _ensure_trip_chain(engine)
     await _ensure_display_prefs_columns(engine)
     await _ensure_carrier_notes_columns(engine)
     await _ensure_user_roles_column(engine)

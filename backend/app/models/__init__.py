@@ -1,7 +1,7 @@
 from app.models.address import ReceivingAddress
 from app.models.user import RecoveryCode, User
 from app.models.social import InviteLink, Connection
-from app.models.marketplace import Trip, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
+from app.models.marketplace import Trip, TripLeg, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant, DealParticipant, DealParticipantRole, CardState, CardAckRole
 from app.models.metrics import PublishMetric
 from app.models.notices import (
@@ -19,7 +19,7 @@ from app.models.webauthn import WebAuthnCredential
 __all__ = [
     "User", "RecoveryCode", "ReceivingAddress",
     "InviteLink", "Connection",
-    "Trip", "Order", "TripStatus", "OrderStatus", "Category", "DEFAULT_CATEGORIES",
+    "Trip", "TripLeg", "Order", "TripStatus", "OrderStatus", "Category", "DEFAULT_CATEGORIES",
     "TripInquiry", "InquiryMessage",
     "Deal", "DealEvent", "DealVaultMessage", "Attachment", "Dispute",
     "DealStatus", "DealEventType", "AttachmentKind", "DisputeStatus",

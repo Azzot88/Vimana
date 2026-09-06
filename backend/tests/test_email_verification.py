@@ -322,9 +322,15 @@ async def test_request_code_without_email(client, session_maker):
 
 async def _trip_body() -> dict:
     return {
-        "origin": "Tbilisi",
-        "destination": "Yerevan",
-        "depart_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "legs": [
+            {
+                "origin": "Tbilisi",
+                "destination": "Yerevan",
+                "depart_at": (
+                    datetime.now(timezone.utc) + timedelta(days=7)
+                ).isoformat(),
+            }
+        ],
         "capacity": 5.0,
         "allowed_categories": ["documents"],
     }

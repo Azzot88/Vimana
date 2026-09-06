@@ -12,9 +12,17 @@ from datetime import datetime, timedelta, timezone
 
 def _payload(**overrides):
     body = {
-        "origin": "DXB",
-        "destination": "JFK",
-        "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+        # T3.11.15 — the route is a chain on the wire. A one-leg chain is the
+        # ordinary case and stays as short to write as the old flat trio.
+        "legs": [
+            {
+                "origin": "DXB",
+                "destination": "JFK",
+                "depart_at": (
+                    datetime.now(timezone.utc) + timedelta(days=6)
+                ).isoformat(),
+            }
+        ],
         "capacity": 6.0,
         "allowed_categories": ["document"],
     }
@@ -40,7 +48,9 @@ async def test_baseline_terms_are_stored_and_returned(client, carrier_headers):
             min_deal_price=40,
             currency="eur",
             max_declared_value=5000,
-            allowed_handover_methods=["in_person", "courier"],
+            # T3.11.15 — the single `allowed_handover_methods` list is gone; the
+            # trip states each end of the handover separately.
+            handover_origin={"methods": ["in_person", "courier"], "points": []},
         ),
     )
     assert r.status_code == 201, r.text
@@ -50,7 +60,7 @@ async def test_baseline_terms_are_stored_and_returned(client, carrier_headers):
     # Lower-cased on the way in — the currency is a code, not free text.
     assert body["currency"] == "EUR"
     assert body["max_declared_value"] == 5000
-    assert body["allowed_handover_methods"] == ["in_person", "courier"]
+    assert body["handover_origin"]["methods"] == ["in_person", "courier"]
 
 
 async def test_negative_price_rejected(client, carrier_headers):
@@ -74,7 +84,7 @@ async def test_unknown_handover_method_rejected(client, carrier_headers):
     r = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json=_payload(allowed_handover_methods=["teleport"]),
+        json=_payload(handover_origin={"methods": ["teleport"], "points": []}),
     )
     assert r.status_code == 422
 

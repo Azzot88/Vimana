@@ -1,7 +1,16 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+)
+
+from app.core.trip_legs import MAX_LEGS
 
 
 # Mirrors `schemas.cards.HandoverMethod`. Kept as a set here rather than
@@ -11,10 +20,67 @@ HANDOVER_METHODS = {
 }
 
 
-class TripCreate(BaseModel):
+class TripLegIn(BaseModel):
+    """T3.11.15 — one flight of the chain. `leg_order` is assigned on write, not
+    submitted: see `core.trip_legs.normalise_legs`."""
+
+    origin: str = Field(min_length=1, max_length=100)
+    destination: str = Field(min_length=1, max_length=100)
+    depart_at: datetime
+    # Declared, never inferred. "Flying in person" is the most valuable claim on
+    # this market and the one nothing checks today.
+    flown_by: Literal["self", "proxy"] = "self"
+
+
+class TripLegOut(BaseModel):
+    # The column is `leg_order` (`order` is reserved in SQL) but the wire word is
+    # `order`: the client has no reason to inherit a database workaround.
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    order: int = Field(validation_alias=AliasChoices("leg_order", "order"))
     origin: str
     destination: str
     depart_at: datetime
+    flown_by: str
+
+
+class HandoverSide(BaseModel):
+    """T3.11.15 — how the carrier takes cargo at one end of the route.
+
+    `points` is free text on purpose: the market names districts, suburbs and
+    satellite cities ("Tustin, Irvine or LAX", "Fili, Moscow"), and a picker
+    over airports cannot say any of that. Bounded rather than validated — a
+    taxonomy of neighbourhoods is not something this task can be right about.
+    """
+
+    methods: list[str] = Field(default_factory=list, max_length=len(HANDOVER_METHODS))
+    points: list[str] = Field(default_factory=list, max_length=6)
+
+    @field_validator("methods")
+    @classmethod
+    def _known_methods(cls, v: list[str]) -> list[str]:
+        unknown = set(v) - HANDOVER_METHODS
+        if unknown:
+            raise ValueError(f"unknown handover methods: {sorted(unknown)}")
+        return v
+
+    @field_validator("points")
+    @classmethod
+    def _trim_points(cls, v: list[str]) -> list[str]:
+        cleaned = [p.strip() for p in v if p and p.strip()]
+        for point in cleaned:
+            if len(point) > 120:
+                raise ValueError("a handover point is at most 120 characters")
+        return cleaned
+
+
+class TripCreate(BaseModel):
+    # T3.11.15 — the route arrives as a chain and only as a chain. The flat
+    # `origin`/`destination`/`depart_at` trio is gone from the wire: keeping it
+    # alongside `legs` would mean two ways to say the same thing and a rule
+    # about which one wins. The columns of those names survive on the model as
+    # the denormalised head of the chain — see `core.trip_legs.head_and_tail`.
+    legs: list[TripLegIn] = Field(min_length=1, max_length=MAX_LEGS)
     capacity: float
     allowed_categories: list[str] | None = None
     # T3.35 — the carrier's baseline terms. Optional on purpose: a trip without
@@ -23,26 +89,28 @@ class TripCreate(BaseModel):
     price_per_kg: float | None = Field(default=None, gt=0, le=10_000)
     min_deal_price: float | None = Field(default=None, ge=0, le=1_000_000)
     currency: str = Field(default="USD", min_length=3, max_length=3)
-    allowed_handover_methods: list[str] | None = None
     max_declared_value: float | None = Field(default=None, ge=0)
     # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
     carriage_rules: str | None = Field(default=None, max_length=4000)
+    # T3.11.15 — the second capacity, and its state. A ceiling alone cannot say
+    # "the luxury allowance is spent but documents still fit", which is how
+    # carriers actually report it.
+    declared_value_status: Literal["open", "exhausted"] = "open"
+    space_kind: Literal[
+        "cabin", "checked_partial", "checked_full", "unspecified"
+    ] = "unspecified"
+    size_hint: Literal["small", "medium", "large"] | None = None
+    # T3.11.15 — asymmetric by design. These replace the single
+    # `allowed_handover_methods` list: once both ends are stated separately, one
+    # combined list is a second way to say the same thing.
+    handover_origin: HandoverSide | None = None
+    handover_destination: HandoverSide | None = None
 
     @field_validator("currency")
     @classmethod
     def _upper(cls, v: str) -> str:
         return v.upper()
-
-    @field_validator("allowed_handover_methods")
-    @classmethod
-    def _known_methods(cls, v: list[str] | None) -> list[str] | None:
-        if v is None:
-            return None
-        unknown = set(v) - HANDOVER_METHODS
-        if unknown:
-            raise ValueError(f"unknown handover methods: {sorted(unknown)}")
-        return v
 
 
 class TripOut(BaseModel):
@@ -66,8 +134,14 @@ class TripOut(BaseModel):
     price_per_kg: float | None = None
     min_deal_price: float | None = None
     currency: str = "USD"
-    allowed_handover_methods: list[str] | None = None
     max_declared_value: float | None = None
+    # T3.11.15
+    declared_value_status: str = "open"
+    space_kind: str = "unspecified"
+    size_hint: str | None = None
+    handover_origin: dict | None = None
+    handover_destination: dict | None = None
+    legs: list[TripLegOut] = Field(default_factory=list)
     carriage_rules: str | None = None
     status: str
     created_at: datetime
