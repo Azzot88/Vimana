@@ -596,11 +596,15 @@ async def test_lost_key_cannot_publish_a_trip(client):
         "/api/trips",
         headers=headers,
         json={
-            "origin": "Tbilisi",
-            "destination": "Yerevan",
-            "depart_at": (
-                datetime.now(timezone.utc) + timedelta(days=7)
-            ).isoformat(),
+            "legs": [
+                {
+                    "origin": "Tbilisi",
+                    "destination": "Yerevan",
+                    "depart_at": (
+                        datetime.now(timezone.utc) + timedelta(days=7)
+                    ).isoformat(),
+                }
+            ],
             "capacity": 3.0,
             "allowed_categories": ["documents"],
         },

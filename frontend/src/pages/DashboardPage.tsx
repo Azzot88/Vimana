@@ -191,9 +191,16 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
-                        <span>
-                          {t('trips.capacity')}: {prefs.weight(trip.capacity)}
-                        </span>
+                        {/* T3.11.07 — see TripsPage: a missing weight is not
+                            rendered as a number. */}
+                        {trip.capacity !== null && (
+                          <span>
+                            {t('trips.capacity')}: {prefs.weight(trip.capacity)}
+                          </span>
+                        )}
+                        {trip.size_hint && (
+                          <span>{t(`trips.sizeHint.${trip.size_hint}`)}</span>
+                        )}
                         <span>
                           {t('trips.pricePerKg')}:{' '}
                           {trip.price_per_kg

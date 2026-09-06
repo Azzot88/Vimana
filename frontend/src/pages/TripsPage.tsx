@@ -184,7 +184,15 @@ export default function TripsPage() {
                       ))}
                     </span>
                     <MonoText className="text-xs">{prefs.dateTime(trip.depart_at)}</MonoText>
-                    <span>{t('trips.capacity')}: <MonoText className="text-xs">{prefs.weight(trip.capacity)}</MonoText></span>
+                    {/* T3.11.07 — a trip with no stated weight says nothing
+                        about weight, and the qualitative size is what most
+                        carriers actually answer. Neither is invented. */}
+                    {trip.capacity !== null && (
+                      <span>{t('trips.capacity')}: <MonoText className="text-xs">{prefs.weight(trip.capacity)}</MonoText></span>
+                    )}
+                    {trip.size_hint && (
+                      <span>{t(`trips.sizeHint.${trip.size_hint}`)}</span>
+                    )}
                     {/* T3.35 — the published baseline, so two trips on one
                         corridor are comparable before anyone opens a chat.
                         Absent price is stated as such rather than hidden. */}

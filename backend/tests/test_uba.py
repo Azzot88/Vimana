@@ -172,9 +172,13 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "UBX",
-            "destination": "UBY",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "UBX",
+                    "destination": "UBY",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

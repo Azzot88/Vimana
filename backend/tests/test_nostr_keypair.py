@@ -194,9 +194,13 @@ async def test_message_from_new_user_gets_server_signed(client):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "SIG",
-            "destination": "TST",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": "SIG",
+                    "destination": "TST",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -256,9 +260,13 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "SCC",
-            "destination": "SLF",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+            "legs": [
+                {
+                    "origin": "SCC",
+                    "destination": "SLF",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

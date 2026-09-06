@@ -53,9 +53,13 @@ async def test_confirm_deal_creates_dealt_with_edges(
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "TGH",
-            "destination": "TG2",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+            "legs": [
+                {
+                    "origin": "TGH",
+                    "destination": "TG2",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+                }
+            ],
             "capacity": 1.0,
             "allowed_categories": ["document"],
         },

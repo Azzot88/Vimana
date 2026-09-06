@@ -81,7 +81,11 @@ class TripCreate(BaseModel):
     # about which one wins. The columns of those names survive on the model as
     # the denormalised head of the chain — see `core.trip_legs.head_and_tail`.
     legs: list[TripLegIn] = Field(min_length=1, max_length=MAX_LEGS)
-    capacity: float
+    # T3.11.07 — optional since the express path. The route is the only thing a
+    # carrier must state to be findable; everything else is a detail they can
+    # add later, and 31 % of this market publishes inside two days of the
+    # flight. Weight in kilograms is stated in 2.4 % of real posts.
+    capacity: float | None = Field(default=None, gt=0, le=100)
     allowed_categories: list[str] | None = None
     # T3.35 — the carrier's baseline terms. Optional on purpose: a trip without
     # a stated price is a legitimate listing ("price on request"), and forcing a
@@ -127,7 +131,7 @@ class TripOut(BaseModel):
     origin: str
     destination: str
     depart_at: datetime
-    capacity: float
+    capacity: float | None = None
     allowed_categories: list[str] | None
     # T3.35 — shown on the trip card so two trips on one corridor are
     # comparable before anyone opens a chat.

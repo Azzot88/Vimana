@@ -135,6 +135,47 @@ async def test_more_than_ten_legs_is_refused(client, carrier_headers):
     assert r.status_code == 422
 
 
+# ── the express path ──────────────────────────────────────────────────────
+
+
+async def test_route_alone_publishes_a_trip(client, carrier_headers):
+    """T3.11.07 — the whole express path in one assertion.
+
+    The median carrier on this market publishes five days before departure,
+    31 % inside two days and 11.8 % on the day of the flight. Against that
+    horizon every required field is a toll, so the route is the only thing a
+    carrier must state to become findable.
+    """
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json={"legs": [_leg("DXB", "JFK", 0)]}
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["capacity"] is None
+    assert body["status"] == "open"
+
+
+async def test_unstated_weight_stays_unstated(client, carrier_headers):
+    """Null is a different answer from a number, and the listing keeps them
+    apart rather than printing a zero nobody typed."""
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json={"legs": [_leg("SVO", "IST", 3)]}
+    )
+    trip_id = created.json()["id"]
+    listing = await client.get("/api/trips", headers=carrier_headers)
+    mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
+    assert mine["capacity"] is None
+
+
+async def test_stated_weight_is_still_validated(client, carrier_headers):
+    """Optional is not unchecked: a negative weight is a wrong claim rather
+    than a missing one."""
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(capacity=-3)
+    )
+    assert r.status_code == 422
+
+
 # ── who is flying ─────────────────────────────────────────────────────────
 
 

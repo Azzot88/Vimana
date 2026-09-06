@@ -32,9 +32,13 @@ async def _make_trip(client, hdr) -> str:
         "/api/trips",
         headers=hdr,
         json={
-            "origin": "P2X",
-            "destination": "P2Y",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "P2X",
+                    "destination": "P2Y",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -81,6 +85,9 @@ async def test_publish_signed_flow_end_to_end(client, session_maker):
         ]
         content = json.dumps(
             {
+                # Not a request body: this mirrors the *event content* that
+                # `core.nostr_publish` builds, which is still the denormalised
+                # trio. Publishing the chain is a separate item of T3.11.07.
                 "origin": "P2X",
                 "destination": "P2Y",
                 "depart_at": trip.depart_at.isoformat(),

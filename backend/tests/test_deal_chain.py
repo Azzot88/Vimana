@@ -537,9 +537,13 @@ async def test_deal_lifecycle_produces_a_valid_chain(
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "MTC",
-            "destination": "DXB",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": "MTC",
+                    "destination": "DXB",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

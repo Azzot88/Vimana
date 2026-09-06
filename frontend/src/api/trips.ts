@@ -43,7 +43,10 @@ export interface Trip {
   destination: string
   depart_at: string
   legs: TripLeg[]
-  capacity: number
+  /** T3.11.07 — null means the carrier did not state a weight, which is a real
+   *  answer: kilograms appear in 2.4 % of real listings and `size_hint` in far
+   *  more. Every card has to render the missing case. */
+  capacity: number | null
   allowed_categories: string[]
   /** T3.35 — the carrier's published baseline. Null means "price on request",
    *  which is a legitimate listing rather than a missing field. */
@@ -71,7 +74,8 @@ export interface CreateTripPayload {
    *  single-leg array is the ordinary case; the flat origin/destination/date
    *  trio no longer exists as an input. */
   legs: TripLegInput[]
-  capacity: number
+  /** Omitted publishes the trip without a stated weight — the express path. */
+  capacity?: number | null
   allowed_categories: string[]
   price_per_kg?: number | null
   min_deal_price?: number | null

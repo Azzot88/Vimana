@@ -27,9 +27,13 @@ async def _matched_deal(client):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "AAA",
-            "destination": "BBB",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": "AAA",
+                    "destination": "BBB",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -178,9 +182,13 @@ async def test_custodial_writes_nip01_event_id(client):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "NIP",
-            "destination": "ONE",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": "NIP",
+                    "destination": "ONE",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -253,9 +261,13 @@ async def test_custodial_deal_event_signed_new_format(client, session_maker):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "DE1",
-            "destination": "DE2",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": "DE1",
+                    "destination": "DE2",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

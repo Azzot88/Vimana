@@ -255,8 +255,16 @@ export default function NewTripPage() {
         return t('trips.newTripValidation.legOutOfOrder', at) as string
       }
     }
-    const cap = parseFloat(draft.capacity)
-    if (!cap || cap < 0.5) return t('trips.newTripValidation.capacity') as string
+    // T3.11.07 — weight is no longer required: the route is the whole of what a
+    // carrier must state to be findable, and 31 % of this market publishes
+    // inside two days of the flight. It is still checked when given, because a
+    // typo there is a wrong claim rather than a missing one.
+    if (draft.capacity) {
+      const cap = parseFloat(draft.capacity)
+      if (Number.isNaN(cap) || cap < 0.5) {
+        return t('trips.newTripValidation.capacity') as string
+      }
+    }
     return null
   }
 
@@ -271,8 +279,12 @@ export default function NewTripPage() {
       setError(validationError)
       return
     }
-    const cap = parseFloat(draft.capacity)
-    if (cap > 15 && !window.confirm(t('trips.newTripValidation.capacityWarning') as string)) {
+    const cap = draft.capacity ? parseFloat(draft.capacity) : null
+    if (
+      cap !== null &&
+      cap > 15 &&
+      !window.confirm(t('trips.newTripValidation.capacityWarning') as string)
+    ) {
       return
     }
     // T_UX.2 pt.3 — pre-flight warning for complex/restricted corridors.
@@ -633,7 +645,10 @@ export default function NewTripPage() {
             >
               {t('trips.newTripCell.capacity')}
             </label>
-            {/* §9b */}
+            {/* §9b — and it says outright that the whole cell is skippable.
+                A field that looks required is required in practice: the carrier
+                who is flying tonight fills it with a guess rather than leave it
+                blank, and a guessed weight is worse than none. */}
             <p className="text-[11px] font-body text-navy/40 -mt-1">
               {t('trips.spaceHint')}
             </p>
@@ -667,7 +682,6 @@ export default function NewTripPage() {
                 max="20"
                 value={draft.capacity}
                 onChange={(e) => patch({ capacity: e.target.value })}
-                required
                 placeholder="5"
                 className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
               />

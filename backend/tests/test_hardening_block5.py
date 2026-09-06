@@ -8,9 +8,13 @@ async def _publish_trip(client, carrier_headers, tag: str) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": f"P-{tag}",
-            "destination": "PAG",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": f"P-{tag}",
+                    "destination": "PAG",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 1.0,
             "allowed_categories": ["document"],
         },

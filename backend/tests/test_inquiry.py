@@ -11,9 +11,13 @@ async def _make_open_trip(client, carrier_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "INQ",
-            "destination": "TST",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+            "legs": [
+                {
+                    "origin": "INQ",
+                    "destination": "TST",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+                }
+            ],
             "capacity": 3.0,
             "allowed_categories": ["document"],
         },

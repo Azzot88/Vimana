@@ -604,7 +604,7 @@
       "proxy": "Leci ktoś inny",
       "proxyChip": "leci ktoś inny"
     },
-    "spaceHint": "Miejsce w Twoim bagażu. Widoczne na karcie, działa na nim filtr wagi.",
+    "spaceHint": "Miejsce w Twoim bagażu — opcjonalne. Widoczne na karcie; podana waga działa też w filtrze.",
     "spaceKind": {
       "cabin": "Bagaż podręczny",
       "checked_partial": "Część bagażu",

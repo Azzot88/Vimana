@@ -119,9 +119,13 @@ async def _e2e_deal(client, session_maker):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "TE2",
-            "destination": "END",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+            "legs": [
+                {
+                    "origin": "TE2",
+                    "destination": "END",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

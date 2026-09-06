@@ -603,7 +603,7 @@
       "proxy": "Otra persona",
       "proxyChip": "vuela otra persona"
     },
-    "spaceHint": "El sitio en tu equipaje. Se ve en la ficha y el filtro de peso se apoya en él.",
+    "spaceHint": "El sitio en tu equipaje — opcional. Se ve en la ficha; si indicas el peso, el filtro también lo usa.",
     "spaceKind": {
       "cabin": "Equipaje de mano",
       "checked_partial": "Parte del equipaje",

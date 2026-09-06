@@ -34,9 +34,13 @@ async def _fresh_deal(client, carrier_headers, sender_headers, origin="VLT", des
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": origin,
-            "destination": destination,
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "legs": [
+                {
+                    "origin": origin,
+                    "destination": destination,
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

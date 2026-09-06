@@ -603,7 +603,7 @@
       "proxy": "Quelqu'un d'autre",
       "proxyChip": "quelqu'un d'autre voyage"
     },
-    "spaceHint": "La place dans votre bagage. Affichée sur la fiche ; le filtre de poids s'appuie dessus.",
+    "spaceHint": "La place dans votre bagage — facultatif. Affichée sur la fiche ; un poids indiqué alimente aussi le filtre.",
     "spaceKind": {
       "cabin": "Bagage à main",
       "checked_partial": "Une partie du bagage",

@@ -97,9 +97,13 @@ async def test_build_event_produces_valid_nip01_signature(client, session_maker)
         "/api/trips",
         headers=hdr,
         json={
-            "origin": "NEO",
-            "destination": "SFO",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+            "legs": [
+                {
+                    "origin": "NEO",
+                    "destination": "SFO",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+                }
+            ],
             "capacity": 3.0,
             "allowed_categories": ["document"],
         },
@@ -145,9 +149,13 @@ async def test_nostr_event_endpoint_503_when_disabled(client):
         "/api/trips",
         headers=hdr,
         json={
-            "origin": "DIS",
-            "destination": "OFF",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "DIS",
+                    "destination": "OFF",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -165,9 +173,13 @@ async def test_nostr_event_endpoint_returns_event_when_enabled(client):
             "/api/trips",
             headers=hdr,
             json={
-                "origin": "ONO",
-                "destination": "STR",
-                "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                "legs": [
+                    {
+                        "origin": "ONO",
+                        "destination": "STR",
+                        "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                    }
+                ],
                 "capacity": 2.0,
                 "allowed_categories": ["document"],
             },
@@ -202,9 +214,13 @@ async def test_publish_task_skips_a_carrier_who_owns_their_key(
         "/api/trips",
         headers=hdr,
         json={
-            "origin": "SLF",
-            "destination": "CST",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "SLF",
+                    "destination": "CST",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -231,9 +247,13 @@ async def test_trip_out_exposes_nostr_fields(client):
         "/api/trips",
         headers=hdr,
         json={
-            "origin": "OUT",
-            "destination": "SCH",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "OUT",
+                    "destination": "SCH",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

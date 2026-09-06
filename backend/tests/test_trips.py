@@ -6,9 +6,13 @@ async def test_create_trip_as_carrier(client, carrier_headers):
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "AAA",
-            "destination": "BBB",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+            "legs": [
+                {
+                    "origin": "AAA",
+                    "destination": "BBB",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+                }
+            ],
             "capacity": 3.5,
             "allowed_categories": ["document"],
         },
@@ -25,9 +29,13 @@ async def test_create_trip_forbidden_for_sender(client, sender_headers):
         "/api/trips",
         headers=sender_headers,
         json={
-            "origin": "XXX",
-            "destination": "YYY",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+            "legs": [
+                {
+                    "origin": "XXX",
+                    "destination": "YYY",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+                }
+            ],
             "capacity": 1.0,
         },
     )
@@ -60,9 +68,13 @@ async def test_trip_route_is_normalised_on_write(client, carrier_headers):
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": " nrm ",
-            "destination": "nrd",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+            "legs": [
+                {
+                    "origin": " nrm ",
+                    "destination": "nrd",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+                }
+            ],
             "capacity": 1.0,
             "allowed_categories": ["document"],
         },
@@ -113,9 +125,13 @@ async def test_list_trips_filter_by_departure_date(client, carrier_headers):
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": origin,
-            "destination": f"{origin}-DEST",
-            "depart_at": depart.isoformat(),
+            "legs": [
+                {
+                    "origin": origin,
+                    "destination": f"{origin}-DEST",
+                    "depart_at": depart.isoformat(),
+                }
+            ],
             "capacity": 1.0,
             "allowed_categories": ["document"],
         },
@@ -163,9 +179,13 @@ async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_header
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": origin,
-            "destination": f"{origin}-D",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+            "legs": [
+                {
+                    "origin": origin,
+                    "destination": f"{origin}-D",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+                }
+            ],
             "capacity": 1.0,
             "allowed_categories": ["document"],
         },

@@ -11,9 +11,13 @@ async def _make_active_deal(client, carrier_headers, sender_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "VER",
-            "destination": "IFY",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+            "legs": [
+                {
+                    "origin": "VER",
+                    "destination": "IFY",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=4)).isoformat(),
+                }
+            ],
             "capacity": 3.0,
             "allowed_categories": ["document"],
         },

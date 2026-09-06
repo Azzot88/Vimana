@@ -444,9 +444,13 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "IDR",
-            "destination": "MTX",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=9)).isoformat(),
+            "legs": [
+                {
+                    "origin": "IDR",
+                    "destination": "MTX",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=9)).isoformat(),
+                }
+            ],
             "capacity": 3.0,
             "allowed_categories": ["document"],
         },
@@ -721,9 +725,13 @@ async def stranger_deal(client, stranger, carrier_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "OWN",
-            "destination": "MIN",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=11)).isoformat(),
+            "legs": [
+                {
+                    "origin": "OWN",
+                    "destination": "MIN",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=11)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },
@@ -830,9 +838,13 @@ async def disputed_deal(client, carrier_headers, sender_headers) -> dict:
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "ARB",
-            "destination": "GNT",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=13)).isoformat(),
+            "legs": [
+                {
+                    "origin": "ARB",
+                    "destination": "GNT",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=13)).isoformat(),
+                }
+            ],
             "capacity": 1.0,
             "allowed_categories": ["document"],
         },

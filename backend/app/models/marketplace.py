@@ -70,7 +70,13 @@ class Trip(Base):
     origin: Mapped[str] = mapped_column(String(100))
     destination: Mapped[str] = mapped_column(String(100))
     depart_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    capacity: Mapped[float] = mapped_column(Float)
+    # T3.11.07 — nullable since the express path. The median carrier publishes
+    # five days before departure and 31 % inside two days; a required weight is
+    # a third field standing between "I am flying tomorrow at 23:40" and a
+    # listing, and it is the field 97.6 % of real posts never answer in
+    # kilograms at all. NULL means "not stated", which `size_hint` often
+    # answers better anyway.
+    capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
     allowed_categories: Mapped[list | None] = mapped_column(JSON, nullable=True)
     # T3.35 — the carrier's baseline terms. Before this the model carried no
     # price at all, so every deal had to invent one in chat and nothing was

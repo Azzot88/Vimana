@@ -77,9 +77,13 @@ async def test_delete_user_cascade_removes_related_rows(client, session_maker):
         "/api/trips",
         headers=v_hdr,
         json={
-            "origin": "DEL",
-            "destination": "GON",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+            "legs": [
+                {
+                    "origin": "DEL",
+                    "destination": "GON",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

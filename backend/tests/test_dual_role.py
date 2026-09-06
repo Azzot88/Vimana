@@ -76,9 +76,13 @@ async def test_post_trip_requires_can_carry(client):
         "/api/trips",
         headers=user["headers"],
         json={
-            "origin": "AAA",
-            "destination": "BBB",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "AAA",
+                    "destination": "BBB",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
         },
     )
@@ -91,9 +95,13 @@ async def test_post_trip_forbidden_when_can_carry_false(client):
         "/api/trips",
         headers=user["headers"],
         json={
-            "origin": "AAA",
-            "destination": "BBB",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "AAA",
+                    "destination": "BBB",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
         },
     )

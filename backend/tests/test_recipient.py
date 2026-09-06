@@ -30,9 +30,13 @@ async def _deal(client):
         "/api/trips",
         headers=c_hdr,
         json={
-            "origin": "RCP",
-            "destination": "DST",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": "RCP",
+                    "destination": "DST",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

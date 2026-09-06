@@ -38,9 +38,13 @@ async def _open_dispute(client, session_maker):
         "/api/trips",
         headers=c_headers,
         json={
-            "origin": "GRT",
-            "destination": "GRD",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+            "legs": [
+                {
+                    "origin": "GRT",
+                    "destination": "GRD",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

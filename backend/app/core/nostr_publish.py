@@ -58,8 +58,12 @@ def _tags(trip: Trip) -> list[list[str]]:
         ["t", "trip"],
         ["published_at", str(int(datetime.now(tz=timezone.utc).timestamp()))],
         ["expires_at", str(int(trip.depart_at.timestamp()))],
-        ["capacity", f"{trip.capacity}kg"],
     ]
+    # T3.11.07 — omitted rather than published as "Nonekg". A trip with no
+    # stated weight says nothing about weight; a tag saying otherwise would be
+    # read by every relay client as a figure the carrier gave.
+    if trip.capacity is not None:
+        tags.append(["capacity", f"{trip.capacity}kg"])
     for cat in (trip.allowed_categories or []):
         tags.append(["t", str(cat)])
     return tags

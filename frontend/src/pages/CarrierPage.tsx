@@ -95,9 +95,18 @@ export default function CarrierPage() {
             <MonoText className="text-xs text-navy/50">
               {prefs.dateTime(trip.depart_at)}
             </MonoText>
-            <span className="text-xs font-body text-navy/50">
-              {t('trips.capacity')}: {prefs.weight(trip.capacity)}
-            </span>
+            {/* T3.11.07 — omitted rather than guessed when the carrier did not
+                state a weight. */}
+            {trip.capacity !== null && (
+              <span className="text-xs font-body text-navy/50">
+                {t('trips.capacity')}: {prefs.weight(trip.capacity)}
+              </span>
+            )}
+            {trip.size_hint && (
+              <span className="text-xs font-body text-navy/50">
+                {t(`trips.sizeHint.${trip.size_hint}`)}
+              </span>
+            )}
             <span className="text-xs font-body text-navy/50">
               {t('trips.pricePerKg')}:{' '}
               {trip.price_per_kg

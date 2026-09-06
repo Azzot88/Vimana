@@ -124,9 +124,13 @@ async def test_share_address_in_inquiry_chat(
         "/api/trips",
         headers=carrier_headers,
         json={
-            "origin": "ADR",
-            "destination": "TST",
-            "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+            "legs": [
+                {
+                    "origin": "ADR",
+                    "destination": "TST",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+                }
+            ],
             "capacity": 2.0,
             "allowed_categories": ["document"],
         },

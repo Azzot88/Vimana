@@ -650,7 +650,7 @@
       "proxy": "Someone else",
       "proxyChip": "someone else flying"
     },
-    "spaceHint": "Room in your bag. Shown on the card and used by the weight filter.",
+    "spaceHint": "Room in your bag — optional. Shown on the card; a stated weight also feeds the weight filter.",
     "spaceKind": {
       "cabin": "Cabin bag",
       "checked_partial": "Part of a checked bag",

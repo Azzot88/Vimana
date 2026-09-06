@@ -1254,6 +1254,9 @@ async def _ensure_trip_chain(engine) -> None:
             await conn.execute(
                 text("ALTER TABLE trips DROP COLUMN allowed_handover_methods")
             )
+        # 0060 — the express path. Idempotent: dropping a constraint that is
+        # already gone is a no-op in Postgres.
+        await conn.execute(text("ALTER TABLE trips ALTER COLUMN capacity DROP NOT NULL"))
         await conn.execute(
             text(
                 "CREATE TABLE IF NOT EXISTS trip_legs ("

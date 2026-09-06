@@ -338,9 +338,13 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
         "/api/trips",
         headers=carrier_hdr,
         json={
-            "origin": unique_origin,
-            "destination": unique_dest,
-            "depart_at": (datetime.now(tz=timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": unique_origin,
+                    "destination": unique_dest,
+                    "depart_at": (datetime.now(tz=timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "arrive_at": (datetime.now(tz=timezone.utc) + timedelta(days=3)).isoformat(),
             "capacity": 5,
         },
@@ -420,9 +424,13 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
         "/api/trips",
         headers=hdr_c,
         json={
-            "origin": origin,
-            "destination": dest,
-            "depart_at": (datetime.now(tz=timezone.utc) + timedelta(days=2)).isoformat(),
+            "legs": [
+                {
+                    "origin": origin,
+                    "destination": dest,
+                    "depart_at": (datetime.now(tz=timezone.utc) + timedelta(days=2)).isoformat(),
+                }
+            ],
             "arrive_at": (datetime.now(tz=timezone.utc) + timedelta(days=3)).isoformat(),
             "capacity": 5,
         },
