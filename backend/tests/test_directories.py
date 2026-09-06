@@ -20,36 +20,57 @@ async def test_postal_services_are_scoped_to_the_destination(client):
     assert "usps" not in {s["code"] for s in tr}
 
 
-async def test_local_services_come_before_the_global_couriers(client):
-    """Somebody posting inside Turkey wants PTT above DHL; the global names are
-    the ones they would have thought of anyway."""
-    body = (await client.get("/api/postal-services", params={"country": "TR"})).json()
-    codes = [s["code"] for s in body]
-    assert codes.index("ptt") < codes.index("dhl")
+async def test_only_local_services_are_offered(client):
+    """Owner's decision 2026-09-06: no global bucket.
+
+    Somebody posting a parcel inside Turkey ships with what is near them, and a
+    list topped by three international couriers describes a business rather than
+    a person with one pick-up point down the road.
+    """
+    codes = {
+        s["code"]
+        for s in (
+            await client.get("/api/postal-services", params={"country": "TR"})
+        ).json()
+    }
+    assert "ptt" in codes
+    assert "dhl" not in codes
+    assert "fedex" not in codes
 
 
-async def test_global_couriers_are_offered_everywhere(client):
-    for country in ("US", "RU", "TH"):
-        codes = {
-            s["code"]
-            for s in (
-                await client.get("/api/postal-services", params={"country": country})
-            ).json()
-        }
-        assert {"dhl", "fedex", "ups"} <= codes, country
+async def test_couriers_are_filed_where_they_deliver_domestically(client):
+    """The consequence of dropping the global bucket, and the honest place for
+    them: UPS and FedEx carry parcels inside the United States, DHL inside
+    Germany. Filed under those countries rather than appended to all of them."""
+    us = {
+        s["code"]
+        for s in (
+            await client.get("/api/postal-services", params={"country": "US"})
+        ).json()
+    }
+    de = {
+        s["code"]
+        for s in (
+            await client.get("/api/postal-services", params={"country": "DE"})
+        ).json()
+    }
+    assert {"usps", "ups", "fedex"} <= us
+    assert "dhl_de" in de
+    assert "ups" not in de
 
 
-async def test_postal_without_a_country_answers_globally(client):
-    """The honest answer to "somewhere, I have not said where yet"."""
-    body = (await client.get("/api/postal-services")).json()
-    assert {s["code"] for s in body} == {"dhl", "fedex", "ups"}
+async def test_postal_without_a_country_answers_with_nothing(client):
+    """"Somewhere, I have not said where yet" has no local services in it. The
+    form falls back to free text, which is the honest answer."""
+    assert (await client.get("/api/postal-services")).json() == []
 
 
 async def test_unknown_country_does_not_fail(client):
-    """A trip into a country the catalogue does not cover still publishes; the
-    form keeps free text for exactly this."""
+    """A trip into a country the catalogue does not cover still publishes: the
+    picker is empty and the carrier types the service by hand. This catalogue
+    has no external source and must not be able to tell them they are wrong."""
     body = (await client.get("/api/postal-services", params={"country": "ZZ"})).json()
-    assert {s["code"] for s in body} == {"dhl", "fedex", "ups"}
+    assert body == []
 
 
 async def test_marketplaces_are_not_postal_services(client):

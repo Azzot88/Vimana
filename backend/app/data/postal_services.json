@@ -11,11 +11,19 @@
     "`marketplace_pickup`. Listing them here would put the same thing in two",
     "vocabularies and let a carrier answer one question twice.",
     "",
-    "`global` are the couriers that operate across borders everywhere and are",
-    "offered for every country. `countries` adds the national operator and the",
-    "domestic carriers people actually name. Order within a list is the order",
-    "shown: national post first where it is the common answer, otherwise the",
-    "carrier the market names most.",
+    "Only `countries` is offered by the picker (owner's decision 2026-09-06):",
+    "a carrier posting a parcel inside one country ships with what is near",
+    "them, and a list topped by three international couriers describes a",
+    "business rather than a person with one pick-up point down the road. So",
+    "DHL, FedEx and UPS are filed under the countries where they genuinely do",
+    "DOMESTIC delivery — the US and Germany below — and not appended",
+    "everywhere. `global` is kept as the record of which three those are, and",
+    "is deliberately read by nothing.",
+    "",
+    "Order within a country is the order shown, seeded by how often this",
+    "market names each service. Real usage should outrank the seed once the",
+    "form has produced any, the same way `Category.usage_count` beats",
+    "`sort_order` — and there is nothing to count until the picker ships.",
     "",
     "Not exhaustive and not pretending to be. The form keeps free text, so a",
     "service missing here costs a carrier nothing; adding one is a line in this",
@@ -35,11 +43,15 @@
       { "code": "sber_logistics", "name": "СберЛогистика" }
     ],
     "US": [
-      { "code": "usps", "name": "USPS" }
+      { "code": "usps", "name": "USPS" },
+      { "code": "ups", "name": "UPS" },
+      { "code": "fedex", "name": "FedEx" }
     ],
     "AE": [
       { "code": "emirates_post", "name": "Emirates Post" },
-      { "code": "aramex", "name": "Aramex" }
+      { "code": "aramex", "name": "Aramex" },
+      { "code": "dhl", "name": "DHL" },
+      { "code": "fedex", "name": "FedEx" }
     ],
     "TR": [
       { "code": "ptt", "name": "PTT" },
@@ -54,6 +66,7 @@
       { "code": "dpd_uk", "name": "DPD" }
     ],
     "DE": [
+      { "code": "dhl_de", "name": "DHL" },
       { "code": "deutsche_post", "name": "Deutsche Post" },
       { "code": "hermes_de", "name": "Hermes" },
       { "code": "gls_de", "name": "GLS" },

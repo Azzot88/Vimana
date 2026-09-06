@@ -55,26 +55,16 @@ def _load(path: str) -> dict:
 def _country_slice(path: str, country_iso: str | None) -> list[Entry]:
     """Just the rows filed under one country — no global set.
 
-    Separate from `_for_country` because the payment picker walks two countries
-    in order, and folding the global names into each pass would drop them
-    between arrival and departure, breaking the very order that answers the
-    question.
+    The only country lookup either picker needs. A sibling that also appended
+    the global set existed for a few hours and is gone: postal services no
+    longer offer one (owner's decision — local only), and the payment picker
+    walks two countries in order, where folding the global names into each pass
+    would drop them between arrival and departure and break the order that is
+    the answer.
     """
     if not country_iso:
         return []
     return list(_load(path)["countries"].get(country_iso.upper(), []))
-
-
-def _for_country(path: str, country_iso: str | None) -> list[Entry]:
-    entries: list[Entry] = []
-    seen: set[str] = set()
-    # Country-specific first: somebody shipping inside Turkey wants PTT above
-    # DHL, and the global names are the ones they would have thought of anyway.
-    for entry in _country_slice(path, country_iso) + _load(path)["global"]:
-        if entry["code"] not in seen:
-            seen.add(entry["code"])
-            entries.append(entry)
-    return entries
 
 
 def postal_services(country_iso: str | None) -> list[Entry]:
@@ -83,9 +73,24 @@ def postal_services(country_iso: str | None) -> list[Entry]:
     The country is the **destination** of the trip: onward shipping happens
     after landing, so a flight into New York offers USPS, not СДЭК.
 
+    **Local services only** (owner's decision 2026-09-06). No global bucket is
+    appended: a carrier posting a parcel inside one country ships with what is
+    near them, and a list topped by three international couriers describes a
+    business, not a person with one pick-up point down the road. The couriers
+    that genuinely do domestic delivery are filed under the countries where they
+    do it, which is the honest place for them.
+
+    Order inside a country is the order in the file, seeded by how often the
+    market names each service. Real usage should outrank that seed once the
+    form has produced any — the same arrangement as `Category.usage_count`
+    beating `sort_order` — and there is nothing to count until the picker ships.
+
+    Anything missing is typed by hand in the form: this catalogue has no
+    external source and must not be able to tell a carrier they are wrong.
+
     Called by: `api.directories.list_postal_services`.
     """
-    return _for_country(str(POSTAL_PATH), country_iso)
+    return _country_slice(str(POSTAL_PATH), country_iso)
 
 
 @lru_cache(maxsize=None)
@@ -171,13 +176,3 @@ def payment_systems(
     return entries
 
 
-def known_postal_codes() -> set[str]:
-    """Every postal service code the catalogue knows, for validation.
-
-    Called by: `schemas.marketplace`.
-    """
-    data = _load(str(POSTAL_PATH))
-    codes = {e["code"] for e in data["global"]}
-    for entries in data["countries"].values():
-        codes.update(e["code"] for e in entries)
-    return codes
