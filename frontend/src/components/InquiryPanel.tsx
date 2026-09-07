@@ -64,7 +64,11 @@ export default function InquiryPanel({ tripId, carrierName, onClose }: Props) {
     setSending(true)
     setError('')
     try {
-      const { data: msg } = await postInquiryMessage(inquiryId, clean)
+      /* T3.11.23 — the trip travels with the message. The thread belongs to the
+         person now, so «пишу про этот рейс» has to be said by the message; it
+         is also what the carrier's panel counts to answer «сколько человек
+         спросили про этот рейс». */
+      const { data: msg } = await postInquiryMessage(inquiryId, clean, tripId)
       setMessages((prev) => [...prev, msg])
       setText('')
     } catch {

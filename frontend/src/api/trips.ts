@@ -175,6 +175,16 @@ export const createTrip = (payload: CreateTripPayload) =>
 export const updateTrip = (tripId: string, payload: CreateTripPayload) =>
   api.patch<Trip>(`/api/trips/${tripId}`, payload)
 
+/** T3.11.23 — how many people asked about each of my trips, keyed by trip id.
+ *
+ *  The panel used to count threads, which was free while a thread was per
+ *  (trip, sender). A chat is per person now, so the question is answered where
+ *  the trip actually lives — on the message that raised it — and distinct chats
+ *  are counted rather than messages: somebody who writes four times about one
+ *  trip has asked once. */
+export const tripAskCounts = () =>
+  api.get<Record<string, number>>('/api/trips/ask-counts')
+
 export const listTrips = (filters?: TripFilters) =>
   api.get<Page<Trip>>('/api/trips', { params: filters })
 

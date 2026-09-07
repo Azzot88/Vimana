@@ -1,8 +1,13 @@
-"""T1.22 — pre-deal chat between a sender and a trip's carrier.
+"""T3.11.23 — the outer chat: one per person, and only one.
 
-One thread per (trip_id, sender_id). Messages encrypted at rest (T1.21).
-When sender creates a deal from the trip, `POST /api/deals/match` links
-`inquiry.deal_id` so the chat history is scoped to the deal afterwards.
+Was T1.22, «pre-deal chat», one thread per `(trip_id, sender_id)` — so writing
+to one carrier about three trips produced three conversations with the same
+person. A chat is keyed by the pair now and outlives every deal in it; the deal
+is the **nested** chat (`Deal` + `DealVaultMessage`), which already existed.
+
+Messages stay encrypted at rest (T1.21). The routes are still called
+`/inquiries/*`: renaming them in the revision that changed what they address
+would have made one deploy break two things for one reason.
 """
 import uuid
 
@@ -210,6 +215,11 @@ async def post_message(
     msg = ChatMessage(
         chat_id=inquiry_id,
         sender_id=current_user.id,
+        # T3.11.23 — recorded when the client says so. The foreign key is the
+        # only check it needs: a trip that does not exist cannot be named, and a
+        # trip that does is public anyway — this is «what I am writing about»,
+        # not a claim about who may read it.
+        about_trip_id=body.about_trip_id,
         text=body.text,
     )
     db.add(msg)

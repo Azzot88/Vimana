@@ -28,6 +28,16 @@ class InquiryOut(BaseModel):
 
 class InquiryMessageCreate(BaseModel):
     text: str
+    # T3.11.23 — which trip this message is about, when it is about one.
+    #
+    # The trip stopped being the thread's identity and became the content of the
+    # message that raises it. Without this the column exists and nothing ever
+    # fills it — and the carrier's panel, which counts «сколько человек
+    # спросили про этот рейс», has nothing left to count.
+    #
+    # Optional because most messages are not about a trip: they are the rest of
+    # the conversation.
+    about_trip_id: uuid.UUID | None = None
 
 
 class InquiryMessageOut(BaseModel):

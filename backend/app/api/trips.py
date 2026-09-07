@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_user_optional
@@ -15,7 +15,7 @@ from app.core.nostr_publish import (
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.trip_legs import LegChainError, head_and_tail, normalise_legs
 from app.models.address import MeetingPlace, ReceivingAddress
-from app.models.marketplace import Trip, TripLeg, TripStatus
+from app.models.marketplace import ChatMessage, Trip, TripLeg, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import TripCreate, TripLegOut, TripOut
 
@@ -322,6 +322,44 @@ async def cancel_trip(
     await db.refresh(trip)
     return trip
 
+
+@router.get("/ask-counts", response_model=dict[str, int])
+async def ask_counts(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.23 — how many people have asked about each of my trips.
+
+    The carrier's panel prints this next to every live trip, and it used to come
+    from counting threads: one thread per `(trip, sender)` made the count free.
+    With one chat per person there is no per-trip thread left to count, so the
+    question is answered where the trip actually is now — on the message that
+    raised it (`ChatMessage.about_trip_id`).
+
+    **Distinct chats, not messages.** Somebody who writes four times about one
+    trip has asked once; counting messages would turn a talkative sender into a
+    queue of four.
+
+    Declared above the `{trip_id}` routes. There is no bare `GET /trips/{id}`
+    today, so nothing shadows it yet — the placement is insurance for the day
+    somebody adds one, because FastAPI matches in declaration order and the
+    failure would be a 422 about an invalid uuid named «ask-counts».
+
+    Only the caller's own trips — the number is a fact about their listing, and
+    on somebody else's it is a demand figure they did not publish.
+    """
+    rows = (
+        await db.execute(
+            select(
+                ChatMessage.about_trip_id,
+                func.count(func.distinct(ChatMessage.chat_id)),
+            )
+            .join(Trip, Trip.id == ChatMessage.about_trip_id)
+            .where(Trip.carrier_id == current_user.id)
+            .group_by(ChatMessage.about_trip_id)
+        )
+    ).all()
+    return {str(trip_id): count for trip_id, count in rows}
 
 @router.get("", response_model=Page[TripOut])
 async def list_trips(

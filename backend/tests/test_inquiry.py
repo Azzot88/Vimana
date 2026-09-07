@@ -355,3 +355,62 @@ async def test_a_matched_deal_gets_a_chat_and_a_spoken_number(
         assert deal.shipment_no and len(deal.shipment_no) == 8
         # Dictated aloud, so the characters that get misheard are not in it.
         assert not set(deal.shipment_no) & set("01OIL")
+
+
+async def test_asks_counts_people_not_messages(client, carrier_headers):
+    """«Сколько человек спросили про этот рейс», answered off the message.
+
+    The panel counted threads while a thread was per `(trip, sender)`. With one
+    chat per person there is nothing per-trip left to count, so the trip moved
+    onto the message that raises it — and the count is over **distinct chats**:
+    somebody who writes four times about one trip has asked once, and counting
+    messages would turn a talkative sender into a queue of four.
+    """
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
+
+    trip_id = await _make_open_trip(client, carrier_headers)
+
+    async def _ask(times: int) -> None:
+        email = unique_email("asker")
+        await make_account(
+            {"email": email, "password": SEED_PASSWORD, "display_name": "Asker"}
+        )
+        headers = {"Authorization": f"Bearer {await _login(client, email)}"}
+        chat = (
+            await client.post(f"/api/trips/{trip_id}/inquiry", headers=headers)
+        ).json()["id"]
+        for i in range(times):
+            r = await client.post(
+                f"/api/inquiries/{chat}/messages",
+                headers=headers,
+                json={"text": f"вопрос {i}", "about_trip_id": trip_id},
+            )
+            assert r.status_code == 201, r.text
+
+    await _ask(4)
+    await _ask(1)
+
+    counts = await client.get("/api/trips/ask-counts", headers=carrier_headers)
+    assert counts.status_code == 200, counts.text
+    assert counts.json().get(trip_id) == 2
+
+
+async def test_asks_are_only_about_my_own_trips(
+    client, carrier_headers, sender_headers
+):
+    """The number is a fact about the carrier's own listing. On somebody else's
+    it is a demand figure they never published."""
+    trip_id = await _make_open_trip(client, carrier_headers)
+    chat = (
+        await client.post(f"/api/trips/{trip_id}/inquiry", headers=sender_headers)
+    ).json()["id"]
+    await client.post(
+        f"/api/inquiries/{chat}/messages",
+        headers=sender_headers,
+        json={"text": "спрашиваю", "about_trip_id": trip_id},
+    )
+
+    mine = await client.get("/api/trips/ask-counts", headers=carrier_headers)
+    theirs = await client.get("/api/trips/ask-counts", headers=sender_headers)
+    assert trip_id in mine.json()
+    assert trip_id not in theirs.json()

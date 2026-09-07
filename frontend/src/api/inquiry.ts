@@ -31,8 +31,19 @@ export const listInquiryMessages = (
     params,
   })
 
-export const postInquiryMessage = (inquiryId: string, text: string) =>
-  api.post<InquiryMessage>(`/api/inquiries/${inquiryId}/messages`, { text })
+/** T3.11.23 — `aboutTripId` is what keeps «пишу про этот рейс» expressible now
+ *  that the thread belongs to the person rather than to the trip. Optional,
+ *  because most messages are not about a trip: they are the rest of the
+ *  conversation. */
+export const postInquiryMessage = (
+  inquiryId: string,
+  text: string,
+  aboutTripId?: string,
+) =>
+  api.post<InquiryMessage>(`/api/inquiries/${inquiryId}/messages`, {
+    text,
+    about_trip_id: aboutTripId,
+  })
 
 export const shareAddressInInquiry = (inquiryId: string, addressId?: string) =>
   api.post<InquiryMessage>(

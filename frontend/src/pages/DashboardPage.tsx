@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { listDeals, type Deal } from '../api/deals'
-import { cancelTrip, listTrips, type Trip } from '../api/trips'
-import { listMyInquiries, type Inquiry } from '../api/inquiry'
+import { cancelTrip, listTrips, tripAskCounts, type Trip } from '../api/trips'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
 import MonoText from '../components/MonoText'
@@ -29,7 +28,11 @@ export default function DashboardPage() {
 
   const [deals, setDeals] = useState<Deal[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
-  const [inquiries, setInquiries] = useState<Inquiry[]>([])
+  /* T3.11.23 — «сколько человек спросили про этот рейс», keyed by trip.
+     The panel counted threads, which was free while a thread was per (trip,
+     sender). A chat is per person now, so there is no per-trip thread left to
+     count and the server answers off the message that raised the trip. */
+  const [asks, setAsks] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [busyTrip, setBusyTrip] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -43,11 +46,11 @@ export default function DashboardPage() {
         // so asking without a status would silently drop matched trips — the
         // ones with somebody already counting on them.
         listTrips({ carrier_id: user.id, status: 'all', limit: 50 }),
-        listMyInquiries().catch(() => ({ data: [] as Inquiry[] })),
+        tripAskCounts().catch(() => ({ data: {} as Record<string, number> })),
       ])
       setDeals(dealsRes.data.items)
       setTrips(tripsRes.data.items)
-      setInquiries(inqRes.data)
+      setAsks(inqRes.data)
     } catch {
       setError(t('common.errorGeneric') as string)
     } finally {
@@ -81,8 +84,7 @@ export default function DashboardPage() {
   const sending = deals.filter(
     (d) => d.sender_id === user?.id && ACTIVE.includes(d.status),
   )
-  const inquiriesFor = (tripId: string) =>
-    inquiries.filter((i) => i.trip_id === tripId).length
+  const inquiriesFor = (tripId: string) => asks[tripId] ?? 0
 
   const withdraw = async (tripId: string) => {
     setBusyTrip(tripId)
@@ -168,7 +170,7 @@ export default function DashboardPage() {
             ) : (
               <div className="grid gap-3">
                 {liveTrips.map((trip) => {
-                  const asks = inquiriesFor(trip.id)
+                  const askCount = inquiriesFor(trip.id)
                   return (
                     <div
                       key={trip.id}
@@ -205,9 +207,9 @@ export default function DashboardPage() {
                         {/* Who is asking about this trip. A published trip with
                             unanswered questions is the one thing on this screen
                             that needs doing today. */}
-                        {asks > 0 && (
+                        {askCount > 0 && (
                           <span className="text-cyan font-medium">
-                            💬 {t('dashboard.inquiries', { count: asks })}
+                            💬 {t('dashboard.inquiries', { count: askCount })}
                           </span>
                         )}
                       </div>
