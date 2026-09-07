@@ -51,6 +51,10 @@ ALLOWED_MIME_BY_KIND: dict[AttachmentKind, set[str]] = {
     AttachmentKind.receipt_photo: _PHOTO_MIME,
     AttachmentKind.doc: _DOC_MIME,
     AttachmentKind.payment_receipt: _DOC_MIME,
+    # T3.11.17 — a photograph of the open parcel, so images only: a PDF of a
+    # parcel is not a thing, and the two document kinds above accept one because
+    # a receipt genuinely arrives as one.
+    AttachmentKind.pre_seal_photo: _PHOTO_MIME,
 }
 
 MIME_TO_EXT: dict[str, str] = {

@@ -46,6 +46,11 @@ class CardKind(str, enum.Enum):
     handoff_declared = "handoff.declared"
     handoff_confirmed = "handoff.confirmed"
     transit_update = "transit.update"
+    # T3.11.17 — the onward postal leg. 44.9 % of carriers post the parcel on
+    # inside the destination country, so for half the deals the custody group
+    # had a hole between «handed over» and «delivered».
+    posted_declared = "posted.declared"
+    posted_confirmed = "posted.confirmed"
     delivery_declared = "delivery.declared"
     delivery_confirmed = "delivery.confirmed"
 
@@ -143,6 +148,20 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         _s(CardKind.handoff_confirmed, "custody", implemented=True),
         _s(CardKind.transit_update, "custody",
            creator_roles=frozenset({CardAckRole.carrier}), implemented=True),
+        # T3.11.17 — «сдано в почту»: the photo is taken **before sealing**
+        # (`USERJOURNEY` Этап 4a) and the tracking code is what ends the
+        # carrier's part. Acked by the other side like every custody step, and
+        # the status it reaches is `posted` rather than `delivered`: the parcel
+        # is in the post, and calling that «delivered» would be the platform
+        # saying something neither party said.
+        _s(CardKind.posted_declared, "custody",
+           creator_roles=frozenset({CardAckRole.carrier}),
+           ack_by=COUNTERPARTY,
+           requires_attachment=AttachmentKind.pre_seal_photo,
+           on_accept_status=DealStatus.posted,
+           on_accept_emit=CardKind.posted_confirmed,
+           implemented=True),
+        _s(CardKind.posted_confirmed, "custody", implemented=True),
         _s(CardKind.delivery_declared, "custody",
            creator_roles=frozenset({CardAckRole.carrier}),
            ack_by=COUNTERPARTY,  # resolved to recipient when there is one

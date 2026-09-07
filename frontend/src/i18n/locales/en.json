@@ -523,7 +523,8 @@
       "receipt_photo": "Receipt photo",
       "doc": "Document",
       "payment_receipt": "Payment receipt",
-      "identity_doc": "Identity document"
+      "identity_doc": "Identity document",
+      "pre_seal_photo": "Photo before sealing"
     },
     "shareAddress": {
       "button": "Share my address",
@@ -807,6 +808,7 @@
       "matched": "Matched",
       "accepted": "Accepted",
       "in_transit": "In transit",
+      "posted": "Posted",
       "delivered": "Delivered",
       "confirmed": "Confirmed",
       "closed": "Closed",
@@ -1423,6 +1425,8 @@
       "handoff_declared": "Declare handover",
       "handoff_confirmed": "Handover confirmed",
       "transit_update": "Transit update",
+      "posted_declared": "Declare posting",
+      "posted_confirmed": "Posting confirmed",
       "delivery_declared": "Declare delivery",
       "delivery_confirmed": "Delivery confirmed",
       "payment_method_agreed": "Payment method",

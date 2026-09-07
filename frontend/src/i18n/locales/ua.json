@@ -490,7 +490,8 @@
       "receipt_photo": "Фото отримання",
       "doc": "Документ",
       "payment_receipt": "Чек оплати",
-      "identity_doc": "Документ особи"
+      "identity_doc": "Документ особи",
+      "pre_seal_photo": "Фото до заклеювання"
     },
     "shareAddress": {
       "button": "Поділитись адресою",
@@ -774,6 +775,7 @@
       "matched": "Підібрано",
       "accepted": "Прийнято",
       "in_transit": "В дорозі",
+      "posted": "Здано в пошту",
       "delivered": "Доставлено",
       "confirmed": "Підтверджено",
       "closed": "Закрито",
@@ -1393,6 +1395,8 @@
       "handoff_declared": "Заявити передачу",
       "handoff_confirmed": "Передачу підтверджено",
       "transit_update": "Статус у дорозі",
+      "posted_declared": "Здати в пошту",
+      "posted_confirmed": "Відправлення підтверджено",
       "delivery_declared": "Заявити вручення",
       "delivery_confirmed": "Вручення підтверджено",
       "payment_method_agreed": "Спосіб оплати",

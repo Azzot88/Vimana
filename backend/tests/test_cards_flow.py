@@ -463,3 +463,115 @@ async def test_a_service_on_a_hand_to_hand_meeting_is_refused(
         {"method": "in_person", "postal_service": "СДЭК"},
     )
     assert r.status_code == 422, r.text
+
+
+# ── T3.11.17 · the onward postal leg ────────────────────────────────────────
+
+
+async def test_posting_declares_its_own_leg_not_a_delivery(
+    client, sender_headers, carrier_headers, deal
+):
+    """T3.11.17 — «сдано в почту» is a state of its own.
+
+    44.9 % of carriers post the parcel on inside the destination country, and
+    the model knew `handoff` and `received` with nothing between. Accepting this
+    card moves the deal to `posted` — not `delivered`, which would be the
+    platform asserting something neither party said.
+    """
+    declared = await _card(
+        client,
+        carrier_headers,
+        deal.id,
+        "posted.declared",
+        {"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
+    )
+    assert declared.status_code == 201, declared.text
+    msg_id = declared.json()["id"]
+
+    # The evidence is required: a declaration without it is a claim.
+    early = await _ack(client, sender_headers, deal.id, msg_id)
+    assert early.status_code == 422, early.text
+
+    photo = await _attach_photo(
+        client, carrier_headers, deal.id, msg_id, "pre_seal_photo"
+    )
+    assert photo.status_code == 201, photo.text
+
+    acked = await _ack(client, sender_headers, deal.id, msg_id)
+    assert acked.status_code == 200, acked.text
+
+    detail = await client.get(f"/api/deals/{deal.id}", headers=sender_headers)
+    assert detail.json()["status"] == "posted"
+
+    listing = await client.get(f"/api/deals/{deal.id}/dealvault", headers=sender_headers)
+    kinds = [m["card_kind"] for m in listing.json()["items"]]
+    assert "posted.confirmed" in kinds
+
+
+async def test_the_chain_says_which_leg_the_parcel_was_on(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """«Арбитр видит, на какой ноге груз потерялся.»
+
+    Without its own event the record answered «handed over» and «received» and
+    left everything between to word against word.
+    """
+    import uuid as uuidlib
+
+    from sqlalchemy import select
+
+    from app.models.deal import DealEvent, DealEventType
+
+    declared = await _card(
+        client,
+        carrier_headers,
+        deal.id,
+        "posted.declared",
+        {"postal_service": "USPS", "tracking_number": "US9400100000000000000000"},
+    )
+    msg_id = declared.json()["id"]
+    await _attach_photo(client, carrier_headers, deal.id, msg_id, "pre_seal_photo")
+    await _ack(client, sender_headers, deal.id, msg_id)
+
+    async with session_maker() as db:
+        events = (
+            (
+                await db.execute(
+                    select(DealEvent).where(
+                        DealEvent.deal_id == uuidlib.UUID(str(deal.id)),
+                        DealEvent.event_type == DealEventType.posted,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert len(events) == 1
+
+
+async def test_posting_needs_the_tracking_code_and_the_company(
+    client, carrier_headers, deal
+):
+    """`USERJOURNEY` Этап 4a ends the carrier's responsibility at the code, so a
+    declaration without one would end it on their word. The company is required
+    with it: a code nobody can attribute is a string, not a way to follow a
+    parcel."""
+    for payload in (
+        {"postal_service": "СДЭК"},
+        {"tracking_number": "RU1"},
+        {"postal_service": "", "tracking_number": "RU1"},
+    ):
+        r = await _card(client, carrier_headers, deal.id, "posted.declared", payload)
+        assert r.status_code == 422, f"{payload} was accepted"
+
+
+async def test_only_the_carrier_declares_the_posting(client, sender_headers, deal):
+    """The sender is not the one at the post office."""
+    r = await _card(
+        client,
+        sender_headers,
+        deal.id,
+        "posted.declared",
+        {"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
+    )
+    assert r.status_code == 403, r.text

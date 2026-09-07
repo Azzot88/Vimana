@@ -347,7 +347,11 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
               </button>
             )}
           {(isCarrier || isSender) &&
-            ['accepted', 'in_transit', 'delivered'].includes(deal.status) &&
+            /* T3.11.17 — a parcel in the post is exactly when a dispute becomes
+               likely, so `posted` is in this list. */
+            ['accepted', 'in_transit', 'posted', 'delivered'].includes(
+              deal.status,
+            ) &&
             deal.status !== 'disputed' && (
               <button
                 onClick={() => setDisputeOpen(true)}

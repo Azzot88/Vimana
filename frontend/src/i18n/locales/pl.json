@@ -484,7 +484,8 @@
       "receipt_photo": "Zdjęcie odbioru",
       "doc": "Dokument",
       "payment_receipt": "Potwierdzenie zapłaty",
-      "identity_doc": "Dokument tożsamości"
+      "identity_doc": "Dokument tożsamości",
+      "pre_seal_photo": "Zdjęcie przed zaklejeniem"
     },
     "shareAddress": {
       "button": "Udostępnij adres",
@@ -768,6 +769,7 @@
       "matched": "Dopasowano",
       "accepted": "Zaakceptowano",
       "in_transit": "W drodze",
+      "posted": "Nadane",
       "delivered": "Dostarczono",
       "confirmed": "Potwierdzono",
       "closed": "Zamknięto",
@@ -1387,6 +1389,8 @@
       "handoff_declared": "Zgłoś przekazanie",
       "handoff_confirmed": "Przekazanie potwierdzone",
       "transit_update": "Status w drodze",
+      "posted_declared": "Zgłoś nadanie",
+      "posted_confirmed": "Nadanie potwierdzone",
       "delivery_declared": "Zgłoś doręczenie",
       "delivery_confirmed": "Doręczenie potwierdzone",
       "payment_method_agreed": "Sposób płatności",

@@ -9,7 +9,15 @@ import {
 import { getKeypairStatus } from './keypair'
 import { getArbiterInfo } from './threshold'
 
-export type AttachmentKind = 'handoff_photo' | 'receipt_photo' | 'doc' | 'payment_receipt' | 'identity_doc'
+/** T3.11.17 — `pre_seal_photo` is the parcel photographed before it was
+ *  sealed: the evidence the onward postal leg stands on. */
+export type AttachmentKind =
+  | 'handoff_photo'
+  | 'receipt_photo'
+  | 'doc'
+  | 'payment_receipt'
+  | 'identity_doc'
+  | 'pre_seal_photo'
 
 export interface Attachment {
   id: string

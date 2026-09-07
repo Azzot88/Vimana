@@ -96,6 +96,19 @@ export const CARD_FORMS: CardFormSpec[] = [
     hasText: true,
   },
   {
+    /* T3.11.17 — «сдано в почту». The photo is taken **before sealing**: that
+       is the one moment the contents are visible and already packed, and the
+       tracking code is what ends the carrier's part (`USERJOURNEY` Этап 4a). */
+    kind: 'posted.declared',
+    roles: ['carrier'],
+    fields: [
+      { name: 'postal_service', type: 'text', required: true },
+      { name: 'tracking_number', type: 'text', required: true },
+    ],
+    needsPhoto: 'pre_seal_photo',
+    hasText: true,
+  },
+  {
     kind: 'delivery.declared',
     roles: ['carrier'],
     fields: [

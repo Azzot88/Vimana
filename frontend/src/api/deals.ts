@@ -6,6 +6,7 @@ export type DealStatus =
   | 'matched'
   | 'accepted'
   | 'in_transit'
+  | 'posted'
   | 'delivered'
   | 'confirmed'
   | 'closed'

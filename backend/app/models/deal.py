@@ -13,6 +13,13 @@ class DealStatus(str, enum.Enum):
     matched = "matched"
     accepted = "accepted"
     in_transit = "in_transit"
+    # T3.11.17 — handed to a postal service inside the destination country.
+    # 44.9 % of carriers on this market post the parcel onward after landing, so
+    # for half the deals there is a leg between «in the carrier's hands» and
+    # «in the recipient's», and the model knew nothing between `handoff` and
+    # `received`. That gap is what made an arbiter's question — on which leg was
+    # it lost — unanswerable from the record.
+    posted = "posted"
     delivered = "delivered"
     confirmed = "confirmed"
     closed = "closed"
@@ -43,6 +50,11 @@ class DealEventType(str, enum.Enum):
     # false in the one place the product exists to keep true. Same hash, own
     # event, its own date.
     file_reattached = "file_reattached"
+    # T3.11.17 — the parcel was handed to a postal service inside the
+    # destination country. Its own event because it is its own leg: the carrier
+    # is done, the parcel is not there yet, and an arbiter asked «where was it
+    # lost» needs to see which of the two answers the record supports.
+    posted = "posted"
 
 
 class CardState(str, enum.Enum):
@@ -84,6 +96,15 @@ class AttachmentKind(str, enum.Enum):
     # verification flow (not uploadable via the generic attachment endpoint:
     # it has no entry in ALLOWED_MIME_BY_KIND, so a manual attempt gets 415).
     identity_doc = "identity_doc"
+    # T3.11.17 — the parcel photographed **before it was sealed**, which is the
+    # only moment its contents are visible and already packed. `USERJOURNEY`
+    # Этап 4a: the carrier's responsibility ends at the tracking code, and this
+    # is the evidence that what went into the box is what was agreed.
+    #
+    # Not `handoff_photo` reused: an arbiter reads these labels, and «фото
+    # передачи» on a picture of an open parcel would misdescribe the one piece
+    # of evidence the postal leg has.
+    pre_seal_photo = "pre_seal_photo"
 
 
 class Deal(Base):

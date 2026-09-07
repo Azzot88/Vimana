@@ -255,6 +255,17 @@ async def _ensure_connection_tier(engine) -> None:
                 "ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'file_reattached'"
             )
         )
+        # T3.11.17 — the onward postal leg (`0079`). Three enum values: the
+        # status between «handed over» and «received», its chain event, and the
+        # photograph taken before the parcel was sealed.
+        for value, type_name in (
+            ("posted", "dealstatus"),
+            ("posted", "dealeventtype"),
+            ("pre_seal_photo", "attachmentkind"),
+        ):
+            await conn.execute(
+                text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS '{value}'")
+            )
         # T3.11.16 — expiry, on a table `create_all` never alters because it
         # already exists. Backfilled the way `0077` does it, so a test database
         # and a migrated one answer the board query identically. Freshness and

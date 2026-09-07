@@ -91,6 +91,26 @@ class TransitUpdate(BaseModel):
     eta: datetime | None = None
 
 
+class PostedDeclared(BaseModel):
+    """T3.11.17 — «сдано в почту»: the onward leg, declared by the carrier.
+
+    Both fields are required, which is unusual here and deliberate. The tracking
+    code is the **entire point** — `USERJOURNEY` Этап 4a ends the carrier's
+    responsibility at it, and a declaration without one would end their
+    responsibility on their word alone. The company is required with it because a
+    code nobody can attribute is a string, not a way to follow a parcel.
+
+    The photo is enforced elsewhere (`requires_attachment`), and it has to be
+    taken **before sealing**: that is the one moment the contents are visible and
+    already packed. A rule about the order of two actions cannot be checked by a
+    schema, so it lives in the copy the carrier reads — and in the fact that the
+    evidence is filed as `pre_seal_photo` rather than as a generic picture.
+    """
+
+    postal_service: str = Field(min_length=1, max_length=120)
+    tracking_number: str = Field(min_length=1, max_length=64)
+
+
 class DeliveryDeclared(BaseModel):
     method: HandoverMethod = "in_person"
 
@@ -124,6 +144,7 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.dropoff_proposed: MeetingPoint,
     CardKind.handoff_declared: HandoffDeclared,
     CardKind.transit_update: TransitUpdate,
+    CardKind.posted_declared: PostedDeclared,
     CardKind.delivery_declared: DeliveryDeclared,
     CardKind.payment_method_agreed: PaymentMethodAgreed,
     CardKind.payment_declared: PaymentDeclared,

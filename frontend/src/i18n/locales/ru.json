@@ -524,7 +524,8 @@
       "receipt_photo": "Фото получения",
       "doc": "Документ",
       "payment_receipt": "Чек оплаты",
-      "identity_doc": "Документ личности"
+      "identity_doc": "Документ личности",
+      "pre_seal_photo": "Фото до заклеивания"
     },
     "shareAddress": {
       "button": "Поделиться адресом",
@@ -808,6 +809,7 @@
       "matched": "Подобрано",
       "accepted": "Принято",
       "in_transit": "В пути",
+      "posted": "Сдано в почту",
       "delivered": "Доставлено",
       "confirmed": "Подтверждено",
       "closed": "Закрыто",
@@ -1424,6 +1426,8 @@
       "handoff_declared": "Заявить передачу",
       "handoff_confirmed": "Передача подтверждена",
       "transit_update": "Статус в пути",
+      "posted_declared": "Сдать в почту",
+      "posted_confirmed": "Отправка подтверждена",
       "delivery_declared": "Заявить вручение",
       "delivery_confirmed": "Вручение подтверждено",
       "payment_method_agreed": "Способ оплаты",

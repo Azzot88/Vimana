@@ -483,7 +483,8 @@
       "receipt_photo": "Photo de la réception",
       "doc": "Document",
       "payment_receipt": "Reçu de paiement",
-      "identity_doc": "Pièce d'identité"
+      "identity_doc": "Pièce d'identité",
+      "pre_seal_photo": "Photo avant fermeture"
     },
     "shareAddress": {
       "button": "Partager mon adresse",
@@ -767,6 +768,7 @@
       "matched": "Associé",
       "accepted": "Accepté",
       "in_transit": "En transit",
+      "posted": "Posté",
       "delivered": "Livré",
       "confirmed": "Confirmé",
       "closed": "Clôturé",
@@ -1386,6 +1388,8 @@
       "handoff_declared": "Déclarer la remise",
       "handoff_confirmed": "Remise confirmée",
       "transit_update": "Suivi en transit",
+      "posted_declared": "Déclarer l'envoi postal",
+      "posted_confirmed": "Envoi confirmé",
       "delivery_declared": "Déclarer la livraison",
       "delivery_confirmed": "Livraison confirmée",
       "payment_method_agreed": "Mode de paiement",

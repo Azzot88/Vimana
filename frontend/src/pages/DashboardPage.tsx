@@ -19,7 +19,17 @@ import { routeChain } from '../lib/format'
  *  are my parcels.** Anything that is neither — the finished deals, the whole
  *  public board — is one link away, not on the panel.
  */
-const ACTIVE = ['matched', 'accepted', 'in_transit', 'delivered', 'confirmed']
+// T3.11.17 — `posted` belongs here: a parcel in the post is the most active a
+// deal gets, and leaving it out would drop half the deals off the panel on the
+// day the carrier did their part.
+const ACTIVE = [
+  'matched',
+  'accepted',
+  'in_transit',
+  'posted',
+  'delivered',
+  'confirmed',
+]
 
 export default function DashboardPage() {
   const { t } = useTranslation()

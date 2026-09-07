@@ -313,6 +313,7 @@ async def apply_acceptance(
         deal.status = spec.on_accept_status
         event = {
             DealStatus.in_transit: DealEventType.in_transit,
+            DealStatus.posted: DealEventType.posted,
             DealStatus.delivered: DealEventType.received,
             DealStatus.confirmed: DealEventType.confirmed,
             DealStatus.closed: DealEventType.closed,
