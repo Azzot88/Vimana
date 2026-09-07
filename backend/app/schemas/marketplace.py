@@ -323,6 +323,18 @@ class DealOut(BaseModel):
     recipient_id: uuid.UUID | None
     status: str
     created_at: datetime
+    # T3.11.26 — enough to tell one deal from another in a list, and to group the
+    # list by the person it is with. Ids cannot do either: «55468906…» beside
+    # «7c3a91b2…» is two rows nobody can choose between, which is why the deals
+    # page could not be built on what this schema returned.
+    #
+    # Filled by `list_deals` from two batched lookups rather than left to the
+    # client: a page of twenty deals would otherwise be forty requests for names
+    # the server already has open in front of it.
+    sender_name: str | None = None
+    carrier_name: str | None = None
+    origin: str | None = None
+    destination: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

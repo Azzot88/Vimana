@@ -427,7 +427,6 @@
     }
   },
   "chat": {
-    "backToDeal": "Acuerdo",
     "immutable": "Inmutable · SHA-256",
     "empty": "Todavía no hay mensajes",
     "placeholder": "Mensaje…",
@@ -512,7 +511,6 @@
     "myCargoSender": "Mis entregas",
     "allDeals": "Todos los acuerdos →",
     "iSend": "Envío",
-    "findTrip": "Buscar vuelo",
     "noTrips": "Sin vuelos publicados",
     "publishFirst": "Publicar vuelo",
     "noDeals": "Sin acuerdos activos",
@@ -702,6 +700,12 @@
     "notFound": "Acuerdo no encontrado",
     "actionFailed": "No se pudo completar. Inténtalo de nuevo.",
     "boardingPass": "Tarjeta de embarque",
+    "byPersonTitle": "Acuerdos por persona",
+    "countWithPerson": "{{count}} acuerdos",
+    "sortBy": {
+      "recent": "Más recientes",
+      "count": "Más acuerdos"
+    },
     "sender": "Remitente",
     "carrier": "Transportista",
     "cargo": "Carga",

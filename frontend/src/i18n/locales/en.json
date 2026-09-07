@@ -474,7 +474,6 @@
     }
   },
   "chat": {
-    "backToDeal": "Deal",
     "immutable": "Immutable · SHA-256",
     "empty": "No messages yet",
     "placeholder": "Message…",
@@ -559,7 +558,6 @@
     "myCargoSender": "My deliveries",
     "allDeals": "All deals →",
     "iSend": "I send",
-    "findTrip": "Find a trip",
     "noTrips": "No published trips",
     "publishFirst": "Publish a trip",
     "noDeals": "No active deals",
@@ -749,6 +747,12 @@
     "notFound": "Deal not found",
     "actionFailed": "That did not go through. Please try again.",
     "boardingPass": "Boarding pass",
+    "byPersonTitle": "Deals by person",
+    "countWithPerson": "{{count}} deals",
+    "sortBy": {
+      "recent": "Most recent",
+      "count": "Most deals"
+    },
     "sender": "Sender",
     "carrier": "Carrier",
     "cargo": "Cargo",

@@ -472,4 +472,56 @@ async def list_deals(
         or_(Deal.sender_id == current_user.id, Deal.carrier_id == current_user.id)
     )
     items, next_cursor = await paginate_desc(db, base, Deal, after, clamp_limit(limit))
-    return Page(items=items, next_cursor=next_cursor)
+
+    # T3.11.26 — names and route, batched. Two queries for the whole page rather
+    # than four per row: the deals page groups by the person a deal is with, and
+    # a list of truncated UUIDs is a list nobody can choose from.
+    #
+    # `.get()` per deal would have been four round trips × twenty rows, and it is
+    # the shape this endpoint would have grown into one row at a time.
+    people = {d.sender_id for d in items} | {d.carrier_id for d in items}
+    trips = {d.trip_id for d in items}
+    names: dict[uuid.UUID, str] = {}
+    routes: dict[uuid.UUID, tuple[str, str]] = {}
+    if people:
+        names = dict(
+            (
+                await db.execute(
+                    select(User.id, User.display_name).where(User.id.in_(people))
+                )
+            ).all()
+        )
+    if trips:
+        routes = {
+            row[0]: (row[1], row[2])
+            for row in (
+                await db.execute(
+                    select(Trip.id, Trip.origin, Trip.destination).where(
+                        Trip.id.in_(trips)
+                    )
+                )
+            ).all()
+        }
+
+    out = []
+    for deal in items:
+        route = routes.get(deal.trip_id)
+        out.append(
+            DealOut(
+                id=deal.id,
+                order_id=deal.order_id,
+                trip_id=deal.trip_id,
+                sender_id=deal.sender_id,
+                carrier_id=deal.carrier_id,
+                recipient_id=deal.recipient_id,
+                status=deal.status.value
+                if hasattr(deal.status, "value")
+                else str(deal.status),
+                created_at=deal.created_at,
+                sender_name=names.get(deal.sender_id),
+                carrier_name=names.get(deal.carrier_id),
+                origin=route[0] if route else None,
+                destination=route[1] if route else None,
+            )
+        )
+    return Page(items=out, next_cursor=next_cursor)

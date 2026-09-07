@@ -39,7 +39,11 @@ export default function BottomNav() {
    *  a signed-in person tapped "Панель" and got the marketing page with a
    *  "go to the panel" button on it. Desktop never showed this because the
    *  `Navbar` link has always pointed at `/dashboard`. */
-  const panelHref = isCarrierMode ? '/carrier' : '/send'
+  /* T3.11.26 — one address for the panel (owner's decision 2026-09-07). The
+     bug the comment above describes is fixed for good by this: there is now
+     exactly one place «Панель» can mean, and it is not a landing and not a
+     board. */
+  const panelHref = '/dashboard'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[3.5rem] text-[10px] font-body transition-colors ${

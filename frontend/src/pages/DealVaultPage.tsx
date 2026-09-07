@@ -18,6 +18,7 @@ import AddressCard, { isAddressCard } from '../components/AddressCard'
 import TermsCard from '../components/TermsCard'
 import TermsProposeForm from '../components/TermsProposeForm'
 import DealCard from '../components/DealCard'
+import DealPage from './DealPage'
 import CardActions from '../components/CardActions'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
@@ -284,8 +285,15 @@ export default function DealVaultPage() {
   return (
     <div className="max-w-2xl flex flex-col min-h-[22rem] max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-10rem)]">
       <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
-        <Link to={`/deals/${dealId}`} className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
-          ← {t('chat.backToDeal')}
+        {/* T3.11.26 — back to the panel, not to a deal card. It used to point at
+           `/deals/:id`, which now redirects here: the link would have been a
+           loop back onto the screen it is drawn on. The card itself is below,
+           folded. */}
+        <Link
+          to="/dashboard"
+          className="text-xs font-body text-navy/40 hover:text-navy transition-colors"
+        >
+          ← {t('nav.dashboard')}
         </Link>
         <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
         {user && parties.senderId === user.id && dealId && (
@@ -306,6 +314,21 @@ export default function DealVaultPage() {
           </button>
         )}
       </div>
+
+      {/* T3.11.26 — the deal itself, folded (owner's decision 2026-09-07). The
+          screen that used to stand in front of the conversation is gone, and
+          everything that was on it — boarding pass, terms, verification, the
+          dispute button — is here. Closed by default: the person came to talk,
+          and a card open above the thread pushes the last message off screen on
+          a phone. */}
+      <details className="mb-3 sm:mb-4 shrink-0 rounded-field border border-navy/10 bg-white">
+        <summary className="cursor-pointer px-3 py-2 text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+          {t('deals.boardingPass')}
+        </summary>
+        <div className="px-3 pb-3">
+          <DealPage embedded />
+        </div>
+      </details>
 
       <div className="bg-navy/5 rounded-field px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan"></span>

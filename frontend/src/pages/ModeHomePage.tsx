@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import Layout from '../components/Layout'
 import DashboardPage from './DashboardPage'
+import TripsPage from './TripsPage'
 import CarrierLandingPage from './CarrierLandingPage'
 import SenderLandingPage from './SenderLandingPage'
 
@@ -42,9 +43,16 @@ export default function ModeHomePage({ mode }: { mode: 'carrier' | 'sender' }) {
     return <Navigate to={effective === 'carrier' ? '/carrier' : '/send'} replace />
   }
 
+  // T3.11.26 — a sender lands on the board, a carrier on the panel (owner's
+  // decision 2026-09-07). The two modes want different first screens and always
+  // did: a carrier opens the product to see what is happening with the trips
+  // they published, a sender opens it to find one. The old shared panel gave the
+  // sender a screen whose main content was a button called «Найти рейс» — one
+  // click of ceremony in front of the thing they came for.
+  //
+  // The panel keeps its own address (`/dashboard`) for both, so the sender has
+  // somewhere to go rather than somewhere to be sent.
   return (
-    <Layout>
-      <DashboardPage />
-    </Layout>
+    <Layout>{mode === 'carrier' ? <DashboardPage /> : <TripsPage />}</Layout>
   )
 }

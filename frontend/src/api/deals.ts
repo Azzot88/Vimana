@@ -20,11 +20,17 @@ export interface Deal {
   recipient_id: string | null
   status: DealStatus
   created_at: string
-  // Optional enrichment fields — populated when the backend joins trip+order
-  // (e.g. via a future list-detail endpoint). Absent on the raw DealOut list.
+  // T3.11.26 — `origin`/`destination` now come with the list too, from a
+  // batched lookup over the page's trips. `cargo_description` still does not:
+  // it lives on the order and only the detail endpoint joins it.
   origin?: string
   destination?: string
   cargo_description?: string
+  /** T3.11.26 — who the deal is with and where it goes. Filled by the list
+   *  endpoint from batched lookups: the deals page groups by person, and a
+   *  column of truncated UUIDs is a list nobody can choose from. */
+  sender_name?: string | null
+  carrier_name?: string | null
 }
 
 export interface DealDetail extends Deal {

@@ -186,3 +186,43 @@ async def test_get_deal_forbidden_for_outsider(client, carrier_headers, sender_h
 
     resp = await client.get(f"/api/deals/{deal_id}", headers=outsider_headers)
     assert resp.status_code == 403
+
+
+# ── T3.11.26 · the list has to be choosable from ─────────────────────────────
+
+
+async def test_list_deals_names_the_counterparty_and_the_route(
+    client, sender_headers, carrier_headers
+):
+    """Names and route travel with the list, not only with the detail.
+
+    The deals page groups by the person a deal is with, and a column of
+    truncated UUIDs is a list nobody can choose from. Fetching them per row
+    would be four requests × twenty rows for something the server already has
+    open in front of it, so `list_deals` batches two lookups for the page.
+    """
+    trip_id = await _create_open_trip(client, carrier_headers)
+    deal_id = await _match_deal(client, sender_headers, trip_id)
+
+    resp = await client.get("/api/deals", headers=sender_headers, params={"limit": 100})
+    assert resp.status_code == 200, resp.text
+    mine = next(d for d in resp.json()["items"] if d["id"] == deal_id)
+
+    assert mine["sender_name"], mine
+    assert mine["carrier_name"], mine
+    # The route comes off the trip, which is what makes one row tell itself
+    # apart from another in the same person's group.
+    assert mine["origin"] and mine["destination"], mine
+
+
+async def test_list_deals_route_is_all_or_nothing(client, sender_headers):
+    """A row has both ends of the route or neither.
+
+    The enrichment is a batched lookup, not a join, so a trip it cannot resolve
+    has to degrade to `None` on **both** columns — half a route is the shape
+    that prints «DXB → undefined» on the card.
+    """
+    resp = await client.get("/api/deals", headers=sender_headers, params={"limit": 20})
+    assert resp.status_code == 200, resp.text
+    for row in resp.json()["items"]:
+        assert (row["origin"] is None) == (row["destination"] is None), row

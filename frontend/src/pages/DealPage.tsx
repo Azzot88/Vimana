@@ -15,7 +15,19 @@ import VerificationRequestModal from '../components/VerificationRequestModal'
 import VerificationRespondModal from '../components/VerificationRespondModal'
 import { useRouteNotes } from '../hooks/useRouteNotes'
 
-export default function DealPage() {
+/** T3.11.26 — the deal card, now shown **inside** the vault rather than in
+ *  front of it (owner's decision 2026-09-07).
+ *
+ *  It stopped being a route: `/deals/:id` redirects into the conversation,
+ *  because a screen whose only purpose is to be clicked through is a screen.
+ *  What was on it is not ceremony though — the boarding pass, the terms, the
+ *  verification and the dispute button are the deal — so it moved rather than
+ *  went. `embedded` is the difference between the two homes: no back-link (the
+ *  vault has one) and no page width of its own (it sits inside a panel).
+ *
+ *  Called by: `pages/DealVaultPage`, folded into a `<details>` under the header.
+ */
+export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   const prefs = usePrefs()
   const { t } = useTranslation()
   const { dealId } = useParams<{ dealId: string }>()
@@ -133,12 +145,17 @@ export default function DealPage() {
   const isSender = deal.sender_id === user?.id
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/deals" className="text-xs font-body text-navy/40 hover:text-navy transition-colors">
-          ← {t('nav.deals')}
-        </Link>
-      </div>
+    <div className={embedded ? 'space-y-6' : 'max-w-2xl space-y-6'}>
+      {!embedded && (
+        <div className="flex items-center gap-3">
+          <Link
+            to="/deals"
+            className="text-xs font-body text-navy/40 hover:text-navy transition-colors"
+          >
+            ← {t('nav.deals')}
+          </Link>
+        </div>
+      )}
 
       <PlatformNoticeBanner surface="deal_page" />
       {routeNotes.length > 0 && (

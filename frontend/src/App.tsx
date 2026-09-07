@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
 import { useAuthStore } from './stores/auth'
 import AuthBootstrap from './components/AuthBootstrap'
 import Layout from './components/Layout'
@@ -26,8 +26,9 @@ const ModeHomePage = lazy(() => import('./pages/ModeHomePage'))
 const BusinessLandingPage = lazy(() => import('./pages/BusinessLandingPage'))
 const TripsPage = lazy(() => import('./pages/TripsPage'))
 const NewTripPage = lazy(() => import('./pages/NewTripPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const DealsPage = lazy(() => import('./pages/DealsPage'))
-const DealPage = lazy(() => import('./pages/DealPage'))
+const DealsByPersonPage = lazy(() => import('./pages/DealsByPersonPage'))
 const DealVaultPage = lazy(() => import('./pages/DealVaultPage'))
 const IdentityPage = lazy(() => import('./pages/IdentityPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
@@ -63,15 +64,19 @@ function ProtectedRoute() {
   return <Outlet />
 }
 
-/** T_UX.23 — `/dashboard` kept as a redirect rather than deleted.
+/** T3.11.26 — `/deals/:id` kept as a redirect rather than deleted.
  *
- *  It is linked from letters, from the landing header, from `WelcomePage` and
- *  from three years of muscle memory. A dead address is a worse answer than a
- *  redirect, exactly as with `/register` above. */
-function DashboardRedirect() {
-  const user = useAuthStore((s) => s.user)
-  const to = user?.active_mode === 'carrier' && user.can_carry ? '/carrier' : '/send'
-  return <Navigate to={to} replace />
+ *  The screen it used to render is gone — its content moved into the vault's
+ *  header — but the address is in letters, in chats and in months of muscle
+ *  memory. A dead address is a worse answer than a redirect, exactly as with
+ *  `/register` and `/profile/activity`.
+ *
+ *  The deal opens where the conversation is: that is the whole change, and a
+ *  card standing in front of it was a screen whose only purpose was to be
+ *  clicked through. */
+function DealRedirectToVault() {
+  const { dealId } = useParams()
+  return <Navigate to={`/deals/${dealId}/vault`} replace />
 }
 
 /** Deliberately quiet: a chunk fetch on a warm connection is over before a
@@ -134,7 +139,12 @@ export default function App() {
                 and is signed in, but a navigation bar around a single question
                 invites wandering off before answering it. */}
             <Route path="/welcome" element={<WelcomePage />} />
-            <Route path="/dashboard" element={<DashboardRedirect />} />
+            {/* T3.11.26 — the panel has its own address (owner's decision
+                2026-09-07). It used to be a redirect onto `/send` or
+                `/carrier`, which was fine while those *were* the panel; `/send`
+                is the board now, and «the most important part» cannot be the
+                one screen with nowhere to live. */}
+            <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
             <Route element={<Layout />}>
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/trips" element={<TripsPage />} />
@@ -143,10 +153,22 @@ export default function App() {
                   something you look up, not something you navigate by. `/deals`
                   stays as the entry point old links point at. */}
               <Route path="/history" element={<DealsPage />} />
-              <Route path="/deals" element={<Navigate to="/history" replace />} />
+              {/* T3.11.26 — deals by the person they are with, and a way into
+                  any of them. `/history` stays what it became in T_UX.18: the
+                  archive you look something up in. */}
+              <Route path="/deals" element={<DealsByPersonPage />} />
               <Route path="/disputes" element={<DisputesPage />} />
               <Route path="/carriers/:carrierId" element={<CarrierPage />} />
-              <Route path="/deals/:dealId" element={<DealPage />} />
+              {/* T3.11.26 — the deal opens where the conversation is. The card
+                  that used to stand in front of it — boarding pass, terms,
+                  verification, dispute — moved into the vault's header rather
+                  than disappearing: «one screen fewer» must not become «the
+                  buttons are gone». The address stays as a redirect so links
+                  in letters and chats keep working. */}
+              <Route
+                path="/deals/:dealId"
+                element={<DealRedirectToVault />}
+              />
               <Route path="/deals/:dealId/vault" element={<DealVaultPage />} />
               {/* T_UX.20 — the profile is seven sections behind one shell, and
                   every one of them is a real path. Nesting rather than tabs is

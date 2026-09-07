@@ -427,7 +427,6 @@
     }
   },
   "chat": {
-    "backToDeal": "Transaction",
     "immutable": "Immuable · SHA-256",
     "empty": "Aucun message pour l'instant",
     "placeholder": "Message…",
@@ -512,7 +511,6 @@
     "myCargoSender": "Mes livraisons",
     "allDeals": "Toutes les transactions →",
     "iSend": "J'envoie",
-    "findTrip": "Trouver un vol",
     "noTrips": "Aucun vol publié",
     "publishFirst": "Publier un vol",
     "noDeals": "Aucune transaction active",
@@ -702,6 +700,12 @@
     "notFound": "Transaction introuvable",
     "actionFailed": "L'action n'a pas abouti. Réessayez.",
     "boardingPass": "Carte d'embarquement",
+    "byPersonTitle": "Accords par personne",
+    "countWithPerson": "{{count}} accords",
+    "sortBy": {
+      "recent": "Les plus récents",
+      "count": "Le plus d'accords"
+    },
     "sender": "Expéditeur",
     "carrier": "Transporteur",
     "cargo": "Colis",

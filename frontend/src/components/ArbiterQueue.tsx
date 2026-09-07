@@ -120,7 +120,7 @@ export default function ArbiterQueue() {
                 </p>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Link
-                    to={`/deals/${d.deal_id}`}
+                    to={`/deals/${d.deal_id}/vault`}
                     className="text-xs font-body text-cyan hover:underline"
                   >
                     {t('admin.viewDeal')} →

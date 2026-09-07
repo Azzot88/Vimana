@@ -56,7 +56,7 @@ export default function DisputesPage() {
         {deals.map((deal) => (
           <Link
             key={deal.id}
-            to={`/deals/${deal.id}`}
+            to={`/deals/${deal.id}/vault`}
             className="block bg-white rounded-card border border-navy/10 p-4 hover:border-cyan/40 transition-colors"
           >
             <div className="flex flex-wrap items-center gap-3">

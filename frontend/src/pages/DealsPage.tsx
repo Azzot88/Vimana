@@ -34,8 +34,8 @@ export default function DealsPage() {
       {deals.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm font-body text-navy/40">{t('deals.noDeals')}</p>
-          <Link to="/trips" className="inline-block mt-3 text-sm text-cyan hover:underline font-body">
-            {t('dashboard.findTrip')}
+          <Link to="/send" className="inline-block mt-3 text-sm text-cyan hover:underline font-body">
+            {t('nav.trips')}
           </Link>
         </div>
       ) : (
@@ -45,7 +45,7 @@ export default function DealsPage() {
             return (
               <Link
                 key={deal.id}
-                to={`/deals/${deal.id}`}
+                to={`/deals/${deal.id}/vault`}
                 className="bg-white rounded-card border border-navy/10 p-5 hover:border-cyan/40 transition-colors"
               >
                 <div className="flex items-center justify-between">

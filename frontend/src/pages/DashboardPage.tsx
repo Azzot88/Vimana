@@ -100,7 +100,10 @@ export default function DashboardPage() {
   const dealRow = (deal: Deal) => (
     <Link
       key={deal.id}
-      to={`/deals/${deal.id}`}
+      /* T3.11.26 — straight into the conversation. The card that used to stand
+         in front of it moved into the vault's header, so the extra stop was a
+         screen whose only purpose was to be clicked through. */
+      to={`/deals/${deal.id}/vault`}
       className="bg-white rounded-card border border-navy/10 p-4 hover:border-cyan/40 transition-colors flex items-center justify-between gap-3"
     >
       <div className="space-y-1 min-w-0">
@@ -136,14 +139,6 @@ export default function DashboardPage() {
             className="bg-cyan text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity flex items-center"
           >
             {t('dashboard.publishTrip')}
-          </Link>
-        )}
-        {!isCarrier && (
-          <Link
-            to="/trips"
-            className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity flex items-center"
-          >
-            {t('dashboard.findTrip')}
           </Link>
         )}
       </div>
@@ -249,8 +244,21 @@ export default function DashboardPage() {
               <div className="grid gap-3">{carrying.map(dealRow)}</div>
             </section>
           )}
+          {/* T3.11.26 — a carrier who is also sending something sees it here.
+              The panel used to show one side or the other by mode, which hid
+              real work from anybody who does both — and both is the normal
+              case on this market. */}
+          {sending.length > 0 && (
+            <section>
+              <h2 className="font-display font-semibold text-lg text-navy mb-3">
+                {t('dashboard.myShipments')}
+              </h2>
+              <div className="grid gap-3">{sending.map(dealRow)}</div>
+            </section>
+          )}
         </>
       ) : (
+        <>
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display font-semibold text-lg text-navy">
@@ -265,17 +273,31 @@ export default function DashboardPage() {
               <p className="text-sm font-body text-navy/40">
                 {t('dashboard.noShipments')}
               </p>
+              {/* T3.11.26 — «Найти рейс» is gone from the panel: `/send` is the
+                  board now, so a button whose whole job was to get there is one
+                  click of ceremony in front of the thing the person came for. */}
               <Link
-                to="/trips"
+                to="/send"
                 className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
               >
-                {t('dashboard.findTrip')}
+                {t('nav.trips')}
               </Link>
             </div>
           ) : (
             <div className="grid gap-3">{sending.map(dealRow)}</div>
           )}
         </section>
+        {/* Same reason as above, the other way round: somebody in sender mode
+            who is also carrying a parcel sees it without switching. */}
+        {carrying.length > 0 && (
+          <section>
+            <h2 className="font-display font-semibold text-lg text-navy mb-3">
+              {t('dashboard.carryingNow')}
+            </h2>
+            <div className="grid gap-3">{carrying.map(dealRow)}</div>
+          </section>
+        )}
+        </>
       )}
     </div>
   )

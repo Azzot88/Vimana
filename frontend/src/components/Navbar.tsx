@@ -13,7 +13,11 @@ export default function Navbar() {
   // `/dashboard` would still work (it redirects), but the link would never
   // light up as active, because the address it names is one nobody ever stays
   // on.
-  const panelHref = isCarrierMode ? '/carrier' : '/send'
+  /* T3.11.26 — the panel has one address now (owner's decision 2026-09-07).
+     It used to be the mode home, which worked while `/send` and `/carrier`
+     *were* the panel; `/send` is the board now, and a tab called «Панель» that
+     lands on a list of other people's trips is a tab that lies. */
+  const panelHref = '/dashboard'
   const { t } = useTranslation()
   const navigate = useNavigate()
 

@@ -428,7 +428,6 @@
     }
   },
   "chat": {
-    "backToDeal": "Transakcja",
     "immutable": "Niezmienne · SHA-256",
     "empty": "Brak wiadomości",
     "placeholder": "Wiadomość…",
@@ -513,7 +512,6 @@
     "myCargoSender": "Moje dostawy",
     "allDeals": "Wszystkie transakcje →",
     "iSend": "Wysyłam",
-    "findTrip": "Znajdź lot",
     "noTrips": "Brak opublikowanych lotów",
     "publishFirst": "Opublikuj lot",
     "noDeals": "Brak aktywnych transakcji",
@@ -703,6 +701,12 @@
     "notFound": "Nie znaleziono transakcji",
     "actionFailed": "Nie udało się wykonać. Spróbuj ponownie.",
     "boardingPass": "Karta pokładowa",
+    "byPersonTitle": "Transakcje wg osoby",
+    "countWithPerson": "Transakcje: {{count}}",
+    "sortBy": {
+      "recent": "Ostatnie",
+      "count": "Najwięcej transakcji"
+    },
     "sender": "Nadawca",
     "carrier": "Przewoźnik",
     "cargo": "Ładunek",
