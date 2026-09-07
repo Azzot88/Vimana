@@ -1670,17 +1670,45 @@ export default function NewTripPage() {
                   className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
                 />
               </label>
-              <label className="w-24">
-                <span className="block text-[11px] font-body text-navy/40 mb-1">
+              {/* T3.11.07 — the account's currencies, not free text.
+                  It was a three-character box, which accepted `RUUB` and every
+                  other typo — and a typo in a currency code is a price nobody
+                  can compare. The list comes from the profile, in the order set
+                  there: the first one is already selected, the rest are one tap
+                  away. A currency that is not here is added in the profile,
+                  where it stays for every later trip instead of being retyped. */}
+              <fieldset className="min-w-[6rem]">
+                <legend className="block text-[11px] font-body text-navy/40 mb-1">
                   {t('trips.currency')}
-                </span>
-                <input
-                  maxLength={3}
-                  value={draft.currency || prefs.currency}
-                  onChange={(e) => patch({ currency: e.target.value.toUpperCase() })}
-                  className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-                />
-              </label>
+                </legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {/* Whatever the draft already holds is shown even if it is no
+                      longer in the profile list — a trip repeated from an older
+                      one, or a currency since removed. Dropping the chip would
+                      publish a price in a currency with nothing selected. */}
+                  {(prefs.currencies.includes(draft.currency) || !draft.currency
+                    ? prefs.currencies
+                    : [...prefs.currencies, draft.currency]
+                  ).map((code) => {
+                    const active = (draft.currency || prefs.currency) === code
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => patch({ currency: code })}
+                        aria-pressed={active}
+                        className={`px-3 min-h-[2.75rem] rounded-field border text-sm font-mono ${
+                          active
+                            ? 'border-cyan text-cyan bg-cyan/5'
+                            : 'border-navy/20 text-navy/60'
+                        }`}
+                      >
+                        {code}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
             </div>
           </div>
         </>

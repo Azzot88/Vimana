@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.currencies import CURRENCIES
+
 PaymentMethod = Literal["cash", "platform", "escrow"]
 
 
@@ -20,7 +22,10 @@ class TermsIn(BaseModel):
     weight_kg: float = Field(gt=0, le=100)
     price_total: float = Field(gt=0)
     declared_value: float = Field(ge=0)
-    currency: str = Field(default="USD", min_length=3, max_length=3)
+    # T3.11.07 — four characters, because `USDT` and `USDC` are four. A deal is
+    # negotiated in the currency the trip was published in, so a limit narrower
+    # than the trip's would refuse the ordinary continuation of that trip.
+    currency: str = Field(default="USD", min_length=3, max_length=4)
     dimensions_cm: list[float] | None = None
     deadline: datetime | None = None
     payment_method: PaymentMethod = "cash"
@@ -30,8 +35,11 @@ class TermsIn(BaseModel):
 
     @field_validator("currency")
     @classmethod
-    def _upper(cls, v: str) -> str:
-        return v.upper()
+    def _known_currency(cls, v: str) -> str:
+        code = v.strip().upper()
+        if code not in CURRENCIES:
+            raise ValueError(f"unknown currency: {code}")
+        return code
 
     @field_validator("dimensions_cm")
     @classmethod

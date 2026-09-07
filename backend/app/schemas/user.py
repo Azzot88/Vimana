@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.currencies import CURRENCIES, MAX_ACCOUNT_CURRENCIES
+
 
 # T3.28 pt.3b — `UserCreate` lived here, the body of `POST /auth/register`.
 # The endpoint is gone; `core/accounts.create_user` takes arguments, not a
@@ -65,10 +67,12 @@ class UserUpdate(BaseModel):
     # T_UX.14 — display preferences.
     unit_weight: Literal["kg", "lb"] | None = None
     date_format: Literal["eu", "us"] | None = None
-    # T3.11.07 — the currency new trips start in. Three letters, upper-cased on
-    # the way in like `Trip.currency`: a code stored two ways is a code that
-    # matches nothing half the time.
-    default_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    # T3.11.07 — the currencies new trips may start in, first one primary.
+    # Validated against a closed list: a typo in a code is a price nobody can
+    # compare, and this is the one field on a trip where free text buys nothing.
+    default_currencies: list[str] | None = Field(
+        default=None, min_length=1, max_length=MAX_ACCOUNT_CURRENCIES
+    )
     # T_UX.15 — standing carriage rules, the template copied into new trips.
     carriage_rules: str | None = Field(default=None, max_length=4000)
     # T_UX.21 — standing notes about the carrier rather than the shipment, so
@@ -78,17 +82,31 @@ class UserUpdate(BaseModel):
     interaction_rules: str | None = Field(default=None, max_length=4000)
     payment_instructions: str | None = Field(default=None, max_length=4000)
 
-    @field_validator("default_currency")
+    @field_validator("default_currencies")
     @classmethod
-    def _currency_upper(cls, v: str | None) -> str | None:
-        """Upper-cased on the way in, exactly as `TripCreate.currency` is.
+    def _known_currencies(cls, v: list[str] | None) -> list[str] | None:
+        """Upper-cased, deduplicated, and checked against the closed list.
 
-        A code stored two ways is a code that matches nothing half the time,
-        and the form pre-fills the trip from this value — so `usd` here would
-        become `usd` on a published trip and fail to line up with every `USD`
-        beside it.
+        Upper-cased for the same reason `TripCreate.currency` is: a code stored
+        two ways matches nothing half the time, and a trip is pre-filled from
+        this value. Checked against the list because a typo in a currency code
+        is a price nobody can compare.
+
+        **Order is preserved.** The first entry is the primary one — what a new
+        trip starts in — so sorting here would quietly reassign it. The screen
+        shows the list alphabetically; that is a display choice and stays on the
+        screen.
         """
-        return v.upper() if v else v
+        if v is None:
+            return None
+        codes = [c.strip().upper() for c in v if c and c.strip()]
+        unknown = [c for c in codes if c not in CURRENCIES]
+        if unknown:
+            raise ValueError(f"unknown currencies: {sorted(set(unknown))}")
+        deduped = list(dict.fromkeys(codes))
+        if not deduped:
+            raise ValueError("at least one currency is required")
+        return deduped
 
     @field_validator("locale")
     @classmethod
@@ -215,7 +233,7 @@ class UserOut(BaseModel):
 class MeOut(UserOut):
     unit_weight: str = "kg"
     date_format: str = "eu"
-    default_currency: str = "USD"
+    default_currencies: list[str] = Field(default_factory=lambda: ["USD"])
     carriage_rules: str | None = None
     # T_UX.21 — owner-only, like the rest of `MeOut`. They are meant for a
     # counterparty, but the carrier decides when to send them: putting them on

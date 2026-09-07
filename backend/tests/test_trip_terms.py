@@ -89,11 +89,32 @@ async def test_unknown_handover_method_rejected(client, carrier_headers):
     assert r.status_code == 422
 
 
-async def test_currency_must_be_three_letters(client, carrier_headers):
+async def test_currency_must_be_a_code_we_know(client, carrier_headers):
+    """Three or four characters, and one of ours.
+
+    `DOLLAR` is refused by the length; `RUUB` gets past it and is refused by the
+    list — which is the case that matters, because a typo in a currency code is
+    a price nobody can compare.
+    """
+    for bad in ("DOLLAR", "RUUB"):
+        r = await client.post(
+            "/api/trips", headers=carrier_headers, json=_payload(currency=bad)
+        )
+        assert r.status_code == 422, f"{bad}: {r.text}"
+
+
+async def test_four_character_stablecoin_publishes(client, carrier_headers):
+    """`USDT` is four characters, and the column and schema were both three.
+
+    A carrier whose primary currency is a stablecoin picks it in the profile and
+    publishes with it — the setting and the form have to agree, or the setting
+    exists and does nothing.
+    """
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(currency="DOLLAR")
+        "/api/trips", headers=carrier_headers, json=_payload(currency="usdt")
     )
-    assert r.status_code == 422
+    assert r.status_code == 201, r.text
+    assert r.json()["currency"] == "USDT"
 
 
 async def test_baseline_shows_up_in_the_listing(client, carrier_headers):
@@ -251,27 +272,98 @@ async def test_trip_can_override_with_no_rules(client, carrier_headers):
     assert r.json()["carriage_rules"] == ""
 
 
-# ── T3.11.07 · the account's default currency ─────────────────────────────
+# ── T3.11.07 · the account's currencies ────────────────────────────────────
 
 
-async def test_default_currency_is_stored_and_upper_cased(client, carrier_headers):
+async def test_currencies_are_stored_and_upper_cased(client, carrier_headers):
     """Upper-cased on the way in, exactly as `TripCreate.currency` is: a code
     stored two ways is a code that matches nothing half the time, and the trip
     form pre-fills from this value."""
     r = await client.patch(
-        "/api/auth/me", headers=carrier_headers, json={"default_currency": "aed"}
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"default_currencies": ["aed", "usdt"]},
     )
     assert r.status_code == 200, r.text
-    assert r.json()["default_currency"] == "AED"
+    assert r.json()["default_currencies"] == ["AED", "USDT"]
 
     back = await client.get("/api/auth/me", headers=carrier_headers)
-    assert back.json()["default_currency"] == "AED"
+    assert back.json()["default_currencies"] == ["AED", "USDT"]
 
     # Put back: the test database is never reset, and a currency left behind
     # would follow this carrier through every later test.
     await client.patch(
-        "/api/auth/me", headers=carrier_headers, json={"default_currency": "USD"}
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["USD"]}
     )
+
+
+async def test_currency_order_is_kept_because_the_first_one_is_the_primary(
+    client, carrier_headers
+):
+    """The screen lists them alphabetically; the account stores them in the
+    order chosen. Sorting here would quietly reassign which currency a new trip
+    starts in — the one thing this order decides."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"default_currencies": ["ZEC", "AED", "PLN"]},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["default_currencies"] == ["ZEC", "AED", "PLN"]
+
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["USD"]}
+    )
+
+
+async def test_repeated_currency_is_kept_once(client, carrier_headers):
+    """A double tap in the picker is not an error worth a red box — the second
+    copy simply is not a second currency."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"default_currencies": ["EUR", "eur", "USD"]},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["default_currencies"] == ["EUR", "USD"]
+
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["USD"]}
+    )
+
+
+async def test_unknown_currency_is_refused(client, carrier_headers):
+    """A closed list: a typo in a code is a price nobody can compare."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"default_currencies": ["USD", "RUUB"]},
+    )
+    assert r.status_code == 422, r.text
+
+    unchanged = await client.get("/api/auth/me", headers=carrier_headers)
+    assert "RUUB" not in unchanged.json()["default_currencies"]
+
+
+async def test_empty_currency_list_is_refused(client, carrier_headers):
+    """Zero currencies is not a preference — it is a trip form with nothing to
+    pre-fill. The account keeps whatever it had."""
+    r = await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": []}
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_too_many_currencies_are_refused(client, carrier_headers):
+    """`MAX_ACCOUNT_CURRENCIES` is what the trip form can show as chips rather
+    than as a second dropdown — a list past it is a list nobody reads."""
+    from app.core.currencies import CURRENCIES, MAX_ACCOUNT_CURRENCIES
+
+    too_many = list(CURRENCIES[: MAX_ACCOUNT_CURRENCIES + 1])
+    r = await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": too_many}
+    )
+    assert r.status_code == 422, r.text
 
 
 async def test_currency_preference_does_not_touch_published_trips(
@@ -288,12 +380,12 @@ async def test_currency_preference_does_not_touch_published_trips(
     trip_id = published.json()["id"]
 
     await client.patch(
-        "/api/auth/me", headers=carrier_headers, json={"default_currency": "AED"}
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["AED"]}
     )
     listing = await client.get("/api/trips", headers=carrier_headers)
     mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
     assert mine["currency"] == "EUR"
 
     await client.patch(
-        "/api/auth/me", headers=carrier_headers, json={"default_currency": "USD"}
+        "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["USD"]}
     )

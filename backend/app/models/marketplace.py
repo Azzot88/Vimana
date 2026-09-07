@@ -126,7 +126,10 @@ class Trip(Base):
     # comparable between trips.
     price_per_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     min_deal_price: Mapped[float | None] = mapped_column(Float, nullable=True)
-    currency: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD")
+    # T3.11.07 — four characters, not three: `USDT` and `USDC` are four, and an
+    # account can now price in them. A carrier whose primary currency is a
+    # stablecoin would otherwise have every publication truncated or refused.
+    currency: Mapped[str] = mapped_column(String(4), default="USD", server_default="USD")
     # T3.11.07 — the customs allowance the carrier has **left** on this flight,
     # not a ceiling they are prepared to cover.
     #
@@ -322,7 +325,9 @@ class Order(Base):
     destination: Mapped[str] = mapped_column(String(100))
     category: Mapped[str] = mapped_column(String(50))
     declared_value: Mapped[float] = mapped_column(Float)
-    currency: Mapped[str] = mapped_column(String(3), default="USD")
+    # T3.11.07 — four characters, matching `Trip.currency`: an order is priced
+    # in what the trip it answers was published in.
+    currency: Mapped[str] = mapped_column(String(4), default="USD")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[OrderStatus] = mapped_column(SAEnum(OrderStatus), default=OrderStatus.draft)

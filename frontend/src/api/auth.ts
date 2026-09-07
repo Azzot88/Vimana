@@ -11,6 +11,49 @@ export interface TokenResponse {
   token_type: string
 }
 
+/** T3.11.07 — the currencies an account can price in. Mirrors
+ *  `core.currencies.CURRENCIES`; the backend refuses anything else, so a code
+ *  added on one side and not the other is a chip that fails to save.
+ *
+ *  Alphabetical by code (owner's decision 2026-09-06). Any other order — by
+ *  region, by how common, by our own traffic — is an opinion the reader has to
+ *  learn before they can find their currency. The stablecoins and
+ *  cryptocurrencies sit in that same order rather than in a section of their
+ *  own: to somebody who prices in USDT it is a currency, not a category.
+ *
+ *  Names and the one-line descriptions live in the locale files — they are
+ *  read by people and have to be translated. */
+export const CURRENCIES = [
+  'AED',
+  'BTC',
+  'CNY',
+  'EUR',
+  'GBP',
+  'GEL',
+  'ILS',
+  'INR',
+  'KZT',
+  'MXN',
+  'PLN',
+  'RSD',
+  'RUB',
+  'THB',
+  'TRY',
+  'UAH',
+  'USD',
+  'USDC',
+  'USDT',
+  'UZS',
+  'ZEC',
+] as const
+export type Currency = (typeof CURRENCIES)[number]
+
+/** How many an account may keep. Enough for somebody working three corridors
+ *  and settling in a stablecoin, few enough that the trip form can show them as
+ *  chips rather than as a second dropdown. Mirrors
+ *  `core.currencies.MAX_ACCOUNT_CURRENCIES`. */
+export const MAX_ACCOUNT_CURRENCIES = 8
+
 // T3.42 — `compliance_editor` joins the set. The type is a statement about what
 // the backend can return, so leaving it out would not have been "one fewer
 // role to handle": it would have been a lie the compiler enforces, and every
@@ -83,9 +126,10 @@ export interface User {
    *  from the browser. */
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
-  /** T3.11.07 — the currency new trips start in, chosen once instead of
-   *  re-picked on every publication. */
-  default_currency?: string
+  /** T3.11.07 — the currencies new trips may start in, chosen once instead of
+   *  re-picked on every publication. **Order is meaningful**: the first entry
+   *  is what the form pre-fills, the rest are offered beside it. */
+  default_currencies?: string[]
   /** T_UX.15 — standing carriage rules, copied into each new trip. */
   carriage_rules?: string | null
   /** T_UX.21 — the other two standing notes, and unlike the carriage rules
@@ -257,7 +301,7 @@ export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 export interface UserUpdate {
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
-  default_currency?: string
+  default_currencies?: string[]
   carriage_rules?: string | null
   interaction_rules?: string | null
   payment_instructions?: string | null

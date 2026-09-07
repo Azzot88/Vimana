@@ -27,15 +27,20 @@ export function usePrefs() {
 
   const unit = (user?.unit_weight as WeightUnit) ?? 'kg'
   const style = (user?.date_format as DateStyle) ?? 'eu'
-  // T3.11.07 — the currency new trips start in. Chosen once in the profile
-  // rather than re-picked on every publication, which is a field always
-  // answered the same way.
-  const currency = user?.default_currency ?? 'USD'
+  // T3.11.07 — the currencies new trips may start in. Chosen once in the
+  // profile rather than re-picked on every publication, which is a field always
+  // answered the same way. **Order is meaningful**: the first entry is what the
+  // form pre-fills, the rest are the chips offered beside it.
+  const currencies = user?.default_currencies?.length
+    ? user.default_currencies
+    : ['USD']
+  const currency = currencies[0]
 
   return {
     unit,
     style,
     currency,
+    currencies,
     /** Kilograms in, the account's unit out. Storage stays metric. */
     weight: (kg: number | null | undefined) => formatWeight(kg, unit),
     /** T3.11.07 — the same conversion without the unit suffix, for the places

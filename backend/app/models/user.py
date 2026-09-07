@@ -123,16 +123,23 @@ class User(Base):
     date_format: Mapped[str] = mapped_column(
         String(2), default="eu", server_default="eu"
     )
-    # T3.11.07 — the currency this account prices in, chosen once instead of
-    # per trip. It is a display preference by the same argument as the two
-    # above: a carrier working one corridor quotes in one currency for years,
-    # and re-picking it on every publication is a field that is always answered
-    # the same way. USD by default because the launch corridor is UAE ↔ US.
+    # T3.11.07 — the currencies this account prices in. **Several** (owner's
+    # decision 2026-09-06): a carrier on two corridors quotes in two, and one
+    # who settles in a stablecoin quotes in that as well. The first is the one a
+    # new trip starts in; the rest are offered beside it as a short pick list,
+    # which is what removed the free-text currency field from the form.
+    #
+    # A list rather than a single value plus a set of "others", because those
+    # would be two fields for one idea and the second would drift from the
+    # first. Order is the carrier's own — first means primary — and is why this
+    # is an array rather than a set.
     #
     # Not a rate and not a conversion: `Trip.currency` still stores what the
     # carrier published in, and nothing here converts anything.
-    default_currency: Mapped[str] = mapped_column(
-        String(3), default="USD", server_default="USD"
+    # `ARRAY`, matching `roles` above: a Postgres array of short strings is what
+    # this is, and JSON would make the same data unqueryable for no gain.
+    default_currencies: Mapped[list[str]] = mapped_column(
+        ARRAY(String(4)), default=lambda: ["USD"], server_default="{USD}"
     )
     # T_UX.15 — the carrier's standing carriage rules, written once and copied
     # into each trip. Copied rather than referenced: a rule changed in March

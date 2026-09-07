@@ -1171,9 +1171,11 @@ async def _ensure_display_prefs_columns(engine) -> None:
             "ADD COLUMN IF NOT EXISTS unit_weight VARCHAR(4) NOT NULL DEFAULT 'kg'",
             "ADD COLUMN IF NOT EXISTS date_format VARCHAR(2) NOT NULL DEFAULT 'eu'",
             "ADD COLUMN IF NOT EXISTS carriage_rules TEXT",
-            # 0067 — the currency new trips start in.
-            "ADD COLUMN IF NOT EXISTS default_currency VARCHAR(3) "
-            "NOT NULL DEFAULT 'USD'",
+            # 0068 — the currencies new trips may start in, first one primary.
+            # (0067 shipped a single `default_currency` and 0068 replaced it.)
+            "ADD COLUMN IF NOT EXISTS default_currencies VARCHAR(4)[] "
+            "NOT NULL DEFAULT '{USD}'",
+            "DROP COLUMN IF EXISTS default_currency",
         ):
             await conn.execute(text(f"ALTER TABLE users {ddl}"))
         await conn.execute(
@@ -1365,6 +1367,13 @@ async def _ensure_trip_chain(engine) -> None:
         await conn.execute(
             text("ALTER TABLE trips ALTER COLUMN payment_model TYPE VARCHAR(24)")
         )
+        # 0068 — `USDT` and `USDC` are four characters. A test database created
+        # before it kept VARCHAR(3), which does not refuse the value: it raises
+        # a truncation error from inside whichever test happened to publish one.
+        for table in ("trips", "orders"):
+            await conn.execute(
+                text(f"ALTER TABLE {table} ALTER COLUMN currency TYPE VARCHAR(4)")
+            )
         await conn.execute(
             text(
                 "UPDATE trips SET excluded = (SELECT COALESCE(json_agg(value), "

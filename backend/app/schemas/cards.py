@@ -58,7 +58,9 @@ class PaymentMethodAgreed(BaseModel):
 
 class PaymentDeclared(BaseModel):
     amount: float = Field(gt=0)
-    currency: str = Field(default="USD", min_length=3, max_length=3)
+    # T3.11.07 — four characters: `USDT` and `USDC` are four, and a payment is
+    # declared in the currency the deal was agreed in.
+    currency: str = Field(default="USD", min_length=3, max_length=4)
     method: Literal["cash", "platform", "escrow"] = "cash"
 
 

@@ -10,6 +10,7 @@ from pydantic import (
     field_validator,
 )
 
+from app.core.currencies import CURRENCIES
 from app.core.trip_legs import MAX_LEGS
 from app.models.marketplace import EXCLUSIONS, TRIP_SERVICES
 
@@ -128,7 +129,13 @@ class TripCreate(BaseModel):
     # number would make carriers invent one to get past the form.
     price_per_kg: float | None = Field(default=None, gt=0, le=10_000)
     min_deal_price: float | None = Field(default=None, ge=0, le=1_000_000)
-    currency: str = Field(default="USD", min_length=3, max_length=3)
+    # T3.11.07 — three or four characters, and one of ours. It was `max_length=3`,
+    # which refused `USDT` and `USDC` outright the moment an account could hold
+    # them — the form offers the carrier's own list, so the one value it sends
+    # would have been rejected by the field it came from. Checked against the
+    # closed list for the same reason the account field is: a typo in a currency
+    # code is a price nobody can compare.
+    currency: str = Field(default="USD", min_length=3, max_length=4)
     max_declared_value: float | None = Field(default=None, ge=0)
     # T3.11.07 — a closed list, so a sender can filter on it. `None` means the
     # carrier said nothing, which is what 94 % of this market does; an empty
@@ -160,8 +167,16 @@ class TripCreate(BaseModel):
 
     @field_validator("currency")
     @classmethod
-    def _upper(cls, v: str) -> str:
-        return v.upper()
+    def _known_currency(cls, v: str) -> str:
+        """Upper-cased and checked against the closed list.
+
+        The form offers the carrier's own currencies, so a value arriving here
+        that is not on the list did not come from the form.
+        """
+        code = v.strip().upper()
+        if code not in CURRENCIES:
+            raise ValueError(f"unknown currency: {code}")
+        return code
 
     @field_validator("excluded")
     @classmethod
