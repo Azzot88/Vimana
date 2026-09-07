@@ -1376,6 +1376,7 @@ export default function NewTripPage() {
             </p>
             <p className="text-[11px] font-body text-navy/40 -mt-1">
               {t('trips.customsHint')}
+            </p>
             {/* T3.11.07 — the number is what is **left**, not a ceiling. It
                 carried a separate `open / exhausted` state for a few hours;
                 once the label says "free", zero already says "spent", and the
