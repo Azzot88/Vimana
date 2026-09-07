@@ -642,6 +642,8 @@
       "title": "Lot",
       "open": "Szczegóły",
       "edit": "Edytuj lot",
+      "reverse": "Lot powrotny",
+      "reverseHint": "Ta sama trasa w drugą stronę. Daty zostaną puste, reszta się przeniesie.",
       "hasAddress": "Adres z profilu — wyślę na czacie",
       "hasMeetingPlace": "Miejsce spotkania z profilu — wyślę na czacie",
       "publishedAt": "Opublikowano"

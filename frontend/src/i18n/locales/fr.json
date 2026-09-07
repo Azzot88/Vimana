@@ -641,6 +641,8 @@
       "title": "Vol",
       "open": "Détails",
       "edit": "Modifier le vol",
+      "reverse": "Vol retour",
+      "reverseHint": "Le même itinéraire en sens inverse. Les dates restent vides, le reste est repris.",
       "hasAddress": "Une adresse de mon profil — je l'enverrai dans le chat",
       "hasMeetingPlace": "Un lieu de rendez-vous de mon profil — je l'enverrai dans le chat",
       "publishedAt": "Publié"

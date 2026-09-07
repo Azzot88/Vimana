@@ -449,6 +449,40 @@ function draftFromTrip(
   }
 }
 
+/** T3.11.07 — the same trip, flown the other way (owner's request 2026-09-06).
+ *
+ *  A carrier who flies Dubai → New York almost always comes back, and the
+ *  return listing is the outbound one with two things changed: the route runs
+ *  backwards and the dates are unknown. Everything else — what they take, how
+ *  much room, the settlement, the rules — is the same person with the same
+ *  suitcase, and making them answer all of it again is the reason the return
+ *  half of this market gets published as a line in a chat instead of a listing.
+ *
+ *  **The two handover ends swap, and they have to.** On the outbound, the
+ *  origin block describes Dubai (where cargo is accepted) and the destination
+ *  block describes New York (where it is handed over). The return is
+ *  New York → Dubai: it accepts in New York and hands over in Dubai. Swapping
+ *  keeps each block with its own city — including the address and the meeting
+ *  place, which are rows in the carrier's profile tied to a real place.
+ *
+ *  **Postal services do not survive the swap.** They are asked only about the
+ *  destination — onward shipping happens after landing — so the block that was
+ *  the destination carries the arrival country's services, and after the swap
+ *  it is the origin. Left in, they would be published on a trip whose form
+ *  never shows them, for a country the parcel no longer lands in.
+ *
+ *  Dates are already empty: this is built on top of `draftFromTrip(…, false)`,
+ *  the same "never right twice" rule as «как в прошлый раз».
+ *
+ *  Called by: the reverse-trip effect in `NewTripPage`.
+ */
+function reversedDraft(base: Partial<Draft>): Partial<Draft> {
+  const nodes = [...(base.nodes ?? [])].reverse()
+  const origin = { ...(base.handoverDestination ?? EMPTY_HANDOVER), postalServices: '' }
+  const destination = { ...(base.handoverOrigin ?? EMPTY_HANDOVER) }
+  return { ...base, nodes, handoverOrigin: origin, handoverDestination: destination }
+}
+
 /** An ISO instant into what `DateTimeField` reads: `YYYY-MM-DDTHH:mm`, local.
  *
  *  Local rather than UTC because that is what the field means everywhere else
@@ -528,6 +562,14 @@ export default function NewTripPage() {
      for editing would be the same twenty fields written twice, and the copy
      that fell behind would be the one that silently dropped an answer. */
   const editingId = params.get('edit')
+  /* T3.11.07 — the trip this one is the return of (owner's request
+     2026-09-06). Unlike `edit`, nothing downstream needs it: it is a
+     starting point, not a target, so it is consumed once and dropped from the
+     URL. A reload then falls back to the autosaved draft, which is what the
+     carrier has been typing into — reprefilling from the parent would throw
+     that away. */
+  const reverseId = params.get('reverse')
+  const reversedFrom = useRef<string | null>(null)
   const goToStep = useCallback(
     (next: number, replace = false) => {
       const query: Record<string, string> = { step: String(next) }
@@ -616,6 +658,49 @@ export default function NewTripPage() {
       .catch(() => setError(t('trips.editNotFound') as string))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId])
+
+  /* T3.11.07 — «обратный рейс»: a new trip built on the parent, flown the other
+     way (owner's request 2026-09-06). A carrier who flies Dubai → New York
+     almost always comes back, and the return listing is the outbound one with
+     the route reversed and the dates unknown — everything else is the same
+     person with the same suitcase.
+
+     A **new** trip, not an edit: it publishes with POST and gets its own id.
+     The marker is dropped from the URL once it has been used, so a reload
+     continues the autosaved draft instead of overwriting what the carrier has
+     since typed.
+
+     It does replace an unfinished draft, and that was weighed: the wizard holds
+     one draft, and pressing «Обратный рейс» is an unambiguous request for a
+     specific one. Asking first would put a modal on the happy path to save a
+     scratch form the carrier had already walked away from. */
+  useEffect(() => {
+    if (!reverseId || reversedFrom.current === reverseId) return
+    const passed = (location.state as { trip?: Trip } | null)?.trip
+    const drop = () => setParams({ step: '1' }, { replace: true })
+    if (passed && passed.id === reverseId) {
+      reversedFrom.current = reverseId
+      setDraft({ ...EMPTY, ...reversedDraft(draftFromTrip(passed, prefs.toUnit, false)) })
+      drop()
+      return
+    }
+    // Cold load: the panel was opened, then the page reloaded. Same fallback as
+    // the edit path — the carrier's own listing is the only place that returns
+    // a trip of any status.
+    listTrips({ carrier_id: user?.id, status: 'all', limit: 100 })
+      .then(({ data }) => {
+        const found = data.items.find((x) => x.id === reverseId)
+        if (!found) {
+          setError(t('trips.editNotFound') as string)
+          return
+        }
+        reversedFrom.current = reverseId
+        setDraft({ ...EMPTY, ...reversedDraft(draftFromTrip(found, prefs.toUnit, false)) })
+        drop()
+      })
+      .catch(() => setError(t('trips.editNotFound') as string))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reverseId])
 
   // Postal services follow the **arrival** country: onward shipping happens
   // after landing. Refetched when that country changes and not before — a

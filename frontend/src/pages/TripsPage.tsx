@@ -460,6 +460,18 @@ export default function TripsPage() {
                   })
               : undefined
           }
+          /* T3.11.07 — «Обратный рейс» (owner's request 2026-09-06). Owner-only
+             like editing, but offered whatever the status: the way back is
+             planned long after the outbound has been matched, and often
+             precisely because it has. */
+          onReverse={
+            previewTrip.carrier_id === user?.id
+              ? () =>
+                  navigate(`/trips/new?reverse=${previewTrip.id}`, {
+                    state: { trip: previewTrip },
+                  })
+              : undefined
+          }
         />
       )}
     </div>

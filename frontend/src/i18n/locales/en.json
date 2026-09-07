@@ -688,6 +688,8 @@
       "title": "Trip",
       "open": "Details",
       "edit": "Edit trip",
+      "reverse": "Return trip",
+      "reverseHint": "The same route the other way. The dates stay empty; everything else is carried over.",
       "hasAddress": "An address from my profile — I will send it in the chat",
       "hasMeetingPlace": "A meeting place from my profile — I will send it in the chat",
       "publishedAt": "Published"

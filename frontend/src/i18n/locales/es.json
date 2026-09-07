@@ -641,6 +641,8 @@
       "title": "Vuelo",
       "open": "Detalles",
       "edit": "Editar vuelo",
+      "reverse": "Vuelo de vuelta",
+      "reverseHint": "La misma ruta al revés. Las fechas quedan vacías; lo demás se copia.",
       "hasAddress": "Una dirección de mi perfil: la enviaré en el chat",
       "hasMeetingPlace": "Un lugar de encuentro de mi perfil: lo enviaré en el chat",
       "publishedAt": "Publicado"

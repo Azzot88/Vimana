@@ -32,10 +32,14 @@ interface Props {
   trip: Trip
   /** Shown only when the viewer owns this trip and it is still open. */
   onEdit?: () => void
+  /** T3.11.07 — start a new trip flown the other way. Owner-only, but unlike
+   *  editing it is offered whatever the status: a carrier can be planning the
+   *  way back long after the outbound has been matched or even flown. */
+  onReverse?: () => void
   onClose: () => void
 }
 
-export default function TripPreview({ trip, onEdit, onClose }: Props) {
+export default function TripPreview({ trip, onEdit, onReverse, onClose }: Props) {
   const { t } = useTranslation()
   const prefs = usePrefs()
 
@@ -304,8 +308,8 @@ export default function TripPreview({ trip, onEdit, onClose }: Props) {
             same row: the id is what every inquiry and deal points at, so a
             carrier fixing a departure hour must not end up with a second
             listing and an orphaned conversation. */}
-        {onEdit && (
-          <footer className="border-t border-navy/10 p-4 flex justify-end gap-2 bg-white sm:rounded-b-card">
+        {(onEdit || onReverse) && (
+          <footer className="border-t border-navy/10 p-4 flex flex-wrap justify-end gap-2 bg-white sm:rounded-b-card">
             <button
               type="button"
               onClick={onClose}
@@ -313,13 +317,34 @@ export default function TripPreview({ trip, onEdit, onClose }: Props) {
             >
               {t('common.close')}
             </button>
-            <button
-              type="button"
-              onClick={onEdit}
-              className="px-4 py-2 min-h-[2.75rem] rounded-field bg-navy text-ivory text-sm font-display font-medium hover:bg-navy-mid transition-colors"
-            >
-              {t('trips.preview.edit')}
-            </button>
+            {/* T3.11.07 — «Обратный рейс». A carrier who flies out almost always
+                comes back, and the return listing is this one with the route
+                reversed and the dates unknown; today that half of the market is
+                published as a line in a chat because the form asks for all
+                twenty answers again. */}
+            {onReverse && (
+              <button
+                type="button"
+                onClick={onReverse}
+                title={t('trips.preview.reverseHint') as string}
+                className="px-4 py-2 min-h-[2.75rem] rounded-field border border-cyan/50 text-cyan text-sm font-display font-medium hover:bg-cyan/5 transition-colors"
+              >
+                {t('trips.preview.reverse')}
+              </button>
+            )}
+            {/* Its own guard now that the footer can be here for the return
+                button alone: editing is refused on a trip that is no longer a
+                listing, and a button that exists to be refused is worse than
+                one that is not there. */}
+            {onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="px-4 py-2 min-h-[2.75rem] rounded-field bg-navy text-ivory text-sm font-display font-medium hover:bg-navy-mid transition-colors"
+              >
+                {t('trips.preview.edit')}
+              </button>
+            )}
           </footer>
         )}
       </div>
