@@ -46,38 +46,57 @@ def upgrade() -> None:
         "meeting_places", sa.Column("city", sa.String(length=150), nullable=True)
     )
 
-    # Converted in place rather than dropped and re-added: the column shipped
-    # hours ago and may already hold somebody's shortlist. `unnest` turns each
-    # text element into an object; an empty array stays an empty array, which
-    # `COALESCE` is there for — `json_agg` over no rows is NULL, and the column
-    # is NOT NULL.
-    op.execute("ALTER TABLE users ALTER COLUMN payment_methods DROP DEFAULT")
+    # Through a second column rather than `ALTER ... TYPE ... USING`, and not by
+    # choice: Postgres refuses a **subquery in a transform expression**
+    # (`FeatureNotSupportedError: cannot use subquery in transform expression`),
+    # and turning one text element into one JSON object needs `unnest` — which
+    # is a subquery however it is written. An `UPDATE` has no such restriction,
+    # so the value is moved rather than cast.
+    #
+    # The old column is not dropped and re-added under the same name: the column
+    # shipped hours ago and may already hold somebody's shortlist, and this way
+    # the data is carried across instead of reset.
+    #
+    # `COALESCE` is for the empty array — `jsonb_agg` over no rows is NULL and
+    # the column is NOT NULL.
     op.execute(
-        "ALTER TABLE users ALTER COLUMN payment_methods TYPE JSONB USING ("
-        "  COALESCE("
-        "    (SELECT jsonb_agg(jsonb_build_object('name', m, 'country', NULL))"
-        "     FROM unnest(payment_methods) AS m),"
-        "    '[]'::jsonb"
-        "  )"
+        "ALTER TABLE users ADD COLUMN payment_methods_jsonb JSONB "
+        "NOT NULL DEFAULT '[]'::jsonb"
+    )
+    op.execute(
+        "UPDATE users SET payment_methods_jsonb = COALESCE("
+        "  (SELECT jsonb_agg(jsonb_build_object('name', m, 'country', NULL))"
+        "   FROM unnest(payment_methods) AS m),"
+        "  '[]'::jsonb"
         ")"
     )
-    op.execute("ALTER TABLE users ALTER COLUMN payment_methods SET DEFAULT '[]'::jsonb")
+    op.execute("ALTER TABLE users DROP COLUMN payment_methods")
+    op.execute(
+        "ALTER TABLE users RENAME COLUMN payment_methods_jsonb TO payment_methods"
+    )
 
 
 def downgrade() -> None:
     # The country is dropped on the way back — there is nowhere in a text array
     # to put it. The names survive, which is the half a downgraded build can use.
-    op.execute("ALTER TABLE users ALTER COLUMN payment_methods DROP DEFAULT")
+    #
+    # Through a second column for the same reason as the upgrade: the transform
+    # needs `jsonb_array_elements`, and a subquery is not allowed in `USING`.
     op.execute(
-        "ALTER TABLE users ALTER COLUMN payment_methods TYPE VARCHAR(60)[] USING ("
-        "  COALESCE("
-        "    (SELECT array_agg(elem->>'name')"
-        "     FROM jsonb_array_elements(payment_methods) AS elem),"
-        "    '{}'::VARCHAR(60)[]"
-        "  )"
+        "ALTER TABLE users ADD COLUMN payment_methods_text VARCHAR(60)[] "
+        "NOT NULL DEFAULT '{}'"
+    )
+    op.execute(
+        "UPDATE users SET payment_methods_text = COALESCE("
+        "  (SELECT array_agg(elem->>'name')"
+        "   FROM jsonb_array_elements(payment_methods) AS elem),"
+        "  '{}'::VARCHAR(60)[]"
         ")"
     )
-    op.execute("ALTER TABLE users ALTER COLUMN payment_methods SET DEFAULT '{}'")
+    op.execute("ALTER TABLE users DROP COLUMN payment_methods")
+    op.execute(
+        "ALTER TABLE users RENAME COLUMN payment_methods_text TO payment_methods"
+    )
 
     op.drop_column("meeting_places", "city")
     op.drop_column("meeting_places", "country_iso")

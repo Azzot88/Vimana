@@ -1194,19 +1194,28 @@ async def _ensure_display_prefs_columns(engine) -> None:
         # text array, and `ADD COLUMN IF NOT EXISTS` is a no-op on it — the same
         # trap as `payment_model` and `currency` before. Converted explicitly,
         # and only when it is still the old type.
+        #
+        # Through a second column, exactly as 0072 does, and for the same reason:
+        # Postgres refuses a subquery in an `ALTER ... TYPE ... USING` transform,
+        # and turning one text element into one JSON object needs `unnest`. The
+        # migration learned this by failing on the server; the copy here would
+        # have failed the same way on the next suite run against an older
+        # database.
         await conn.execute(
             text(
                 "DO $$ BEGIN "
                 "IF EXISTS (SELECT 1 FROM information_schema.columns "
                 "  WHERE table_name = 'users' AND column_name = 'payment_methods' "
                 "    AND data_type = 'ARRAY') THEN "
-                "  ALTER TABLE users ALTER COLUMN payment_methods DROP DEFAULT; "
-                "  ALTER TABLE users ALTER COLUMN payment_methods TYPE JSONB USING ("
-                "    COALESCE((SELECT jsonb_agg("
+                "  ALTER TABLE users ADD COLUMN payment_methods_jsonb JSONB "
+                "    NOT NULL DEFAULT '[]'::jsonb; "
+                "  UPDATE users SET payment_methods_jsonb = COALESCE("
+                "    (SELECT jsonb_agg("
                 "      jsonb_build_object('name', m, 'country', NULL)) "
-                "      FROM unnest(payment_methods) AS m), '[]'::jsonb)); "
-                "  ALTER TABLE users ALTER COLUMN payment_methods "
-                "    SET DEFAULT '[]'::jsonb; "
+                "     FROM unnest(payment_methods) AS m), '[]'::jsonb); "
+                "  ALTER TABLE users DROP COLUMN payment_methods; "
+                "  ALTER TABLE users RENAME COLUMN payment_methods_jsonb "
+                "    TO payment_methods; "
                 "END IF; END $$;"
             )
         )
