@@ -12,7 +12,7 @@ export type DealRole = 'sender' | 'carrier' | 'recipient'
 export type CardField =
   | { name: string; type: 'text' | 'number' | 'datetime'; required?: boolean }
   | { name: string; type: 'bool'; default?: boolean }
-  | { name: string; type: 'select'; options: string[]; required?: boolean }
+  | { name: string; type: 'select'; options: readonly string[]; required?: boolean }
 
 export interface CardFormSpec {
   kind: string
@@ -24,13 +24,25 @@ export interface CardFormSpec {
   hasText?: boolean
 }
 
-const HANDOVER_METHODS = [
+/** T3.11.22 — the one client-side copy of the vocabulary.
+ *
+ *  It was written out here **and** in `pages/NewTripPage`, mirroring the same
+ *  duplication the backend had between `schemas/cards` and
+ *  `schemas/marketplace`. Four literal lists obliged to agree forever: the trip
+ *  form offering a method, the deal card executing it, and nothing connecting
+ *  any of them. The place a drift shows up is the worst one — a card unable to
+ *  name the method the trip was published with, at the moment the parcel
+ *  changes hands.
+ *
+ *  Labels stay in `cards.opt.*` for the same reason: one vocabulary, named once.
+ */
+export const HANDOVER_METHODS = [
   'in_person',
   'local_post',
   'courier',
   'parcel_locker',
   'poste_restante',
-]
+] as const
 
 const MEETING_FIELDS: CardField[] = [
   { name: 'method', type: 'select', options: HANDOVER_METHODS, required: true },
@@ -38,6 +50,10 @@ const MEETING_FIELDS: CardField[] = [
   { name: 'at', type: 'datetime' },
   { name: 'window_minutes', type: 'number' },
   { name: 'tracking_number', type: 'text' },
+  // T3.11.22 — beside the number, never instead of it: a tracking code without
+  // the company that issued it is a string nobody can follow. The server
+  // refuses it on a hand-to-hand meeting, where nothing was posted.
+  { name: 'postal_service', type: 'text' },
 ]
 
 export const CARD_FORMS: CardFormSpec[] = [

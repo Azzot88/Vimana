@@ -23,6 +23,10 @@ import {
   type MeetingPlace,
 } from '../api/addresses'
 import { CURRENCIES } from '../api/auth'
+// T3.11.22 — the vocabulary lives in one file now (`lib/cardForms`), the same
+// one the deal card reads. A carrier cannot advertise a method no card can name
+// because there is no second list left to drift.
+import { HANDOVER_METHODS } from '../lib/cardForms'
 import {
   listPaymentSystems,
   listPostalServices,
@@ -164,16 +168,6 @@ const EMPTY_HANDOVER: HandoverDraft = {
   postalServices: '',
 }
 
-// Matches `schemas.marketplace.HANDOVER_METHODS` and reuses the card labels
-// (`cards.opt.*`): one vocabulary, named once, so a carrier cannot advertise a
-// method no deal card can ever name.
-const HANDOVER_METHODS = [
-  'in_person',
-  'local_post',
-  'courier',
-  'parcel_locker',
-  'poste_restante',
-] as const
 
 /** T3.11.07 — how far one press of an arrow or one notch of the wheel moves
  *  the customs allowance (owner's decision 2026-09-06). Allowances are round
@@ -1819,13 +1813,24 @@ export default function NewTripPage() {
                           key={method}
                           type="button"
                           aria-pressed={chosen}
-                          onClick={() =>
+                          onClick={() => {
+                            const methods = chosen
+                              ? draft[field].methods.filter((m) => m !== method)
+                              : [...draft[field].methods, method]
+                            /* T3.11.22 — dropping «по почте» drops the services
+                               chosen under it. The server refuses the pair now
+                               (naming CDEK while not posting anything is the
+                               contradiction the task removes), and a draft that
+                               kept them would send a body it knows will be
+                               rejected — the person would be told they are
+                               wrong about a box the form had already hidden. */
+                            const losesPost =
+                              chosen && method === 'local_post'
                             patchHandover(field, {
-                              methods: chosen
-                                ? draft[field].methods.filter((m) => m !== method)
-                                : [...draft[field].methods, method],
+                              methods,
+                              ...(losesPost ? { postalServices: '' } : {}),
                             })
-                          }
+                          }}
                           className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
                             chosen
                               ? 'border-cyan bg-cyan/10 text-navy'

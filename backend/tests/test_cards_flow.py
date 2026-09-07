@@ -421,3 +421,45 @@ async def test_platform_cards_are_chained(
     assert result["content_ok"] is True, result["mismatches"]
     # The emitted half of the step is covered, not just the half a person wrote.
     assert result["checked_messages"] >= 2
+
+
+# ── T3.11.22 · which service actually carried it ────────────────────────────
+
+
+async def test_the_card_names_the_service_beside_the_tracking_number(
+    client, sender_headers, deal
+):
+    """T3.11.22 — «какой отправил фактически, рядом с `tracking_number`».
+
+    The trip says what the carrier *can* do; the card says what happened. A
+    tracking code without the company that issued it is a string nobody can
+    follow, which is why the two belong on one card.
+    """
+    r = await _card(
+        client,
+        sender_headers,
+        deal.id,
+        "dropoff.proposed",
+        {
+            "method": "local_post",
+            "postal_service": "СДЭК",
+            "tracking_number": "RU123456789",
+        },
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["card_payload"]["postal_service"] == "СДЭК"
+
+
+async def test_a_service_on_a_hand_to_hand_meeting_is_refused(
+    client, sender_headers, deal
+):
+    """Nothing was posted, so nobody carried it. Refused rather than dropped: a
+    field silently ignored is a field the sender believes they filled in."""
+    r = await _card(
+        client,
+        sender_headers,
+        deal.id,
+        "dropoff.proposed",
+        {"method": "in_person", "postal_service": "СДЭК"},
+    )
+    assert r.status_code == 422, r.text

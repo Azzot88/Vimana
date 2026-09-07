@@ -720,3 +720,52 @@ async def test_editing_can_grow_the_chain(client, carrier_headers):
     # The denormalised head and tail follow the new chain, not the old one.
     assert body["origin"] == "SVO"
     assert body["destination"] == "LAX"
+
+
+async def test_naming_a_service_without_posting_is_refused(client, carrier_headers):
+    """T3.11.22 — the third level cannot be answered before the second.
+
+    Three independent answers about the same thing — «отправляю почтой», «выдача
+    почтой», «СДЭК» — was the defect: they could disagree and none of them was
+    authoritative. The cure is dependence, not deletion: naming the company is
+    only possible once posting has been said.
+    """
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_destination={
+                "methods": ["in_person"],
+                "points": [],
+                "postal_services": ["CDEK"],
+            }
+        ),
+    )
+    assert r.status_code == 422, r.text
+    assert "local_post" in r.text
+
+
+async def test_the_handover_vocabulary_is_declared_once(client, carrier_headers):
+    """T3.11.22 — the trip and the deal card read the same list.
+
+    It was written out twice, word for word, in two schema modules with nothing
+    connecting them. The place a drift would have surfaced is the worst one: a
+    deal card unable to name the method the trip was published with, at the
+    moment the parcel changes hands. Asserted here rather than by reading both
+    files, because the test has to fail if somebody re-types the list.
+    """
+    from app.schemas.cards import HANDOVER_METHODS as card_methods
+    from app.schemas.marketplace import HANDOVER_METHODS as trip_methods
+
+    assert trip_methods is card_methods
+
+    # And every one of them is publishable, which is what «one vocabulary»
+    # actually has to mean for the carrier.
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            handover_origin={"methods": sorted(card_methods), "points": []}
+        ),
+    )
+    assert r.status_code == 201, r.text

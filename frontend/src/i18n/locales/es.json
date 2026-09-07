@@ -1399,6 +1399,7 @@
       "city": "Ciudad",
       "at": "Cuándo",
       "window_minutes": "Ventana, min",
+      "postal_service": "Servicio postal",
       "tracking_number": "Nº de seguimiento",
       "packaging": "Embalaje",
       "open_on_handover": "Abrir al entregar",

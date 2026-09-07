@@ -1436,6 +1436,7 @@
       "city": "City",
       "at": "When",
       "window_minutes": "Window, min",
+      "postal_service": "Postal service",
       "tracking_number": "Tracking number",
       "packaging": "Packaging",
       "open_on_handover": "Open on handover",

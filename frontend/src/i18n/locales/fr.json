@@ -1399,6 +1399,7 @@
       "city": "Ville",
       "at": "Quand",
       "window_minutes": "Fenêtre, min",
+      "postal_service": "Service postal",
       "tracking_number": "Numéro de suivi",
       "packaging": "Emballage",
       "open_on_handover": "Ouvrir à la remise",

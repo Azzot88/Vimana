@@ -9,18 +9,20 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
+    model_validator,
 )
 
 from app.core.currencies import CURRENCIES
 from app.core.trip_legs import MAX_LEGS
 from app.models.marketplace import EXCLUSIONS, TRIP_SERVICES
-
-
-# Mirrors `schemas.cards.HandoverMethod`. Kept as a set here rather than
-# imported to avoid a marketplace→cards dependency for one literal list.
-HANDOVER_METHODS = {
-    "in_person", "local_post", "courier", "parcel_locker", "poste_restante",
-}
+# T3.11.22 — imported, not re-typed. This list used to be written out here as
+# well as in `schemas/cards.py`: two literal copies obliged to agree forever and
+# connected by nothing. The old comment justified the copy by avoiding a
+# marketplace→cards dependency — a dependency that costs nothing (nothing in
+# `cards` imports this module) and whose absence bought a second vocabulary that
+# would have drifted silently, surfacing on the deal card as a method the trip
+# offered and the card could not name.
+from app.schemas.cards import HANDOVER_METHODS
 
 
 def _closed_list(
@@ -138,6 +140,29 @@ class HandoverSide(BaseModel):
             if len(item) > 120:
                 raise ValueError("at most 120 characters")
         return list(dict.fromkeys(cleaned))
+
+    @model_validator(mode="after")
+    def _services_need_the_method(self) -> "HandoverSide":
+        """T3.11.22 — the third level cannot be answered before the second.
+
+        Naming postal companies while not handing over by post is the
+        contradiction this task exists to remove: three independent answers, no
+        one of them authoritative, and the deal card left to guess. Making the
+        levels **depend** on each other is what makes the contradiction
+        impossible — you cannot say «only CDEK is near me» without having said
+        you post it at all.
+
+        The coarse level above (`services.domestic_shipping`) is not asked for
+        twice: `api.trips._services_with_derived` computes it from the same
+        method. Derived where derivable, refused where it would be a guess —
+        nobody can work out from a list of couriers whether the carrier meant to
+        post anything.
+        """
+        if self.postal_services and "local_post" not in self.methods:
+            raise ValueError(
+                "postal_services without the local_post handover method"
+            )
+        return self
 
 
 class TripCreate(BaseModel):

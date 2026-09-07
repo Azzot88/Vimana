@@ -1400,6 +1400,7 @@
       "city": "Miasto",
       "at": "Kiedy",
       "window_minutes": "Okno, min",
+      "postal_service": "Firma kurierska",
       "tracking_number": "Numer przesyłki",
       "packaging": "Opakowanie",
       "open_on_handover": "Otworzyć przy przekazaniu",

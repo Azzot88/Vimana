@@ -1437,6 +1437,7 @@
       "city": "Город",
       "at": "Когда",
       "window_minutes": "Окно, мин",
+      "postal_service": "Служба доставки",
       "tracking_number": "Трек-номер",
       "packaging": "Упаковка",
       "open_on_handover": "Вскрывать при передаче",

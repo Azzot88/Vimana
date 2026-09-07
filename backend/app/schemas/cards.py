@@ -8,15 +8,34 @@ even where the card obviously has something to say.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, get_args
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.cards import CardKind
 
+#: T3.11.22 — **the** list of handover methods, declared once.
+#:
+#: It lived here and, word for word, in `schemas/marketplace.py`: two literal
+#: lists obliged to agree forever and connected by nothing. They would have
+#: diverged in silence, and the place it became visible is the worst one — a
+#: deal card unable to name the method the trip was published with, which is
+#: exactly the moment the parcel changes hands.
+#:
+#: This file owns it because the deal card is where the method is *executed*;
+#: the trip merely offers it. `schemas/marketplace` imports the tuple below
+#: rather than re-typing the words. The earlier comment there said the
+#: duplication avoided a marketplace→cards dependency — that dependency does not
+#: exist (nothing in `cards` imports `marketplace`), and avoiding it bought a
+#: second copy of the vocabulary.
 HandoverMethod = Literal[
     "in_person", "local_post", "courier", "parcel_locker", "poste_restante"
 ]
+
+#: The same vocabulary at runtime, for validators that check membership rather
+#: than annotate a field. Derived from the `Literal` so the two cannot drift:
+#: adding a method means editing one line above and nothing else.
+HANDOVER_METHODS: frozenset[str] = frozenset(get_args(HandoverMethod))
 
 
 class HandoverConditions(BaseModel):
@@ -36,6 +55,30 @@ class MeetingPoint(BaseModel):
     at: datetime | None = None
     window_minutes: int | None = Field(default=None, ge=0, le=24 * 60)
     tracking_number: str | None = Field(default=None, max_length=64)
+    # T3.11.22 — **which** company actually took it, beside the number they gave.
+    # The trip says what the carrier can do («CDEK is the one near me»); the card
+    # says what happened («posted with CDEK, here is the code»). A tracking
+    # number without the company that issued it is a string nobody can follow —
+    # the two belong on the same card and always did.
+    #
+    # Free text, like the trip's list and for the same reason: the catalogue has
+    # no external source and must not be able to tell somebody the company that
+    # took their parcel does not exist.
+    postal_service: str | None = Field(default=None, max_length=120)
+
+    @model_validator(mode="after")
+    def _service_needs_a_carrier_of_parcels(self) -> "MeetingPoint":
+        """T3.11.22 — the same narrowing as on the trip, one step further in.
+
+        A company name on a hand-to-hand meeting is a contradiction: nothing was
+        posted, so nobody carried it. Refused rather than ignored — a field
+        quietly dropped is a field the sender believes they filled in.
+        """
+        if self.postal_service and self.method not in ("local_post", "courier"):
+            raise ValueError(
+                "postal_service only applies to local_post or courier"
+            )
+        return self
 
 
 class HandoffDeclared(BaseModel):
