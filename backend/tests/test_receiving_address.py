@@ -102,9 +102,23 @@ async def test_share_address_without_address_returns_422(
     client, carrier_headers, seed_deal, session_maker, seed_carrier
 ):
     """Ensure carrier without a set address gets 422 on share."""
-    # T_KEYS.1 — nothing to clear any more: the legacy columns are gone and the
-    # carrier has no row in `receiving_addresses`, which is the actual
-    # precondition this test is about.
+    # T_KEYS.1 — the legacy columns are gone; the precondition is now "no row in
+    # `receiving_addresses`".
+    #
+    # T3.11.07 — that precondition has to be **made**, not assumed. It used to
+    # hold for free, and stopped holding the moment `test_trip_chain` began
+    # giving this same carrier an address to point a handover at: the test
+    # database is never reset (`ENVIRONMENT §8`), so the row survived into every
+    # later run and the share succeeded with a 201. Emptying the list here is
+    # what the test is actually about, and nothing else needs the shared
+    # carrier to own an address — the tests that need one create their own.
+    existing = await client.get("/api/me/addresses", headers=carrier_headers)
+    assert existing.status_code == 200, existing.text
+    for addr in existing.json():
+        gone = await client.delete(
+            f"/api/me/addresses/{addr['id']}", headers=carrier_headers
+        )
+        assert gone.status_code == 204, gone.text
 
     resp = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages/share-address",
