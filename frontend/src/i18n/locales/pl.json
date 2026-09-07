@@ -548,6 +548,7 @@
   },
   "dashboard": {
     "welcome": "Witaj, {{name}}",
+    "partialError": "Część panelu się nie wczytała. Reszta jest pokazana bez zmian.",
     "carrier": "Przewoźnik",
     "sender": "Nadawca",
     "publishTrip": "+ Opublikuj lot",

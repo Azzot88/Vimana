@@ -49,23 +49,35 @@ export default function DashboardPage() {
 
   const load = async () => {
     if (!user?.id) return
-    try {
-      const [dealsRes, tripsRes, inqRes] = await Promise.all([
-        listDeals(),
-        // `all`, then filtered below: the public board returns only `open`,
-        // so asking without a status would silently drop matched trips — the
-        // ones with somebody already counting on them.
-        listTrips({ carrier_id: user.id, status: 'all', limit: 50 }),
-        tripAskCounts().catch(() => ({ data: {} as Record<string, number> })),
-      ])
-      setDeals(dealsRes.data.items)
-      setTrips(tripsRes.data.items)
-      setAsks(inqRes.data)
-    } catch {
-      setError(t('common.errorGeneric') as string)
-    } finally {
-      setLoading(false)
-    }
+    /* One failing call used to take the whole panel with it: `Promise.all`
+       rejects on the first rejection, so a broken trips endpoint left the deals
+       empty as well and the reader was told «что-то пошло не так» about
+       everything. The two halves of this screen are independent facts — what I
+       am carrying and what I am sending — and a person whose deals load fine
+       should see them while the other half is down. Found on 2026-09-07, when a
+       schema behind the code broke `/api/trips` and the panel reported that as
+       having no deliveries at all. */
+    const [dealsRes, tripsRes, inqRes] = await Promise.allSettled([
+      listDeals(),
+      // `all`, then filtered below: the public board returns only `open`,
+      // so asking without a status would silently drop matched trips — the
+      // ones with somebody already counting on them.
+      listTrips({ carrier_id: user.id, status: 'all', limit: 50 }),
+      tripAskCounts(),
+    ])
+    if (dealsRes.status === 'fulfilled') setDeals(dealsRes.value.data.items)
+    if (tripsRes.status === 'fulfilled') setTrips(tripsRes.value.data.items)
+    if (inqRes.status === 'fulfilled') setAsks(inqRes.value.data)
+    /* The counter is the one thing here nobody misses: it decorates a trip card
+       rather than being one. The other two are the screen, so their failure is
+       said out loud — and said as «this part did not load», not as «you have
+       nothing», which is a different sentence and was the wrong one. */
+    setError(
+      dealsRes.status === 'rejected' || tripsRes.status === 'rejected'
+        ? (t('dashboard.partialError') as string)
+        : '',
+    )
+    setLoading(false)
   }
 
   useEffect(() => {

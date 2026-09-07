@@ -587,6 +587,7 @@
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",
+    "partialError": "Part of the panel did not load. The rest is shown as it is.",
     "carrier": "Carrier",
     "sender": "Sender",
     "publishTrip": "+ Publish trip",

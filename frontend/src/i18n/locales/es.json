@@ -547,6 +547,7 @@
   },
   "dashboard": {
     "welcome": "Bienvenido, {{name}}",
+    "partialError": "Parte del panel no se cargó. El resto se muestra tal cual.",
     "carrier": "Transportista",
     "sender": "Remitente",
     "publishTrip": "+ Publicar vuelo",

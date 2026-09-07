@@ -547,6 +547,7 @@
   },
   "dashboard": {
     "welcome": "Bienvenue, {{name}}",
+    "partialError": "Une partie du tableau ne s'est pas chargée. Le reste est affiché tel quel.",
     "carrier": "Transporteur",
     "sender": "Expéditeur",
     "publishTrip": "+ Publier un vol",
