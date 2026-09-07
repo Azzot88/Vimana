@@ -260,8 +260,15 @@ async def update_trip(
     # Replaced wholesale rather than diffed. `leg_order` is dense and assigned by
     # `normalise_legs`, so matching old rows to new ones would mean guessing
     # which leg the carrier meant to keep — and guessing wrong leaves a chain
-    # that is off by one city. `delete-orphan` removes the old rows in the same
-    # commit.
+    # that is off by one city.
+    #
+    # **In two flushes, and that is not optional.** `delete-orphan` removes the
+    # old rows, but the unit of work does not order that removal before an
+    # insert that reuses the same key: the new leg 0 goes in while the old leg 0
+    # is still there and hits `uq_trip_legs_order`. Every edit failed with a
+    # database error until the delete got a flush of its own.
+    trip.legs.clear()
+    await db.flush()
     trip.legs = [TripLeg(**leg) for leg in legs]
 
     await db.commit()

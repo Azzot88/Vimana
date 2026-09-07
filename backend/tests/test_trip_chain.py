@@ -691,3 +691,28 @@ async def test_editing_validates_the_chain_like_publishing_does(
         json=_payload(legs=[_leg("DXB", "DXB", 6)]),
     )
     assert r.status_code == 422, r.text
+
+
+async def test_editing_can_grow_the_chain(client, carrier_headers):
+    """One flight becomes three. The shape that first broke this: every edit
+    reuses `leg_order` 0, and the old row has to be gone before the new one
+    lands or `uq_trip_legs_order` refuses it — the delete needs a flush of its
+    own, which is not what `delete-orphan` does by itself."""
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(legs=[_leg("SVO", "DXB", 5)])
+    )
+    trip_id = created.json()["id"]
+
+    edited = await client.patch(
+        f"/api/trips/{trip_id}",
+        headers=carrier_headers,
+        json=_payload(
+            legs=[_leg("SVO", "IST", 5), _leg("IST", "JFK", 6), _leg("JFK", "LAX", 7)]
+        ),
+    )
+    assert edited.status_code == 200, edited.text
+    body = edited.json()
+    assert [leg["order"] for leg in body["legs"]] == [0, 1, 2]
+    # The denormalised head and tail follow the new chain, not the old one.
+    assert body["origin"] == "SVO"
+    assert body["destination"] == "LAX"
