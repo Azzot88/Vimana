@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listDeals, type Deal } from '../api/deals'
 import { listMyInquiries } from '../api/inquiry'
-import DealCard from '../components/DealCard'
+import DealSummaryCard from '../components/DealSummaryCard'
 import MonoText from '../components/MonoText'
 
 /** T3.11.26 — every deal, grouped by the person it is with.
@@ -187,7 +187,7 @@ export default function DealsByPersonPage() {
                     {/* The same card the chat draws: one deal looks like one
                         deal wherever it is listed. */}
                     {group.deals.map((deal) => (
-                      <DealCard key={deal.id} deal={deal} />
+                      <DealSummaryCard key={deal.id} deal={deal} />
                     ))}
                   </div>
                 )}

@@ -14,7 +14,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ShareAddressModal from '../components/ShareAddressModal'
-import DealCard from '../components/DealCard'
+import DealSummaryCard from '../components/DealSummaryCard'
 import MonoText from '../components/MonoText'
 
 /** T3.11.23 — the outer chat: one per person, forever, with the deals nested
@@ -156,7 +156,7 @@ export default function ChatPage() {
           </h2>
           <div className="grid gap-2">
             {sorted.live.map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
+              <DealSummaryCard key={deal.id} deal={deal} />
             ))}
           </div>
           {sorted.done.length > 0 && (
@@ -166,7 +166,7 @@ export default function ChatPage() {
               </summary>
               <div className="grid gap-2 mt-2">
                 {sorted.done.map((deal) => (
-                  <DealCard key={deal.id} deal={deal} />
+                  <DealSummaryCard key={deal.id} deal={deal} />
                 ))}
               </div>
             </details>
