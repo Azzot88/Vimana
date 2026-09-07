@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -215,23 +215,51 @@ async def delete_address(
 class MeetingPlaceOut(BaseModel):
     id: uuid.UUID
     description: str
+    # T3.11.07 — where this place is (owner's decision 2026-09-06). The trip form
+    # offers meeting places for one end of a route, and without a country it was
+    # offering a Moscow landmark to somebody arriving in Dubai. `None` on rows
+    # that predate the field; those are offered everywhere, which is what they
+    # already did.
+    country_iso: str | None = None
+    # The city matters here and not on the payment methods: «у метро Фили» is
+    # only findable if you know it is Moscow, and one carrier meets people in two
+    # cities of one country often enough for the country alone to be too coarse.
+    city: str | None = None
     is_default: bool
     created_at: datetime
 
 
 class MeetingPlaceCreate(BaseModel):
     description: str = Field(min_length=1, max_length=300)
+    # Required on creation, unlike the column: the column is nullable only
+    # because rows exist that predate the field.
+    country_iso: str = Field(min_length=2, max_length=2)
+    city: str | None = Field(default=None, max_length=150)
     is_default: bool = False
+
+    @field_validator("country_iso")
+    @classmethod
+    def _iso(cls, v: str) -> str:
+        return v.strip().upper()
 
 
 class MeetingPlaceUpdate(BaseModel):
     description: str | None = Field(default=None, min_length=1, max_length=300)
+    country_iso: str | None = Field(default=None, min_length=2, max_length=2)
+    city: str | None = Field(default=None, max_length=150)
+
+    @field_validator("country_iso")
+    @classmethod
+    def _iso(cls, v: str | None) -> str | None:
+        return v.strip().upper() if v else None
 
 
 def _place_out(p: MeetingPlace) -> MeetingPlaceOut:
     return MeetingPlaceOut(
         id=p.id,
         description=p.description,
+        country_iso=p.country_iso,
+        city=p.city,
         is_default=p.is_default,
         created_at=p.created_at,
     )
@@ -297,6 +325,8 @@ async def create_meeting_place(
     place = MeetingPlace(
         user_id=current_user.id,
         description=body.description.strip(),
+        country_iso=body.country_iso,
+        city=(body.city or "").strip() or None,
         is_default=is_default,
     )
     db.add(place)
@@ -315,6 +345,14 @@ async def update_meeting_place(
     place = await _owned_place(place_id, current_user, db)
     if body.description is not None:
         place.description = body.description.strip()
+    if body.country_iso is not None:
+        place.country_iso = body.country_iso
+    # `city` is cleared by an empty string and left alone by omission — the two
+    # have to stay distinguishable, because a place can genuinely lose its city
+    # (a country-wide «встречу в аэропорту вылета») and a PATCH that only edits
+    # the description must not wipe it.
+    if body.city is not None:
+        place.city = body.city.strip() or None
     await db.commit()
     await db.refresh(place)
     return _place_out(place)

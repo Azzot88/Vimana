@@ -1,6 +1,7 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { updateMe } from '../api/auth'
+import { updateMe, type PaymentMethod } from '../api/auth'
+import { listCountries } from '../api/airports'
 import { useAuthStore } from '../stores/auth'
 
 /** T3.11.07 — the ways this carrier can be paid, kept once on the account.
@@ -28,21 +29,45 @@ const MAX_METHODS = 12
 const MAX_LENGTH = 60
 
 export default function PaymentMethodsField() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const token = useAuthStore((s) => s.token)
   const setAuth = useAuthStore((s) => s.setAuth)
   const inputId = useId()
 
-  const methods = user?.payment_methods ?? []
+  const methods: PaymentMethod[] = user?.payment_methods ?? []
   const [entry, setEntry] = useState('')
+  /* T3.11.07 — the country each method belongs to (owner's decision
+     2026-09-06). Empty means «anywhere», which is what «наличные при встрече»
+     honestly is; Каспи is KZ and Zelle is US, and the trip form filters on
+     exactly this. */
+  const [country, setCountry] = useState('')
+  const [countries, setCountries] = useState<Array<{ iso: string; name: string }>>([])
+
+  useEffect(() => {
+    let cancelled = false
+    listCountries()
+      .then(({ data }) => {
+        if (cancelled) return
+        const display = new Intl.DisplayNames([i18n.language], { type: 'region' })
+        setCountries(
+          data
+            .map((c) => ({ iso: c.iso, name: display.of(c.iso) || c.iso }))
+            .sort((a, b) => a.name.localeCompare(b.name, i18n.language)),
+        )
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [i18n.language])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   /** Writes the whole list. The store is the only copy — there is no local
    *  mirror to fall out of step with the server, which is what a chip that
    *  survives a failed save would be. */
-  const write = async (next: string[]) => {
+  const write = async (next: PaymentMethod[]) => {
     setSaving(true)
     setError('')
     try {
@@ -61,12 +86,16 @@ export default function PaymentMethodsField() {
     // Refused here as well as on the server: a chip that only fails on save is
     // a rule the carrier learns by being rejected.
     if (value.length > MAX_LENGTH || methods.length >= MAX_METHODS) return
-    if (methods.includes(value)) {
+    const iso = country || null
+    // Deduplicated on the **pair**: «наличные при встрече» in Kazakhstan and the
+    // same words in Poland are two entries a carrier may legitimately keep,
+    // because the trip form filters on the country.
+    if (methods.some((m) => m.name === value && m.country === iso)) {
       setEntry('')
       return
     }
     setEntry('')
-    void write([...methods, value])
+    void write([...methods, { name: value, country: iso }])
   }
 
   return (
@@ -91,15 +120,28 @@ export default function PaymentMethodsField() {
         <ul className="flex flex-wrap gap-2">
           {methods.map((method) => (
             <li
-              key={method}
+              key={`${method.name}|${method.country ?? ''}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-cyan/30 bg-cyan/10 pl-3 pr-1.5 py-1 text-xs font-body text-navy"
             >
-              {method}
+              {method.name}
+              {/* The country on the chip, because two chips can read the same
+                  and mean different routes. «Везде» is said out loud rather
+                  than left blank: a chip with nothing after it would look like
+                  a chip that lost its country. */}
+              <span className="text-[10px] font-mono text-navy/45">
+                {method.country ?? t('rules.payment.methodsAnywhere')}
+              </span>
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => void write(methods.filter((m) => m !== method))}
-                aria-label={`${t('common.delete')} ${method}`}
+                onClick={() =>
+                  void write(
+                    methods.filter(
+                      (m) => !(m.name === method.name && m.country === method.country),
+                    ),
+                  )
+                }
+                aria-label={`${t('common.delete')} ${method.name}`}
                 className="w-5 h-5 rounded-full text-navy/40 hover:text-danger disabled:opacity-40"
               >
                 ×
@@ -109,7 +151,7 @@ export default function PaymentMethodsField() {
         </ul>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <input
           id={inputId}
           type="text"
@@ -128,6 +170,23 @@ export default function PaymentMethodsField() {
           placeholder={t('rules.payment.methodsPlaceholder') as string}
           className="flex-1 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan disabled:opacity-50"
         />
+        <select
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          disabled={saving || methods.length >= MAX_METHODS}
+          aria-label={t('profile.address.country') as string}
+          className="w-32 border border-navy/20 rounded-field px-2 py-2 min-h-[2.75rem] text-sm font-body text-navy bg-white focus:outline-none focus:border-cyan disabled:opacity-50"
+        >
+          {/* «Везде» is the default, and it is the honest one: cash at handover
+              works on any route, and forcing a country on it would file it
+              under one and hide it on the rest. */}
+          <option value="">{t('rules.payment.methodsAnywhere')}</option>
+          {countries.map((c) => (
+            <option key={c.iso} value={c.iso}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={add}

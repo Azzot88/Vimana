@@ -696,6 +696,14 @@ async def _ensure_meeting_places(engine) -> None:
                 """
             )
         )
+        # 0072 — added separately from the CREATE above: a test database made
+        # before this revision already has the table, and CREATE IF NOT EXISTS
+        # says nothing about its columns.
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS country_iso VARCHAR(2)",
+            "ADD COLUMN IF NOT EXISTS city VARCHAR(150)",
+        ):
+            await conn.execute(text(f"ALTER TABLE meeting_places {ddl}"))
         await conn.execute(
             text(
                 "CREATE INDEX IF NOT EXISTS ix_meeting_places_user_id "
@@ -1176,11 +1184,32 @@ async def _ensure_display_prefs_columns(engine) -> None:
             "ADD COLUMN IF NOT EXISTS default_currencies VARCHAR(4)[] "
             "NOT NULL DEFAULT '{USD}'",
             "DROP COLUMN IF EXISTS default_currency",
-            # 0070 — the carrier's own shortlist of ways to be paid.
-            "ADD COLUMN IF NOT EXISTS payment_methods VARCHAR(60)[] "
-            "NOT NULL DEFAULT '{}'",
+            # 0070 — the carrier's own shortlist of ways to be paid; 0072 gave
+            # each entry a country and moved the column to JSONB.
+            "ADD COLUMN IF NOT EXISTS payment_methods JSONB "
+            "NOT NULL DEFAULT '[]'::jsonb",
         ):
             await conn.execute(text(f"ALTER TABLE users {ddl}"))
+        # A database created between 0070 and 0072 already has the column as a
+        # text array, and `ADD COLUMN IF NOT EXISTS` is a no-op on it — the same
+        # trap as `payment_model` and `currency` before. Converted explicitly,
+        # and only when it is still the old type.
+        await conn.execute(
+            text(
+                "DO $$ BEGIN "
+                "IF EXISTS (SELECT 1 FROM information_schema.columns "
+                "  WHERE table_name = 'users' AND column_name = 'payment_methods' "
+                "    AND data_type = 'ARRAY') THEN "
+                "  ALTER TABLE users ALTER COLUMN payment_methods DROP DEFAULT; "
+                "  ALTER TABLE users ALTER COLUMN payment_methods TYPE JSONB USING ("
+                "    COALESCE((SELECT jsonb_agg("
+                "      jsonb_build_object('name', m, 'country', NULL)) "
+                "      FROM unnest(payment_methods) AS m), '[]'::jsonb)); "
+                "  ALTER TABLE users ALTER COLUMN payment_methods "
+                "    SET DEFAULT '[]'::jsonb; "
+                "END IF; END $$;"
+            )
+        )
         await conn.execute(
             text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS carriage_rules TEXT")
         )

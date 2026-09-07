@@ -154,8 +154,20 @@ class User(Base):
     #
     # Order is the carrier's own — first is what they offer first — so an array
     # rather than a set, exactly like `default_currencies`.
-    payment_methods: Mapped[list[str]] = mapped_column(
-        ARRAY(String(60)), default=list, server_default="{}"
+    #
+    # T3.11.07 (owner's decision 2026-09-06) — **each entry carries a country**:
+    # `[{"name": "Каспи", "country": "KZ"}, ...]`. Каспи is not offered on a
+    # Warsaw route and Zelle is not offered in Almaty; a shortlist that has to be
+    # read and rejected on every publication is the thing this column exists to
+    # stop. `country` is `null` for «anywhere», which is not a gap — «наличные
+    # при встрече» is genuinely country-agnostic and so is every row written
+    # before the field existed.
+    #
+    # JSONB rather than a table of its own: it is small, always read whole with
+    # the account, never queried by anything but the form, and a second CRUD
+    # surface for three rows would cost more than it explains.
+    payment_methods: Mapped[list] = mapped_column(
+        JSONB, default=list, server_default="[]"
     )
     # T_UX.15 — the carrier's standing carriage rules, written once and copied
     # into each trip. Copied rather than referenced: a rule changed in March

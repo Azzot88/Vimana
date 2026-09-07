@@ -779,6 +779,7 @@
       "add": "Add",
       "default": "default",
       "makeDefault": "Make default",
+      "anywhere": "Not tied to a country",
       "loadFailed": "Could not load your meeting places",
       "saveFailed": "Could not save"
     },
@@ -1459,7 +1460,8 @@
       "methodsLabel": "What you can be paid with",
       "methodsDesc": "Add your own once — they show up as chips on the trip form, so you stop typing them on every publication.",
       "methodsPlaceholder": "Cash on handover",
-      "methodsLimit": "You can add at most {{max}}."
+      "methodsLimit": "You can add at most {{max}}.",
+      "methodsAnywhere": "Anywhere"
     }
   },
   "calendar": {

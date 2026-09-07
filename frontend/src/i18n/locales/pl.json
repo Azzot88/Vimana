@@ -733,6 +733,7 @@
       "add": "Dodaj",
       "default": "domyślne",
       "makeDefault": "Ustaw domyślne",
+      "anywhere": "Bez kraju",
       "loadFailed": "Nie udało się wczytać miejsc spotkań",
       "saveFailed": "Nie udało się zapisać"
     },
@@ -1416,7 +1417,8 @@
       "methodsLabel": "Czym można Ci zapłacić",
       "methodsDesc": "Dodaj swoje warianty raz — pojawią się jako chipy w formularzu lotu i nie trzeba ich wpisywać za każdym razem.",
       "methodsPlaceholder": "Gotówka przy przekazaniu",
-      "methodsLimit": "Można dodać najwyżej {{max}}."
+      "methodsLimit": "Można dodać najwyżej {{max}}.",
+      "methodsAnywhere": "Wszędzie"
     }
   },
   "calendar": {

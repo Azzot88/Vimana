@@ -732,6 +732,7 @@
       "add": "Ajouter",
       "default": "par défaut",
       "makeDefault": "Définir par défaut",
+      "anywhere": "Sans pays",
       "loadFailed": "Impossible de charger vos points de rencontre",
       "saveFailed": "Impossible d'enregistrer"
     },
@@ -1415,7 +1416,8 @@
       "methodsLabel": "Comment on peut vous payer",
       "methodsDesc": "Ajoutez vos moyens une fois — ils apparaissent en pastilles dans le formulaire de vol, et vous ne les retapez plus.",
       "methodsPlaceholder": "Espèces à la remise",
-      "methodsLimit": "Vous pouvez en ajouter {{max}} au maximum."
+      "methodsLimit": "Vous pouvez en ajouter {{max}} au maximum.",
+      "methodsAnywhere": "Partout"
     }
   },
   "calendar": {

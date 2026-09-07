@@ -390,36 +390,74 @@ async def test_currency_preference_does_not_touch_published_trips(
         "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["USD"]}
     )
 
-
-# ── T3.11.07 · the carrier's own ways to be paid ───────────────────────────
+# ── T3.11.07 · the carrier's own ways to be paid, and where ────────────────
 
 
 async def test_payment_methods_are_kept_in_order_and_deduplicated(
     client, carrier_headers
 ):
-    """Free strings, and the order is the carrier's: the first is what they
-    offer first. Case is left alone — `Zelle` and «Каспи» are names people
-    wrote, not codes to match on."""
+    """Free strings with a country, and the order is the carrier's: the first is
+    what they offer first. Case is left alone — `Zelle` and «Каспи» are names
+    people wrote, not codes to match on.
+
+    Deduplicated on the **pair**: the same words filed under two countries are
+    two entries a carrier may legitimately keep, because the trip form filters
+    on the country and would otherwise show the row on one route and not the
+    other.
+    """
     r = await client.patch(
         "/api/auth/me",
         headers=carrier_headers,
         json={
             "payment_methods": [
-                "  Наличные при встрече ",
-                "Каспи",
-                "Наличные при встрече",
-                "Zelle",
+                {"name": "  Наличные при встрече ", "country": None},
+                {"name": "Каспи", "country": "kz"},
+                {"name": "Наличные при встрече", "country": None},
+                {"name": "Наличные при встрече", "country": "PL"},
+                {"name": "Zelle", "country": "US"},
             ]
         },
     )
     assert r.status_code == 200, r.text
-    assert r.json()["payment_methods"] == ["Наличные при встрече", "Каспи", "Zelle"]
+    assert r.json()["payment_methods"] == [
+        {"name": "Наличные при встрече", "country": None},
+        {"name": "Каспи", "country": "KZ"},
+        {"name": "Наличные при встрече", "country": "PL"},
+        {"name": "Zelle", "country": "US"},
+    ]
 
     back = await client.get("/api/auth/me", headers=carrier_headers)
-    assert back.json()["payment_methods"] == ["Наличные при встрече", "Каспи", "Zelle"]
+    assert [m["name"] for m in back.json()["payment_methods"]] == [
+        "Наличные при встрече",
+        "Каспи",
+        "Наличные при встрече",
+        "Zelle",
+    ]
 
     # Put back: the test database is never reset, and a list left behind would
     # follow this carrier through every later test.
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"payment_methods": []}
+    )
+
+
+async def test_a_method_without_a_country_is_offered_anywhere(
+    client, carrier_headers
+):
+    """`null` is a real answer, not a gap. «Наличные при встрече» is genuinely
+    country-agnostic, and so is every row written before the field existed —
+    refusing it would have made the retrofit lossy for people who did nothing
+    wrong."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"payment_methods": [{"name": "Наличные при встрече"}]},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["payment_methods"] == [
+        {"name": "Наличные при встрече", "country": None}
+    ]
+
     await client.patch(
         "/api/auth/me", headers=carrier_headers, json={"payment_methods": []}
     )
@@ -436,13 +474,25 @@ async def test_empty_payment_methods_is_a_real_answer(client, carrier_headers):
 
 
 async def test_an_overlong_payment_method_is_refused(client, carrier_headers):
-    """The column is `VARCHAR(60)`. A 4 000-character "method" is a note in the
-    wrong box, and truncating it silently would store something the carrier
-    never wrote."""
+    """60 characters is what the field is for. A 4 000-character "method" is a
+    note in the wrong box, and truncating it silently would store something the
+    carrier never wrote."""
     r = await client.patch(
         "/api/auth/me",
         headers=carrier_headers,
-        json={"payment_methods": ["x" * 61]},
+        json={"payment_methods": [{"name": "x" * 61, "country": "AE"}]},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_a_malformed_country_is_refused(client, carrier_headers):
+    """Two letters or nothing. `Kazakhstan` in this field is a value nothing
+    downstream can match against an airport's ISO code, so the filter would
+    silently stop offering the method it was written for."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"payment_methods": [{"name": "Каспи", "country": "Kazakhstan"}]},
     )
     assert r.status_code == 422, r.text
 
@@ -460,7 +510,11 @@ async def test_payment_methods_do_not_reach_the_public_listing(
     await client.patch(
         "/api/auth/me",
         headers=carrier_headers,
-        json={"payment_methods": ["Каспи 4400 0000 0000 0000"]},
+        json={
+            "payment_methods": [
+                {"name": "Каспи 4400 0000 0000 0000", "country": "KZ"}
+            ]
+        },
     )
     try:
         published = await client.post(

@@ -60,6 +60,46 @@ class PasswordChangeBody(BaseModel):
         return v
 
 
+class PaymentMethodIn(BaseModel):
+    """T3.11.07 — one way this carrier can be paid, and where.
+
+    Free text for the name and deliberately not a closed list: what people
+    transfer through is local and changes faster than a vocabulary we could
+    ship, and a carrier naming one we had not heard of would be told they are
+    wrong. `Trip.payment_systems` is free text for exactly this reason.
+
+    `country` is what the owner asked for on 2026-09-06 and it earns its place:
+    Каспи is not offered on a Warsaw route and Zelle is not offered in Almaty, so
+    without it the shortlist has to be read and rejected on every publication —
+    which is the work this list exists to remove.
+
+    `None` means «anywhere», and that is a real answer rather than a gap:
+    «наличные при встрече» is genuinely country-agnostic, and so is every row
+    written before the field existed.
+    """
+
+    name: str = Field(min_length=1, max_length=60)
+    country: str | None = Field(default=None, min_length=2, max_length=2)
+
+    @field_validator("name")
+    @classmethod
+    def _trim(cls, v: str) -> str:
+        # Case is left alone, unlike the currency codes: `Zelle` and «Каспи» are
+        # names a person wrote, not codes to match on, and upper-casing them
+        # would shout at the reader.
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("a payment method needs a name")
+        return cleaned
+
+    @field_validator("country")
+    @classmethod
+    def _iso(cls, v: str | None) -> str | None:
+        if v is None or not v.strip():
+            return None
+        return v.strip().upper()
+
+
 class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
@@ -82,32 +122,34 @@ class UserUpdate(BaseModel):
     interaction_rules: str | None = Field(default=None, max_length=4000)
     payment_instructions: str | None = Field(default=None, max_length=4000)
 
-    # T3.11.07 — the ways this carrier can be paid, written once instead of
-    # retyped on every trip. Free strings and deliberately not a closed list:
-    # what people transfer through is local and changes faster than a vocabulary
-    # we could ship. An empty list is a legal value — it means "I have not said".
-    payment_methods: list[str] | None = Field(default=None, max_length=12)
+    # T3.11.07 — the ways this carrier can be paid and where, written once
+    # instead of retyped on every trip. An empty list is a legal value: it means
+    # "I have not said".
+    payment_methods: list[PaymentMethodIn] | None = Field(default=None, max_length=12)
 
     @field_validator("payment_methods")
     @classmethod
-    def _tidy_methods(cls, v: list[str] | None) -> list[str] | None:
-        """Trimmed, deduplicated, order kept, and each one bounded.
+    def _tidy_methods(
+        cls, v: list[PaymentMethodIn] | None
+    ) -> list[PaymentMethodIn] | None:
+        """Deduplicated on (name, country), order kept.
 
-        Bounded rather than validated: a taxonomy of the world's payment rails
-        is not something this field can be right about, but a 4 000-character
-        "method" is a note in the wrong box and the column is `VARCHAR(60)`.
-
-        Case is left alone, unlike the currency codes: `Zelle` and `Каспи` are
-        names people wrote, not codes to match on, and upper-casing them would
-        shout at the reader. Deduplication is therefore exact.
+        The pair, not the name: «наличные при встрече» in Kazakhstan and the
+        same words in Poland are two entries a carrier may legitimately keep,
+        because the trip form filters on the country and would otherwise show
+        the row on one route and not the other.
         """
         if v is None:
             return None
-        cleaned = [m.strip() for m in v if m and m.strip()]
-        for method in cleaned:
-            if len(method) > 60:
-                raise ValueError("a payment method may be at most 60 characters")
-        return list(dict.fromkeys(cleaned))
+        seen: set[tuple[str, str | None]] = set()
+        out: list[PaymentMethodIn] = []
+        for method in v:
+            key = (method.name, method.country)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(method)
+        return out
 
     @field_validator("default_currencies")
     @classmethod
@@ -264,7 +306,7 @@ class MeOut(UserOut):
     # T3.11.07 — owner-only, like the rest of `MeOut`. How the carrier can be
     # paid is theirs to send when they choose; putting it on the public
     # `UserOut` would publish a wallet to anyone who opened a profile page.
-    payment_methods: list[str] = Field(default_factory=list)
+    payment_methods: list[PaymentMethodIn] = Field(default_factory=list)
     carriage_rules: str | None = None
     # T_UX.21 — owner-only, like the rest of `MeOut`. They are meant for a
     # counterparty, but the carrier decides when to send them: putting them on

@@ -1079,10 +1079,43 @@ export default function NewTripPage() {
   const routeAnswered = draft.nodes.every((node, i) =>
     isNodeComplete(node, i === draft.nodes.length - 1),
   )
+  /** T3.11.07 — the profile lists, narrowed to one end of the route (owner's
+   *  decision 2026-09-06).
+   *
+   *  A row with no country is kept rather than dropped: `null` means «anywhere»
+   *  — «наличные при встрече» genuinely is, and so is every row written before
+   *  the field existed. Dropping those would have made the retrofit lossy for
+   *  people who did nothing wrong.
+   *
+   *  An **unknown** end also keeps everything. The country is only known once
+   *  an airport is picked from the list rather than typed; filtering on an empty
+   *  ISO would empty the picker and read as "you have no meeting places", which
+   *  is a different and untrue statement.
+   */
+  const placesFor = (iso: string) =>
+    places.filter((p) => !iso || !p.country_iso || p.country_iso === iso)
+  const methodsFor = (iso: string) =>
+    (user?.payment_methods ?? []).filter(
+      (m) => !iso || !m.country || m.country === iso,
+    )
+
   /** T3.11.07 — the ways this carrier said they can be paid, kept once in the
-   *  profile. Offered above the corridor catalogue: that catalogue knows what
-   *  exists in a country, this knows what this person actually accepts. */
-  const myMethods = user?.payment_methods ?? []
+   *  profile and narrowed to this route. Offered above the corridor catalogue:
+   *  that catalogue knows what exists in a country, this knows what this person
+   *  actually accepts.
+   *
+   *  Both ends, deduplicated by name: money moves between two countries and the
+   *  carrier may be paid at either, so a method filed under one of them belongs
+   *  on the list — and one filed under both must not appear twice.
+   *
+   *  Declared after `methodsFor` on purpose: a `const` referenced above its own
+   *  declaration is a temporal-dead-zone crash at first render, not a warning. */
+  const myMethods = [
+    ...new Set([
+      ...methodsFor(arrivalIso).map((m) => m.name),
+      ...methodsFor(departureIso).map((m) => m.name),
+    ]),
+  ]
   // T3.11.07 — the weight scale in the unit this account reads in. Storage
   // stays metric; only the numbers on screen change.
   const scale = CAPACITY_SCALE[prefs.unit]
@@ -1760,10 +1793,16 @@ export default function NewTripPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(
                 [
-                  ['handoverOrigin', firstOrigin] as const,
-                  ['handoverDestination', lastDestination] as const,
+                  /* T3.11.07 — each end carries its country, not just its code
+                     (owner's decision 2026-09-06). The profile lists are filed
+                     by country and the form filters on it: a Moscow meeting
+                     place has no business being offered to somebody arriving in
+                     Dubai, and a list that has to be read and rejected on every
+                     publication is worse than no list. */
+                  ['handoverOrigin', firstOrigin, departureIso] as const,
+                  ['handoverDestination', lastDestination, arrivalIso] as const,
                 ]
-              ).map(([field, place]) => (
+              ).map(([field, place, iso]) => (
                 <fieldset
                   key={field}
                   className="border border-navy/10 rounded-field p-3 space-y-3"
@@ -1811,7 +1850,7 @@ export default function NewTripPage() {
                       <span className="block text-[11px] font-body text-navy/40 mb-1">
                         {t('trips.meetingPlace')}
                       </span>
-                      {places.length > 0 ? (
+                      {placesFor(iso).length > 0 ? (
                         <select
                           value={draft[field].placeId}
                           onChange={(e) =>
@@ -1820,9 +1859,9 @@ export default function NewTripPage() {
                           className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy focus:outline-none focus:border-cyan"
                         >
                           <option value="">{t('trips.pickNothing')}</option>
-                          {places.map((p) => (
+                          {placesFor(iso).map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.description}
+                              {p.city ? `${p.city} · ${p.description}` : p.description}
                             </option>
                           ))}
                         </select>
@@ -1999,6 +2038,9 @@ export default function NewTripPage() {
                     corridor catalogue below cannot know them: it knows what
                     exists in a country, not what this person accepts. Kept
                     once in «Как со мной рассчитаться» and offered here. */}
+                {/* Both ends, deduplicated by name: money moves between two
+                    countries and the carrier may be paid at either. A method
+                    filed under «везде» shows on every route. */}
                 {myMethods.length > 0 && (
                   <span className="flex flex-wrap gap-2 mb-2">
                     {myMethods.map((name) => {

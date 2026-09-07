@@ -732,6 +732,7 @@
       "add": "Añadir",
       "default": "predeterminado",
       "makeDefault": "Hacer predeterminado",
+      "anywhere": "Sin país",
       "loadFailed": "No se pudieron cargar los puntos de encuentro",
       "saveFailed": "No se pudo guardar"
     },
@@ -1415,7 +1416,8 @@
       "methodsLabel": "Con qué se te puede pagar",
       "methodsDesc": "Añade tus opciones una vez: aparecen como fichas en el formulario del vuelo y dejas de escribirlas cada vez.",
       "methodsPlaceholder": "Efectivo en la entrega",
-      "methodsLimit": "Puedes añadir como máximo {{max}}."
+      "methodsLimit": "Puedes añadir como máximo {{max}}.",
+      "methodsAnywhere": "En todas partes"
     }
   },
   "calendar": {

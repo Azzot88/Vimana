@@ -133,7 +133,7 @@ export interface User {
   /** T3.11.07 — the ways this carrier can be paid, written once instead of
    *  retyped on every trip. Free strings, and the order is theirs: the first is
    *  what they offer first. Owner-only, like the rest of `MeOut`. */
-  payment_methods?: string[]
+  payment_methods?: PaymentMethod[]
   /** T_UX.15 — standing carriage rules, copied into each new trip. */
   carriage_rules?: string | null
   /** T_UX.21 — the other two standing notes, and unlike the carriage rules
@@ -302,11 +302,22 @@ export const uploadAvatar = (file: File) => {
 
 export const deleteAvatar = () => api.delete<User>('/api/me/avatar')
 
+/** T3.11.07 — one way this carrier can be paid, and where (owner's decision
+ *  2026-09-06). `country` is `null` for «anywhere», which is a real answer:
+ *  «наличные при встрече» is country-agnostic, and so is every row written
+ *  before the field existed. Каспи, on the other hand, is not offered on a
+ *  Warsaw route — and a shortlist that has to be read and rejected on every
+ *  publication is the work this list exists to remove. */
+export interface PaymentMethod {
+  name: string
+  country: string | null
+}
+
 export interface UserUpdate {
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
   default_currencies?: string[]
-  payment_methods?: string[]
+  payment_methods?: PaymentMethod[]
   carriage_rules?: string | null
   interaction_rules?: string | null
   payment_instructions?: string | null

@@ -49,21 +49,35 @@ export const deleteAddress = (id: string) =>
 export interface MeetingPlace {
   id: string
   description: string
+  /** T3.11.07 — where this place is. The trip form offers meeting places for one
+   *  end of a route; without a country it offered a Moscow landmark to somebody
+   *  arriving in Dubai. Null on rows that predate the field — those are offered
+   *  everywhere, which is what they already did. */
+  country_iso: string | null
+  /** Asked for meeting places and not for payment methods: «у метро Фили» is
+   *  only findable if you know it is Moscow. */
+  city: string | null
   is_default: boolean
   created_at: string
+}
+
+export interface MeetingPlaceInput {
+  description: string
+  country_iso: string
+  city?: string | null
+  is_default?: boolean
 }
 
 export const listMeetingPlaces = () =>
   api.get<MeetingPlace[]>('/api/me/meeting-places')
 
-export const createMeetingPlace = (description: string, isDefault = false) =>
-  api.post<MeetingPlace>('/api/me/meeting-places', {
-    description,
-    is_default: isDefault,
-  })
+export const createMeetingPlace = (place: MeetingPlaceInput) =>
+  api.post<MeetingPlace>('/api/me/meeting-places', place)
 
-export const updateMeetingPlace = (id: string, description: string) =>
-  api.patch<MeetingPlace>(`/api/me/meeting-places/${id}`, { description })
+export const updateMeetingPlace = (
+  id: string,
+  place: Partial<MeetingPlaceInput>,
+) => api.patch<MeetingPlace>(`/api/me/meeting-places/${id}`, place)
 
 export const makeMeetingPlaceDefault = (id: string) =>
   api.post<MeetingPlace>(`/api/me/meeting-places/${id}/default`)

@@ -13,12 +13,26 @@ import uuid
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
 
-async def _create(client, headers, description: str, is_default: bool = False):
-    return await client.post(
-        "/api/me/meeting-places",
-        headers=headers,
-        json={"description": description, "is_default": is_default},
-    )
+async def _create(
+    client,
+    headers,
+    description: str,
+    is_default: bool = False,
+    country: str = "AE",
+    city: str | None = None,
+):
+    # T3.11.07 — a country is required on creation (owner's decision
+    # 2026-09-06): the trip form files places by country and offers them for one
+    # end of a route. The default here keeps the tests that are about the list
+    # rules short; the ones about the country pass it explicitly.
+    body: dict = {
+        "description": description,
+        "is_default": is_default,
+        "country_iso": country,
+    }
+    if city is not None:
+        body["city"] = city
+    return await client.post("/api/me/meeting-places", headers=headers, json=body)
 
 
 async def _fresh_headers(client) -> dict[str, str]:
@@ -148,3 +162,73 @@ async def test_unknown_place_is_not_found(client, carrier_headers):
 async def test_places_need_a_signed_in_person(client):
     r = await client.get("/api/me/meeting-places")
     assert r.status_code in (401, 403)
+
+
+# ── T3.11.07 · a place is filed under a country and a city ─────────────────
+
+
+async def test_country_is_required_on_creation(client, carrier_headers):
+    """The column is nullable and the schema is not, and the difference is
+    deliberate: rows exist that predate the field, but nothing new may be
+    written without one. A place with no country is offered on every route, and
+    that has to be a fact about old rows, not a choice available today."""
+    r = await client.post(
+        "/api/me/meeting-places",
+        headers=carrier_headers,
+        json={"description": "У выхода №3"},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_country_and_city_are_stored_and_returned(client, carrier_headers):
+    """The city is asked here and not on the payment methods: «у метро Фили» is
+    only findable if you know it is Moscow."""
+    r = await _create(
+        client, carrier_headers, "У метро Фили, выход №3", country="ru", city="Moscow"
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    # Upper-cased on the way in, like every other ISO code we store.
+    assert body["country_iso"] == "RU"
+    assert body["city"] == "Moscow"
+
+    listing = (
+        await client.get("/api/me/meeting-places", headers=carrier_headers)
+    ).json()
+    stored = next(p for p in listing if p["id"] == body["id"])
+    assert stored["country_iso"] == "RU"
+    assert stored["city"] == "Moscow"
+
+    await client.delete(
+        f"/api/me/meeting-places/{body['id']}", headers=carrier_headers
+    )
+
+
+async def test_city_is_optional_and_clearable(client, carrier_headers):
+    """«Встречу в аэропорту вылета» is a country-wide offer with no city, and a
+    place can lose one. Omission and an empty string have to stay different:
+    a PATCH that edits only the description must not wipe the city."""
+    created = await _create(
+        client, carrier_headers, "В аэропорту", country="AE", city="Dubai"
+    )
+    place_id = created.json()["id"]
+
+    only_text = await client.patch(
+        f"/api/me/meeting-places/{place_id}",
+        headers=carrier_headers,
+        json={"description": "В аэропорту, у стойки"},
+    )
+    assert only_text.status_code == 200, only_text.text
+    assert only_text.json()["city"] == "Dubai"
+
+    cleared = await client.patch(
+        f"/api/me/meeting-places/{place_id}",
+        headers=carrier_headers,
+        json={"city": ""},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["city"] is None
+
+    await client.delete(
+        f"/api/me/meeting-places/{place_id}", headers=carrier_headers
+    )

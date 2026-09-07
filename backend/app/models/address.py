@@ -53,8 +53,21 @@ class MeetingPlace(Base):
     Deliberately *not* an address. An address is a place a parcel is sent to and
     has the structure the post office needs; a meeting place is «у метро Фили,
     у выхода №3» or «Terminal D, departures, by the Costa» — a sentence one
-    human says to another, and any attempt to make it a country/city/street
+    human says to another, and any attempt to reduce it to country/city/street
     would either refuse it or throw away the half that matters.
+
+    T3.11.07 (owner's decision 2026-09-06) — the country and the city sit
+    **beside** that sentence, not instead of it. The trip form offers meeting
+    places for one end of a route, and without a country it was offering a
+    Moscow landmark to somebody arriving in Dubai: a list that has to be read
+    and rejected on every publication is worse than no list. The description
+    stays free text and stays the point; these two are the keys it is filed
+    under.
+
+    `country_iso` is nullable only because rows exist that predate it — the
+    schema requires it on every new one. A place whose country is unknown is
+    offered on every route, which is the honest reading of «not stated» and the
+    behaviour those rows already had.
 
     A list with one default, like the addresses above and for the same reason:
     a carrier meets people in two or three usual spots, and picking one per trip
@@ -72,6 +85,12 @@ class MeetingPlace(Base):
     # Long enough for a sentence with landmarks, short enough not to become a
     # second free-text field for carriage rules.
     description: Mapped[str] = mapped_column(String(300))
+    country_iso: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    # The city matters here and not on the payment methods: «у метро Фили» is
+    # only findable if you know it is Moscow, and one carrier meets people in
+    # two cities of one country often enough for the country alone to be too
+    # coarse a filter.
+    city: Mapped[str | None] = mapped_column(String(150), nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
