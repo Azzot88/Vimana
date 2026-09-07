@@ -166,6 +166,15 @@ export interface TripFilters {
 export const createTrip = (payload: CreateTripPayload) =>
   api.post<Trip>('/api/trips', payload)
 
+/** T3.11.07 — edit a published trip (owner's request 2026-09-06).
+ *
+ *  The same trip, not a new one: cancel-and-republish would change the id, and
+ *  the id is what every inquiry, deal and Nostr event points at. The whole body
+ *  goes every time — the wizard produces all of it anyway, and a partial shape
+ *  would be a second thing to validate with no caller. */
+export const updateTrip = (tripId: string, payload: CreateTripPayload) =>
+  api.patch<Trip>(`/api/trips/${tripId}`, payload)
+
 export const listTrips = (filters?: TripFilters) =>
   api.get<Page<Trip>>('/api/trips', { params: filters })
 

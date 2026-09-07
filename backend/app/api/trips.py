@@ -35,7 +35,7 @@ def _services_with_derived(body: TripCreate) -> list[str] | None:
     longer contradict each other — which is the actual defect here, not the
     number of levels.
 
-    Called by: `create_trip`.
+    Called by: `_apply_terms`, i.e. both `create_trip` and `update_trip`.
     """
     services = list(body.services or [])
     posts_it_on = bool(
@@ -56,7 +56,7 @@ async def _assert_owns_referenced_places(
     the addresses and meeting-places endpoints: telling a stranger "this id is
     real but not yours" answers a question they had no business asking.
 
-    Called by: `create_trip`.
+    Called by: `create_trip`, `update_trip`.
     """
     wanted_addresses: set[uuid.UUID] = set()
     wanted_places: set[uuid.UUID] = set()
@@ -87,6 +87,52 @@ async def _assert_owns_referenced_places(
         )
         if owned != ids:
             raise HTTPException(status_code=404, detail=f"{what} not found")
+
+
+def _apply_terms(trip: Trip, body: TripCreate, carriage_fallback: str | None) -> None:
+    """Everything a trip says about itself, written onto the row.
+
+    Shared by create and edit so the two cannot drift. That mattered the moment
+    editing existed: a field added to the form and to `create_trip` alone would
+    save on publication and silently revert on the first edit, which reads as
+    the platform losing an answer the carrier gave.
+
+    The route is **not** here — it is normalised before this is called, and the
+    denormalised head is derived from it.
+
+    Called by: `create_trip`, `update_trip`.
+    """
+    trip.capacity = body.capacity
+    trip.allowed_categories = body.allowed_categories
+    trip.price_per_kg = body.price_per_kg
+    trip.min_deal_price = body.min_deal_price
+    trip.currency = body.currency
+    trip.max_declared_value = body.max_declared_value
+    trip.max_declared_value_currency = body.max_declared_value_currency
+    trip.space_kind = body.space_kind
+    trip.size_hint = body.size_hint
+    # `mode="json"` because the column is JSON and the side carries UUIDs: the
+    # default dump keeps them as `UUID` objects, which asyncpg cannot write into
+    # a JSON column and which fail at serialisation, not at validation.
+    trip.handover_origin = (
+        body.handover_origin.model_dump(mode="json") if body.handover_origin else None
+    )
+    trip.handover_destination = (
+        body.handover_destination.model_dump(mode="json")
+        if body.handover_destination
+        else None
+    )
+    trip.excluded = body.excluded
+    trip.services = _services_with_derived(body)
+    trip.payment_model = body.payment_model
+    trip.payment_systems = body.payment_systems
+    # T_UX.15 — the carrier's standing rules are **copied** into the trip, not
+    # referenced. Edited later they must not rewrite what a sender read when
+    # they chose this trip. `None` means "use my template"; an explicit empty
+    # string means this trip carries no rules.
+    trip.carriage_rules = (
+        body.carriage_rules if body.carriage_rules is not None else carriage_fallback
+    )
 
 
 @router.post("", response_model=TripOut, status_code=201)
@@ -123,47 +169,9 @@ async def create_trip(
         origin=head_origin,
         destination=tail_destination,
         depart_at=first_departure,
-        capacity=body.capacity,
-        allowed_categories=body.allowed_categories,
-        # T3.35 — the carrier's baseline terms travel with the listing, so a
-        # sender can compare two trips on a corridor before opening a chat.
-        price_per_kg=body.price_per_kg,
-        min_deal_price=body.min_deal_price,
-        currency=body.currency,
-        max_declared_value=body.max_declared_value,
-        max_declared_value_currency=body.max_declared_value_currency,
-        # T3.11.15 — the two capacities and the two ends of the handover.
-        space_kind=body.space_kind,
-        size_hint=body.size_hint,
-        # `mode="json"` because the column is JSON and the side now carries
-        # UUIDs: the default dump keeps them as `UUID` objects, which asyncpg
-        # cannot write into a JSON column and which fail at serialisation, not
-        # at validation.
-        handover_origin=(
-            body.handover_origin.model_dump(mode="json")
-            if body.handover_origin
-            else None
-        ),
-        handover_destination=(
-            body.handover_destination.model_dump(mode="json")
-            if body.handover_destination
-            else None
-        ),
-        excluded=body.excluded,
-        services=_services_with_derived(body),
-        payment_model=body.payment_model,
-        payment_systems=body.payment_systems,
-        # T_UX.15 — the carrier's standing rules are **copied** into the trip,
-        # not referenced. Edited later they must not rewrite what a sender read
-        # when they chose this trip. `None` means "use my template"; an explicit
-        # empty string means this trip carries no rules.
-        carriage_rules=(
-            body.carriage_rules
-            if body.carriage_rules is not None
-            else current_user.carriage_rules
-        ),
         status=TripStatus.open,
     )
+    _apply_terms(trip, body, current_user.carriage_rules)
     # Cascade `all, delete-orphan`: the legs are written by the same commit and
     # a leg outliving its trip would be a record of nothing.
     trip.legs = [TripLeg(**leg) for leg in legs]
@@ -184,6 +192,90 @@ async def create_trip(
         publish_trip_to_nostr.delay(str(trip.id))
     except Exception:
         # Broker unreachable in dev — the trip still exists in Postgres.
+        pass
+
+    return trip
+
+
+@router.patch("/{trip_id}", response_model=TripOut)
+async def update_trip(
+    trip_id: uuid.UUID,
+    body: TripCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.07 — edit a published trip (owner's request 2026-09-06).
+
+    **The same trip, not a new one.** The obvious shortcut — cancel and
+    republish — changes the id, and the id is what every inquiry, every deal and
+    every Nostr event points at: a carrier fixing a typo in their departure hour
+    would silently orphan the conversation they were having about it. So the row
+    is updated in place and the chain is rebuilt on it.
+
+    **Whole body, not a patch of fields.** `TripCreate` is what the wizard
+    already produces and it always sends every answer, so a partial body would
+    be a second shape to validate with no caller. `PATCH` rather than `PUT` only
+    because the URL names an existing resource and the verb is the one clients
+    reach for; the semantics are a full replacement and this docstring is where
+    that is written down.
+
+    **Only while it is `open`.** A matched or completed trip is no longer a
+    listing — it is part of what two people agreed to, and rewriting it after
+    the fact is the one thing `D-COMPLIANCE-STANCE` is about: the record has to
+    say what was true when it was read. Cancelled trips stay cancelled; the way
+    back is a new publication.
+
+    `carriage_rules` falls back to the account template exactly as it does on
+    creation. That is deliberate and slightly lossy: a carrier who publishes
+    with their template, then changes the template, then edits the trip will get
+    the new one. The alternative — keeping the old copy — means an edit cannot
+    refresh the rules at all, and the carrier has no other way to do it.
+    """
+    trip = (
+        await db.execute(select(Trip).where(Trip.id == trip_id))
+    ).scalar_one_or_none()
+    # 404 rather than 403 for somebody else's trip: which trips exist is public,
+    # but which of them are yours is not something a stranger gets to probe.
+    if trip is None or trip.carrier_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    require_live_identity(current_user)  # T3.12 — a lost key cannot sign a trip
+    if trip.status != TripStatus.open:
+        raise HTTPException(
+            status_code=409,
+            detail="Only an open trip can be edited",
+        )
+
+    try:
+        legs = normalise_legs([leg.model_dump() for leg in body.legs])
+    except LegChainError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    head_origin, tail_destination, first_departure = head_and_tail(legs)
+
+    await _assert_owns_referenced_places(body, current_user, db)
+
+    trip.origin = head_origin
+    trip.destination = tail_destination
+    trip.depart_at = first_departure
+    _apply_terms(trip, body, current_user.carriage_rules)
+    # Replaced wholesale rather than diffed. `leg_order` is dense and assigned by
+    # `normalise_legs`, so matching old rows to new ones would mean guessing
+    # which leg the carrier meant to keep — and guessing wrong leaves a chain
+    # that is off by one city. `delete-orphan` removes the old rows in the same
+    # commit.
+    trip.legs = [TripLeg(**leg) for leg in legs]
+
+    await db.commit()
+    await db.refresh(trip)
+
+    # T3.5 — the relays hold the version that was published. Re-publishing is
+    # enqueued for the same reason it is on creation: a trip whose board card
+    # and whose Nostr event disagree is worse than one that is only on the
+    # board. The task itself checks the flag.
+    from app.tasks.nostr_publish import publish_trip_to_nostr
+    try:
+        publish_trip_to_nostr.delay(str(trip.id))
+    except Exception:
+        # Broker unreachable in dev — the edit still landed in Postgres.
         pass
 
     return trip

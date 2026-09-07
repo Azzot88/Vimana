@@ -1,13 +1,15 @@
 import { useId, useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import {
   createTrip,
+  updateTrip,
   listTrips,
   EXCLUSIONS,
   PAYMENT_MODELS,
   TRIP_SERVICES,
+  type CreateTripPayload,
   type Exclusion,
   type PaymentModel,
   type Trip,
@@ -367,6 +369,103 @@ function toHandover(side: HandoverDraft) {
   }
 }
 
+/** T3.11.07 — a stored trip back into the shape the form edits.
+ *
+ *  One function for two callers that differ in one bit. «Как в прошлый раз»
+ *  copies everything **except** the dates — they are the one thing never right
+ *  twice — while an edit copies them too, because an edit that silently blanked
+ *  the departure would be a trap: the carrier came to change a price and would
+ *  publish a trip with no date.
+ *
+ *  Two things deliberately do not survive either trip. The **countries** are not
+ *  in the response — a trip carries IATA codes, not ISO pairs — so the postal
+ *  and payment pickers stay empty until an airport is re-picked rather than
+ *  being shown a catalogue guessed from a code. The **arrival** is copied only
+ *  with the dates, for the same reason as the departure.
+ *
+ *  `toUnit` is passed rather than imported: the weight is stored metric and
+ *  shown in whatever the account reads in, and a module function has no hook.
+ *
+ *  Called by: `prefillFromLast`, and the edit-mode effect.
+ */
+function draftFromTrip(
+  trip: Trip,
+  toUnit: (kg: number) => number,
+  keepDates: boolean,
+): Partial<Draft> {
+  const legs = trip.legs ?? []
+  const nodes: NodeDraft[] =
+    legs.length > 0
+      ? [
+          {
+            ...EMPTY_NODE,
+            code: legs[0].origin,
+            // The city comes back with the trip, so the preview reads the same
+            // as it did on the original. The country does not — the API sends a
+            // code, not an ISO pair — which is why that one still waits for the
+            // airport to be re-picked.
+            city: legs[0].origin_city ?? '',
+            departAt: keepDates ? toLocalInput(legs[0].depart_at) : '',
+          },
+          ...legs.map((leg, i) => ({
+            ...EMPTY_NODE,
+            code: leg.destination,
+            city: leg.destination_city ?? '',
+            // A stop's departure is the *next* leg's, and the last stop has
+            // none — which is exactly what `nodesToLegs` reads back out.
+            departAt:
+              keepDates && legs[i + 1] ? toLocalInput(legs[i + 1].depart_at) : '',
+            arriveAt:
+              keepDates && !legs[i + 1] ? toLocalInput(leg.arrive_at) : '',
+          })),
+        ]
+      : [
+          { ...EMPTY_NODE, code: trip.origin },
+          { ...EMPTY_NODE, code: trip.destination },
+        ]
+
+  return {
+    nodes,
+    flownBy: legs[0]?.flown_by ?? 'self',
+    // Stored metric, shown in the account's unit.
+    capacity:
+      trip.capacity != null ? String(Math.round(toUnit(trip.capacity) * 2) / 2) : '',
+    spaceKind: trip.space_kind ?? 'unspecified',
+    sizeHint: trip.size_hint ?? '',
+    handoverOrigin: fromHandover(trip.handover_origin),
+    handoverDestination: fromHandover(trip.handover_destination),
+    excluded: trip.excluded ?? [],
+    services: trip.services ?? [],
+    paymentModel: trip.payment_model ?? '',
+    paymentSystems: (trip.payment_systems ?? []).join(', '),
+    categories: trip.allowed_categories ?? [],
+    pricePerKg: trip.price_per_kg != null ? String(trip.price_per_kg) : '',
+    minDealPrice: trip.min_deal_price != null ? String(trip.min_deal_price) : '',
+    currency: trip.currency ?? 'USD',
+    maxDeclaredValue:
+      trip.max_declared_value != null ? String(trip.max_declared_value) : '',
+    maxDeclaredValueCurrency: trip.max_declared_value_currency ?? '',
+    carriageRules: trip.carriage_rules ?? '',
+  }
+}
+
+/** An ISO instant into what `DateTimeField` reads: `YYYY-MM-DDTHH:mm`, local.
+ *
+ *  Local rather than UTC because that is what the field means everywhere else
+ *  in this form — the carrier types the clock on the wall at the airport they
+ *  are leaving from. Round-tripping through UTC here would move every edited
+ *  departure by the offset, silently, and only for carriers not on UTC.
+ */
+function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`
+}
+
 // Feature flags for experimental input methods (voice / ticket scan).
 // Kept as hook-points per PRD T1.25 — actual implementations live in
 // EXP-03 / EXP-04 (see MASTERPLAN §10).
@@ -390,6 +489,7 @@ export default function NewTripPage() {
   const capacityLabelId = useId()
   const rulesId = useId()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
 
@@ -423,16 +523,32 @@ export default function NewTripPage() {
     TOTAL_STEPS,
     Math.max(1, Number(params.get('step')) || 1),
   )
+  /* T3.11.07 — the trip being edited, or null for a new one (owner's request
+     2026-09-06). The wizard is the same four steps either way: a second form
+     for editing would be the same twenty fields written twice, and the copy
+     that fell behind would be the one that silently dropped an answer. */
+  const editingId = params.get('edit')
   const goToStep = useCallback(
     (next: number, replace = false) => {
-      setParams({ step: String(next) }, { replace })
+      const query: Record<string, string> = { step: String(next) }
+      // Carried across every step: dropping it mid-wizard would turn an edit
+      // into a second publication at whichever step the carrier pressed Next.
+      const editing = params.get('edit')
+      if (editing) query.edit = editing
+      setParams(query, { replace })
     },
-    [setParams],
+    [params, setParams],
   )
 
   useEffect(() => {
+    // T3.11.07 — an edit is not saved as the draft. The key holds the carrier's
+    // unfinished *new* trip, and writing an edit into it would throw that away
+    // for somebody who only came to fix a price. An edit is a short round trip
+    // and losing it costs one reopen; losing a half-written publication does
+    // not.
+    if (editingId) return
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-  }, [draft])
+  }, [draft, editingId])
 
   // T_UX.15 — the standing rules from the profile are a starting point, not a
   // lock: prefilled once when the field is untouched, editable per trip.
@@ -456,7 +572,7 @@ export default function NewTripPage() {
    *  hide exactly the ones a regular carrier has most of.
    */
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || editingId) return
     listTrips({ carrier_id: user.id, status: 'all', limit: 1 })
       .then(({ data }) => setLastTrip(data.items[0] ?? null))
       .catch(() => {})
@@ -474,6 +590,32 @@ export default function NewTripPage() {
       .then(({ data }) => setPlaces(data))
       .catch(() => {})
   }, [])
+
+  /* T3.11.07 — edit mode loads the trip into the form (owner's request
+     2026-09-06). The panel hands it over in router state, because the board
+     already has the object and a second request for something on screen is a
+     spinner for nothing. A cold reload has no state, and there is no
+     single-trip endpoint, so it falls back to the carrier's own listing —
+     which is the one place that returns a trip of any status. */
+  useEffect(() => {
+    if (!editingId) return
+    const passed = (location.state as { trip?: Trip } | null)?.trip
+    // Merged onto EMPTY, not onto the current draft: an unfinished new trip
+    // sitting in `localStorage` must not leak its answers into somebody else's
+    // published one.
+    if (passed && passed.id === editingId) {
+      setDraft({ ...EMPTY, ...draftFromTrip(passed, prefs.toUnit, true) })
+      return
+    }
+    listTrips({ carrier_id: user?.id, status: 'all', limit: 100 })
+      .then(({ data }) => {
+        const found = data.items.find((x) => x.id === editingId)
+        if (found) setDraft({ ...EMPTY, ...draftFromTrip(found, prefs.toUnit, true) })
+        else setError(t('trips.editNotFound') as string)
+      })
+      .catch(() => setError(t('trips.editNotFound') as string))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId])
 
   // Postal services follow the **arrival** country: onward shipping happens
   // after landing. Refetched when that country changes and not before — a
@@ -501,71 +643,13 @@ export default function NewTripPage() {
       .catch(() => setSystems([]))
   }, [arrivalIso, departureIso])
 
-  /** Fills everything except the dates from that trip.
-   *
-   *  Dates are the one thing that is never right twice, so they stay empty and
-   *  the carrier lands on step 1 with the route already there and the cursor's
-   *  work reduced to two fields. The route **is** copied: a regular carrier
-   *  flies the same corridor, and clearing it would make them retype the part
-   *  they were most sure about.
+  /** T3.11.21 — «как в прошлый раз», without the dates.
    *
    *  Called by: the "same as last time" button on step 1.
    */
   const prefillFromLast = () => {
-    const trip = lastTrip
-    if (!trip) return
-    setDraft((prev) => ({
-      ...prev,
-      // The stops, rebuilt from the stored chain: the first origin followed by
-      // every destination. Dates stay empty — the one thing never right twice —
-      // and so do the countries: a stored trip carries codes, not ISO pairs,
-      // and guessing them would put the wrong postal catalogue in front of
-      // somebody. They fill in as soon as an airport is re-picked.
-      nodes:
-        trip.legs.length > 0
-          ? [
-              {
-                ...EMPTY_NODE,
-                code: trip.legs[0].origin,
-                // The city comes back with the trip, so the preview reads the
-                // same on a repeat as it did on the original. The country does
-                // not — the API sends a code, not an ISO pair — which is why
-                // that one still waits for the airport to be re-picked.
-                city: trip.legs[0].origin_city ?? '',
-              },
-              ...trip.legs.map((leg) => ({
-                ...EMPTY_NODE,
-                code: leg.destination,
-                city: leg.destination_city ?? '',
-              })),
-            ]
-          : [
-              { ...EMPTY_NODE, code: trip.origin },
-              { ...EMPTY_NODE, code: trip.destination },
-            ],
-      flownBy: trip.legs[0]?.flown_by ?? 'self',
-      // Stored metric, shown in the account's unit.
-      capacity:
-        trip.capacity != null
-          ? String(Math.round(prefs.toUnit(trip.capacity) * 2) / 2)
-          : "",
-      spaceKind: trip.space_kind ?? 'unspecified',
-      sizeHint: trip.size_hint ?? '',
-      handoverOrigin: fromHandover(trip.handover_origin),
-      handoverDestination: fromHandover(trip.handover_destination),
-      excluded: trip.excluded ?? [],
-      services: trip.services ?? [],
-      paymentModel: trip.payment_model ?? '',
-      paymentSystems: (trip.payment_systems ?? []).join(', '),
-      categories: trip.allowed_categories ?? [],
-      pricePerKg: trip.price_per_kg != null ? String(trip.price_per_kg) : '',
-      minDealPrice: trip.min_deal_price != null ? String(trip.min_deal_price) : '',
-      currency: trip.currency ?? 'USD',
-      maxDeclaredValue:
-        trip.max_declared_value != null ? String(trip.max_declared_value) : '',
-      maxDeclaredValueCurrency: trip.max_declared_value_currency ?? '',
-      carriageRules: trip.carriage_rules ?? '',
-    }))
+    if (!lastTrip) return
+    setDraft((prev) => ({ ...prev, ...draftFromTrip(lastTrip, prefs.toUnit, false) }))
     setPrefilled(true)
   }
 
@@ -712,6 +796,13 @@ export default function NewTripPage() {
    *
    *  Called by: the close button in the sheet header, and Escape. */
   const requestClose = () => {
+    // T3.11.07 — an edit has no draft to keep, so there is nothing to ask
+    // about: the question «сохранить черновик?» would be about a thing that was
+    // never written.
+    if (editingId) {
+      navigate(-1)
+      return
+    }
     const untouched =
       draft.nodes.length === 2 && draft.nodes.every((n) => !n.code && !n.departAt)
     if (untouched) {
@@ -768,7 +859,7 @@ export default function NewTripPage() {
     }
     setLoading(true)
     try {
-      const published = await createTrip({
+      const payload: CreateTripPayload = {
         // T3.11.07 — the route travels as the chain the carrier typed. Order is
         // the array order; the server assigns it and derives the trip's
         // origin, destination and date from the first and last leg.
@@ -824,12 +915,20 @@ export default function NewTripPage() {
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
         // rules" rather than "fall back to my template".
         carriage_rules: draft.carriageRules,
-      })
-      localStorage.removeItem(DRAFT_KEY)
+      }
+      /* T3.11.07 — the same row when editing, a new one otherwise. Cancel and
+         republish would have been fewer lines and changes the id — which is
+         what every inquiry, deal and Nostr event points at, so a carrier fixing
+         a departure hour would orphan the conversation about it. */
+      const saved = editingId
+        ? await updateTrip(editingId, payload)
+        : await createTrip(payload)
+      // Only a publication clears the draft: an edit never wrote to it.
+      if (!editingId) localStorage.removeItem(DRAFT_KEY)
       /* T3.11.07 — straight to the card that was just written, not to the top
          of the board (owner's request 2026-09-06). The id goes in the query
          string: the board rings it and scrolls to it, and a reload keeps it. */
-      navigate(`/trips?trip=${published.data.id}`)
+      navigate(`/trips?trip=${saved.data.id}`)
     } catch {
       setError(t('trips.publishError') as string)
     } finally {
@@ -1015,7 +1114,11 @@ export default function NewTripPage() {
           : 'border border-amber/60 text-amber font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-amber/5 transition-colors disabled:opacity-50'
       }
     >
-      {loading ? t('common.loading') : t('trips.publish')}
+      {loading
+        ? t('common.loading')
+        : editingId
+          ? t('common.save')
+          : t('trips.publish')}
     </button>
   )
 
@@ -1023,7 +1126,14 @@ export default function NewTripPage() {
     <WizardSheet
       step={step}
       total={TOTAL_STEPS}
-      title={stepTitles[step - 1] as string}
+      /* T3.11.07 — an edit says so in the header. Four identical steps that
+         quietly rewrite an existing listing instead of making a new one is the
+         kind of mode a person only discovers by pressing the button. */
+      title={
+        editingId
+          ? (t('trips.preview.edit') as string)
+          : (stepTitles[step - 1] as string)
+      }
       subtitle={stepSubtitles[step - 1] as string}
       onBack={step > 1 ? () => goToStep(step - 1) : undefined}
       onClose={requestClose}
@@ -1098,7 +1208,13 @@ export default function NewTripPage() {
           {/* T3.11.21 — offered only while the form is untouched. A carrier who
               has begun typing is not shown a button that would overwrite it,
               and one who has already used it is not shown it twice. */}
-          {lastTrip && !prefilled && !draft.nodes[0].code && !draft.nodes[0].departAt && (
+          {/* Never in edit mode: a button that overwrites the trip being edited
+              with a different one is the opposite of what it says. */}
+          {!editingId &&
+            lastTrip &&
+            !prefilled &&
+            !draft.nodes[0].code &&
+            !draft.nodes[0].departAt && (
             <button
               type="button"
               onClick={prefillFromLast}

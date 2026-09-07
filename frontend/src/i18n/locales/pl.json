@@ -638,8 +638,17 @@
     "arrivalAt": "Przylot do {{code}}",
     "optional": "opcjonalnie",
     "pickDateTime": "Wybierz datę i godzinę",
+    "preview": {
+      "title": "Lot",
+      "open": "Szczegóły",
+      "edit": "Edytuj lot",
+      "hasAddress": "Adres z profilu — wyślę na czacie",
+      "hasMeetingPlace": "Miejsce spotkania z profilu — wyślę na czacie",
+      "publishedAt": "Opublikowano"
+    },
     "allowanceCurrency": "Waluta",
     "published": "Lot opublikowany — oto on na tablicy.",
+    "editNotFound": "Nie udało się wczytać tego lotu — mógł zostać wycofany.",
     "flownBy": {
       "label": "Kto leci",
       "self": "Lecę ja",

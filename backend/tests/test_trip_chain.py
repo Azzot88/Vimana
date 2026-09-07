@@ -591,3 +591,103 @@ async def test_no_local_post_no_derived_service(client, carrier_headers):
         ),
     )
     assert r.json()["services"] is None
+
+
+# ── T3.11.07 · editing a published trip ────────────────────────────────────
+
+
+async def test_editing_keeps_the_same_trip(client, carrier_headers):
+    """The id survives. Cancel-and-republish was the obvious shortcut and it
+    changes the id — which is what every inquiry, deal and Nostr event points
+    at, so a carrier fixing a departure hour would orphan the conversation they
+    were having about it."""
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload(legs=[_leg("DXB", "JFK", 6)])
+    )
+    assert created.status_code == 201, created.text
+    trip_id = created.json()["id"]
+
+    edited = await client.patch(
+        f"/api/trips/{trip_id}",
+        headers=carrier_headers,
+        json=_payload(legs=[_leg("DXB", "LHR", 7)], capacity=12.0),
+    )
+    assert edited.status_code == 200, edited.text
+    body = edited.json()
+    assert body["id"] == trip_id
+    assert body["destination"] == "LHR"
+    assert body["capacity"] == 12.0
+
+
+async def test_editing_replaces_the_whole_chain(client, carrier_headers):
+    """Replaced wholesale, not diffed: `leg_order` is dense and assigned on
+    write, so matching old rows to new ones would mean guessing which leg the
+    carrier meant to keep — and guessing wrong leaves a chain off by one city."""
+    created = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            legs=[_leg("SVO", "IST", 5), _leg("IST", "JFK", 6), _leg("JFK", "LAX", 7)]
+        ),
+    )
+    trip_id = created.json()["id"]
+
+    edited = await client.patch(
+        f"/api/trips/{trip_id}",
+        headers=carrier_headers,
+        json=_payload(legs=[_leg("SVO", "DXB", 5)]),
+    )
+    assert edited.status_code == 200, edited.text
+    legs = edited.json()["legs"]
+    assert [(leg["origin"], leg["destination"]) for leg in legs] == [("SVO", "DXB")]
+    assert [leg["order"] for leg in legs] == [0]
+
+
+async def test_a_stranger_cannot_edit_a_trip(client, carrier_headers, sender_headers):
+    """404, not 403: which trips exist is public, which of them are yours is
+    not something a stranger gets to probe."""
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload()
+    )
+    trip_id = created.json()["id"]
+
+    r = await client.patch(
+        f"/api/trips/{trip_id}", headers=sender_headers, json=_payload()
+    )
+    assert r.status_code == 404, r.text
+
+
+async def test_a_cancelled_trip_cannot_be_edited(client, carrier_headers):
+    """A trip that is no longer a listing is part of what two people read. The
+    way back is a new publication, not a rewrite of the old one."""
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload()
+    )
+    trip_id = created.json()["id"]
+    cancelled = await client.post(
+        f"/api/trips/{trip_id}/cancel", headers=carrier_headers
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    r = await client.patch(
+        f"/api/trips/{trip_id}", headers=carrier_headers, json=_payload()
+    )
+    assert r.status_code == 409, r.text
+
+
+async def test_editing_validates_the_chain_like_publishing_does(
+    client, carrier_headers
+):
+    """One door, one set of rules. An edit that could store a chain publishing
+    refuses would make the validation a formality of the first save."""
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload()
+    )
+    trip_id = created.json()["id"]
+
+    r = await client.patch(
+        f"/api/trips/{trip_id}",
+        headers=carrier_headers,
+        json=_payload(legs=[_leg("DXB", "DXB", 6)]),
+    )
+    assert r.status_code == 422, r.text

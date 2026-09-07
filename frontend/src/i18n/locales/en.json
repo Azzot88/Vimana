@@ -684,8 +684,17 @@
     "arrivalAt": "Arrival at {{code}}",
     "optional": "optional",
     "pickDateTime": "Pick a date and time",
+    "preview": {
+      "title": "Trip",
+      "open": "Details",
+      "edit": "Edit trip",
+      "hasAddress": "An address from my profile — I will send it in the chat",
+      "hasMeetingPlace": "A meeting place from my profile — I will send it in the chat",
+      "publishedAt": "Published"
+    },
     "allowanceCurrency": "Currency",
     "published": "Your trip is published — here it is on the board.",
+    "editNotFound": "That trip could not be loaded. It may have been withdrawn.",
     "flownBy": {
       "label": "Who is flying",
       "self": "I am",

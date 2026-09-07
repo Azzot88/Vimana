@@ -637,8 +637,17 @@
     "arrivalAt": "Arrivée à {{code}}",
     "optional": "facultatif",
     "pickDateTime": "Choisir la date et l'heure",
+    "preview": {
+      "title": "Vol",
+      "open": "Détails",
+      "edit": "Modifier le vol",
+      "hasAddress": "Une adresse de mon profil — je l'enverrai dans le chat",
+      "hasMeetingPlace": "Un lieu de rendez-vous de mon profil — je l'enverrai dans le chat",
+      "publishedAt": "Publié"
+    },
     "allowanceCurrency": "Monnaie",
     "published": "Votre vol est publié — le voici sur le tableau.",
+    "editNotFound": "Ce vol n'a pas pu être chargé — il a peut-être été retiré.",
     "flownBy": {
       "label": "Qui voyage",
       "self": "Moi",

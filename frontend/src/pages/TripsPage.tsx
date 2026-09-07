@@ -1,5 +1,5 @@
-import { Link, useSearchParams } from 'react-router-dom'
-import { useEffect, useId, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
@@ -10,6 +10,7 @@ import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import NostrBadge from '../components/NostrBadge'
 import RouteNoteBadge from '../components/RouteNoteBadge'
+import TripPreview from '../components/TripPreview'
 import UBAChip from '../components/UBAChip'
 import { filterNotesForCorridor, useRouteNotes } from '../hooks/useRouteNotes'
 import { routeChain } from '../lib/format'
@@ -67,6 +68,15 @@ export default function TripsPage() {
      nobody in particular. */
   const [params, setParams] = useSearchParams()
   const justPublished = params.get('trip')
+  /* T3.11.07 — the trip whose detail panel is open (owner's request
+     2026-09-06). The board card is a summary and stays one; the panel holds
+     the rest. Held as the object rather than an id: the list already has it,
+     and a second fetch for something on screen is a spinner for nothing. */
+  const [previewTrip, setPreviewTrip] = useState<Trip | null>(null)
+  /* Opened once, not every render: closing the panel must not reopen it, and
+     the list refetches. */
+  const openedForPublish = useRef(false)
+  const navigate = useNavigate()
 
   const fetchTrips = async () => {
     setLoading(true)
@@ -86,6 +96,19 @@ export default function TripsPage() {
   useEffect(() => {
     fetchTrips()
   }, [])
+
+  /* T3.11.07 — a freshly published trip opens its own detail (owner's request
+     2026-09-06). That is what «посмотреть свой рейс после публикации» asks
+     for: the carrier lands on what they wrote, not on a list they have to
+     search for it in. The ring on the card stays, so closing the panel leaves
+     the trip still findable. */
+  useEffect(() => {
+    if (!justPublished || openedForPublish.current) return
+    const published = trips.find((x) => x.id === justPublished)
+    if (!published) return
+    openedForPublish.current = true
+    setPreviewTrip(published)
+  }, [justPublished, trips])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -312,6 +335,21 @@ export default function TripsPage() {
                     </div>
                   )}
                 </div>
+                <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto sm:ml-4">
+                  {/* T3.11.07 — the card stays a summary; everything else is one
+                      click away (owner's request 2026-09-06). Shown to everyone,
+                      not only the owner: a sender deciding whether to write has
+                      the same questions — where the handover happens, what is
+                      refused, how settlement works — and the card has room for
+                      none of them. */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTrip(trip)}
+                    className="border border-navy/20 text-navy/70 font-body px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-ivory transition-colors"
+                  >
+                    {t('trips.preview.open')}
+                  </button>
+                </div>
                 {user?.active_mode !== 'carrier' && trip.carrier_id !== user?.id && (
                   <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto sm:ml-4">
                     <button
@@ -401,6 +439,27 @@ export default function TripsPage() {
           tripId={chatTrip.id}
           carrierName={chatTrip.carrierName}
           onClose={() => setChatTrip(null)}
+        />
+      )}
+
+      {previewTrip && (
+        <TripPreview
+          trip={previewTrip}
+          onClose={() => setPreviewTrip(null)}
+          /* T3.11.07 — editing is offered only to the owner, and only while the
+             trip is still a listing. A matched or cancelled trip is part of what
+             two people agreed to; the server refuses it either way, and a button
+             that exists to be refused is worse than one that is not there. The
+             trip travels in router state so the wizard opens without a second
+             request for something already on screen. */
+          onEdit={
+            previewTrip.carrier_id === user?.id && previewTrip.status === 'open'
+              ? () =>
+                  navigate(`/trips/new?edit=${previewTrip.id}`, {
+                    state: { trip: previewTrip },
+                  })
+              : undefined
+          }
         />
       )}
     </div>
