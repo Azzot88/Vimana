@@ -203,7 +203,25 @@ TEST_DATABASE_URL=postgresql+asyncpg://vimana:vimana_dev@db:5432/vimana_test
 
 ### Запуск
 ```bash
-docker compose -f docker-compose.dev.yml exec -w /app backend pytest -v
+docker compose -f docker-compose.dev.yml exec -w /app backend pytest
+```
+
+**Без `-T` и без `| tail`** (правило владельца 2026-09-07: «всегда должен быть виден процесс»).
+Полный сьют идёт ~15 минут, и оба этих приёма делают его молчаливым:
+
+- `| tail` копит весь вывод и печатает хвост в самом конце — до этого на экране пусто;
+- `-T` снимает TTY, после чего Python буферизует stdout блоками.
+
+Читается это как зависание, а честная реакция на зависание — Ctrl-C, то есть выброшенный зелёный прогон.
+Вторая половина починена в образе: `ENV PYTHONUNBUFFERED=1` в `backend/Dockerfile`, поэтому даже под
+пайпом вывод идёт по мере появления. `addopts` в `pytest.ini` держат `-v -ra --durations=15`: строка на
+тест вместо стены точек, сводка непрошедших в конце и пятнадцать самых медленных — та строка, которая
+объясняет, куда ушло время, когда сьют начнёт тормозить.
+
+Если хвост всё-таки нужен, он не должен отменять живой вывод:
+```bash
+docker compose -f docker-compose.dev.yml exec -w /app backend pytest 2>&1 | tee /tmp/pytest.log
+tail -n 25 /tmp/pytest.log
 ```
 
 ### Запрещено в тестах
