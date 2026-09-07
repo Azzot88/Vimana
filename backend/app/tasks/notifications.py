@@ -762,3 +762,57 @@ def notify_admins_zap_findings(high: list[str], medium_count: int) -> None:
             "Baseline — пассивный скан: это то, что видно снаружи без единого "
             "атакующего запроса.",
         )
+
+
+@celery_app.task(name="app.tasks.notifications.notify_trip_rescheduled")
+def notify_trip_rescheduled(trip_id: str, was: str, now: str) -> None:
+    """T3.11.16 — the carrier moved the flight; everybody counting on it hears.
+
+    Owner's requirement 2026-09-07: a reschedule is initiated by the carrier and
+    the deals already agreed on that trip get a notification of the **deal**
+    class. Today this event exists on the market as a line appended to the end
+    of a post («перенесла билеты»), which is not something a sender can act on
+    and not something the record keeps.
+
+    Only live deals. A closed or cancelled one is history, and history does not
+    change because the carrier's calendar did; telling somebody their finished
+    delivery has moved would be a false alarm about a parcel already in their
+    hands.
+
+    The carrier is not told — they are the one who did it. Both dates travel in
+    the letter because the sender's own plans hang off the old one.
+
+    Called by: `api.trips.update_trip`, when the departure actually changed.
+    """
+    from app.models.deal import Deal, DealStatus
+    from app.models.marketplace import Trip
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        trip = db.get(Trip, trip_id)
+        if not trip:
+            return
+        route = f"{trip.origin} → {trip.destination}"
+        deals = (
+            db.execute(
+                select(Deal).where(
+                    Deal.trip_id == trip.id,
+                    Deal.status.notin_([DealStatus.closed, DealStatus.draft]),
+                )
+            )
+            .scalars()
+            .all()
+        )
+        # One letter per person, not per deal: somebody sending two parcels on
+        # one flight has been told once, and twice would read as two changes.
+        told: set[str] = set()
+        for deal in deals:
+            for user_id in (deal.sender_id, deal.recipient_id):
+                if user_id is None or str(user_id) in told:
+                    continue
+                told.add(str(user_id))
+                person = db.get(User, str(user_id))
+                if person:
+                    _notify_user(
+                        person, "trip_rescheduled", route=route, was=was, now=now
+                    )

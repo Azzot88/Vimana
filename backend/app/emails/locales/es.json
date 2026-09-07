@@ -89,6 +89,19 @@
     },
     "note": "Puedes desactivar las notificaciones de acuerdos en tu perfil."
   },
+  "trip_rescheduled": {
+    "subject": "Vimana · El transportista movió el vuelo",
+    "preheader": "Cambió la fecha de salida de tu acuerdo",
+    "heading": "El vuelo se movió",
+    "body": [
+      "El transportista cambió la fecha del vuelo en el que va tu acuerdo. Abajo: lo que era y lo que es ahora.",
+      "Si la nueva fecha no te sirve, dilo en el acuerdo: las condiciones se pactaron con la anterior."
+    ],
+    "facts_route": "Ruta",
+    "facts_was": "Antes",
+    "facts_now": "Ahora",
+    "note": "Puedes desactivar las notificaciones de acuerdos en tu perfil."
+  },
   "deadline_reminder": {
     "subject": "Vimana · Se acerca el plazo de entrega",
     "preheader": "Quedan menos de 24 horas",

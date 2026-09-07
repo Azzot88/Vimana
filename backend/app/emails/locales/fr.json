@@ -89,6 +89,19 @@
     },
     "note": "Vous pouvez désactiver les notifications de transaction dans votre profil."
   },
+  "trip_rescheduled": {
+    "subject": "Vimana · Le transporteur a déplacé le vol",
+    "preheader": "La date de départ de votre transaction a changé",
+    "heading": "Le vol a été déplacé",
+    "body": [
+      "Le transporteur a changé la date du vol sur lequel repose votre transaction. Ci-dessous : ce qui était prévu et ce qui l'est maintenant.",
+      "Si la nouvelle date ne vous convient pas, dites-le dans la transaction : les conditions ont été convenues sur l'ancienne."
+    ],
+    "facts_route": "Trajet",
+    "facts_was": "Avant",
+    "facts_now": "Maintenant",
+    "note": "Vous pouvez désactiver les notifications de transactions dans votre profil."
+  },
   "deadline_reminder": {
     "subject": "Vimana · L'échéance de livraison approche",
     "preheader": "Moins de 24 heures restantes",

@@ -261,6 +261,12 @@ async def update_trip(
 
     await _assert_owns_referenced_places(body, current_user, db)
 
+    # T3.11.16 — a moved flight is the one edit somebody else has to hear about.
+    # Read **before** the row is overwritten: afterwards there is nothing left
+    # to compare against, which is why «перенос» could not be told from any other
+    # edit until now.
+    was_departure = trip.depart_at
+
     trip.origin = head_origin
     trip.destination = tail_destination
     trip.depart_at = first_departure
@@ -293,6 +299,24 @@ async def update_trip(
     except Exception:
         # Broker unreachable in dev — the edit still landed in Postgres.
         pass
+
+    # T3.11.16 — «перенос»: the carrier moved the flight, and the people whose
+    # deals ride on it are told. Only when the departure actually changed —
+    # every other edit is the carrier's own business, and a letter for each of
+    # them would teach senders to ignore the one that matters.
+    if trip.depart_at != was_departure:
+        from app.tasks.notifications import notify_trip_rescheduled
+
+        try:
+            notify_trip_rescheduled.delay(
+                str(trip.id),
+                was_departure.isoformat(),
+                trip.depart_at.isoformat(),
+            )
+        except Exception:
+            # Same posture as the publish above: the edit is saved either way,
+            # and a broker that is down must not fail a carrier's correction.
+            pass
 
     return trip
 

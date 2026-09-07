@@ -89,6 +89,19 @@
     },
     "note": "You can turn deal notifications off in your profile."
   },
+  "trip_rescheduled": {
+    "subject": "Vimana · The carrier moved the flight",
+    "preheader": "The departure date on your deal has changed",
+    "heading": "The trip was moved",
+    "body": [
+      "The carrier changed the date of the flight your deal is riding on. What it was and what it is now are below.",
+      "If the new date does not suit you, say so in the deal: the terms were agreed against the old one."
+    ],
+    "facts_route": "Route",
+    "facts_was": "Was",
+    "facts_now": "Now",
+    "note": "You can turn deal notifications off in your profile."
+  },
   "deadline_reminder": {
     "subject": "Vimana · Delivery deadline is close",
     "preheader": "Less than 24 hours left",

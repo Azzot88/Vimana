@@ -76,6 +76,11 @@ _LETTERS: dict[str, dict[str, Any]] = {
     "role_revoked": {"facts": ["role", "reason"]},
     "deal_status": {},
     "deadline_reminder": {},
+    # T3.11.16 — the carrier moved the flight. Both dates are facts rather than
+    # prose: the sender's own plans hang off the old one, and «перенесла билеты»
+    # written into a chat is how this event exists on the market today — a line
+    # nobody can act on and nothing records.
+    "trip_rescheduled": {"facts": ["route", "was", "now"]},
 }
 
 _env = Environment(
@@ -164,6 +169,11 @@ def sample_context(kind: str) -> dict[str, Any]:
         },
         "deal_status": {"status": "in_transit"},
         "deadline_reminder": {},
+        "trip_rescheduled": {
+            "route": "DXB → JFK",
+            "was": "2026-09-12 23:40 UTC",
+            "now": "2026-09-15 08:05 UTC",
+        },
     }
     return samples[kind]
 

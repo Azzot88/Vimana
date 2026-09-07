@@ -82,7 +82,11 @@ class EventClass:
 
 #: Order matters — it is the order of the rows on the screen.
 EVENT_CLASSES: tuple[EventClass, ...] = (
-    EventClass("deal", kinds=("deal_status",)),
+    # T3.11.16 — `trip_rescheduled` joins the deal class rather than getting one
+    # of its own: to the person receiving it, «перевозчик перенёс рейс» is news
+    # about their delivery, and a separate switch would ask them to reason about
+    # our table layout.
+    EventClass("deal", kinds=("deal_status", "trip_rescheduled")),
     EventClass("deadline", kinds=("deadline_reminder",)),
     # No producer yet. Declared so the taxonomy is whole and so the day one
     # appears is a one-word change here rather than a migration.

@@ -827,3 +827,88 @@ async def test_a_flown_trip_leaves_the_board_but_not_my_history(
     )
     assert trip_id in [t["id"] for t in mine.json()["items"]]
 
+
+
+async def test_moving_the_flight_tells_the_deals_riding_on_it(
+    client, session_maker, monkeypatch, carrier_headers, sender_headers
+):
+    """T3.11.16 — «перенос перевозчиком», and the deals hear about it.
+
+    On the market this event exists as a line appended to a post («перенесла
+    билеты»): not something a sender can act on, and not something the record
+    keeps. Here it is an edit that names both dates and reaches the people whose
+    delivery rides on them.
+    """
+    from app.tasks import notifications as notifications_module
+
+    sent: list[tuple] = []
+
+    class _Capture:
+        def delay(self, *args, **kwargs):
+            sent.append(args)
+
+    created = await client.post(
+        "/api/trips", headers=carrier_headers, json=_payload()
+    )
+    trip_id = created.json()["id"]
+    await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={
+            "trip_id": trip_id,
+            "order": {
+                "recipient_contact": "+10000003333",
+                "origin": "DXB",
+                "destination": "JFK",
+                "category": "document",
+                "declared_value": 10.0,
+            },
+        },
+    )
+
+    monkeypatch.setattr(
+        notifications_module, "notify_trip_rescheduled", _Capture(), raising=False
+    )
+
+    # An edit that does not touch the departure says nothing to anybody: a
+    # letter per edit would teach senders to ignore the one that matters. The
+    # legs are echoed back **verbatim** — rebuilding them from `_leg()` would
+    # move the departure by the milliseconds between two calls, and the test
+    # would be asserting the opposite of what it reads.
+    same_legs = [
+        {
+            "origin": leg["origin"],
+            "destination": leg["destination"],
+            "depart_at": leg["depart_at"],
+        }
+        for leg in created.json()["legs"]
+    ]
+    quiet = await client.patch(
+        f"/api/trips/{trip_id}",
+        headers=carrier_headers,
+        json=_payload(legs=same_legs, capacity=9.0),
+    )
+    assert quiet.status_code == 200, quiet.text
+    assert sent == []
+
+    moved = await client.patch(
+        f"/api/trips/{trip_id}",
+        headers=carrier_headers,
+        json=_payload(legs=[_leg("DXB", "JFK", 9)], capacity=9.0),
+    )
+    assert moved.status_code == 200, moved.text
+    assert len(sent) == 1
+    assert sent[0][0] == trip_id
+    # Both dates travel: the sender's own plans hang off the old one.
+    assert sent[0][1] != sent[0][2]
+
+
+async def test_the_reschedule_letter_names_the_route_and_both_dates(client):
+    """The letter is a real one in all six locales, not a status word reused."""
+    from app.core.email_templates import LOCALES, render, sample_context
+
+    for locale in LOCALES:
+        letter = render("trip_rescheduled", locale, **sample_context("trip_rescheduled"))
+        assert letter.subject.strip()
+        assert "DXB" in letter.text
+        assert "2026-09-15 08:05 UTC" in letter.text

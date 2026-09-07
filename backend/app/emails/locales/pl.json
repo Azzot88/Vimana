@@ -89,6 +89,19 @@
     },
     "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
   },
+  "trip_rescheduled": {
+    "subject": "Vimana · Przewoźnik przełożył lot",
+    "preheader": "Zmieniła się data wylotu w Twojej transakcji",
+    "heading": "Lot został przełożony",
+    "body": [
+      "Przewoźnik zmienił datę lotu, na którym opiera się Twoja transakcja. Poniżej: jak było i jak jest teraz.",
+      "Jeśli nowa data Ci nie odpowiada, powiedz o tym w transakcji: warunki ustalano pod poprzednią."
+    ],
+    "facts_route": "Trasa",
+    "facts_was": "Było",
+    "facts_now": "Jest",
+    "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
+  },
   "deadline_reminder": {
     "subject": "Vimana · Termin dostawy się zbliża",
     "preheader": "Zostało mniej niż 24 godziny",
