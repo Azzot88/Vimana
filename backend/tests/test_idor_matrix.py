@@ -542,7 +542,13 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
     place = await client.post(
         "/api/me/meeting-places",
         headers=sender_headers,
-        json={"description": "Victim meets by the fountain"},
+        # T3.11.07 — a country is required on creation since 0072. The fixture is
+        # not about countries; it is about a row that belongs to somebody else,
+        # and a fixture that 422s takes eighty-four unrelated tests with it.
+        json={
+            "description": "Victim meets by the fountain",
+            "country_iso": "PL",
+        },
     )
     assert place.status_code == 201, place.text
     place_id = place.json()["id"]

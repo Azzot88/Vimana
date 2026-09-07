@@ -478,9 +478,13 @@ async def _address(client, headers, label="Дом") -> str:
     return r.json()["id"]
 
 
-async def _place(client, headers, text="У метро Фили") -> str:
+async def _place(client, headers, text="У метро Фили", country="RU") -> str:
+    # T3.11.07 — a country is required on creation since 0072; these tests are
+    # about the handover referencing a place, not about where it is.
     r = await client.post(
-        "/api/me/meeting-places", headers=headers, json={"description": text}
+        "/api/me/meeting-places",
+        headers=headers,
+        json={"description": text, "country_iso": country},
     )
     assert r.status_code == 201, r.text
     return r.json()["id"]
