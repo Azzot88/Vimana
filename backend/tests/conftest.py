@@ -216,12 +216,15 @@ async def _ensure_connections_unique(engine) -> None:
 
 
 async def _ensure_connection_tier(engine) -> None:
-    """T3.11.24 — `connections.tier` and a nullable participant invite token.
+    """T3.11.24 / T3.11.25 — the alterations `create_all` cannot make.
 
-    Both are `ADD COLUMN IF NOT EXISTS` / `DROP NOT NULL`, which are no-ops on a
-    database that already has them: `create_all` builds new tables from the
-    models, but it never alters a table that exists, and `vimana_test` is never
-    reset (`ENVIRONMENT §8`).
+    Every statement here is `ADD COLUMN IF NOT EXISTS`, `DROP NOT NULL` or
+    `ADD VALUE IF NOT EXISTS`, so each is a no-op on a database that already has
+    it: `create_all` builds tables that are missing but never alters one that
+    exists, and `vimana_test` is never reset (`ENVIRONMENT §8`).
+
+    Grouped by when they arrived rather than by table — mirrors `0074`–`0076`,
+    which is what the next reader will compare this against.
     """
     async with engine.begin() as conn:
         await conn.execute(
@@ -238,6 +241,19 @@ async def _ensure_connection_tier(engine) -> None:
         )
         await conn.execute(
             text("ALTER TABLE users ADD COLUMN IF NOT EXISTS handle VARCHAR(32)")
+        )
+        # T3.11.25 — `user_files` itself comes from `create_all`; what that never
+        # does is alter a table that already exists, which is both of these.
+        await conn.execute(
+            text(
+                "ALTER TABLE attachments ADD COLUMN IF NOT EXISTS "
+                "user_file_id UUID REFERENCES user_files(id)"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'file_reattached'"
+            )
         )
         await conn.execute(
             text(

@@ -413,6 +413,18 @@
     "stepBack": "Back to contact",
     "remove": "Remove from contacts"
   },
+  "safe": {
+    "title": "My files",
+    "hint": "A document sent once does not have to be sent again",
+    "button": "My files",
+    "empty": "Nothing here yet",
+    "firstProvided": "First provided {{date}}",
+    "attachError": "Could not attach the file",
+    "scan": {
+      "pending": "not scanned",
+      "infected": "infected"
+    }
+  },
   "recipient": {
     "foundOnPlatform": "Found on the platform",
     "pendingInvite": "Invite sent",

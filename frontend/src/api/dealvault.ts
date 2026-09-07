@@ -180,3 +180,36 @@ export async function ackCard(
   )
   return data
 }
+
+/** T3.11.25 — the personal file safe: everything this account has ever
+ *  attached, once, with the day it first arrived. */
+export interface SafeFile {
+  id: string
+  file_hash: string
+  kind: AttachmentKind
+  mime: string
+  size_bytes: number
+  scan_status: string
+  url: string | null
+  /** «впервые предоставлен» — never moves. Re-attaching writes an event, not a
+   *  new first time. */
+  first_provided_at: string
+}
+
+export const listMyFiles = () => api.get<SafeFile[]>('/api/me/files')
+
+/** Attach a file the account already has to this deal. One action for the
+ *  person; on the server it is its own chain event carrying the same hash and
+ *  today's date, which is the whole point of the feature. */
+export const attachExistingFile = async (
+  dealId: string,
+  userFileId: string,
+): Promise<VaultMessage> => {
+  const { data: msg } = await createMessage(dealId, '', false)
+  await api.post(
+    `/api/deals/${dealId}/dealvault/messages/${msg.id}/attach-file`,
+    { user_file_id: userFileId },
+  )
+  const { data: page } = await listMessages(dealId, { limit: 100 })
+  return page.items.find((m) => m.id === msg.id) ?? msg
+}

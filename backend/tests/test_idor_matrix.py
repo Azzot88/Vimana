@@ -197,6 +197,11 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/deals/join/{token}"): Case(
         CAPABILITY, "the recipient invite token is the authorisation"
     ),
+    ("POST", "/api/deals/{deal_id}/dealvault/messages/{message_id}/attach-file"): Case(
+        DENIED,
+        "putting my own document into a stranger's deal",
+        json={"user_file_id": "00000000-0000-4000-8000-000000000000"},
+    ),
     ("POST", "/api/deals/{deal_id}/recipient"): Case(
         DENIED,
         "naming the recipient of a stranger's deal",

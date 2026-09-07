@@ -379,6 +379,18 @@
     "stepBack": "Contact ordinaire",
     "remove": "Retirer des contacts"
   },
+  "safe": {
+    "title": "Mes fichiers",
+    "hint": "Un document envoyé une fois n'a pas à l'être de nouveau",
+    "button": "Mes fichiers",
+    "empty": "Rien pour l'instant",
+    "firstProvided": "Fourni pour la première fois le {{date}}",
+    "attachError": "Impossible de joindre le fichier",
+    "scan": {
+      "pending": "non analysé",
+      "infected": "infecté"
+    }
+  },
   "recipient": {
     "foundOnPlatform": "Trouvés sur la plateforme",
     "pendingInvite": "Invitation envoyée",

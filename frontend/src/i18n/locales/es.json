@@ -379,6 +379,18 @@
     "stepBack": "Contacto normal",
     "remove": "Quitar de contactos"
   },
+  "safe": {
+    "title": "Mis archivos",
+    "hint": "Un documento enviado una vez no hay que enviarlo otra vez",
+    "button": "Mis archivos",
+    "empty": "Todavía no hay nada",
+    "firstProvided": "Aportado por primera vez el {{date}}",
+    "attachError": "No se pudo adjuntar el archivo",
+    "scan": {
+      "pending": "sin analizar",
+      "infected": "infectado"
+    }
+  },
   "recipient": {
     "foundOnPlatform": "Encontrados en la plataforma",
     "pendingInvite": "Invitación enviada",

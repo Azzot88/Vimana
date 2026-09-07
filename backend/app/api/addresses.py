@@ -11,7 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.storage import get_presigned_url, presign_ttl_for_kind
 from app.models.address import MeetingPlace, ReceivingAddress
+from app.models.deal import UserFile
 from app.models.user import User
 
 router = APIRouter()
@@ -401,3 +403,61 @@ async def delete_meeting_place(
             successor.is_default = True
     await db.commit()
     return
+
+
+# ── T3.11.25 — the personal file safe ────────────────────────────────────────
+
+
+class UserFileOut(BaseModel):
+    """T3.11.25 — one file in the person's own safe."""
+
+    id: uuid.UUID
+    file_hash: str
+    kind: str
+    mime: str
+    size_bytes: int
+    scan_status: str
+    url: str | None = None
+    #: «впервые предоставлен» — the day these bytes first reached the platform.
+    #: It never moves; re-attaching writes an event, not a new first time.
+    first_provided_at: datetime
+
+
+@router.get("/me/files", response_model=list[UserFileOut])
+async def list_my_files(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Every file this person has ever attached, newest first.
+
+    T3.11.25 — the safe. Owner's statement 2026-09-07: «файлы из одной сделки с
+    этим аккаунтом доступны и для новых сделок и уже там должны присутствовать».
+    Before this, a passport lived inside the deal it was first sent to and
+    nowhere else, so the next parcel meant sending it again.
+
+    Only your own rows. There is no parameter for whose safe to read, and there
+    should not be: a document somebody handed to one counterparty is not
+    published to the platform by that act.
+    """
+    rows = (
+        await db.execute(
+            select(UserFile)
+            .where(UserFile.owner_id == current_user.id)
+            .order_by(UserFile.created_at.desc())
+            .limit(200)
+        )
+    ).scalars().all()
+    return [
+        UserFileOut(
+            id=f.id,
+            file_hash=f.file_hash,
+            kind=f.kind.value,
+            mime=f.mime,
+            size_bytes=f.size_bytes,
+            scan_status=f.scan_status,
+            url=get_presigned_url(f.r2_key, expires=presign_ttl_for_kind(f.kind.value)),
+            first_provided_at=f.created_at,
+        )
+        for f in rows
+    ]
+

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import {
+  attachExistingFile,
   createMessage,
   listMessages,
   sendPhotoMessage,
@@ -12,6 +13,7 @@ import {
 } from '../api/dealvault'
 import api from '../api/client'
 import RecipientModal from '../components/RecipientModal'
+import SafeFilePicker from '../components/SafeFilePicker'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
@@ -55,6 +57,7 @@ export default function DealVaultPage() {
      amber. One state for both would have made every success look like a
      warning. */
   const [notice, setNotice] = useState('')
+  const [safeOpen, setSafeOpen] = useState(false)
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
@@ -410,6 +413,21 @@ export default function DealVaultPage() {
             >
               📍 {t('chat.shareAddress.button')}
             </button>
+            {/* T3.11.25 — beside the upload, not instead of it: a document this
+                account has sent before is attached from the safe in one action,
+                and the deal records that as its own event with the original
+                date rather than as a fresh provision. */}
+            <button
+              type="button"
+              onClick={() => {
+                setError('')
+                setSafeOpen(true)
+              }}
+              disabled={sending || !dealId}
+              className="border border-navy/20 text-navy/60 rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body hover:border-cyan transition-colors disabled:opacity-40"
+            >
+              🗄 {t('safe.button')}
+            </button>
           </div>
           {dealRole && dealId && (
             <CardActions dealId={dealId} myRole={dealRole} onDone={load} />
@@ -472,6 +490,17 @@ export default function DealVaultPage() {
           setMessages((prev) => [...prev, data])
         }}
       />
+
+      {dealId && (
+        <SafeFilePicker
+          open={safeOpen}
+          onClose={() => setSafeOpen(false)}
+          onPick={async (fileId) => {
+            const msg = await attachExistingFile(dealId, fileId)
+            setMessages((prev) => [...prev, msg])
+          }}
+        />
+      )}
 
       {dealId && (
         <RecipientModal

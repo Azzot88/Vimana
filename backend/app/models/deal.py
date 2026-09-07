@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, Index, JSON, LargeBinary, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -37,6 +37,12 @@ class DealEventType(str, enum.Enum):
     file_added = "file_added"
     sealed = "sealed"
     identity_ref = "identity_ref"
+    # T3.11.25 — a file that already existed, attached to *this* deal today.
+    # Deliberately not `file_added`: the bytes were provided in March under a
+    # different parcel, and a record saying they were provided here would be
+    # false in the one place the product exists to keep true. Same hash, own
+    # event, its own date.
+    file_reattached = "file_reattached"
 
 
 class CardState(str, enum.Enum):
@@ -376,6 +382,52 @@ class OperatorAccessGrant(Base):
     )
 
 
+class UserFile(Base):
+    """T3.11.25 — a file belongs to the person, not to the deal it first went to.
+
+    Owner's statement 2026-09-07: «файлы из одной сделки с этим аккаунтом
+    доступны и для новых сделок». Until now an `Attachment` hung off a
+    `message_id` and nowhere else, so somebody who had sent their passport once
+    sent it again for the next parcel, and the two copies were unrelated bytes
+    as far as the platform could tell.
+
+    **One row per (owner, hash).** The same document uploaded twice is one file
+    in the safe: the hash is what identifies it, and keeping two rows would make
+    «впервые предоставлен» a question with two answers.
+
+    The safe holds the *reference*, never a second copy of the bytes: `r2_key`
+    is the object already stored for the first attachment, and re-attaching
+    points a new `Attachment` at the same key.
+    """
+
+    __tablename__ = "user_files"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "file_hash", name="uq_user_files_owner_hash"),
+        Index("ix_user_files_owner", "owner_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    r2_key: Mapped[str] = mapped_column(String(512))
+    file_hash: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[AttachmentKind] = mapped_column(SAEnum(AttachmentKind))
+    mime: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    # Copied from the attachment that first carried these bytes. Kept here too
+    # because the safe is browsed on its own: a file listed without what we know
+    # about it would be a file people re-send blind.
+    scan_status: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="pending", server_default="pending"
+    )
+    # T3.11.25 — «паспорт, впервые предоставлен 3 марта». This is that date, and
+    # it never moves: re-attaching writes a new event, not a new first time.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class Attachment(Base):
     __tablename__ = "attachments"
     # `selectinload(...attachments)` fetches a whole chat page by message id
@@ -384,6 +436,12 @@ class Attachment(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deal_vault_messages.id"))
+    # T3.11.25 — the file in the owner's safe these bytes belong to. Nullable
+    # for every attachment uploaded before the safe existed: those rows are not
+    # wrong, they simply predate the question.
+    user_file_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("user_files.id"), nullable=True, index=True
+    )
     r2_key: Mapped[str] = mapped_column(String(512))
     file_hash: Mapped[str] = mapped_column(String(64))
     ipfs_cid: Mapped[str | None] = mapped_column(String(100), nullable=True)

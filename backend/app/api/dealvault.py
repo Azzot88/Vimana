@@ -31,6 +31,7 @@ from app.core.threshold import E2EPayload, envelope_parts, nip44_decrypt
 from app.core.cards import CardKind, role_of, spec_for
 from app.models.deal import (
     Attachment, AttachmentKind, CardState, Deal, DealEventType, DealVaultMessage,
+    UserFile,
 )
 from app.models.user import User
 from app.schemas.dealvault import AttachmentOut, CardAckIn, MessageCreate, MessageOut
@@ -407,8 +408,36 @@ async def upload_attachment(
     # largest files the product accepts, so this is the worst place to hold it.
     await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
 
+    # T3.11.25 — the file lands in the uploader's own safe at the same moment it
+    # lands in the deal. Not a second copy of the bytes: the safe row points at
+    # the object just written, and re-attaching later points a new attachment at
+    # the same key. One row per (owner, hash) — sending the same passport twice
+    # is one file, and `created_at` is «впервые предоставлен», which must have
+    # exactly one answer.
+    safe_file = (
+        await db.execute(
+            select(UserFile).where(
+                UserFile.owner_id == current_user.id,
+                UserFile.file_hash == file_hash,
+            )
+        )
+    ).scalar_one_or_none()
+    if safe_file is None:
+        safe_file = UserFile(
+            owner_id=current_user.id,
+            r2_key=r2_key,
+            file_hash=file_hash,
+            kind=attachment_kind,
+            mime=content_type,
+            size_bytes=total,
+            scan_status=scan_status,
+        )
+        db.add(safe_file)
+        await db.flush()
+
     attachment = Attachment(
         message_id=message_id,
+        user_file_id=safe_file.id,
         r2_key=r2_key,
         file_hash=file_hash,
         kind=attachment_kind,
@@ -638,4 +667,104 @@ async def ack_card(
         supersedes_id=msg.supersedes_id,
         attachments=[],
         created_at=msg.created_at,
+    )
+
+
+class ReattachBody(BaseModel):
+    user_file_id: uuid.UUID
+
+
+@router.post(
+    "/{deal_id}/dealvault/messages/{message_id}/attach-file",
+    response_model=AttachmentOut,
+    status_code=201,
+)
+async def attach_existing_file(
+    deal_id: uuid.UUID,
+    message_id: uuid.UUID,
+    body: ReattachBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.25 — attach a file you already have to this deal.
+
+    One action for the person, and **its own event in this deal's chain**, with
+    the same hash and today's date. That distinction is the whole task: recording
+    it as `file_added` would make the record say the document was provided under
+    this parcel, when it was provided in March under another one. What a reader
+    of the chain gets instead is «паспорт, впервые предоставлен 3 марта, приложен
+    к этой сделке 12 сентября» — which is both more useful and true.
+
+    No bytes move. The new attachment points at the object already in storage,
+    so the hash is identical by construction rather than by re-computation —
+    there is nothing to re-compute and nothing that could disagree.
+
+    Only your own file: `owner_id` is checked, and a stranger's id answers 404
+    rather than 403, because the existence of somebody else's document is not
+    something this endpoint should confirm.
+    """
+    deal = await _get_deal_as_participant(deal_id, current_user, db)
+    _ensure_not_sealed(deal)
+
+    msg = await db.get(DealVaultMessage, message_id)
+    if not msg or msg.deal_id != deal_id:
+        raise HTTPException(status_code=404, detail="Message not found in this deal")
+
+    safe_file = (
+        await db.execute(
+            select(UserFile).where(
+                UserFile.id == body.user_file_id,
+                UserFile.owner_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if safe_file is None:
+        raise HTTPException(status_code=404, detail="File not found in your safe")
+
+    attachment = Attachment(
+        message_id=message_id,
+        user_file_id=safe_file.id,
+        r2_key=safe_file.r2_key,
+        file_hash=safe_file.file_hash,
+        kind=safe_file.kind,
+        scan_status=safe_file.scan_status,
+        scanned_at=None,
+    )
+    db.add(attachment)
+    await db.flush()
+    try:
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.file_reattached,
+            actor_id=current_user.id,
+            payload={
+                "attachment_id": str(attachment.id),
+                "message_id": str(message_id),
+                "file_hash": safe_file.file_hash,
+                "kind": safe_file.kind.value,
+                "user_file_id": str(safe_file.id),
+                # The date the reader needs to tell the two apart, carried in
+                # the entry itself: the chain has to stand on its own when it is
+                # read years later beside a deal nobody remembers.
+                "first_provided_at": safe_file.created_at.isoformat(),
+            },
+            author=current_user,
+        )
+    except SealedError:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
+    await db.commit()
+    await db.refresh(attachment)
+
+    return AttachmentOut(
+        id=attachment.id,
+        message_id=attachment.message_id,
+        r2_key=attachment.r2_key,
+        file_hash=attachment.file_hash,
+        ipfs_cid=attachment.ipfs_cid,
+        kind=attachment.kind.value,
+        url=get_presigned_url(
+            attachment.r2_key, expires=presign_ttl_for_kind(attachment.kind.value)
+        ),
+        created_at=attachment.created_at,
     )

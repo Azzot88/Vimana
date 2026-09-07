@@ -380,6 +380,18 @@
     "stepBack": "Zwykły kontakt",
     "remove": "Usuń z kontaktów"
   },
+  "safe": {
+    "title": "Moje pliki",
+    "hint": "Dokument wysłany raz nie musi być wysyłany ponownie",
+    "button": "Moje pliki",
+    "empty": "Na razie pusto",
+    "firstProvided": "Pierwszy raz udostępniono {{date}}",
+    "attachError": "Nie udało się załączyć pliku",
+    "scan": {
+      "pending": "niesprawdzony",
+      "infected": "zainfekowany"
+    }
+  },
   "recipient": {
     "foundOnPlatform": "Znaleziono na platformie",
     "pendingInvite": "Zaproszenie wysłane",
