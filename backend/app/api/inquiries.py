@@ -271,7 +271,7 @@ async def share_address(
     await db.refresh(msg)
     return InquiryMessageOut(
         id=msg.id,
-        inquiry_id=msg.inquiry_id,
+        inquiry_id=msg.chat_id,
         sender_id=msg.sender_id,
         text=msg.text,
         created_at=msg.created_at,
