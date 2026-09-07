@@ -215,12 +215,26 @@ async def test_a_chat_is_the_same_from_both_sides(
         assert chat_id in {c["id"] for c in listing.json()}
 
 
-async def test_messages_from_both_trips_are_in_one_thread(
-    client, sender_headers, carrier_headers
-):
+async def test_messages_from_both_trips_are_in_one_thread(client, carrier_headers):
     """A conversation is a conversation. Two questions about two trips are two
     messages in the same place, which is what a person would expect and what the
-    old model could not express."""
+    old model could not express.
+
+    On a **fresh** sender, not the shared seed one. The fold gave that pair every
+    message they had ever exchanged in any thread, and the listing is ascending —
+    so two new messages land past the first page and the test fails for a reason
+    that has nothing to do with what it checks. Third time this suite has taught
+    the same lesson (`ENVIRONMENT §8`): a shared fixture accumulates, and an
+    assertion about «what is in the thread» needs a thread with a known floor.
+    """
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
+
+    email = unique_email("chatfold")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Fold"}
+    )
+    sender_headers = {"Authorization": f"Bearer {await _login(client, email)}"}
+
     first = await _make_open_trip(client, carrier_headers)
     second = await _make_open_trip(client, carrier_headers)
     chat_id = (

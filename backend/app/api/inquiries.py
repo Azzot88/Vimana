@@ -120,9 +120,36 @@ async def list_my_inquiries(
         .limit(100)
     )
     chats = list(result.scalars().all())
+
+    # T3.11.23 — the deal to carry on in, for every chat at once. A chat list
+    # that cannot say «there is something live in here» is a list of names, and
+    # this is the field that says it.
+    #
+    # Batched, not per row: the alternative is one query per chat, and a person
+    # with forty counterparties would pay forty round trips to draw a list.
+    # Newest first inside each chat, because several deals can share one and the
+    # one they are in the middle of is the one they mean.
+    open_deals: dict[uuid.UUID, uuid.UUID] = {}
+    if chats:
+        rows = (
+            await db.execute(
+                select(Deal.chat_id, Deal.id)
+                .where(
+                    Deal.chat_id.in_([c.id for c in chats]),
+                    Deal.status != DealStatus.closed,
+                )
+                .order_by(Deal.created_at.asc())
+            )
+        ).all()
+        # Ascending, then overwritten: the last write per chat is the newest
+        # deal, which is cheaper than a window function for a page of forty.
+        for chat_id, deal_id in rows:
+            open_deals[chat_id] = deal_id
+
     return [
         InquiryOut(
             id=c.id,
+            deal_id=open_deals.get(c.id),
             # Roles are not stored on a chat — the reader is one side and the
             # other person is the other, whichever way the last deal ran.
             sender_id=current_user.id,
