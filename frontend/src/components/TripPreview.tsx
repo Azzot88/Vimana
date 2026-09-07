@@ -37,15 +37,10 @@ interface Props {
    *  way back long after the outbound has been matched or even flown. */
   onReverse?: () => void
   /** T3.11.16 — «повторить»: the same route on a new date. A different
-   *  intention from bumping and different in the data too — repeating a route
-   *  is 5.4 % of the market («летаю регулярно»), holding a listing at the top
-   *  is 60.8 %. One button for both would record one as the other. */
+   *  intention from a repost and different in the data too: repeating a route
+   *  is 5.4 % of this market («летаю регулярно»). The dates come back empty,
+   *  so it is a new plan rather than the same one said louder. */
   onRepeat?: () => void
-  /** T3.11.16 — «поднять». Owner-only and only while the trip is a listing;
-   *  the caller decides, because it is the caller that knows the quota answer
-   *  and has somewhere to show it. */
-  onBump?: () => void
-  bumpNote?: string
   onClose: () => void
 }
 
@@ -54,8 +49,6 @@ export default function TripPreview({
   onEdit,
   onReverse,
   onRepeat,
-  onBump,
-  bumpNote,
   onClose,
 }: Props) {
   const { t } = useTranslation()
@@ -326,16 +319,8 @@ export default function TripPreview({
             same row: the id is what every inquiry and deal points at, so a
             carrier fixing a departure hour must not end up with a second
             listing and an orphaned conversation. */}
-        {(onEdit || onReverse || onRepeat || onBump) && (
+        {(onEdit || onReverse || onRepeat) && (
           <footer className="border-t border-navy/10 p-4 flex flex-wrap items-center justify-end gap-2 bg-white sm:rounded-b-card">
-            {/* The quota answer, in the one place the press happened. A 429 is
-                not an error to hide: the carrier may do this, just not again
-                yet, and they need to know which. */}
-            {bumpNote && (
-              <span className="mr-auto text-[11px] font-body text-navy/50">
-                {bumpNote}
-              </span>
-            )}
             <button
               type="button"
               onClick={onClose}
@@ -343,21 +328,11 @@ export default function TripPreview({
             >
               {t('common.close')}
             </button>
-            {/* T3.11.16 — «поднять» and «повторить» sit side by side because
-                they are near-neighbours in intent and opposite in effect: one
-                keeps this listing and moves it up, the other starts a new one
-                on the same route. Naming both is what stops the second being
-                used as the first, which on this market is the default habit. */}
-            {onBump && (
-              <button
-                type="button"
-                onClick={onBump}
-                title={t('trips.preview.bumpHint') as string}
-                className="px-4 py-2 min-h-[2.75rem] rounded-field border border-amber/50 text-amber text-sm font-display font-medium hover:bg-amber/5 transition-colors"
-              >
-                {t('trips.preview.bump')}
-              </button>
-            )}
+            {/* T3.11.16 — «повторить»: the same route, a new date, everything
+                else carried over. Deliberately the only listing action of its
+                kind here: raising a trip back to the top was built and then
+                withdrawn (owner, 2026-09-07) — a board is not a feed, and
+                attention on it is not something to buy with a button. */}
             {onRepeat && (
               <button
                 type="button"

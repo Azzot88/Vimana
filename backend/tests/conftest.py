@@ -255,16 +255,10 @@ async def _ensure_connection_tier(engine) -> None:
                 "ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'file_reattached'"
             )
         )
-        # T3.11.16 — freshness and expiry. `trip_bumps` comes from `create_all`;
-        # these two columns are on a table that already exists, which it never
-        # touches. Backfilled the way `0077` does it, so a test database and a
-        # migrated one answer the board query identically.
-        await conn.execute(
-            text(
-                "ALTER TABLE trips ADD COLUMN IF NOT EXISTS listed_at "
-                "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
-            )
-        )
+        # T3.11.16 — expiry, on a table `create_all` never alters because it
+        # already exists. Backfilled the way `0077` does it, so a test database
+        # and a migrated one answer the board query identically. Freshness and
+        # the bump journal were withdrawn by the owner and dropped in `0078`.
         await conn.execute(
             text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ")
         )
@@ -2264,13 +2258,27 @@ async def seed_trip(session_maker, seed_carrier) -> Trip:
             )
         )
         trip = result.scalars().first()
+        soon = datetime.now(timezone.utc) + timedelta(days=7)
         if trip:
+            # T3.11.16 — the seed trip is **found**, not created (`ENVIRONMENT
+            # §8`), so the one written weeks ago departs in the past by now. That
+            # was invisible until the board learned to hide flown listings, and
+            # then three tests failed for a reason that had nothing to do with
+            # what they assert. A fixture whose whole job is to be «the trip on
+            # the board» has to be a live listing on every run, so its dates are
+            # rolled forward rather than the tests taught to expect a corpse.
+            if trip.expires_at is None or trip.expires_at <= datetime.now(timezone.utc):
+                trip.depart_at = soon
+                trip.expires_at = soon
+                await db.commit()
+                await db.refresh(trip)
             return trip
         trip = Trip(
             carrier_id=seed_carrier.id,
             origin="SEED-ORIGIN",
             destination="SEED-DEST",
-            depart_at=datetime.now(timezone.utc) + timedelta(days=7),
+            depart_at=soon,
+            expires_at=soon,
             capacity=5.0,
             allowed_categories=["document"],
             status=TripStatus.open,

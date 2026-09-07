@@ -771,30 +771,7 @@ async def test_the_handover_vocabulary_is_declared_once(client, carrier_headers)
     assert r.status_code == 201, r.text
 
 
-# ── T3.11.16 · lifecycle: freshness, quota, expiry ──────────────────────────
-
-
-async def _fresh_carrier(client):
-    """A carrier with no bump history.
-
-    The quota counts presses per account over 24 hours, and `vimana_test` is
-    never reset (`ENVIRONMENT §8`): a shared fixture would carry yesterday's
-    presses into today's assertion, and worse, would make one test exhaust the
-    quota for another.
-    """
-    from tests.conftest import SEED_PASSWORD, _login, make_account, unique_email
-
-    email = unique_email("bumper")
-    await make_account(
-        {
-            "email": email,
-            "password": SEED_PASSWORD,
-            "display_name": "Bumper",
-            "can_carry": True,
-            "active_mode": "carrier",
-        }
-    )
-    return {"Authorization": f"Bearer {await _login(client, email)}"}
+# ── T3.11.16 · lifecycle: a listing that has flown is not a listing ─────────
 
 
 async def test_expiry_is_the_last_leg_not_the_first(client, carrier_headers):
@@ -850,81 +827,3 @@ async def test_a_flown_trip_leaves_the_board_but_not_my_history(
     )
     assert trip_id in [t["id"] for t in mine.json()["items"]]
 
-
-async def test_bump_lifts_the_listing_and_leaves_a_record(client, session_maker):
-    """T3.11.16 — «поднять» moves freshness and writes a journal row.
-
-    The trip keeps its id, its `created_at` and everything hanging off it: in
-    every way that matters it is the same trip, which is the point — the market
-    holds listings at the top by reposting, and a repost here would be a
-    duplicate with its own conversations.
-    """
-    import uuid as uuidlib
-
-    from sqlalchemy import func, select
-
-    from app.models.marketplace import TripBump
-
-    headers = await _fresh_carrier(client)
-    first = await client.post("/api/trips", headers=headers, json=_payload())
-    second = await client.post(
-        "/api/trips", headers=headers, json=_payload(legs=[_leg("DXB", "JFK", 6)])
-    )
-    older = first.json()["id"]
-
-    r = await client.post(f"/api/trips/{older}/bump", headers=headers)
-    assert r.status_code == 200, r.text
-    assert r.json()["used_today"] == 1
-    assert r.json()["quota"] >= 1
-
-    board = await client.get("/api/trips", params={"origin": "DXB", "limit": 100})
-    ids = [t["id"] for t in board.json()["items"]]
-    assert ids.index(older) < ids.index(second.json()["id"])
-
-    async with session_maker() as db:
-        bumps = (
-            await db.execute(
-                select(func.count())
-                .select_from(TripBump)
-                .where(TripBump.trip_id == uuidlib.UUID(older))
-            )
-        ).scalar_one()
-    assert bumps == 1
-
-
-async def test_bump_quota_is_per_carrier_and_refuses_with_429(client):
-    """A limit counted per trip would let ten listings buy ten times the
-    exposure, and the top of the board would belong to whoever publishes most."""
-    headers = await _fresh_carrier(client)
-    trips = [
-        (await client.post("/api/trips", headers=headers, json=_payload())).json()["id"]
-        for _ in range(5)
-    ]
-
-    quota = None
-    for index, trip_id in enumerate(trips):
-        r = await client.post(f"/api/trips/{trip_id}/bump", headers=headers)
-        if r.status_code == 429:
-            assert index > 0, "the first bump must always be allowed"
-            assert "quota" in r.text.lower()
-            break
-        assert r.status_code == 200, r.text
-        quota = r.json()["quota"]
-    else:
-        raise AssertionError(f"quota of {quota} was never reached")
-
-
-async def test_only_the_owner_bumps_and_only_an_open_trip(
-    client, carrier_headers, sender_headers
-):
-    created = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload()
-    )
-    trip_id = created.json()["id"]
-
-    theirs = await client.post(f"/api/trips/{trip_id}/bump", headers=sender_headers)
-    assert theirs.status_code == 403
-
-    await client.post(f"/api/trips/{trip_id}/cancel", headers=carrier_headers)
-    withdrawn = await client.post(f"/api/trips/{trip_id}/bump", headers=carrier_headers)
-    assert withdrawn.status_code == 409
