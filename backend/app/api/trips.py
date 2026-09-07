@@ -2,7 +2,8 @@ import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from pydantic import BaseModel
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_user_optional
@@ -13,9 +14,15 @@ from app.core.nostr_publish import (
     is_publish_enabled,
 )
 from app.core.pagination import Page, clamp_limit, paginate_desc
-from app.core.trip_legs import LegChainError, head_and_tail, normalise_legs
+from app.core.params import resolve as resolve_param
+from app.core.trip_legs import (
+    LegChainError,
+    head_and_tail,
+    last_departure,
+    normalise_legs,
+)
 from app.models.address import MeetingPlace, ReceivingAddress
-from app.models.marketplace import ChatMessage, Trip, TripLeg, TripStatus
+from app.models.marketplace import ChatMessage, Trip, TripBump, TripLeg, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import TripCreate, TripLegOut, TripOut
 
@@ -169,6 +176,9 @@ async def create_trip(
         origin=head_origin,
         destination=tail_destination,
         depart_at=first_departure,
+        # T3.11.16 — when this stops being a listing. Derived like the three
+        # above, so it cannot disagree with the legs it comes from.
+        expires_at=last_departure(legs),
         status=TripStatus.open,
     )
     _apply_terms(trip, body, current_user.carriage_rules)
@@ -256,6 +266,7 @@ async def update_trip(
     trip.origin = head_origin
     trip.destination = tail_destination
     trip.depart_at = first_departure
+    trip.expires_at = last_departure(legs)
     _apply_terms(trip, body, current_user.carriage_rules)
     # Replaced wholesale rather than diffed. `leg_order` is dense and assigned by
     # `normalise_legs`, so matching old rows to new ones would mean guessing
@@ -321,6 +332,85 @@ async def cancel_trip(
     await db.commit()
     await db.refresh(trip)
     return trip
+
+
+class BumpOut(BaseModel):
+    """What the carrier needs to see after pressing «поднять»."""
+
+    listed_at: datetime
+    used_today: int
+    quota: int
+
+
+@router.post("/{trip_id}/bump", response_model=BumpOut)
+async def bump_trip(
+    trip_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.16 — hold a listing at the top, once, on the record.
+
+    **Why the platform offers this at all.** 60.8 % of carrier posts on the
+    market are a word-for-word repost of the author's own text, median interval
+    23 hours, and 49 % of authors do it. The habit arrives with the people. Given
+    no mechanism it becomes duplicate trips — three listings for one flight, each
+    with its own conversations, none of them cancellable by editing the others.
+    Given one, it becomes a column that moves and a row in a journal.
+
+    **A quota rather than a race.** `trip_bumps_per_day` (`T3.40`, editable in
+    the admin screen) counts presses per carrier over a rolling 24 hours, not per
+    calendar day: a day boundary would make midnight the busiest minute on the
+    board, which is a rule about clocks rather than about freshness. The count is
+    per **carrier**, not per trip — otherwise ten trips would buy ten times the
+    exposure and the top of the board would belong to whoever publishes most.
+
+    The bump moves `listed_at` and nothing else. The trip keeps its id, its
+    deals, its conversations and its `created_at`; nothing downstream can tell
+    a bumped trip from a fresh one, because in every way that matters it is the
+    same trip and always was.
+
+    A cancelled or already-flown trip cannot be bumped: the board would not show
+    it either way, and a control that quietly does nothing is worse than one that
+    says no.
+
+    Called by: the trip card on the board and the panel.
+    """
+    trip = await db.get(Trip, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.carrier_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your trip")
+    if trip.status != TripStatus.open:
+        raise HTTPException(status_code=409, detail="Only an open trip can be raised")
+
+    now = datetime.now(timezone.utc)
+    if trip.expires_at is not None and trip.expires_at < now:
+        raise HTTPException(status_code=409, detail="This trip has already flown")
+
+    quota = int(await resolve_param(db, "trip_bumps_per_day"))
+    since = now - timedelta(hours=24)
+    used = (
+        await db.execute(
+            select(func.count())
+            .select_from(TripBump)
+            .where(
+                TripBump.carrier_id == current_user.id,
+                TripBump.created_at >= since,
+            )
+        )
+    ).scalar_one()
+    if used >= quota:
+        # 429, not 403: the carrier is allowed to do this, just not again yet.
+        raise HTTPException(
+            status_code=429,
+            detail=f"Bump quota reached: {quota} per 24 hours",
+        )
+
+    db.add(TripBump(trip_id=trip.id, carrier_id=current_user.id))
+    trip.listed_at = now
+    await db.commit()
+    await db.refresh(trip)
+    return BumpOut(listed_at=trip.listed_at, used_today=used + 1, quota=quota)
 
 
 @router.get("/ask-counts", response_model=dict[str, int])
@@ -392,7 +482,19 @@ async def list_trips(
             status_code=403, detail="Only your own trips can be listed by status"
         )
     if status is None:
-        stmt = select(Trip).where(Trip.status == TripStatus.open)
+        # T3.11.16 — the board is open trips that have not flown yet. Expiry is
+        # a filter rather than a status change: nobody cancelled the trip and it
+        # did not fail, it simply happened, and rewriting `status` to say
+        # otherwise would put a false word in the carrier's own history. A trip
+        # published before the column existed has `expires_at IS NULL` and keeps
+        # being shown — hiding rows we cannot date would be guessing.
+        stmt = select(Trip).where(
+            Trip.status == TripStatus.open,
+            or_(
+                Trip.expires_at.is_(None),
+                Trip.expires_at >= datetime.now(timezone.utc),
+            ),
+        )
     elif status == "all":
         stmt = select(Trip)
     else:
@@ -422,7 +524,15 @@ async def list_trips(
             Trip.depart_at < day_start + timedelta(days=1),
         )
 
-    items, next_cursor = await paginate_desc(db, stmt, Trip, after, clamp_limit(limit))
+    # T3.11.16 — ordered by freshness of the listing, not by when the row was
+    # written. Bumping is the market's main behaviour, and a board that ignored
+    # it would leave the carrier no reason to press the button rather than
+    # publish the trip again — which is the duplicate this task exists to
+    # prevent. `listed_at` equals `created_at` until somebody bumps, so the
+    # order is unchanged for a board nobody has touched.
+    items, next_cursor = await paginate_desc(
+        db, stmt, Trip, after, clamp_limit(limit), sort_column=Trip.listed_at
+    )
 
     # Enrich with carrier name + UBA. One additional query batched by ids.
     from app.core.uba import level_of
@@ -481,6 +591,11 @@ async def list_trips(
                     carriage_rules=t.carriage_rules,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,
+                    # T3.11.16 — the board sorts on this, so the card has to be
+                    # able to say it («поднят час назад») rather than leave the
+                    # order looking arbitrary.
+                    listed_at=t.listed_at,
+                    expires_at=t.expires_at,
                     nostr_event_id=t.nostr_event_id,
                     nostr_published_at=t.nostr_published_at,
                 )

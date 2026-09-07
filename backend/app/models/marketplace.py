@@ -114,6 +114,31 @@ class Trip(Base):
     origin: Mapped[str] = mapped_column(String(100))
     destination: Mapped[str] = mapped_column(String(100))
     depart_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # T3.11.16 — how fresh the *listing* is, which is not when the row was
+    # written. 60.8 % of carrier posts on the market are a word-for-word repost
+    # of the author's own text at a median interval of 23 hours: the market does
+    # not create listings, it holds them at the top. Given no mechanism, that
+    # habit arrives here as duplicate trips.
+    #
+    # So bumping moves this column and nothing else — the trip keeps its
+    # identity, its deals and its `created_at`, and the board sorts by freshness.
+    # Every bump also writes a `TripBump` row, which is both the quota counter
+    # and the journal: a limit nobody can audit is a limit nobody believes.
+    listed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    # T3.11.16 — when the trip stops being a listing: the departure of its
+    # **last** leg, denormalised on write like `origin`/`destination`/`depart_at`
+    # are denormalised from the first. The board hides what has already flown
+    # without anybody pressing anything — at a median horizon of five days, a
+    # board without this fills with trips that no longer exist inside a week.
+    #
+    # Nullable only for rows written before the column existed; the listing
+    # treats null as «no answer» and keeps showing them rather than hiding
+    # history it cannot date.
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     # T3.11.07 — nullable since the express path. The median carrier publishes
     # five days before departure and 31 % inside two days; a required weight is
     # a third field standing between "I am flying tomorrow at 23:40" and a
@@ -277,6 +302,41 @@ PAYMENT_MODELS = ("on_platform", "off_platform")
 # accepts when the answer is `off_platform`. The catalogue lives in
 # `core/payment_systems.py`; free text stays allowed, because what people settle
 # through is local and outlives any list we ship.
+
+
+class TripBump(Base):
+    """T3.11.16 — one press of «поднять рейс».
+
+    The quota counter and the journal are the same rows on purpose. A limit has
+    to be counted from something, and once that something exists, hiding it
+    would be a choice: «поднятие ограничено квотой и видно в журнале» is one
+    requirement, not two, because a limit nobody can audit is a limit nobody
+    believes — least of all the carrier who thinks they have bumps left.
+
+    Rows are never deleted. Yesterday's bumps stop counting against the quota by
+    falling out of the window, not by being erased: how often a carrier holds
+    their listing at the top is exactly the behaviour this task exists to
+    measure, and it is the first honest input for the ranking that follows.
+    """
+
+    __tablename__ = "trip_bumps"
+    __table_args__ = (
+        # The quota reads (carrier, created_at) over a 24-hour window.
+        Index("ix_trip_bumps_carrier_created", "carrier_id", "created_at"),
+        Index("ix_trip_bumps_trip", "trip_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("trips.id", ondelete="CASCADE")
+    )
+    # Denormalised from the trip: the quota is per carrier, and joining every
+    # bump back to its trip to count them would be a join per board refresh.
+    carrier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
 
 
 class TripLeg(Base):

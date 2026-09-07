@@ -36,10 +36,28 @@ interface Props {
    *  editing it is offered whatever the status: a carrier can be planning the
    *  way back long after the outbound has been matched or even flown. */
   onReverse?: () => void
+  /** T3.11.16 — «повторить»: the same route on a new date. A different
+   *  intention from bumping and different in the data too — repeating a route
+   *  is 5.4 % of the market («летаю регулярно»), holding a listing at the top
+   *  is 60.8 %. One button for both would record one as the other. */
+  onRepeat?: () => void
+  /** T3.11.16 — «поднять». Owner-only and only while the trip is a listing;
+   *  the caller decides, because it is the caller that knows the quota answer
+   *  and has somewhere to show it. */
+  onBump?: () => void
+  bumpNote?: string
   onClose: () => void
 }
 
-export default function TripPreview({ trip, onEdit, onReverse, onClose }: Props) {
+export default function TripPreview({
+  trip,
+  onEdit,
+  onReverse,
+  onRepeat,
+  onBump,
+  bumpNote,
+  onClose,
+}: Props) {
   const { t } = useTranslation()
   const prefs = usePrefs()
 
@@ -308,8 +326,16 @@ export default function TripPreview({ trip, onEdit, onReverse, onClose }: Props)
             same row: the id is what every inquiry and deal points at, so a
             carrier fixing a departure hour must not end up with a second
             listing and an orphaned conversation. */}
-        {(onEdit || onReverse) && (
-          <footer className="border-t border-navy/10 p-4 flex flex-wrap justify-end gap-2 bg-white sm:rounded-b-card">
+        {(onEdit || onReverse || onRepeat || onBump) && (
+          <footer className="border-t border-navy/10 p-4 flex flex-wrap items-center justify-end gap-2 bg-white sm:rounded-b-card">
+            {/* The quota answer, in the one place the press happened. A 429 is
+                not an error to hide: the carrier may do this, just not again
+                yet, and they need to know which. */}
+            {bumpNote && (
+              <span className="mr-auto text-[11px] font-body text-navy/50">
+                {bumpNote}
+              </span>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -317,6 +343,31 @@ export default function TripPreview({ trip, onEdit, onReverse, onClose }: Props)
             >
               {t('common.close')}
             </button>
+            {/* T3.11.16 — «поднять» and «повторить» sit side by side because
+                they are near-neighbours in intent and opposite in effect: one
+                keeps this listing and moves it up, the other starts a new one
+                on the same route. Naming both is what stops the second being
+                used as the first, which on this market is the default habit. */}
+            {onBump && (
+              <button
+                type="button"
+                onClick={onBump}
+                title={t('trips.preview.bumpHint') as string}
+                className="px-4 py-2 min-h-[2.75rem] rounded-field border border-amber/50 text-amber text-sm font-display font-medium hover:bg-amber/5 transition-colors"
+              >
+                {t('trips.preview.bump')}
+              </button>
+            )}
+            {onRepeat && (
+              <button
+                type="button"
+                onClick={onRepeat}
+                title={t('trips.preview.repeatHint') as string}
+                className="px-4 py-2 min-h-[2.75rem] rounded-field border border-navy/20 text-navy/70 text-sm font-display font-medium hover:border-navy/40 transition-colors"
+              >
+                {t('trips.preview.repeat')}
+              </button>
+            )}
             {/* T3.11.07 — «Обратный рейс». A carrier who flies out almost always
                 comes back, and the return listing is this one with the route
                 reversed and the dates unknown; today that half of the market is

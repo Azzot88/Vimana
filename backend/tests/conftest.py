@@ -255,6 +255,27 @@ async def _ensure_connection_tier(engine) -> None:
                 "ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'file_reattached'"
             )
         )
+        # T3.11.16 — freshness and expiry. `trip_bumps` comes from `create_all`;
+        # these two columns are on a table that already exists, which it never
+        # touches. Backfilled the way `0077` does it, so a test database and a
+        # migrated one answer the board query identically.
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD COLUMN IF NOT EXISTS listed_at "
+                "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+            )
+        )
+        await conn.execute(
+            text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ")
+        )
+        await conn.execute(
+            text(
+                "UPDATE trips SET expires_at = COALESCE("
+                "  (SELECT MAX(depart_at) FROM trip_legs"
+                "   WHERE trip_legs.trip_id = trips.id), depart_at)"
+                " WHERE expires_at IS NULL"
+            )
+        )
         await conn.execute(
             text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_handle "

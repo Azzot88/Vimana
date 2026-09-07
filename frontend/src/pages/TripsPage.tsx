@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
-import { listTrips, type Trip } from '../api/trips'
+import { bumpTrip, listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
@@ -72,6 +72,9 @@ export default function TripsPage() {
      the rest. Held as the object rather than an id: the list already has it,
      and a second fetch for something on screen is a spinner for nothing. */
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null)
+  /* T3.11.16 — what the last press of «поднять» answered, shown in the panel
+     where it happened. Cleared when the panel opens on another trip. */
+  const [bumpNote, setBumpNote] = useState('')
   /* Opened once, not every render: closing the panel must not reopen it, and
      the list refetches. */
   const openedForPublish = useRef(false)
@@ -444,7 +447,10 @@ export default function TripsPage() {
       {previewTrip && (
         <TripPreview
           trip={previewTrip}
-          onClose={() => setPreviewTrip(null)}
+          onClose={() => {
+            setPreviewTrip(null)
+            setBumpNote('')
+          }}
           /* T3.11.07 — editing is offered only to the owner, and only while the
              trip is still a listing. A matched or cancelled trip is part of what
              two people agreed to; the server refuses it either way, and a button
@@ -471,6 +477,50 @@ export default function TripsPage() {
                   })
               : undefined
           }
+          /* T3.11.16 — «повторить»: the same route, dates cleared. It reuses
+             the reverse machinery minus the reversal, because «this route
+             again» and «this route back» are the same form pre-filled from the
+             same trip. */
+          onRepeat={
+            previewTrip.carrier_id === user?.id
+              ? () =>
+                  navigate(`/trips/new?repeat=${previewTrip.id}`, {
+                    state: { trip: previewTrip },
+                  })
+              : undefined
+          }
+          /* T3.11.16 — «поднять» only while the trip is still a listing: the
+             board would not show a cancelled or matched one either way. */
+          onBump={
+            previewTrip.carrier_id === user?.id && previewTrip.status === 'open'
+              ? async () => {
+                  try {
+                    const { data } = await bumpTrip(previewTrip.id)
+                    setBumpNote(
+                      t('trips.preview.bumpDone', {
+                        used: data.used_today,
+                        quota: data.quota,
+                      }) as string,
+                    )
+                    fetchTrips()
+                  } catch (err: unknown) {
+                    const status = (err as { response?: { status?: number } })
+                      ?.response?.status
+                    /* 429 is the quota, not a failure: the carrier may do this,
+                       just not again yet, and saying so is the whole point of
+                       having a quota rather than a silent cap. */
+                    setBumpNote(
+                      t(
+                        status === 429
+                          ? 'trips.preview.bumpQuota'
+                          : 'common.errorGeneric',
+                      ) as string,
+                    )
+                  }
+                }
+              : undefined
+          }
+          bumpNote={bumpNote}
         />
       )}
     </div>

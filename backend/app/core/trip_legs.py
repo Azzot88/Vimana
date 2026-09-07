@@ -99,3 +99,21 @@ def head_and_tail(legs: list[dict[str, Any]]) -> tuple[str, str, datetime]:
     Called by: `api.trips.create_trip`.
     """
     return legs[0]["origin"], legs[-1]["destination"], legs[0]["depart_at"]
+
+
+def last_departure(legs: list[dict[str, Any]]) -> datetime:
+    """T3.11.16 — when the chain is over, as far as a listing is concerned.
+
+    The **last** leg's departure, deliberately not the first: a trip with a
+    transfer is still a live offer on the day its second flight leaves, and
+    hiding it when the first one takes off would retire it early — exactly the
+    trips a sender with a transfer route is looking for.
+
+    Not the arrival, either: `arrive_at` is optional and most carriers do not
+    state it (29.8 % name even the hour of departure), so an expiry built on it
+    would be null for most trips and the board would keep flown listings on
+    screen. Departure is stated by everyone, because a trip has to have one.
+
+    Called by: `api.trips.create_trip`, `api.trips.update_trip`.
+    """
+    return legs[-1]["depart_at"]

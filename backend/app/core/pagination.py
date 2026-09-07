@@ -45,17 +45,16 @@ def clamp_limit(limit: int | None) -> int:
     return max(1, min(limit, MAX_LIMIT))
 
 
-def _cursor_key(model, after_uuid: uuid.UUID):
-    """The `(created_at, id)` pair the cursor row sits at.
+def _cursor_key(model, after_uuid: uuid.UUID, column=None):
+    """The `(<sort column>, id)` pair the cursor row sits at.
 
-    `created_at` is looked up rather than carried in the cursor so the cursor
-    stays an opaque id — clients cannot forge a position, and the value cannot
-    drift from the row it names.
+    The value is looked up rather than carried in the cursor so the cursor stays
+    an opaque id — clients cannot forge a position, and the value cannot drift
+    from the row it names.
     """
-    created_at = (
-        select(model.created_at).where(model.id == after_uuid).scalar_subquery()
-    )
-    return tuple_(created_at, literal(after_uuid, type_=model.id.type))
+    sort_column = column if column is not None else model.created_at
+    value = select(sort_column).where(model.id == after_uuid).scalar_subquery()
+    return tuple_(value, literal(after_uuid, type_=model.id.type))
 
 
 async def paginate_desc(
@@ -64,8 +63,20 @@ async def paginate_desc(
     model,
     after: str | None,
     limit: int,
+    sort_column=None,
 ):
-    """Descending pagination by (created_at, id). Newest first."""
+    """Descending pagination by (`sort_column`, id). Newest first.
+
+    T3.11.16 — `sort_column` defaults to `created_at`, which is what every
+    caller but one wants. The board is the exception: a trip is ordered by how
+    *fresh the listing* is, not by when the row was written, because bumping is
+    the market's main behaviour (60.8 % of carrier posts are a repost of their
+    own text). The column is a parameter rather than a second copy of this
+    function because the keyset comparison and the ordering must use the same
+    key — that is the whole correctness argument above, and it is not one to
+    restate in a fork.
+    """
+    key = sort_column if sort_column is not None else model.created_at
     stmt = base_stmt
     if after:
         try:
@@ -73,9 +84,9 @@ async def paginate_desc(
         except ValueError:
             return [], None
         stmt = stmt.where(
-            tuple_(model.created_at, model.id) < _cursor_key(model, after_uuid)
+            tuple_(key, model.id) < _cursor_key(model, after_uuid, key)
         )
-    stmt = stmt.order_by(model.created_at.desc(), model.id.desc()).limit(limit + 1)
+    stmt = stmt.order_by(key.desc(), model.id.desc()).limit(limit + 1)
     result = await db.execute(stmt)
     rows = list(result.scalars().all())
     has_more = len(rows) > limit

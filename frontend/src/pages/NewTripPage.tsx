@@ -563,6 +563,10 @@ export default function NewTripPage() {
      carrier has been typing into — reprefilling from the parent would throw
      that away. */
   const reverseId = params.get('reverse')
+  /* T3.11.16 — «повторить»: the same route again, dates cleared. Its own
+     parameter rather than a flag on `reverse`, so the two intentions stay
+     distinguishable in the address and in whatever we measure later. */
+  const repeatId = params.get('repeat')
   const reversedFrom = useRef<string | null>(null)
   const goToStep = useCallback(
     (next: number, replace = false) => {
@@ -668,13 +672,27 @@ export default function NewTripPage() {
      one draft, and pressing «Обратный рейс» is an unambiguous request for a
      specific one. Asking first would put a modal on the happy path to save a
      scratch form the carrier had already walked away from. */
+  /* T3.11.16 — «повторить» rides the same effect. Both start from an existing
+     trip with the dates cleared; the only difference is whether the route is
+     turned around, and that is one call. Two effects would have been the same
+     twenty lines twice, and the copy that fell behind would be the rarer one.
+
+     They stay two buttons and two parameters, though, because the intentions
+     are different and so are the numbers behind them: repeating a route is
+     5.4 % of this market, holding a listing at the top is 60.8 %. Recording one
+     as the other would make the first measurement of either useless. */
   useEffect(() => {
-    if (!reverseId || reversedFrom.current === reverseId) return
+    const sourceId = reverseId ?? repeatId
+    if (!sourceId || reversedFrom.current === sourceId) return
+    const shape = (trip: Trip) => {
+      const base = draftFromTrip(trip, prefs.toUnit, false)
+      return { ...EMPTY, ...(reverseId ? reversedDraft(base) : base) }
+    }
     const passed = (location.state as { trip?: Trip } | null)?.trip
     const drop = () => setParams({ step: '1' }, { replace: true })
-    if (passed && passed.id === reverseId) {
-      reversedFrom.current = reverseId
-      setDraft({ ...EMPTY, ...reversedDraft(draftFromTrip(passed, prefs.toUnit, false)) })
+    if (passed && passed.id === sourceId) {
+      reversedFrom.current = sourceId
+      setDraft(shape(passed))
       drop()
       return
     }
@@ -683,18 +701,18 @@ export default function NewTripPage() {
     // a trip of any status.
     listTrips({ carrier_id: user?.id, status: 'all', limit: 100 })
       .then(({ data }) => {
-        const found = data.items.find((x) => x.id === reverseId)
+        const found = data.items.find((x) => x.id === sourceId)
         if (!found) {
           setError(t('trips.editNotFound') as string)
           return
         }
-        reversedFrom.current = reverseId
-        setDraft({ ...EMPTY, ...reversedDraft(draftFromTrip(found, prefs.toUnit, false)) })
+        reversedFrom.current = sourceId
+        setDraft(shape(found))
         drop()
       })
       .catch(() => setError(t('trips.editNotFound') as string))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reverseId])
+  }, [reverseId, repeatId])
 
   // Postal services follow the **arrival** country: onward shipping happens
   // after landing. Refetched when that country changes and not before — a

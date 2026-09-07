@@ -120,6 +120,10 @@ export interface Trip {
   carriage_rules?: string | null
   status: string
   created_at: string
+  /** T3.11.16 — how fresh the listing is (the board sorts on it, and bumping
+   *  moves it) and when it stops being one — the last leg's departure. */
+  listed_at?: string | null
+  expires_at?: string | null
   nostr_event_id?: string | null
   nostr_published_at?: string | null
 }
@@ -192,3 +196,16 @@ export const listTrips = (filters?: TripFilters) =>
  *  already be talking about it. */
 export const cancelTrip = (tripId: string) =>
   api.post<Trip>(`/api/trips/${tripId}/cancel`)
+
+/** T3.11.16 — hold a listing at the top without republishing it.
+ *
+ *  The market's own habit: 60.8 % of carrier posts are a word-for-word repost
+ *  of the author's text. Given no button, that arrives here as duplicate trips
+ *  — three listings for one flight, each with its own conversations. `429` is
+ *  the quota answer, and it is not an error the caller should hide: the carrier
+ *  is allowed to do this, just not again yet.
+ */
+export const bumpTrip = (tripId: string) =>
+  api.post<{ listed_at: string; used_today: number; quota: number }>(
+    `/api/trips/${tripId}/bump`,
+  )

@@ -98,6 +98,14 @@ REGISTRY: tuple[ParamSpec, ...] = (
         "premium_price_month", "0", ParamValueType.decimal, "premium", False,
         "Цена премиум-подписки в месяц, USD.",
     ),
+    # T3.11.16 — 3 is a placeholder, not a decision: the market reposts at a
+    # median interval of 23 hours, so anything above one a day already covers
+    # ordinary behaviour, and the number that matters will come from watching
+    # bumps rather than from guessing here. `approved=False` says exactly that.
+    ParamSpec(
+        "trip_bumps_per_day", "3", ParamValueType.integer, "listing", False,
+        "Сколько раз в сутки перевозчик может поднять свои рейсы.",
+    ),
 )
 
 REGISTRY_BY_KEY: dict[str, ParamSpec] = {spec.key: spec for spec in REGISTRY}

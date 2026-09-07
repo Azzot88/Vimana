@@ -197,6 +197,9 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/deals/join/{token}"): Case(
         CAPABILITY, "the recipient invite token is the authorisation"
     ),
+    ("POST", "/api/trips/{trip_id}/bump"): Case(
+        DENIED, "raising somebody else's listing up the board"
+    ),
     ("POST", "/api/deals/{deal_id}/dealvault/messages/{message_id}/attach-file"): Case(
         DENIED,
         "putting my own document into a stranger's deal",

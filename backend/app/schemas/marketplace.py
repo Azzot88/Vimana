@@ -321,6 +321,12 @@ class TripOut(BaseModel):
     payment_systems: list[str] | None = None
     carriage_rules: str | None = None
     status: str
+    # T3.11.16 — how fresh the listing is, and when it stops being one. Both are
+    # on the card because both change what the reader should do with it: a trip
+    # raised an hour ago is being actively offered, and one whose last flight
+    # leaves tonight is not worth writing to about a parcel next week.
+    listed_at: datetime | None = None
+    expires_at: datetime | None = None
     created_at: datetime
     # T3.5 — Nostr publish state (surfaced to clients for the "📡 Also on Nostr" chip).
     nostr_event_id: str | None = None
