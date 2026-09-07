@@ -130,9 +130,26 @@ async def test_post_empty_message_rejected(
     assert resp.status_code == 422
 
 
-async def test_inquiry_linked_to_deal_after_match(
-    client, carrier_headers, sender_headers
-):
+async def test_inquiry_linked_to_deal_after_match(client, carrier_headers):
+    """Before the match the chat names no deal; after it, that one.
+
+    T3.11.23 — on a **fresh** sender. `deal_id` used to mean «the deal of this
+    thread», and a thread was per trip, so it was empty until this test filled
+    it. It now means «the deal to carry on in» and a chat is per person, so
+    between the two shared seed accounts there is almost always one running from
+    an earlier test — and «before» stopped being empty for a reason that has
+    nothing to do with matching.
+
+    Written with its own sender so both halves are statements again.
+    """
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
+
+    email = unique_email("linked")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Linked"}
+    )
+    sender_headers = {"Authorization": f"Bearer {await _login(client, email)}"}
+
     trip_id = await _make_open_trip(client, carrier_headers)
     inq = await client.post(f"/api/trips/{trip_id}/inquiry", headers=sender_headers)
     inquiry_id = inq.json()["id"]
