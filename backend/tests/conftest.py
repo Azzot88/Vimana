@@ -1005,6 +1005,9 @@ async def _ensure_hot_path_indexes(engine) -> None:
                 "verification_badges (subject_id)",
             ),
         ):
+            await conn.execute(text(f"CREATE INDEX IF NOT EXISTS {name} ON {target}"))
+
+
 async def _ensure_inquiry_tables(engine) -> None:
     """T3.11.23 — `chats` + `chat_messages`, and the fold away from per-trip
     threads. Mirrors `0073`; idempotent.
