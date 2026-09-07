@@ -25,6 +25,7 @@ Create Date: 2026-09-07
 """
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 
 revision = "0076"
@@ -53,7 +54,13 @@ def upgrade() -> None:
         sa.Column("file_hash", sa.String(length=64), nullable=False),
         sa.Column(
             "kind",
-            sa.Enum(
+            # `postgresql.ENUM`, not `sa.Enum`: `create_type=False` is a
+            # PostgreSQL-dialect option, and the generic type accepts the
+            # keyword without honouring it — so the first run tried to
+            # `CREATE TYPE attachmentkind` again and died on a type that has
+            # existed since `0003`. The column points at the existing type;
+            # `0079` is what adds a value to it.
+            postgresql.ENUM(
                 "handoff_photo",
                 "receipt_photo",
                 "doc",
