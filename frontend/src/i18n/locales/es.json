@@ -551,7 +551,6 @@
     "category": "Categoría",
     "submit": "Enviar solicitud",
     "submitting": "Enviando...",
-    "requestSent": "Solicitud enviada. Esperando confirmación del transportista.",
     "requestError": "No se pudo crear la solicitud",
     "newTrip": "Nuevo vuelo",
     "departureDate": "Fecha de salida",

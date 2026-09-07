@@ -58,7 +58,6 @@ export default function TripsPage() {
   const [declaredValue, setDeclaredValue] = useState('')
   const [recipientContact, setRecipientContact] = useState('')
   const [orderLoading, setOrderLoading] = useState(false)
-  const [orderSuccess, setOrderSuccess] = useState(false)
   const [error, setError] = useState('')
   /* T3.11.07 — the trip that was just published (owner's request 2026-09-06).
      Publishing used to drop the carrier on the board with no way to tell which
@@ -123,7 +122,7 @@ export default function TripsPage() {
     const trip = trips.find((t) => t.id === orderTripId)
     if (!trip) return
     try {
-      await matchDeal({
+      const { data: deal } = await matchDeal({
         trip_id: orderTripId,
         order: {
           recipient_contact: recipientContact,
@@ -134,8 +133,14 @@ export default function TripsPage() {
           description: cargoDesc,
         },
       })
-      setOrderSuccess(true)
       setOrderTripId(null)
+      /* T3.11.23 — one press, and you are inside the deal (owner's model
+         2026-09-07): the server opens the chat with this carrier and nests the
+         deal in it, and the person lands in the deal. They see a deal; they are
+         in fact in a chat that has one open. A success banner on the board
+         instead would have left the conversation somewhere they have to go
+         looking for — and it was already unclear where. */
+      navigate(`/deals/${deal.id}/vault`)
     } catch {
       setError(t('trips.requestError'))
     } finally {
@@ -173,12 +178,6 @@ export default function TripsPage() {
           {t('trips.search')}
         </button>
       </form>
-
-      {orderSuccess && (
-        <div className="bg-success/5 border border-success/30 rounded-card p-4">
-          <p className="text-sm font-body text-success">{t('trips.requestSent')}</p>
-        </div>
-      )}
 
       {/* T3.11.07 — «посмотреть свой рейс после публикации» (owner's request
           2026-09-06). The form used to hand the carrier the board and nothing
@@ -360,7 +359,7 @@ export default function TripsPage() {
                       {t('inquiry.chatButton')}
                     </button>
                     <button
-                      onClick={() => { setOrderTripId(trip.id); setOrderSuccess(false) }}
+                      onClick={() => setOrderTripId(trip.id)}
                       className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity"
                     >
                       {t('trips.sendPackage')}

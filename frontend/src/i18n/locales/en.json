@@ -598,7 +598,6 @@
     "category": "Category",
     "submit": "Submit request",
     "submitting": "Submitting...",
-    "requestSent": "Request sent. Waiting for carrier confirmation.",
     "requestError": "Failed to create request",
     "newTrip": "New trip",
     "departureDate": "Departure date",

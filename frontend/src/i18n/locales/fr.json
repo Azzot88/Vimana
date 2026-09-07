@@ -551,7 +551,6 @@
     "category": "Catégorie",
     "submit": "Soumettre la demande",
     "submitting": "Envoi...",
-    "requestSent": "Demande envoyée. En attente de confirmation du transporteur.",
     "requestError": "Impossible de créer la demande",
     "newTrip": "Nouveau vol",
     "departureDate": "Date de départ",
