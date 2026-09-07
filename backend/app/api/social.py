@@ -3,15 +3,21 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.social import (
+    TIERS,
+    add_connection as add_contact,
+    closeness,
+    pair_state,
+)
 from app.core.trust import add_invited
 from app.models.social import Connection, InviteLink
 from app.models.user import User
@@ -150,11 +156,171 @@ async def accept_invite(
 async def list_connections(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    q: str | None = Query(default=None, max_length=100),
 ):
-    result = await db.execute(
+    """My contacts, newest rules applied: my tier, and the state of the pair.
+
+    T3.11.24 — `q` is the search box the recipient picker needs above its list.
+    It matches the display name and the public key, because those are the two
+    things a person actually has to hand: a name they remember, or a key
+    somebody pasted them. Matching is case-insensitive on both — a key is
+    dictated in whatever case the client showed it.
+    """
+    stmt = (
         select(Connection)
         .where(Connection.user_id == current_user.id)
         .options(selectinload(Connection.connected_user))
     )
-    connections = result.scalars().all()
-    return connections
+    needle = (q or "").strip().lower()
+    if needle:
+        stmt = stmt.join(User, User.id == Connection.connected_user_id).where(
+            or_(
+                func.lower(User.display_name).like(f"%{needle}%"),
+                func.lower(User.nostr_pubkey).like(f"%{needle}%"),
+            )
+        )
+    connections = list((await db.execute(stmt)).scalars().all())
+
+    # Their half of every row, in one query. Closeness is mutual, so a list that
+    # showed only my tier would call a one-sided declaration «close» — which is
+    # precisely the claim the model refuses to let one person make.
+    theirs: dict[uuid.UUID, str] = {}
+    if connections:
+        theirs = dict(
+            (
+                await db.execute(
+                    select(Connection.user_id, Connection.tier).where(
+                        Connection.connected_user_id == current_user.id,
+                        Connection.user_id.in_(
+                            [c.connected_user_id for c in connections]
+                        ),
+                    )
+                )
+            ).all()
+        )
+
+    return [
+        ConnectionOut(
+            id=c.id,
+            connected_user_id=c.connected_user_id,
+            connected_user=c.connected_user,
+            created_at=c.created_at,
+            tier=c.tier,
+            state=pair_state(c.tier, theirs.get(c.connected_user_id)),
+        )
+        for c in connections
+    ]
+
+
+class ConnectionBody(BaseModel):
+    user_id: uuid.UUID
+
+
+@router.post("/me/connections", response_model=ConnectionOut, status_code=201)
+async def add_connection(
+    body: ConnectionBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.24 — «добавить в контакты», one direction.
+
+    Until now a `Connection` could only come from accepting an invite, which
+    wrote both rows: the only way to have a contact was to have exchanged a
+    link with them. The owner's model is looser — «Контакты могут быть и
+    односторонними» — and this is the path for it: from a carrier's card, from
+    the people in a deal, from search.
+
+    Nothing is written into the other person's list. A contact list says whom
+    *you* keep; writing the mirror row would let anyone put themselves into a
+    stranger's contacts.
+    """
+    if body.user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot add yourself")
+    other = await db.get(User, body.user_id)
+    if other is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    row = await add_contact(db, current_user.id, body.user_id)
+    await db.refresh(row, ["connected_user"])
+    return ConnectionOut(
+        id=row.id,
+        connected_user_id=row.connected_user_id,
+        connected_user=row.connected_user,
+        created_at=row.created_at,
+        tier=row.tier,
+        state=await closeness(db, current_user.id, row.connected_user_id),
+    )
+
+
+@router.delete("/me/connections/{user_id}", status_code=204)
+async def remove_connection(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Drop someone from my contacts. Their row, if they keep one, is theirs."""
+    row = (
+        await db.execute(
+            select(Connection).where(
+                Connection.user_id == current_user.id,
+                Connection.connected_user_id == user_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not in your contacts")
+    await db.delete(row)
+    await db.commit()
+
+
+class TierBody(BaseModel):
+    tier: str
+
+
+@router.patch("/me/connections/{user_id}", response_model=ConnectionOut)
+async def set_tier(
+    user_id: uuid.UUID,
+    body: TierBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.24 — mark a contact close, or step back to an acquaintance.
+
+    **Closeness is mutual or it is nothing**, and this endpoint is where that is
+    enforced rather than hinted at. Two refusals live here on purpose:
+
+    - a stranger cannot be made close, because closeness upgrades a
+      relationship that has to exist first (`404`);
+    - saying «close» about someone who has not said it back stores the tier but
+      **does not make the pair close** — the answer says `close_pending`, which
+      is what actually happened.
+
+    A hidden button would have been the wrong shape for both: the API is what a
+    second client, a script or a future mobile app talks to, and a rule that
+    lives in a disabled button is a rule that holds only for this frontend.
+    """
+    if body.tier not in TIERS:
+        raise HTTPException(status_code=422, detail=f"Unknown tier: {body.tier}")
+    row = (
+        await db.execute(
+            select(Connection).where(
+                Connection.user_id == current_user.id,
+                Connection.connected_user_id == user_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=404, detail="Add them to your contacts first"
+        )
+    row.tier = body.tier
+    await db.commit()
+    await db.refresh(row, ["connected_user"])
+    return ConnectionOut(
+        id=row.id,
+        connected_user_id=row.connected_user_id,
+        connected_user=row.connected_user,
+        created_at=row.created_at,
+        tier=row.tier,
+        state=await closeness(db, current_user.id, user_id),
+    )

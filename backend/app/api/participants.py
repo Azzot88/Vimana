@@ -205,3 +205,100 @@ async def list_participants(
         )
         for (p, u) in rows
     ]
+
+
+class RecipientBody(BaseModel):
+    """T3.11.24 — one of two ways to name a recipient who already has an account.
+
+    From the contacts list you have their id; from a pasted key you have the
+    key. The third path in the owner's brief — a service link — is
+    `invite-recipient` above, and it is deliberately *not* merged into this
+    endpoint: it produces a link for somebody who is not on the platform yet,
+    and pretending the three ways are equivalent is exactly what the form must
+    not do.
+    """
+
+    user_id: uuid.UUID | None = None
+    npub: str | None = None
+
+
+@router.post("/deals/{deal_id}/recipient", response_model=ParticipantOut, status_code=201)
+async def set_recipient(
+    deal_id: uuid.UUID,
+    body: RecipientBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Sender-only: attach a recipient who is already on the platform.
+
+    No token, no waiting: the person exists, so the participant row is written
+    already accepted and `Deal.recipient_id` is filled. That column was never
+    set by the invite path — the recipient there is a `DealParticipant` and
+    nothing else — and a deal whose recipient is known should say so where
+    everything else reads it.
+
+    A key that belongs to nobody is a `404` with a detail the form can show. It
+    is not an invitation in disguise: the sender asked to attach *this* person,
+    and quietly issuing a link instead would leave them believing the recipient
+    is attached when nobody has accepted anything.
+    """
+    if (body.user_id is None) == (body.npub is None):
+        raise HTTPException(
+            status_code=422, detail="Give exactly one of user_id or npub"
+        )
+
+    deal = await db.get(Deal, deal_id)
+    if deal is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    if deal.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only sender can set the recipient")
+
+    if body.user_id is not None:
+        person = await db.get(User, body.user_id)
+    else:
+        person = (
+            await db.execute(
+                select(User).where(User.nostr_pubkey == body.npub.strip())
+            )
+        ).scalar_one_or_none()
+    if person is None:
+        raise HTTPException(
+            status_code=404, detail="No account for that person — send an invite instead"
+        )
+    if person.id in (deal.sender_id, deal.carrier_id):
+        raise HTTPException(
+            status_code=400,
+            detail="They are already a principal participant of this deal",
+        )
+
+    existing = (
+        await db.execute(
+            select(DealParticipant).where(
+                DealParticipant.deal_id == deal_id,
+                DealParticipant.user_id == person.id,
+                DealParticipant.revoked_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    row = existing or DealParticipant(
+        deal_id=deal_id,
+        user_id=person.id,
+        role=DealParticipantRole.recipient,
+        invited_by=current_user.id,
+        accepted_at=datetime.now(tz=timezone.utc),
+    )
+    if existing is None:
+        db.add(row)
+    deal.recipient_id = person.id
+    await db.commit()
+    await db.refresh(row)
+    return ParticipantOut(
+        id=row.id,
+        deal_id=row.deal_id,
+        user_id=row.user_id,
+        display_name=person.display_name,
+        npub=person.nostr_pubkey,
+        role=row.role.value,
+        invited_at=row.invited_at,
+        accepted_at=row.accepted_at,
+    )

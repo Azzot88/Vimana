@@ -359,3 +359,104 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
     )
     assert dec.status_code == 200, dec.json()
     assert dec.json()["text"] == "hello recipient"
+
+
+# ── T3.11.24: naming a recipient who already has an account ──────────────────
+
+
+async def test_recipient_can_be_named_by_user_id(client, _deal):
+    """Owner's brief 2026-09-07: the recipient is chosen from a list, not typed
+    as a string. Somebody already on the platform needs no token and no waiting
+    — the participant row is written accepted, and the deal records who they
+    are."""
+    hdr, _ = await _register(client, "r-known")
+    me = await client.get("/api/auth/me", headers=hdr)
+    user_id = me.json()["id"]
+
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"user_id": user_id},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["user_id"] == user_id
+    assert r.json()["accepted_at"] is not None
+
+    listed = await client.get(
+        f"/api/deals/{_deal['deal_id']}/participants",
+        headers=_deal["sender_headers"],
+    )
+    assert user_id in [p["user_id"] for p in listed.json()]
+
+    detail = await client.get(
+        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
+    )
+    assert detail.json()["recipient_id"] == user_id
+
+
+async def test_naming_the_same_recipient_twice_is_one_row(client, _deal):
+    hdr, _ = await _register(client, "r-twice")
+    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
+
+    first = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"user_id": user_id},
+    )
+    second = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"user_id": user_id},
+    )
+    assert first.json()["id"] == second.json()["id"]
+
+
+async def test_unknown_key_says_so_instead_of_inviting(client, _deal):
+    """The third path — a service link — is a different endpoint on purpose. A
+    key nobody holds must not quietly become an invitation: the sender would
+    believe the recipient is attached when nobody has accepted anything."""
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"npub": "f" * 64},
+    )
+    assert r.status_code == 404
+    assert "invite" in r.json()["detail"].lower()
+
+
+async def test_recipient_needs_exactly_one_identifier(client, _deal):
+    both = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"user_id": str(_deal["deal_id"]), "npub": "a" * 64},
+    )
+    assert both.status_code == 422
+    neither = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={},
+    )
+    assert neither.status_code == 422
+
+
+async def test_only_sender_can_name_the_recipient(client, _deal):
+    hdr, _ = await _register(client, "r-outsider")
+    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["carrier_headers"],
+        json={"user_id": user_id},
+    )
+    assert r.status_code == 403
+
+
+async def test_carrier_cannot_be_made_the_recipient(client, _deal):
+    """They already read everything in the deal; a recipient row would add a
+    role that means nothing and a second reason for the same access."""
+    me = await client.get("/api/auth/me", headers=_deal["carrier_headers"])
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"user_id": me.json()["id"]},
+    )
+    assert r.status_code == 400

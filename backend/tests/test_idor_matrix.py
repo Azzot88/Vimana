@@ -197,6 +197,24 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/deals/join/{token}"): Case(
         CAPABILITY, "the recipient invite token is the authorisation"
     ),
+    ("POST", "/api/deals/{deal_id}/recipient"): Case(
+        DENIED,
+        "naming the recipient of a stranger's deal",
+        # A body, because a missing one is 422 before the ownership check and
+        # the row would then pass for the wrong reason.
+        json={"npub": "0" * 64},
+    ),
+    # ---- contacts ------------------------------------------------------
+    ("DELETE", "/api/me/connections/{user_id}"): Case(
+        DENIED,
+        "the path names a person, but the row deleted is always the caller's "
+        "own — a stranger has none, so this is a 404 by construction",
+    ),
+    ("PATCH", "/api/me/connections/{user_id}"): Case(
+        DENIED,
+        "closeness is set on my own row; without one there is nothing to set",
+        json={"tier": "close"},
+    ),
     # ---- disputes / arbiter --------------------------------------------
     ("POST", "/api/deals/{deal_id}/dispute"): Case(
         DENIED, "only participants dispute a deal", json={"reason": "idor probe"}

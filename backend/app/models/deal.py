@@ -328,7 +328,14 @@ class DealParticipant(Base):
         SAEnum(DealParticipantRole), default=DealParticipantRole.recipient
     )
     invited_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    invite_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # T3.11.24 — nullable, because a recipient chosen from contacts was never
+    # invited: the sender named an account that already exists and the row is
+    # written accepted. Minting a token nobody will ever send would have been a
+    # live credential kept for the sake of a NOT NULL, and a column that lies
+    # about how this participant got here.
+    invite_token: Mapped[str | None] = mapped_column(
+        String(64), unique=True, index=True, nullable=True
+    )
     invited_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

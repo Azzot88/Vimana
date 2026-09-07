@@ -19,6 +19,13 @@ class ConnectionOut(BaseModel):
     connected_user_id: uuid.UUID
     connected_user: UserOut
     created_at: datetime
+    # T3.11.24 — `tier` is what **I** said about them; `state` is what is true of
+    # the pair. They differ exactly when I called someone close and they have
+    # not called me back: the tier is stored, and the state says `close_pending`
+    # rather than `close`, because one person does not get to decide they are
+    # trusted by another.
+    tier: str = "connection"
+    state: str = "connection"
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -215,6 +215,29 @@ async def _ensure_connections_unique(engine) -> None:
             )
 
 
+async def _ensure_connection_tier(engine) -> None:
+    """T3.11.24 — `connections.tier` and a nullable participant invite token.
+
+    Both are `ADD COLUMN IF NOT EXISTS` / `DROP NOT NULL`, which are no-ops on a
+    database that already has them: `create_all` builds new tables from the
+    models, but it never alters a table that exists, and `vimana_test` is never
+    reset (`ENVIRONMENT §8`).
+    """
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE connections ADD COLUMN IF NOT EXISTS "
+                "tier VARCHAR(16) NOT NULL DEFAULT 'connection'"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE deal_participants ALTER COLUMN invite_token "
+                "DROP NOT NULL"
+            )
+        )
+
+
 async def _ensure_role_column(engine) -> None:
     """T1.24 pt.1 schema fix: users.role varchar; drop legacy booleans."""
     async with engine.begin() as conn:
@@ -1827,6 +1850,8 @@ async def test_engine():
     await _ensure_trip_nostr_columns(engine)
     await _ensure_publish_metrics_table(engine)
     await _ensure_deal_participants(engine)
+    # T3.11.24 — after the participants table exists: it alters a column on it.
+    await _ensure_connection_tier(engine)
     await _ensure_notices_tables(engine)
     await _ensure_receiving_addresses(engine)
     await _ensure_meeting_places(engine)
