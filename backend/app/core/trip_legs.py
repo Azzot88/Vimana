@@ -55,12 +55,22 @@ def normalise_legs(legs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         depart_at = leg["depart_at"]
         if not isinstance(depart_at, datetime):
             raise LegChainError(f"leg {index + 1}: departure is not a date")
+        # T3.11.07 — arrival is optional and asked only for the end of the route
+        # (owner's decision 2026-09-06). `None` is a real answer: 29.8 % of this
+        # market states a departure hour at all, and a landing time it does not
+        # know is not one it should be made to invent.
+        arrive_at = leg.get("arrive_at")
+        if arrive_at is not None and not isinstance(arrive_at, datetime):
+            raise LegChainError(f"leg {index + 1}: arrival is not a date")
+        if arrive_at is not None and arrive_at < depart_at:
+            raise LegChainError(f"leg {index + 1}: arrives before it departs")
         out.append(
             {
                 "leg_order": index,
                 "origin": origin,
                 "destination": destination,
                 "depart_at": depart_at,
+                "arrive_at": arrive_at,
                 "flown_by": leg.get("flown_by") or "self",
             }
         )

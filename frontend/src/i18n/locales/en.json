@@ -655,6 +655,7 @@
       "legSameRoute": "Flight {{n}}: origin and destination must differ",
       "legDate": "Flight {{n}}: choose departure date and time",
       "legOutOfOrder": "Flight {{n}} departs before the one before it",
+      "arrivalBeforeDeparture": "Flight {{n}}: it arrives before it departs.",
       "pastDate": "Date must be in the future",
       "capacity": "Capacity must be at least 0.5 kg"
     },
@@ -679,6 +680,9 @@
     "addTransferBlocked": "Finish the route first — the cities and the departure time.",
     "removeTransfer": "Remove this transfer",
     "departureFrom": "Departure from {{code}}",
+    "arrival": "Arrival",
+    "arrivalAt": "Arrival at {{code}}",
+    "optional": "optional",
     "pickDateTime": "Pick a date and time",
     "allowanceCurrency": "Currency",
     "published": "Your trip is published — here it is on the board.",

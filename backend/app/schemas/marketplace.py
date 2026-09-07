@@ -7,6 +7,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    computed_field,
     field_validator,
 )
 
@@ -49,6 +50,10 @@ class TripLegIn(BaseModel):
     origin: str = Field(min_length=1, max_length=100)
     destination: str = Field(min_length=1, max_length=100)
     depart_at: datetime
+    # T3.11.07 — optional, and the form asks it only for the end of the route.
+    # A landing time the carrier does not know is not one they should be made to
+    # invent, and `None` says so.
+    arrive_at: datetime | None = None
     # Declared, never inferred. "Flying in person" is the most valuable claim on
     # this market and the one nothing checks today.
     flown_by: Literal["self", "proxy"] = "self"
@@ -63,7 +68,31 @@ class TripLegOut(BaseModel):
     origin: str
     destination: str
     depart_at: datetime
+    # T3.11.07 — when the carrier lands (owner's decision 2026-09-06). Asked for
+    # the **end of the route**, which is the leg that has one; `None` everywhere
+    # else, and `None` on older trips, which is a real answer rather than a gap.
+    arrive_at: datetime | None = None
     flown_by: str
+
+    # T3.11.07 — the city behind each code, so a collapsed trip reads
+    # «New York, JFK» rather than `JFK`. Computed rather than stored: the trip
+    # holds the code the carrier stated, and a city copied into the row would be
+    # a second version of it that never gets corrected. `None` for a code we do
+    # not know — the client then prints the code alone, which is what it did
+    # before and is never wrong.
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def origin_city(self) -> str | None:
+        from app.core.airports import city_of
+
+        return city_of(self.origin)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def destination_city(self) -> str | None:
+        from app.core.airports import city_of
+
+        return city_of(self.destination)
 
 
 class HandoverSide(BaseModel):

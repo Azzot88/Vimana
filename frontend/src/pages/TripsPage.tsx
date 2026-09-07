@@ -16,6 +16,21 @@ import { routeChain } from '../lib/format'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { usePrefs } from '../hooks/usePrefs'
 
+/** T3.11.07 — the landing at the end of the route, or null.
+ *
+ *  Read off the last leg rather than off the trip: the arrival belongs to a
+ *  flight, and a trip has no column for it — `Trip.depart_at` is denormalised
+ *  because search and the countdown stand on it, and nothing stands on the
+ *  landing. Null for every trip published before 2026-09-06 and for every
+ *  carrier who did not state one, which is most of them.
+ *
+ *  Called by: the route card below.
+ */
+function arrivalOf(trip: Trip): string | null {
+  const last = trip.legs?.[trip.legs.length - 1]
+  return last?.arrive_at ?? null
+}
+
 export default function TripsPage() {
   // T_TEST.8 — the search row had three visible labels and none of them was
   // attached to anything. axe only reported the date, because its `label` rule
@@ -233,6 +248,20 @@ export default function TripsPage() {
                       ))}
                     </span>
                     <MonoText className="text-xs">{prefs.dateTime(trip.depart_at)}</MonoText>
+                    {/* T3.11.07 — the landing at the end of the route, when the
+                        carrier stated one. It is the time the sender actually
+                        plans around: departure says when the parcel has to be
+                        handed over, arrival says when it can be collected. Only
+                        shown when it exists — most trips have none, and an
+                        invented one would be worse than a missing one. */}
+                    {arrivalOf(trip) && (
+                      <span>
+                        {t('trips.arrival')}:{' '}
+                        <MonoText className="text-xs">
+                          {prefs.dateTime(arrivalOf(trip))}
+                        </MonoText>
+                      </span>
+                    )}
                     {/* T3.11.07 — a trip with no stated weight says nothing
                         about weight, and the qualitative size is what most
                         carriers actually answer. Neither is invented. */}

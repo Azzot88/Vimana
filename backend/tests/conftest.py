@@ -1413,6 +1413,15 @@ async def _ensure_trip_chain(engine) -> None:
                 "CHECK (flown_by IN ('self','proxy')))"
             )
         )
+        # 0071 — the landing time at the end of the route. Added separately from
+        # the CREATE above: a test database made before this revision already has
+        # the table, and CREATE IF NOT EXISTS says nothing about its columns.
+        await conn.execute(
+            text(
+                "ALTER TABLE trip_legs ADD COLUMN IF NOT EXISTS "
+                "arrive_at TIMESTAMPTZ"
+            )
+        )
         await conn.execute(
             text(
                 "CREATE INDEX IF NOT EXISTS ix_trip_legs_trip_order "

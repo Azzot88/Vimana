@@ -42,6 +42,22 @@ class Entry(TypedDict):
     name: str
 
 
+# T3.11.07 — offered on every corridor, whatever the two countries are (owner's
+# decision 2026-09-06). Held in code rather than in the JSON `global` block for
+# the same reason `CURRENCIES` is: this is a rule about what the picker must
+# always contain, and a rule the API enforces belongs where the enforcement is
+# written. The JSON block stays what it is — a list of names that happen to be
+# international.
+#
+# The labels are the codes people actually write in these posts, not the project
+# names: a carrier types «USDT», not «Tether».
+ALWAYS_OFFERED: tuple[Entry, ...] = (
+    {"code": "btc", "name": "BTC"},
+    {"code": "usdt", "name": "USDT"},
+    {"code": "zec", "name": "ZEC"},
+)
+
+
 @lru_cache(maxsize=None)
 def _load(path: str) -> dict:
     with Path(path).open("r", encoding="utf-8") as f:
@@ -145,6 +161,18 @@ def payment_systems(
     """
     entries: list[Entry] = []
     seen_codes: set[str] = set()
+    # T3.11.07 — the three that are always offered (owner's decision
+    # 2026-09-06), and they go **first**.
+    #
+    # They are the exception to "local before global", and the reason is that
+    # they are not a country's rail at all: BTC, USDT and ZEC settle the same
+    # way at both ends of every corridor, which is exactly why a P2P carrier
+    # reaches for them when the two countries have no rail in common — the
+    # commonest case on this market. Appended last, as they were, they fell past
+    # the visible chips as soon as both countries had entries; "always offered"
+    # and "offered if the list is short enough" are different promises.
+    #
+    # Three entries in front cost the local rails nothing they can spare.
     # Names are compared case-insensitively across layers: the same service
     # listed by both should appear once, and ours is the one that stays.
     seen_names: set[str] = set()
@@ -157,6 +185,8 @@ def payment_systems(
             seen_codes.add(entry["code"])
             seen_names.add(name_key)
             entries.append(entry)
+
+    add(list(ALWAYS_OFFERED))
 
     vendor_global, vendor_by_country = _hodlhodl()
     # Deduplicated across the two ends as well: a service both countries list —

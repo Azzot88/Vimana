@@ -55,3 +55,63 @@ describe('routeChain', () => {
     ).toBe('SVO → DXB → SVO')
   })
 })
+
+/** T3.11.07 — the city in front of the code (owner's decision 2026-09-06). */
+describe('routeChain with cities', () => {
+  it('prints «city, code» when the API resolved one', () => {
+    expect(
+      routeChain({
+        origin: 'JFK',
+        destination: 'DME',
+        legs: [
+          {
+            origin: 'JFK',
+            destination: 'DXB',
+            origin_city: 'New York',
+            destination_city: 'Dubai',
+          },
+          {
+            origin: 'DXB',
+            destination: 'DME',
+            origin_city: 'Dubai',
+            destination_city: 'Moscow',
+          },
+        ],
+      }),
+    ).toBe('New York, JFK → Dubai, DXB → Moscow, DME')
+  })
+
+  it('keeps the city on a single flight', () => {
+    // The old guard fell back to the denormalised pair for anything under two
+    // legs, which threw the city away on every direct flight — the commonest
+    // shape on this market.
+    expect(
+      routeChain({
+        origin: 'DXB',
+        destination: 'JFK',
+        legs: [
+          {
+            origin: 'DXB',
+            destination: 'JFK',
+            origin_city: 'Dubai',
+            destination_city: 'New York',
+          },
+        ],
+      }),
+    ).toBe('Dubai, DXB → New York, JFK')
+  })
+
+  it('prints the code alone for a city we do not know', () => {
+    // A code typed by hand rather than picked, or one the airport table has no
+    // row for. The line still has to render, and a code alone is never wrong.
+    expect(
+      routeChain({
+        origin: 'DXB',
+        destination: 'ZZZ',
+        legs: [
+          { origin: 'DXB', destination: 'ZZZ', origin_city: 'Dubai', destination_city: null },
+        ],
+      }),
+    ).toBe('Dubai, DXB → ZZZ')
+  })
+})

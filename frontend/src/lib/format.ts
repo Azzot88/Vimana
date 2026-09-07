@@ -134,12 +134,48 @@ export function freshnessOf(iso: string | null | undefined): Freshness | null {
  *
  *  Called by: `pages/TripsPage`, `pages/CarrierPage`, `pages/DashboardPage`.
  */
+export interface RouteChainLeg {
+  origin: string
+  destination: string
+  /** T3.11.07 — resolved from the IATA code by the API, `null` for a code we do
+   *  not know. Never stored on the trip: the code is the fact the carrier
+   *  stated, and a city copied into the row would be a second version of it. */
+  origin_city?: string | null
+  destination_city?: string | null
+}
+
 export function routeChain(trip: {
   origin: string
   destination: string
-  legs?: { origin: string; destination: string }[]
+  legs?: RouteChainLeg[]
 }): string {
   const legs = trip.legs ?? []
-  if (legs.length < 2) return `${trip.origin} → ${trip.destination}`
-  return [legs[0].origin, ...legs.map((leg) => leg.destination)].join(' → ')
+  // T3.11.07 — the pair is a fallback for a response with no chain at all, not
+  // for a one-flight trip: a single leg carries the cities and the flat columns
+  // do not, so the old `< 2` test threw away the city on every direct flight.
+  if (legs.length === 0) return `${trip.origin} → ${trip.destination}`
+  const nodes = [
+    { code: legs[0].origin, city: legs[0].origin_city },
+    ...legs.map((leg) => ({ code: leg.destination, city: leg.destination_city })),
+  ]
+  return nodes.map((n) => routeNode(n.code, n.city)).join(' → ')
+}
+
+/** T3.11.07 — «New York, JFK» (owner's decision 2026-09-06).
+ *
+ *  Three letters are a code the carrier who typed them reads fluently and the
+ *  sender reading the board often does not: `DME` and `SVO` are the same city
+ *  to everybody except the person who has to be at one of them. The code stays,
+ *  because it is the thing that is unambiguous and the thing a boarding pass
+ *  prints; the city goes in front, because it is what a reader recognises first.
+ *
+ *  The city is dropped when we do not have one, rather than substituted: a code
+ *  alone is what this line printed before and is never wrong.
+ *
+ *  English only. The names come from OpenFlights' city column; the GeoNames
+ *  alt-names we also load are an untagged flat list, so there is no honest way
+ *  to pick the Russian or Polish variant out of it.
+ */
+export function routeNode(code: string, city?: string | null): string {
+  return city ? `${city}, ${code}` : code
 }

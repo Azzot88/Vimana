@@ -8,13 +8,25 @@ export interface TripLeg {
   origin: string
   destination: string
   depart_at: string
+  /** T3.11.07 — when this flight lands. Asked for the **end of the route** and
+   *  null everywhere else, including on every trip published before 2026-09-06:
+   *  a landing time the carrier does not know is not one to invent. */
+  arrive_at?: string | null
+  /** T3.11.07 — the city behind each code, resolved by the API from the airport
+   *  table. Null for a code we do not know; the card then prints the code alone.
+   *  Never stored on the trip — the code is what the carrier stated. */
+  origin_city?: string | null
+  destination_city?: string | null
   /** Who is actually on the plane. 16.9 % of real posts claim "in person" and
    *  some of those same posts add "(a friend is flying)" — so it is declared,
    *  not inferred, and `proxy` is a normal answer rather than a confession. */
   flown_by: 'self' | 'proxy'
 }
 
-export type TripLegInput = Omit<TripLeg, 'order'>
+export type TripLegInput = Omit<
+  TripLeg,
+  'order' | 'origin_city' | 'destination_city'
+>
 
 /** T3.11.15 — how cargo is taken at one end of the route. Separate at each end:
  *  carriers routinely accept at an address in one country and meet in person in

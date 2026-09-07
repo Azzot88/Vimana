@@ -219,3 +219,53 @@ async def test_popular_respects_the_limit(client):
     resp = await client.get("/api/airports/popular", params={"limit": 2})
     assert resp.status_code == 200
     assert len(resp.json()) <= 2
+
+
+# ── T3.11.07 · country names have to resolve, or three things go quiet ──────
+
+
+def test_every_country_resolves_to_an_iso():
+    """A country name with no ISO code costs an airport three things at once.
+
+    It keeps working in the picker, and quietly loses its GeoNames alt-names
+    (so it can only be found by its English name), its postal catalogue and its
+    payment catalogue. Nothing raises — that is the whole problem.
+
+    This is how Turkey was found: ISO renamed it to Türkiye in 2022, pycountry
+    followed, and `"Turkey"` — what OpenFlights writes — stopped matching in a
+    library upgrade. Every Turkish airport went half-missing and stayed that way
+    until the owner could not add Istanbul.
+
+    The assertion prints the offenders, so the fix is one line in
+    `_COUNTRY_ALIASES` per name.
+    """
+    from app.core.airports import unresolved_countries
+
+    missing = unresolved_countries()
+    assert missing == [], f"no ISO for: {missing}"
+
+
+def test_istanbul_is_findable_by_code_and_by_name():
+    """The airport the owner could not add. Both spellings of the query, and
+    the country code, because it was the empty code that broke the rest."""
+    from app.core.airports import search
+
+    by_code = search("IST")
+    assert any(a.iata == "IST" for a in by_code), [a.iata for a in by_code]
+
+    ist = next(a for a in by_code if a.iata == "IST")
+    assert ist.country_iso == "TR"
+    assert ist.city == "Istanbul"
+
+    by_name = search("Istanbul")
+    assert any(a.iata == "IST" for a in by_name), [a.iata for a in by_name]
+
+
+def test_turkish_airports_are_findable_in_russian():
+    """The GeoNames alt-names come from the country index, which is keyed by
+    ISO — so an unresolved country loses every language but English. Cyrillic is
+    the case that matters here: this market writes «Стамбул», not «Istanbul»."""
+    from app.core.airports import search
+
+    found = search("Стамбул")
+    assert any(a.iata in ("IST", "SAW") for a in found), [a.iata for a in found]

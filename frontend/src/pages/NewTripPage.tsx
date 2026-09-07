@@ -31,6 +31,7 @@ import DateTimeField from '../components/DateTimeField'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import WizardSheet from '../components/WizardSheet'
+import { routeNode } from '../lib/format'
 import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.20 — four steps, and only the first is required.
@@ -80,10 +81,27 @@ interface NodeDraft {
   // hand-typed code, and that is a real state: the pickers then fall back to
   // typing the answer.
   country: string
+  /** T3.11.07 — the city behind the code, captured when the airport is picked
+   *  so the preview reads «Dubai, DXB» exactly as the board does. Empty for a
+   *  hand-typed code, and then the preview prints the code alone — the same
+   *  thing the board does for the same case. */
+  city: string
   departAt: string
+  /** T3.11.07 — when the carrier lands here. Asked only on the **last** stop
+   *  (owner's decision 2026-09-06): that is the time a sender needs — when the
+   *  parcel can be collected — and a carrier who knows the landing hour of each
+   *  intermediate hop is rare. Empty everywhere else, and empty is a real
+   *  answer rather than a gap. */
+  arriveAt: string
 }
 
-const EMPTY_NODE: NodeDraft = { code: '', country: '', departAt: '' }
+const EMPTY_NODE: NodeDraft = {
+  code: '',
+  country: '',
+  city: '',
+  departAt: '',
+  arriveAt: '',
+}
 
 /** The chain the API wants, derived from the stops the carrier named.
  *
@@ -96,8 +114,14 @@ const EMPTY_NODE: NodeDraft = { code: '', country: '', departAt: '' }
 function nodesToLegs(nodes: NodeDraft[]) {
   return nodes.slice(0, -1).map((from, i) => ({
     origin: from.code,
+    originCity: from.city,
     destination: nodes[i + 1].code,
+    destinationCity: nodes[i + 1].city,
     departAt: from.departAt,
+    // The landing time belongs to the flight that ends at the next stop, so it
+    // is read off *that* stop rather than off this one. Only the last stop is
+    // ever asked, so every earlier leg carries an empty string.
+    arriveAt: nodes[i + 1].arriveAt,
   }))
 }
 
@@ -357,6 +381,7 @@ export default function NewTripPage() {
   // is a list of stops now, and the two names described the old shape.
   const stopId = useId()
   const departId = useId()
+  const arriveId = useId()
   const capacityId = useId()
   // T_TEST.8 — the slider is a second way into the same number, so it carries
   // the same name rather than a made-up one of its own. Hiding it from screen
@@ -499,8 +524,20 @@ export default function NewTripPage() {
       nodes:
         trip.legs.length > 0
           ? [
-              { ...EMPTY_NODE, code: trip.legs[0].origin },
-              ...trip.legs.map((leg) => ({ ...EMPTY_NODE, code: leg.destination })),
+              {
+                ...EMPTY_NODE,
+                code: trip.legs[0].origin,
+                // The city comes back with the trip, so the preview reads the
+                // same on a repeat as it did on the original. The country does
+                // not — the API sends a code, not an ISO pair — which is why
+                // that one still waits for the airport to be re-picked.
+                city: trip.legs[0].origin_city ?? '',
+              },
+              ...trip.legs.map((leg) => ({
+                ...EMPTY_NODE,
+                code: leg.destination,
+                city: leg.destination_city ?? '',
+              })),
             ]
           : [
               { ...EMPTY_NODE, code: trip.origin },
@@ -609,6 +646,15 @@ export default function NewTripPage() {
       // constrained by the one before them rather than by the clock.
       if (index === 0 && departure.getTime() < Date.now()) {
         return t('trips.newTripValidation.pastDate') as string
+      }
+      // T3.11.07 — the landing, when it is stated. Checked here as well as on
+      // the server so the carrier reads it in their own words rather than as a
+      // 422 from the publish button.
+      if (leg.arriveAt) {
+        const arrival = new Date(leg.arriveAt)
+        if (Number.isNaN(arrival.getTime()) || arrival < departure) {
+          return t('trips.newTripValidation.arrivalBeforeDeparture', at) as string
+        }
       }
       const previous = nodesToLegs(draft.nodes)[index - 1]
       if (previous?.departAt && departure < new Date(previous.departAt)) {
@@ -730,6 +776,9 @@ export default function NewTripPage() {
           origin: leg.origin,
           destination: leg.destination,
           depart_at: leg.departAt,
+          // Empty stays null: a landing time nobody stated is not one to invent,
+          // and the column keeps the two apart.
+          arrive_at: leg.arriveAt || null,
           // One answer for the trip, written onto every leg. The model keeps it
           // per leg so a chain flown by two people stays expressible later.
           flown_by: draft.flownBy,
@@ -883,10 +932,14 @@ export default function NewTripPage() {
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2"
             >
               <MonoText className="text-lg text-navy font-medium">
-                {leg.origin || '???'} → {leg.destination || '???'}
+                {routeNode(leg.origin || '???', leg.originCity)} →{' '}
+                {routeNode(leg.destination || '???', leg.destinationCity)}
               </MonoText>
               <MonoText className="text-sm text-navy/60">
                 {formatDeparture(leg.departAt)}
+                {/* The landing, when the carrier stated one. Only the last stop
+                    is ever asked, so this shows on one row of the chain. */}
+                {leg.arriveAt && ` → ${formatDeparture(leg.arriveAt)}`}
               </MonoText>
             </div>
           ))}
@@ -1119,7 +1172,9 @@ export default function NewTripPage() {
                     inputId={`${stopId}-${index}`}
                     value={node.code}
                     onChange={(v) => patchNode(index, { code: v })}
-                    onPick={(a) => patchNode(index, { country: a.country_iso })}
+                    onPick={(a) =>
+                      patchNode(index, { country: a.country_iso, city: a.city })
+                    }
                     required
                     placeholder={isLast ? 'JFK' : 'DXB'}
                   />
@@ -1154,6 +1209,38 @@ export default function NewTripPage() {
                            validation two clicks later. */
                         min={index > 0 ? draft.nodes[index - 1].departAt : undefined}
                         required
+                      />
+                    </div>
+                  )}
+                  {/* T3.11.07 — the landing (owner's decision 2026-09-06), and
+                      only at the end of the route. That is the time a sender
+                      needs: when the parcel can actually be collected. Asking it
+                      at every transfer would be asking a carrier to look up
+                      three flight schedules to publish one trip.
+
+                      Optional, and it says so: 29.8 % of real posts state a
+                      departure hour at all, so a landing time many carriers do
+                      not know is not one to make them invent. */}
+                  {isLast && (
+                    <div>
+                      <label
+                        htmlFor={`${arriveId}-${index}`}
+                        className="block text-[11px] font-body text-navy/40 mb-1"
+                      >
+                        {node.code
+                          ? t('trips.arrivalAt', { code: node.code })
+                          : t('trips.arrival')}{' '}
+                        <span className="text-navy/30">{t('trips.optional')}</span>
+                      </label>
+                      <DateTimeField
+                        id={`${arriveId}-${index}`}
+                        value={node.arriveAt}
+                        onChange={(v) => patchNode(index, { arriveAt: v })}
+                        style={prefs.style}
+                        /* It cannot land before the last flight left. The
+                           calendar refuses the day rather than letting the
+                           carrier find out from a validation message. */
+                        min={draft.nodes[index - 1]?.departAt}
                       />
                     </div>
                   )}

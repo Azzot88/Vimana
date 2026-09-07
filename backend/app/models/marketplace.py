@@ -314,6 +314,14 @@ class TripLeg(Base):
     origin: Mapped[str] = mapped_column(String(100), nullable=False)
     destination: Mapped[str] = mapped_column(String(100), nullable=False)
     depart_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # T3.11.07 — when this flight lands (owner's decision 2026-09-06). Nullable,
+    # and the form asks it only for the **end of the route**: that is the time a
+    # sender needs — when the parcel can be collected — and a carrier who knows
+    # the landing hour of each intermediate hop is rare. Null is a real answer,
+    # not a gap, and every trip published before this revision carries one.
+    arrive_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # T3.11.15 — who is actually on the plane. 16.9 % of posts say "flying in
     # person, no intermediaries" and some of those same posts say "(a friend is
     # flying)". The claim is the most valuable signal on this market and today

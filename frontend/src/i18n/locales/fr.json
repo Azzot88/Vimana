@@ -608,6 +608,7 @@
       "legSameRoute": "Vol {{n}} : l'origine et la destination doivent différer",
       "legDate": "Vol {{n}} : choisissez la date et l'heure de départ",
       "legOutOfOrder": "Le vol {{n}} part avant celui qui le précède",
+      "arrivalBeforeDeparture": "Vol {{n}} : il arrive avant de partir.",
       "pastDate": "La date doit être dans le futur",
       "capacity": "Le poids doit être d'au moins 0.5 kg"
     },
@@ -632,6 +633,9 @@
     "addTransferBlocked": "Complétez d'abord l'itinéraire — les villes et l'heure de départ.",
     "removeTransfer": "Retirer cette escale",
     "departureFrom": "Départ de {{code}}",
+    "arrival": "Arrivée",
+    "arrivalAt": "Arrivée à {{code}}",
+    "optional": "facultatif",
     "pickDateTime": "Choisir la date et l'heure",
     "allowanceCurrency": "Monnaie",
     "published": "Votre vol est publié — le voici sur le tableau.",

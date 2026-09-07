@@ -608,6 +608,7 @@
       "legSameRoute": "Vuelo {{n}}: origen y destino deben ser diferentes",
       "legDate": "Vuelo {{n}}: elige fecha y hora de salida",
       "legOutOfOrder": "El vuelo {{n}} sale antes que el anterior",
+      "arrivalBeforeDeparture": "Vuelo {{n}}: llega antes de salir.",
       "pastDate": "La fecha debe ser en el futuro",
       "capacity": "El peso debe ser al menos 0.5 kg"
     },
@@ -632,6 +633,9 @@
     "addTransferBlocked": "Completa antes la ruta: las ciudades y la hora de salida.",
     "removeTransfer": "Quitar esta escala",
     "departureFrom": "Salida desde {{code}}",
+    "arrival": "Llegada",
+    "arrivalAt": "Llegada a {{code}}",
+    "optional": "opcional",
     "pickDateTime": "Elegir fecha y hora",
     "allowanceCurrency": "Moneda",
     "published": "Tu vuelo está publicado: aquí lo tienes en el tablero.",

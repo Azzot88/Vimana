@@ -609,6 +609,7 @@
       "legSameRoute": "Lot {{n}}: skąd i dokąd muszą się różnić",
       "legDate": "Lot {{n}}: wskaż datę i czas wylotu",
       "legOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
+      "arrivalBeforeDeparture": "Lot {{n}}: przylot przed wylotem.",
       "pastDate": "Data musi być w przyszłości",
       "capacity": "Waga musi być co najmniej 0.5 kg"
     },
@@ -633,6 +634,9 @@
     "addTransferBlocked": "Najpierw uzupełnij trasę — miasta i godzinę wylotu.",
     "removeTransfer": "Usuń przesiadkę",
     "departureFrom": "Wylot z {{code}}",
+    "arrival": "Przylot",
+    "arrivalAt": "Przylot do {{code}}",
+    "optional": "opcjonalnie",
     "pickDateTime": "Wybierz datę i godzinę",
     "allowanceCurrency": "Waluta",
     "published": "Lot opublikowany — oto on na tablicy.",

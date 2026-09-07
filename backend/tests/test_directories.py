@@ -298,3 +298,36 @@ def test_the_check_is_registered_with_the_worker():
         entry["task"] for entry in celery_app.conf.beat_schedule.values()
     }
     assert "app.tasks.directories.check_payment_catalogue" in scheduled
+
+
+# ── T3.11.07 · three systems are offered on every corridor ─────────────────
+
+
+def test_crypto_is_offered_whatever_the_corridor():
+    """BTC, USDT and ZEC settle the same way at both ends of every route, which
+    is why a P2P carrier reaches for them when the two countries share no rail —
+    the commonest case on this market. Owner's decision 2026-09-06."""
+    from app.core.directories import payment_systems
+
+    for arrival, departure in (("RU", "AE"), ("US", "PL"), (None, None), ("XX", "YY")):
+        codes = [e["code"] for e in payment_systems(arrival, departure)]
+        assert {"btc", "usdt", "zec"} <= set(codes), (arrival, departure, codes)
+
+
+def test_crypto_comes_first_so_it_cannot_fall_off_the_visible_chips():
+    """Appended last, as it was, it dropped past the form's visible chips the
+    moment both countries had entries. "Always offered" and "offered if the
+    list is short enough" are different promises."""
+    from app.core.directories import payment_systems
+
+    codes = [e["code"] for e in payment_systems("RU", "AE")]
+    assert codes[:3] == ["btc", "usdt", "zec"], codes[:6]
+
+
+def test_bitcoin_is_not_listed_twice():
+    """`bitcoin`/«Bitcoin» and `btc`/«BTC» are one thing written two ways, and a
+    picker offering both asks the carrier to choose between them."""
+    from app.core.directories import payment_systems
+
+    names = [e["name"].casefold() for e in payment_systems("US", "RU")]
+    assert "bitcoin" not in names, names

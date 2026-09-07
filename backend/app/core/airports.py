@@ -40,6 +40,38 @@ _COUNTRY_ALIASES: dict[str, str] = {
     "west bank": "PS",
     "kosovo": "XK",
     "netherlands antilles": "AN",
+    # T3.11.07 (2026-09-06) — the second batch, and the reason they matter more
+    # than they look. A name that does not resolve leaves `country_iso` empty,
+    # and an airport with no ISO loses **three** things at once: the GeoNames
+    # alt-names (so it cannot be found by its name in any language but English),
+    # the postal catalogue for its country, and the payment catalogue. Nothing
+    # errors; the airport is simply half-there.
+    #
+    # Turkey is how this was found: the owner could not add Istanbul. ISO renamed
+    # the country to Türkiye in 2022 and pycountry followed, so `"turkey"` — what
+    # OpenFlights writes — stopped matching, and every Turkish airport went quiet
+    # in one library upgrade. Both spellings are listed so neither direction of
+    # that change can break it again.
+    "turkey": "TR",
+    "türkiye": "TR",
+    "macedonia": "MK",
+    # ISO spells these the other way round, with the qualifier last.
+    "british virgin islands": "VG",
+    "virgin islands": "VI",
+    "falkland islands": "FK",
+    # Accents: OpenFlights writes them flat, ISO does not.
+    "cote d'ivoire": "CI",
+    "côte d'ivoire": "CI",
+    "reunion": "RE",
+    "réunion": "RE",
+    "saint helena": "SH",
+    "svalbard": "SJ",
+    "micronesia": "FM",
+    # US minor outlying islands: airfields with IATA codes and no ISO entry of
+    # their own. `UM` is where ISO actually puts them.
+    "johnston atoll": "UM",
+    "midway islands": "UM",
+    "wake island": "UM",
 }
 
 
@@ -172,6 +204,22 @@ def _load() -> list[Airport]:
 _AIRPORTS: list[Airport] = _load()
 
 
+def unresolved_countries() -> list[str]:
+    """T3.11.07 — country names in the data that no ISO code was found for.
+
+    A diagnostic, not a guard: nothing about a missing code raises, which is
+    exactly the problem. An airport whose country did not resolve keeps working
+    in the picker and quietly loses its localised names, its postal catalogue
+    and its payment catalogue — Turkey spent a library upgrade in that state and
+    nobody noticed until the owner tried to add Istanbul.
+
+    Called by: `tests/test_airports.py::test_every_country_resolves_to_an_iso`.
+    That test is the mechanism: when `pycountry` renames the next country, it
+    fails and names it, instead of one corridor going silent.
+    """
+    return sorted({a.country for a in _AIRPORTS if not a.country_iso})
+
+
 def all_airports() -> list[Airport]:
     return _AIRPORTS
 
@@ -251,6 +299,30 @@ def route_distance_km(origin: str, destination: str) -> float | None:
     if a is None or b is None:
         return None
     return _haversine_km(a.lat, a.lon, b.lat, b.lon)
+
+
+def city_of(iata: str) -> str | None:
+    """T3.11.07 — the city behind an IATA code, or `None` for one we do not know.
+
+    Owner's decision 2026-09-06: a collapsed trip prints «New York, JFK» rather
+    than `JFK`. Three letters are a code the carrier who typed them reads
+    fluently and the sender reading the board often does not — `DME` and `SVO`
+    are the same city to everybody except the person who has to be at one of
+    them.
+
+    Derived on the way out rather than stored on the leg: the trip holds the
+    code, which is the fact the carrier stated, and a city copied into the row
+    would be a second version of it that never gets corrected.
+
+    English, and only English. The city names are OpenFlights' column; the
+    GeoNames alt-names we also load are an untagged flat list, so there is no
+    honest way to pick the Russian or Polish variant out of it. A localised
+    board would need a translated city table, which is a different task.
+
+    Called by: `schemas.marketplace.TripLegOut` (computed fields).
+    """
+    a = _by_iata().get((iata or "").strip().upper())
+    return a.city if a else None
 
 
 def corridor_of(origin: str, destination: str) -> str | None:
