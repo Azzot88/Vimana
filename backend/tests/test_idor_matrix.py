@@ -75,6 +75,25 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/trips/{trip_id}/cancel"): Case(
         DENIED, "withdrawing a stranger's trip"
     ),
+    # T3.11.07 — editing is the same posture as withdrawing, and worse if it
+    # leaked: a stranger who could PATCH a listing could rewrite the route,
+    # the price and the handover under a sender who had already read it, on a
+    # trip whose id every inquiry points at. Answered 404 rather than 403, like
+    # the rest of these: which trips exist is public, which of them are yours
+    # is not something to confirm on request.
+    ("PATCH", "/api/trips/{trip_id}"): Case(
+        DENIED,
+        "rewriting a stranger's listing",
+        json={
+            "legs": [
+                {
+                    "origin": "DXB",
+                    "destination": "JFK",
+                    "depart_at": "2030-01-01T10:00:00+00:00",
+                }
+            ]
+        },
+    ),
     ("POST", "/api/deals/{deal_id}/cards"): Case(
         DENIED,
         "raising a card in a stranger's deal",
