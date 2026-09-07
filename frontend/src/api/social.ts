@@ -36,6 +36,9 @@ export interface ConnectedUser {
  * the old shape anyway.
  */
 export interface Connection {
+  /** T3.11.24 — see `ConnectionTier` / `ConnectionState` below. */
+  tier?: ConnectionTier
+  state?: ConnectionState
   id: string
   connected_user_id: string
   connected_user: ConnectedUser
@@ -61,3 +64,22 @@ export const listMyInvites = () =>
 
 export const listConnections = () =>
   api.get<Connection[]>('/api/me/connections')
+
+/** T3.11.24 — `tier` is what I said about them, `state` is what is true of the
+ *  pair. They differ while a close request is unanswered. */
+export type ConnectionTier = 'connection' | 'close'
+export type ConnectionState = 'none' | 'connection' | 'close_pending' | 'close'
+
+export const addConnection = (userId: string) =>
+  api.post<Connection>('/api/me/connections', { user_id: userId })
+
+export const removeConnection = (userId: string) =>
+  api.delete<void>(`/api/me/connections/${userId}`)
+
+export const setConnectionTier = (userId: string, tier: ConnectionTier) =>
+  api.patch<Connection>(`/api/me/connections/${userId}`, { tier })
+
+/** Search matches the display name and the public key — the two things a person
+ *  has to hand when looking somebody up. */
+export const searchConnections = (q: string) =>
+  api.get<Connection[]>('/api/me/connections', { params: { q } })

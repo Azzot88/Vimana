@@ -370,6 +370,31 @@
     "hopLabel_other": "{{count}} personas",
     "empty": "Aún no hay círculos — invita amigos y cierra un acuerdo para empezar a construir tu red."
   },
+  "contacts": {
+    "close": "Cercano",
+    "contact": "Contacto",
+    "add": "Añadir a contactos",
+    "makeClose": "Marcar como cercano",
+    "closePending": "Esperando su respuesta",
+    "stepBack": "Contacto normal",
+    "remove": "Quitar de contactos"
+  },
+  "recipient": {
+    "pickerTitle": "Quién recibe el paquete",
+    "searchPlaceholder": "Nombre o clave pública",
+    "byKey": "Añadir por clave",
+    "noContacts": "Aún no hay contactos",
+    "noMatches": "No se encontró a nadie",
+    "notOnPlatform": "Esta persona todavía no está en la plataforma — envíale un enlace de invitación",
+    "linkExplainer": "¿El destinatario no está en la plataforma? Dale un enlace y se unirá solo.",
+    "makeLink": "Crear enlace de invitación",
+    "attached": "Destinatario añadido: {{name}}",
+    "inviteButton": "Invitar al destinatario",
+    "inviteCopied": "Enlace copiado — envíaselo al destinatario",
+    "inviteError": "No se pudo crear la invitación",
+    "joinTitle": "Uniéndose al chat del acuerdo…",
+    "joinError": "No se pudo unir"
+  },
   "verification": {
     "sectionTitle": "Verificación de identidad",
     "sectionHint": "Tres niveles de verificación se acumulan en tu perfil. Nivel más alto = más confianza en búsquedas. Cada marca lleva su fecha: con el tiempo pesa menos.",

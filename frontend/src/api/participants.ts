@@ -39,3 +39,12 @@ export const decryptMessageForMe = (dealId: string, messageId: string) =>
   api.post<{ message_id: string; text: string }>(
     `/api/deals/${dealId}/dealvault/messages/${messageId}/decrypt-for-me`,
   )
+
+/** T3.11.24 — name a recipient who already has an account: from contacts you
+ *  have their id, from a pasted key you have the key. A key nobody holds comes
+ *  back 404 — the caller is expected to offer an invite link then, not to
+ *  pretend the person was attached. */
+export const setRecipient = (
+  dealId: string,
+  who: { user_id: string } | { npub: string },
+) => api.post<Participant>(`/api/deals/${dealId}/recipient`, who)

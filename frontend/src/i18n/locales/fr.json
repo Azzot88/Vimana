@@ -370,6 +370,31 @@
     "hopLabel_other": "{{count}} personnes",
     "empty": "Aucun cercle — invitez des amis et concluez un contrat pour commencer à bâtir votre réseau."
   },
+  "contacts": {
+    "close": "Proche",
+    "contact": "Contact",
+    "add": "Ajouter aux contacts",
+    "makeClose": "Marquer comme proche",
+    "closePending": "En attente de sa réponse",
+    "stepBack": "Contact ordinaire",
+    "remove": "Retirer des contacts"
+  },
+  "recipient": {
+    "pickerTitle": "Qui reçoit le colis",
+    "searchPlaceholder": "Nom ou clé publique",
+    "byKey": "Ajouter par clé",
+    "noContacts": "Aucun contact pour l'instant",
+    "noMatches": "Personne trouvée",
+    "notOnPlatform": "Cette personne n'est pas encore sur la plateforme — envoyez-lui un lien d'invitation",
+    "linkExplainer": "Destinataire absent de la plateforme ? Donnez-lui un lien, il rejoindra lui-même.",
+    "makeLink": "Créer un lien d'invitation",
+    "attached": "Destinataire ajouté : {{name}}",
+    "inviteButton": "Inviter le destinataire",
+    "inviteCopied": "Lien copié — envoyez-le au destinataire",
+    "inviteError": "Impossible de créer l'invitation",
+    "joinTitle": "Connexion au chat de la transaction…",
+    "joinError": "Impossible de rejoindre"
+  },
   "verification": {
     "sectionTitle": "Vérification d'identité",
     "sectionHint": "Trois niveaux de vérification s'accumulent sur votre profil. Plus le niveau est élevé, plus la confiance dans les recherches est grande. Chaque marque porte sa date : elle pèse moins avec le temps.",

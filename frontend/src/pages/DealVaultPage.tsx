@@ -11,7 +11,7 @@ import {
   type VaultMessage,
 } from '../api/dealvault'
 import api from '../api/client'
-import { inviteRecipient } from '../api/participants'
+import RecipientModal from '../components/RecipientModal'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
@@ -47,6 +47,14 @@ export default function DealVaultPage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>('')
   const [uploadKind, setUploadKind] = useState<AttachmentKind>('handoff_photo')
+  /* T3.11.24 — the recipient picker. Sender-only, like the button that opens
+     it: the server refuses anybody else, and a control drawn in order to be
+     refused is worse than one that is not drawn. */
+  const [recipientOpen, setRecipientOpen] = useState(false)
+  /* Not `error`: «получатель добавлен» is good news, and the error strip is
+     amber. One state for both would have made every success look like a
+     warning. */
+  const [notice, setNotice] = useState('')
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
@@ -296,18 +304,15 @@ export default function DealVaultPage() {
           ← {t('nav.dashboard')}
         </Link>
         <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
+        {/* T3.11.24 — the recipient is chosen, not typed. The button used to
+            mint a link and copy it silently, which answered only one of the
+            three ways a sender knows their recipient: from contacts, by public
+            key, or — for somebody not on the platform — by a link. The picker
+            holds all three and keeps them distinct. */}
         {user && parties.senderId === user.id && dealId && (
           <button
             type="button"
-            onClick={async () => {
-              try {
-                const { data } = await inviteRecipient(dealId)
-                await navigator.clipboard.writeText(data.invite_url)
-                alert(t('recipient.inviteCopied'))
-              } catch {
-                alert(t('recipient.inviteError'))
-              }
-            }}
+            onClick={() => setRecipientOpen(true)}
             className="ml-auto text-xs font-display font-medium border border-cyan/40 text-cyan px-3 py-1.5 rounded-field hover:bg-cyan/10"
           >
             {t('recipient.inviteButton')}
@@ -362,6 +367,12 @@ export default function DealVaultPage() {
         {error && (
           <div className="border-t border-amber/30 bg-amber/5 px-4 py-2">
             <p className="text-xs font-mono text-amber">{error}</p>
+          </div>
+        )}
+
+        {notice && (
+          <div className="border-t border-success/30 bg-success/5 px-4 py-2">
+            <p className="text-xs font-mono text-success">{notice}</p>
           </div>
         )}
 
@@ -461,6 +472,18 @@ export default function DealVaultPage() {
           setMessages((prev) => [...prev, data])
         }}
       />
+
+      {dealId && (
+        <RecipientModal
+          open={recipientOpen}
+          dealId={dealId}
+          onClose={() => setRecipientOpen(false)}
+          /* T3.11.24 — the participant list is what proves it happened, so the
+             page reloads its messages and the confirmation is one line above
+             the composer rather than an alert nobody can re-read. */
+          onAttached={(name) => setNotice(t('recipient.attached', { name: name ?? '' }))}
+        />
+      )}
     </div>
   )
 }

@@ -371,6 +371,31 @@
     "hopLabel_many": "{{count}} osób",
     "empty": "Brak kręgów — zaproś znajomych i zamknij transakcję, żeby zacząć budować sieć."
   },
+  "contacts": {
+    "close": "Bliski",
+    "contact": "Kontakt",
+    "add": "Dodaj do kontaktów",
+    "makeClose": "Oznacz jako bliskiego",
+    "closePending": "Czekamy na odpowiedź",
+    "stepBack": "Zwykły kontakt",
+    "remove": "Usuń z kontaktów"
+  },
+  "recipient": {
+    "pickerTitle": "Kto odbiera przesyłkę",
+    "searchPlaceholder": "Imię lub klucz publiczny",
+    "byKey": "Dodaj po kluczu",
+    "noContacts": "Brak kontaktów",
+    "noMatches": "Nikogo nie znaleziono",
+    "notOnPlatform": "Tej osoby nie ma jeszcze na platformie — wyślij link z zaproszeniem",
+    "linkExplainer": "Odbiorcy nie ma na platformie? Daj mu link, dołączy sam.",
+    "makeLink": "Utwórz link z zaproszeniem",
+    "attached": "Dodano odbiorcę: {{name}}",
+    "inviteButton": "Zaproś odbiorcę",
+    "inviteCopied": "Link skopiowany — wyślij go odbiorcy",
+    "inviteError": "Nie udało się utworzyć zaproszenia",
+    "joinTitle": "Dołączam do czatu transakcji…",
+    "joinError": "Nie udało się dołączyć"
+  },
   "verification": {
     "sectionTitle": "Weryfikacja tożsamości",
     "sectionHint": "Trzy poziomy weryfikacji kumulują się w profilu. Wyższy poziom = większe zaufanie w wyszukiwaniu. Każdy znak ma datę — z czasem waży mniej.",

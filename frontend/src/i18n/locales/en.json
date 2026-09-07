@@ -404,7 +404,25 @@
     "preflightBody": "This corridor has known specifics you should be aware of. Please read them and confirm before publishing.",
     "iUnderstand": "I understand — publish anyway"
   },
+  "contacts": {
+    "close": "Close",
+    "contact": "Contact",
+    "add": "Add to contacts",
+    "makeClose": "Mark as close",
+    "closePending": "Waiting for their answer",
+    "stepBack": "Back to contact",
+    "remove": "Remove from contacts"
+  },
   "recipient": {
+    "pickerTitle": "Who receives the parcel",
+    "searchPlaceholder": "Name or public key",
+    "byKey": "Add by key",
+    "noContacts": "No contacts yet",
+    "noMatches": "Nobody found",
+    "notOnPlatform": "This person is not on the platform yet — send them an invite link",
+    "linkExplainer": "Recipient not on the platform? Give them a link and they join themselves.",
+    "makeLink": "Make an invite link",
+    "attached": "Recipient added: {{name}}",
     "inviteButton": "Invite recipient",
     "inviteCopied": "Invite link copied — send it to the recipient",
     "inviteError": "Could not create invite",
