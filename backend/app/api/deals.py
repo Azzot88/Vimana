@@ -471,10 +471,21 @@ async def list_deals(
     db: AsyncSession = Depends(get_db),
     after: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
+    chat_id: uuid.UUID | None = Query(default=None),
 ):
+    """Deals on either side of me, newest first.
+
+    T3.11.23 — `chat_id` narrows the page to one conversation. The chat screen
+    asks «что лежит в этом чате», closed deals included, and that is a different
+    question from «что у меня есть со всеми». The ownership filter stays in
+    place either way: a chat id is not a capability, and a guessed one must not
+    turn into a way to read someone else's deals.
+    """
     base = select(Deal).where(
         or_(Deal.sender_id == current_user.id, Deal.carrier_id == current_user.id)
     )
+    if chat_id is not None:
+        base = base.where(Deal.chat_id == chat_id)
     items, next_cursor = await paginate_desc(db, base, Deal, after, clamp_limit(limit))
 
     # T3.11.26 — names and route, batched. Two queries for the whole page rather
@@ -507,9 +518,44 @@ async def list_deals(
             ).all()
         }
 
+    # T3.11.23 — the two halves of the deal card the list could not draw: what
+    # is being carried, and what was agreed for it. Both batched, for the same
+    # reason as the names above.
+    from app.core.cards import CardKind
+
+    order_ids = {d.order_id for d in items}
+    deal_ids = [d.id for d in items]
+    categories: dict[uuid.UUID, str] = {}
+    prices: dict[uuid.UUID, tuple[float | None, str | None]] = {}
+    if order_ids:
+        categories = dict(
+            (
+                await db.execute(
+                    select(Order.id, Order.category).where(Order.id.in_(order_ids))
+                )
+            ).all()
+        )
+    if deal_ids:
+        agreed = (
+            await db.execute(
+                select(DealVaultMessage.deal_id, DealVaultMessage.card_payload)
+                .where(
+                    DealVaultMessage.deal_id.in_(deal_ids),
+                    DealVaultMessage.card_kind == CardKind.terms_agreed.value,
+                )
+                .order_by(DealVaultMessage.created_at.asc())
+            )
+        ).all()
+        # Ascending, then overwritten: the last write per deal is the newest
+        # agreement, which is what «цена» means after a counter-offer.
+        for did, payload in agreed:
+            if payload:
+                prices[did] = (payload.get("price_total"), payload.get("currency"))
+
     out = []
     for deal in items:
         route = routes.get(deal.trip_id)
+        price = prices.get(deal.id)
         out.append(
             DealOut(
                 id=deal.id,
@@ -526,6 +572,11 @@ async def list_deals(
                 carrier_name=names.get(deal.carrier_id),
                 origin=route[0] if route else None,
                 destination=route[1] if route else None,
+                shipment_no=deal.shipment_no,
+                chat_id=deal.chat_id,
+                cargo_category=categories.get(deal.order_id),
+                price_total=price[0] if price else None,
+                currency=price[1] if price else None,
             )
         )
     return Page(items=out, next_cursor=next_cursor)

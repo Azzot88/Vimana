@@ -92,11 +92,14 @@ async def open_inquiry(
         )
     ).scalar_one_or_none()
 
+    carrier = await db.get(User, trip.carrier_id)
+
     return InquiryOut(
         id=chat.id,
         trip_id=trip_id,
         sender_id=current_user.id,
         carrier_id=trip.carrier_id,
+        counterparty_name=carrier.display_name if carrier else None,
         deal_id=open_deal,
         created_at=chat.created_at,
     )
@@ -135,32 +138,54 @@ async def list_my_inquiries(
     # Newest first inside each chat, because several deals can share one and the
     # one they are in the middle of is the one they mean.
     open_deals: dict[uuid.UUID, uuid.UUID] = {}
+    deal_counts: dict[uuid.UUID, int] = {}
     if chats:
         rows = (
             await db.execute(
-                select(Deal.chat_id, Deal.id)
-                .where(
-                    Deal.chat_id.in_([c.id for c in chats]),
-                    Deal.status != DealStatus.closed,
-                )
+                select(Deal.chat_id, Deal.id, Deal.status)
+                .where(Deal.chat_id.in_([c.id for c in chats]))
                 .order_by(Deal.created_at.asc())
             )
         ).all()
         # Ascending, then overwritten: the last write per chat is the newest
         # deal, which is cheaper than a window function for a page of forty.
-        for chat_id, deal_id in rows:
-            open_deals[chat_id] = deal_id
+        #
+        # Closed deals are counted but never carried on in: they stay in the
+        # chat as cards you can open (owner's model 2026-09-07), and the count
+        # is what tells the screen whether to offer a choice of deal at all.
+        for chat_id, deal_id, status in rows:
+            deal_counts[chat_id] = deal_counts.get(chat_id, 0) + 1
+            if status != DealStatus.closed:
+                open_deals[chat_id] = deal_id
+
+    # T3.11.23 — the other person, by name. A chat list is a list of people, and
+    # a person named `55468906…` is a row nobody opens. One query for the page.
+    others = {
+        c.id: (c.user_high_id if c.user_low_id == current_user.id else c.user_low_id)
+        for c in chats
+    }
+    names: dict[uuid.UUID, str] = {}
+    if others:
+        names = dict(
+            (
+                await db.execute(
+                    select(User.id, User.display_name).where(
+                        User.id.in_(set(others.values()))
+                    )
+                )
+            ).all()
+        )
 
     return [
         InquiryOut(
             id=c.id,
             deal_id=open_deals.get(c.id),
+            deal_count=deal_counts.get(c.id, 0),
             # Roles are not stored on a chat — the reader is one side and the
             # other person is the other, whichever way the last deal ran.
             sender_id=current_user.id,
-            carrier_id=(
-                c.user_high_id if c.user_low_id == current_user.id else c.user_low_id
-            ),
+            carrier_id=others[c.id],
+            counterparty_name=names.get(others[c.id]),
             created_at=c.created_at,
         )
         for c in chats

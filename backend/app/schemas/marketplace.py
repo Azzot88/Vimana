@@ -335,6 +335,18 @@ class DealOut(BaseModel):
     carrier_name: str | None = None
     origin: str | None = None
     destination: str | None = None
+    # T3.11.23 — what makes a row in the chat a *deal card* instead of a link.
+    # The number is what people say out loud; the category and the route are the
+    # name («Документы · DXB → JFK»), derived rather than asked for, because a
+    # name field would come back empty on a market that fills nothing in; the
+    # price is the agreed one, and it is missing exactly while nothing has been
+    # agreed — a deal being negotiated has no price, and printing zero would be
+    # a claim nobody made.
+    shipment_no: str | None = None
+    chat_id: uuid.UUID | None = None
+    cargo_category: str | None = None
+    price_total: float | None = None
+    currency: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

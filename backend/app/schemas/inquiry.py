@@ -23,6 +23,15 @@ class InquiryOut(BaseModel):
     carrier_id: uuid.UUID
     deal_id: uuid.UUID | None = None
     created_at: datetime
+    # T3.11.23 — who the chat is with, by name. The list of chats is a list of
+    # people, and a person named by a truncated uuid is a row nobody opens. Not
+    # a role: today one of them sends and the other carries, tomorrow the other
+    # way round, and the chat outlives both arrangements.
+    counterparty_name: str | None = None
+    # T3.11.23 — how many deals are nested here. The screen asks it to decide
+    # whether to offer a choice at all: with one deal a picker is furniture, and
+    # the owner asked for it «только если появляется вторая сделка».
+    deal_count: int = 0
     model_config = ConfigDict(from_attributes=True)
 
 
