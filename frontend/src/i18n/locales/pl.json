@@ -618,17 +618,24 @@
     "maxDeclaredValue": "Wolny limit celny",
     "priceOnRequest": "na zapytanie",
     "termsHint": "Twoja baza. Nadawca i tak może zaproponować swoje w czacie.",
-    "categoriesMore": "Jeszcze {{count}}",
     "categoriesNoneChosen": "Nic nie wybrano — kliknij poniżej.",
     "rulesHint": "Wypełnione z profilu. Edytuj tylko dla tego lotu; puste = brak zasad.",
     "hasRules": "są zasady",
     "sameAsLast": "Jak poprzednio",
     "sameAsLastHint": "Wypełni wszystko poza datami — te ustawisz sam.",
     "routeHint": "Wszystkie loty tej podróży. Po pierwszym i ostatnim znajdą Cię w wyszukiwarce, pośrednie widać na karcie.",
-    "legNumber": "Lot {{n}}",
-    "addLeg": "+ Dodaj lot",
-    "addLegBlocked": "Najpierw uzupełnij ten lot — skąd, dokąd i godzina wylotu.",
-    "removeLeg": "Usuń ten lot",
+    "stop": {
+      "from": "Skąd",
+      "to": "Dokąd",
+      "transfer": "Przesiadka"
+    },
+    "addTransfer": "+ Dodaj przesiadkę",
+    "addTransferBlocked": "Najpierw uzupełnij trasę — miasta i godzinę wylotu.",
+    "removeTransfer": "Usuń przesiadkę",
+    "departureFrom": "Wylot z {{code}}",
+    "pickDateTime": "Wybierz datę i godzinę",
+    "allowanceCurrency": "Waluta",
+    "published": "Lot opublikowany — oto on na tablicy.",
     "flownBy": {
       "label": "Kto leci",
       "self": "Lecę ja",
@@ -1390,8 +1397,22 @@
       "desc": "Trafia do drugiej strony na czat, gdy sam tego zechcesz. Vimana nie sprawdza tych danych i nie przeprowadza płatności — umawiacie się między sobą.",
       "label": "Sposób i dane",
       "labelDesc": "Gotówka przy przekazaniu, przelew, portfel — jak wolisz otrzymać pieniądze.",
-      "placeholder": "Gotówką przy przekazaniu albo przelewem — dane podam na czacie."
+      "placeholder": "Gotówką przy przekazaniu albo przelewem — dane podam na czacie.",
+      "methodsLabel": "Czym można Ci zapłacić",
+      "methodsDesc": "Dodaj swoje warianty raz — pojawią się jako chipy w formularzu lotu i nie trzeba ich wpisywać za każdym razem.",
+      "methodsPlaceholder": "Gotówka przy przekazaniu",
+      "methodsLimit": "Można dodać najwyżej {{max}}."
     }
+  },
+  "calendar": {
+    "prevMonth": "Poprzedni miesiąc",
+    "nextMonth": "Następny miesiąc",
+    "time": "Godzina",
+    "hours": "Godziny",
+    "minutes": "Minuty",
+    "clear": "Wyczyść",
+    "today": "Dziś",
+    "save": "Zapisz"
   },
   "prefs": {
     "title": "Region i formaty",

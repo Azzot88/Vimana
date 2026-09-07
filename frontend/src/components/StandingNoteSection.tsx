@@ -21,6 +21,12 @@ interface Props {
   titleKey: string
   descKey: string
   fields: NoteField[]
+  /** T3.11.07 — a control that belongs to this card but saves on its own.
+   *  The payment card carries the carrier's shortlist of ways to be paid
+   *  (`PaymentMethodsField`), which is a list of chips rather than prose and
+   *  writes on every change; a second card for it would have split one
+   *  question — «как со мной рассчитаться» — across two headings. */
+  extra?: React.ReactNode
 }
 
 /**
@@ -42,7 +48,7 @@ interface Props {
  * while staying two columns with different behaviour underneath — the carriage
  * rules are copied into each trip (T_UX.15), the working notes are not.
  */
-export default function StandingNoteSection({ titleKey, descKey, fields }: Props) {
+export default function StandingNoteSection({ titleKey, descKey, fields, extra }: Props) {
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const token = useAuthStore((s) => s.token)
@@ -103,6 +109,8 @@ export default function StandingNoteSection({ titleKey, descKey, fields }: Props
       </div>
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
+
+      {extra}
 
       {editing ? (
         <div className="space-y-4">

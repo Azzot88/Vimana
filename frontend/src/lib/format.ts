@@ -14,6 +14,28 @@ export type DateStyle = 'eu' | 'us'
 
 const LB_PER_KG = 2.20462
 
+/** T3.11.07 — our language code as a tag `Intl` actually knows.
+ *
+ *  Two of the six do not survive the trip. `ua` is our code for Ukrainian; the
+ *  language subtag is `uk`, and `Intl` treats `ua` as a well-formed tag for a
+ *  language it has never heard of — so it silently falls back to the browser's
+ *  default and every Ukrainian carrier read dates and month names in whatever
+ *  the device happened to be set to. That is the quiet kind of wrong: nothing
+ *  throws, and the screen looks plausible.
+ *
+ *  `en-GB` is the fallback for European style because it is the day-month-year
+ *  24-hour reading; `en-US` is passed explicitly by the callers that mean it.
+ *
+ *  Called by: `formatDate`, `formatDateTime`, `components/DateTimeField`.
+ */
+const INTL_TAGS: Record<string, string> = { ua: 'uk' }
+
+export function intlLocale(language?: string): string {
+  if (!language) return 'en-GB'
+  const base = language.split('-')[0].toLowerCase()
+  return INTL_TAGS[base] ?? language
+}
+
 export function toDisplayWeight(kg: number, unit: WeightUnit): number {
   return unit === 'lb' ? kg * LB_PER_KG : kg
 }
@@ -41,7 +63,7 @@ export function formatDateTime(
   if (Number.isNaN(d.getTime())) return '—'
   // `hour12` is the actual difference people notice; the day/month order
   // follows from the locale tag, which is why the two travel as one setting.
-  return d.toLocaleString(style === 'us' ? 'en-US' : locale || 'en-GB', {
+  return d.toLocaleString(style === 'us' ? 'en-US' : intlLocale(locale), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -59,7 +81,7 @@ export function formatDate(
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString(style === 'us' ? 'en-US' : locale || 'en-GB', {
+  return d.toLocaleDateString(style === 'us' ? 'en-US' : intlLocale(locale), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

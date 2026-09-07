@@ -20,12 +20,14 @@ import {
   type Address,
   type MeetingPlace,
 } from '../api/addresses'
+import { CURRENCIES } from '../api/auth'
 import {
   listPaymentSystems,
   listPostalServices,
   type DirectoryEntry,
 } from '../api/directories'
 import AirportSelect from '../components/AirportSelect'
+import DateTimeField from '../components/DateTimeField'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import WizardSheet from '../components/WizardSheet'
@@ -40,52 +42,77 @@ import { usePrefs } from '../hooks/usePrefs'
  */
 const TOTAL_STEPS = 4
 
-// T3.11.07 — bumped from v1 when the route became a chain, and again when "who
-// is flying" moved from the leg to the trip. Both times for the same reason: a
-// draft read under the wrong shape looks filled and is not. Here a v2 draft
-// would carry the answer on each leg, where nothing reads it any more, and
-// publish `self` for a carrier who had said otherwise.
-const DRAFT_KEY = 'trips:draft:v3'
+// T3.11.07 — bumped from v1 when the route became a chain, again when "who is
+// flying" moved from the leg to the trip, and again when the route became a
+// list of stops rather than a list of flights. Every time for the same reason:
+// a draft read under the wrong shape looks filled and is not. A v3 draft holds
+// `legs`, which nothing reads any more — it would open as an empty route with
+// every other answer still in place, which is the worst of the two states.
+const DRAFT_KEY = 'trips:draft:v4'
 
-/** T3.11.15 — one flight. Strings throughout: these come from inputs, and an
- *  empty string is a real answer ("not stated yet") that a number is not.
+/** T3.11.07 — one **stop** on the route (owner's decision 2026-09-06).
+ *
+ *  The form used to ask for flights: a row of from / to / date, and a second
+ *  row for the next flight. That is the database's shape, not the carrier's.
+ *  Somebody flying Moscow → Istanbul → New York does not think "two flights",
+ *  they think "one trip with a transfer in Istanbul" — and the old form made
+ *  them type Istanbul twice, once as an arrival and once as a departure, with
+ *  nothing stopping the two from disagreeing.
+ *
+ *  So the carrier now names stops, and the flights fall out of them: adding a
+ *  transfer inserts one stop and produces two hops. A city cannot disagree with
+ *  itself, because it is written once.
+ *
+ *  `departAt` is when this stop is **left**. The last stop has none — nobody
+ *  departs their destination — and `nodesToLegs` never reads it.
  *
  *  Note what is *not* here: who is flying. The model keeps `flown_by` per leg,
  *  because a chain can genuinely be flown by two people, but the form asks it
  *  once for the whole trip (owner's decision 2026-09-06) — the answer is almost
  *  always the same for every leg, and asking it three times makes a real
  *  question look like a formality. */
-interface LegDraft {
-  origin: string
-  destination: string
+interface NodeDraft {
+  code: string
+  // T3.11.07 — the country behind the code, captured when the airport is
+  // picked. Postal services are offered by the country the trip lands in and
+  // payment systems by its two ends; deriving that from an IATA code later
+  // would be a second lookup for something the picker already had. Empty for a
+  // hand-typed code, and that is a real state: the pickers then fall back to
+  // typing the answer.
+  country: string
   departAt: string
-  // T3.11.07 — the country behind each code, captured when the airport is
-  // picked. Postal services are offered by the country the flight lands in and
-  // payment systems by the two ends of the route; deriving that from an IATA
-  // code later would be a second lookup for something the picker already had.
-  // Empty for a hand-typed code, and that is a real state: the pickers then
-  // fall back to typing the answer.
-  originCountry: string
-  destinationCountry: string
 }
 
-const EMPTY_LEG: LegDraft = {
-  origin: '',
-  destination: '',
-  departAt: '',
-  originCountry: '',
-  destinationCountry: '',
+const EMPTY_NODE: NodeDraft = { code: '', country: '', departAt: '' }
+
+/** The chain the API wants, derived from the stops the carrier named.
+ *
+ *  One direction only. The stops are the single source of the route: deriving
+ *  legs on the way out and never storing them means the two cannot drift, which
+ *  is the whole reason the form changed shape.
+ *
+ *  Called by: `validate`, `handleSubmit`, the preview, the preflight check.
+ */
+function nodesToLegs(nodes: NodeDraft[]) {
+  return nodes.slice(0, -1).map((from, i) => ({
+    origin: from.code,
+    destination: nodes[i + 1].code,
+    departAt: from.departAt,
+  }))
 }
 
-/** A leg the carrier has finished answering. Used to decide when the next one
- *  may be offered: a form that hands out empty rows before the first is filled
- *  shows work instead of asking for it. */
-const isLegComplete = (leg: LegDraft) =>
-  Boolean(leg.origin && leg.destination && leg.departAt)
+/** A stop the carrier has finished answering — the code, and the departure
+ *  unless it is the last one. Used to decide when the next transfer may be
+ *  offered: a form that hands out empty rows before the first is filled shows
+ *  work instead of asking for it. */
+const isNodeComplete = (node: NodeDraft, isLast: boolean) =>
+  Boolean(node.code && (isLast || node.departAt))
 
 // Matches `core.trip_legs.MAX_LEGS` on the server. Real posts top out at six
-// cities; the limit exists so one listing cannot become a database.
+// cities; the limit exists so one listing cannot become a database. Stops are
+// one more than flights — two stops are one flight.
 const MAX_LEGS = 10
+const MAX_NODES = MAX_LEGS + 1
 
 /** T3.11.07 — one end of the handover. `points` is one text field rather than a
  *  repeater: carriers write "Tustin, Irvine or LAX" in one breath, and three
@@ -122,6 +149,13 @@ const HANDOVER_METHODS = [
   'poste_restante',
 ] as const
 
+/** T3.11.07 — how far one press of an arrow or one notch of the wheel moves
+ *  the customs allowance (owner's decision 2026-09-06). Allowances are round
+ *  numbers — $2 000 into the US — and the figures carriers quote move in
+ *  hundreds. Typing stays free: `step` constrains the stepper, not the
+ *  keyboard, so an exact 1 750 is still one field away. */
+const ALLOWANCE_STEP = 200
+
 const SPACE_KINDS = ['cabin', 'checked_partial', 'checked_full'] as const
 const SIZE_HINTS = ['small', 'medium', 'large'] as const
 
@@ -148,7 +182,9 @@ const CAPACITY_SCALE = {
 } as const
 
 interface Draft {
-  legs: LegDraft[]
+  /** The stops, in order. Always at least two — an origin and a destination —
+   *  and everything between them is a transfer. */
+  nodes: NodeDraft[]
   // T3.11.15 — asked once for the trip and written onto every leg. "Flying in
   // person" is the most valuable claim on this market and it appears in the
   // same posts as "(a friend is flying)", so silence is not allowed to answer
@@ -183,11 +219,15 @@ interface Draft {
   minDealPrice: string
   currency: string
   maxDeclaredValue: string
+  // T3.11.07 — the allowance counts in the arrival country's money, which is
+  // routinely not what the carrier quotes prices in. Empty means "the trip's
+  // currency" and travels as null.
+  maxDeclaredValueCurrency: string
   carriageRules: string
 }
 
 const EMPTY: Draft = {
-  legs: [{ ...EMPTY_LEG }],
+  nodes: [{ ...EMPTY_NODE }, { ...EMPTY_NODE }],
   flownBy: 'self',
   capacity: '',
   spaceKind: 'unspecified',
@@ -206,7 +246,11 @@ const EMPTY: Draft = {
   // convention every other field in this draft uses. Hard-coding USD here made
   // "untouched" indistinguishable from "chose USD".
   currency: '',
-  maxDeclaredValue: '',
+  // T3.11.07 — 2 000 by default (owner's decision 2026-09-06). It is the US
+  // allowance and the number this market quotes most; a blank field made every
+  // carrier look up a figure they mostly already know.
+  maxDeclaredValue: '2000',
+  maxDeclaredValueCurrency: '',
   carriageRules: '',
 }
 
@@ -219,9 +263,12 @@ function loadDraft(): Draft {
       ...EMPTY,
       ...parsed,
       categories: parsed.categories ?? [],
-      // A saved draft with an empty chain would render a route cell with no
-      // rows and no way to add one.
-      legs: parsed.legs?.length ? parsed.legs : [{ ...EMPTY_LEG }],
+      // A saved draft with fewer than two stops would render a route cell that
+      // cannot express a flight and gives no way to add one.
+      nodes:
+        parsed.nodes && parsed.nodes.length >= 2
+          ? parsed.nodes
+          : [{ ...EMPTY_NODE }, { ...EMPTY_NODE }],
       excluded: parsed.excluded ?? [],
       services: parsed.services ?? [],
       handoverOrigin: { ...EMPTY_HANDOVER, ...parsed.handoverOrigin },
@@ -306,8 +353,9 @@ export default function NewTripPage() {
   const prefs = usePrefs()
   // T_TEST.8 — labels that stand *next to* a field name nothing. Associated by
   // id, generated per instance rather than fixed.
-  const originId = useId()
-  const destId = useId()
+  // T3.11.07 — one id per stop, not one for "from" and one for "to": the route
+  // is a list of stops now, and the two names described the old shape.
+  const stopId = useId()
   const departId = useId()
   const capacityId = useId()
   // T_TEST.8 — the slider is a second way into the same number, so it carries
@@ -405,7 +453,7 @@ export default function NewTripPage() {
   // Postal services follow the **arrival** country: onward shipping happens
   // after landing. Refetched when that country changes and not before — a
   // carrier editing the second leg has not changed where the parcel ends up.
-  const arrivalIso = draft.legs[draft.legs.length - 1]?.destinationCountry ?? ''
+  const arrivalIso = draft.nodes[draft.nodes.length - 1]?.country ?? ''
   useEffect(() => {
     if (!arrivalIso) {
       setPostal([])
@@ -417,7 +465,7 @@ export default function NewTripPage() {
   }, [arrivalIso])
 
   // Payment systems follow both ends, arrival first.
-  const departureIso = draft.legs[0]?.originCountry ?? ''
+  const departureIso = draft.nodes[0]?.country ?? ''
   useEffect(() => {
     if (!arrivalIso && !departureIso) {
       setSystems([])
@@ -443,18 +491,21 @@ export default function NewTripPage() {
     if (!trip) return
     setDraft((prev) => ({
       ...prev,
-      legs:
+      // The stops, rebuilt from the stored chain: the first origin followed by
+      // every destination. Dates stay empty — the one thing never right twice —
+      // and so do the countries: a stored trip carries codes, not ISO pairs,
+      // and guessing them would put the wrong postal catalogue in front of
+      // somebody. They fill in as soon as an airport is re-picked.
+      nodes:
         trip.legs.length > 0
-          ? trip.legs.map((leg) => ({
-              ...EMPTY_LEG,
-              origin: leg.origin,
-              destination: leg.destination,
-              // Dates stay empty — the one thing never right twice — and so do
-              // the countries: a stored trip carries codes, not ISO pairs, and
-              // guessing them would put the wrong postal catalogue in front of
-              // somebody. They fill in as soon as an airport is re-picked.
-            }))
-          : [{ ...EMPTY_LEG, origin: trip.origin, destination: trip.destination }],
+          ? [
+              { ...EMPTY_NODE, code: trip.legs[0].origin },
+              ...trip.legs.map((leg) => ({ ...EMPTY_NODE, code: leg.destination })),
+            ]
+          : [
+              { ...EMPTY_NODE, code: trip.origin },
+              { ...EMPTY_NODE, code: trip.destination },
+            ],
       flownBy: trip.legs[0]?.flown_by ?? 'self',
       // Stored metric, shown in the account's unit.
       capacity:
@@ -475,34 +526,50 @@ export default function NewTripPage() {
       currency: trip.currency ?? 'USD',
       maxDeclaredValue:
         trip.max_declared_value != null ? String(trip.max_declared_value) : '',
+      maxDeclaredValueCurrency: trip.max_declared_value_currency ?? '',
       carriageRules: trip.carriage_rules ?? '',
     }))
     setPrefilled(true)
   }
 
-  // T3.11.07 — the chain is edited by index; the three helpers exist so no
+  // T3.11.07 — the route is edited by index; the three helpers exist so no
   // caller has to copy the array by hand and get the splice wrong.
-  const patchLeg = useCallback((index: number, delta: Partial<LegDraft>) => {
+  const patchNode = useCallback((index: number, delta: Partial<NodeDraft>) => {
     setDraft((prev) => ({
       ...prev,
-      legs: prev.legs.map((leg, i) => (i === index ? { ...leg, ...delta } : leg)),
+      nodes: prev.nodes.map((node, i) => (i === index ? { ...node, ...delta } : node)),
     }))
   }, [])
 
-  const addLeg = useCallback(() => {
+  /** Insert a transfer directly before the destination.
+   *
+   *  There before, not after: a transfer is a stop on the way to where the
+   *  carrier is going, and appending would move the destination one place
+   *  further from the end every time. Adding one turns one flight into two
+   *  without the carrier retyping either city.
+   */
+  const addTransfer = useCallback(() => {
     setDraft((prev) => {
-      if (prev.legs.length >= MAX_LEGS) return prev
-      const last = prev.legs[prev.legs.length - 1]
+      if (prev.nodes.length >= MAX_NODES) return prev
       // Guarded here as well as in the button's `disabled`: a disabled control
       // is a hint, not a rule, and this one is also reachable by keyboard.
-      if (last && !isLegComplete(last)) return prev
-      // The next flight starts where the last one landed far more often than
-      // not — «Москва — Майами — Лос-Анджелес», «Дубай — Москва — Дубай». It
-      // stays editable, so guessing costs a keystroke and saves several.
-      return {
-        ...prev,
-        legs: [...prev.legs, { ...EMPTY_LEG, origin: last?.destination ?? '' }],
-      }
+      const ready = prev.nodes.every((node, i) =>
+        isNodeComplete(node, i === prev.nodes.length - 1),
+      )
+      if (!ready) return prev
+      const nodes = [...prev.nodes]
+      nodes.splice(nodes.length - 1, 0, { ...EMPTY_NODE })
+      return { ...prev, nodes }
+    })
+  }, [])
+
+  /** Remove a transfer. Only the middle ones: an origin and a destination are
+   *  what a route *is*, and a button that could delete them would leave a form
+   *  with no way back to a publishable state. */
+  const removeTransfer = useCallback((index: number) => {
+    setDraft((prev) => {
+      if (index <= 0 || index >= prev.nodes.length - 1) return prev
+      return { ...prev, nodes: prev.nodes.filter((_, i) => i !== index) }
     })
   }, [])
 
@@ -519,16 +586,12 @@ export default function NewTripPage() {
     [],
   )
 
-  const removeLeg = useCallback((index: number) => {
-    setDraft((prev) =>
-      prev.legs.length <= 1
-        ? prev
-        : { ...prev, legs: prev.legs.filter((_, i) => i !== index) },
-    )
-  }, [])
-
   const validate = (): string | null => {
-    for (const [index, leg] of draft.legs.entries()) {
+    // T3.11.07 — checked as flights, because that is what the API stores and
+    // what the rules are about ("a city cannot fly to itself", "the second
+    // departure is after the first"). The carrier typed stops; the legs are
+    // derived from them, so the two can never disagree here.
+    for (const [index, leg] of nodesToLegs(draft.nodes).entries()) {
       const at = { n: index + 1 }
       if (!leg.origin || !leg.destination) {
         return t('trips.newTripValidation.legRoute', at) as string
@@ -547,7 +610,7 @@ export default function NewTripPage() {
       if (index === 0 && departure.getTime() < Date.now()) {
         return t('trips.newTripValidation.pastDate') as string
       }
-      const previous = draft.legs[index - 1]
+      const previous = nodesToLegs(draft.nodes)[index - 1]
       if (previous?.departAt && departure < new Date(previous.departAt)) {
         return t('trips.newTripValidation.legOutOfOrder', at) as string
       }
@@ -604,10 +667,7 @@ export default function NewTripPage() {
    *  Called by: the close button in the sheet header, and Escape. */
   const requestClose = () => {
     const untouched =
-      draft.legs.length === 1 &&
-      !draft.legs[0].origin &&
-      !draft.legs[0].destination &&
-      !draft.legs[0].departAt
+      draft.nodes.length === 2 && draft.nodes.every((n) => !n.code && !n.departAt)
     if (untouched) {
       localStorage.removeItem(DRAFT_KEY)
       navigate(-1)
@@ -639,7 +699,7 @@ export default function NewTripPage() {
     if (!ackedPreflight) {
       try {
         const perLeg = await Promise.all(
-          draft.legs.map((leg) =>
+          nodesToLegs(draft.nodes).map((leg) =>
             listRouteNotes({ origin: leg.origin, destination: leg.destination }),
           ),
         )
@@ -662,11 +722,11 @@ export default function NewTripPage() {
     }
     setLoading(true)
     try {
-      await createTrip({
+      const published = await createTrip({
         // T3.11.07 — the route travels as the chain the carrier typed. Order is
         // the array order; the server assigns it and derives the trip's
         // origin, destination and date from the first and last leg.
-        legs: draft.legs.map((leg) => ({
+        legs: nodesToLegs(draft.nodes).map((leg) => ({
           origin: leg.origin,
           destination: leg.destination,
           depart_at: leg.departAt,
@@ -689,6 +749,10 @@ export default function NewTripPage() {
         max_declared_value: draft.maxDeclaredValue
           ? Number(draft.maxDeclaredValue)
           : null,
+        // Empty means "the same money the trip is priced in" and travels as
+        // null: writing the trip's currency here would record a choice the
+        // carrier never made and freeze it if they later re-price.
+        max_declared_value_currency: draft.maxDeclaredValueCurrency || null,
         // T3.11.07 — the two capacities and the two ends of the handover.
         // `sizeHint` empty stays null: "did not say" and "small" are different
         // answers and the API keeps them apart.
@@ -713,7 +777,10 @@ export default function NewTripPage() {
         carriage_rules: draft.carriageRules,
       })
       localStorage.removeItem(DRAFT_KEY)
-      navigate('/trips')
+      /* T3.11.07 — straight to the card that was just written, not to the top
+         of the board (owner's request 2026-09-06). The id goes in the query
+         string: the board rings it and scrolls to it, and a reload keeps it. */
+      navigate(`/trips?trip=${published.data.id}`)
     } catch {
       setError(t('trips.publishError') as string)
     } finally {
@@ -771,8 +838,18 @@ export default function NewTripPage() {
 
   // The two ends of the chain, named on the handover cell so "where you accept"
   // is not an abstract question. Empty until the carrier has typed the route.
-  const firstOrigin = draft.legs[0]?.origin ?? ''
-  const lastDestination = draft.legs[draft.legs.length - 1]?.destination ?? ''
+  const firstOrigin = draft.nodes[0]?.code ?? ''
+  const lastDestination = draft.nodes[draft.nodes.length - 1]?.code ?? ''
+  /** Every stop named, and every one but the last given a departure. Gates the
+   *  "add a transfer" button: offering a fourth empty box while the second is
+   *  blank shows work instead of asking for it. */
+  const routeAnswered = draft.nodes.every((node, i) =>
+    isNodeComplete(node, i === draft.nodes.length - 1),
+  )
+  /** T3.11.07 — the ways this carrier said they can be paid, kept once in the
+   *  profile. Offered above the corridor catalogue: that catalogue knows what
+   *  exists in a country, this knows what this person actually accepts. */
+  const myMethods = user?.payment_methods ?? []
   // T3.11.07 — the weight scale in the unit this account reads in. Storage
   // stays metric; only the numbers on screen change.
   const scale = CAPACITY_SCALE[prefs.unit]
@@ -800,7 +877,7 @@ export default function NewTripPage() {
       </summary>
       <div className="mt-3 bg-white rounded-card border border-navy/10 p-4">
         <div className="space-y-1">
-          {draft.legs.map((leg, index) => (
+          {nodesToLegs(draft.nodes).map((leg, index) => (
             <div
               key={index}
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2"
@@ -968,7 +1045,7 @@ export default function NewTripPage() {
           {/* T3.11.21 — offered only while the form is untouched. A carrier who
               has begun typing is not shown a button that would overwrite it,
               and one who has already used it is not shown it twice. */}
-          {lastTrip && !prefilled && !draft.legs[0].origin && !draft.legs[0].departAt && (
+          {lastTrip && !prefilled && !draft.nodes[0].code && !draft.nodes[0].departAt && (
             <button
               type="button"
               onClick={prefillFromLast}
@@ -998,115 +1075,104 @@ export default function NewTripPage() {
             </div>
           </div>
 
-          {draft.legs.map((leg, index) => (
-            <fieldset
-              key={index}
-              className="border border-navy/10 rounded-field p-3 space-y-3"
-            >
-              <legend className="px-1 text-[11px] font-mono text-navy/40">
-                {t('trips.legNumber', { n: index + 1 })}
-              </legend>
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
-                <div>
-                  <label
-                    htmlFor={`${originId}-${index}`}
-                    className="block text-xs font-body font-medium text-navy/60 mb-1"
-                  >
-                    {t('trips.from')}
-                  </label>
+          {/* T3.11.07 — stops, not flights (owner's decision 2026-09-06).
+              The carrier names where they start, where they are going, and any
+              transfer in between; the hops fall out of that. Istanbul is typed
+              once instead of twice — as an arrival and again as a departure —
+              and so it can no longer disagree with itself. */}
+          <ol className="space-y-2">
+            {draft.nodes.map((node, index) => {
+              const isFirst = index === 0
+              const isLast = index === draft.nodes.length - 1
+              const role = isFirst ? 'from' : isLast ? 'to' : 'transfer'
+              return (
+                <li
+                  key={index}
+                  className={`rounded-field border p-3 space-y-3 ${
+                    role === 'transfer'
+                      ? 'border-cyan/30 bg-cyan/[0.03]'
+                      : 'border-navy/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor={`${stopId}-${index}`}
+                      className="text-xs font-body font-medium text-navy/60"
+                    >
+                      {t(`trips.stop.${role}`)}
+                    </label>
+                    {/* Only a transfer can be removed. An origin and a
+                        destination are what a route is; a button that could
+                        delete them would leave a form with no way back to a
+                        publishable state. */}
+                    {role === 'transfer' && (
+                      <button
+                        type="button"
+                        onClick={() => removeTransfer(index)}
+                        className="text-[11px] font-body text-navy/40 hover:text-danger transition-colors"
+                      >
+                        {t('trips.removeTransfer')}
+                      </button>
+                    )}
+                  </div>
                   <AirportSelect
-                    inputId={`${originId}-${index}`}
-                    value={leg.origin}
-                    onChange={(v) => patchLeg(index, { origin: v })}
-                    onPick={(a) => patchLeg(index, { originCountry: a.country_iso })}
+                    inputId={`${stopId}-${index}`}
+                    value={node.code}
+                    onChange={(v) => patchNode(index, { code: v })}
+                    onPick={(a) => patchNode(index, { country: a.country_iso })}
                     required
-                    placeholder="DXB"
+                    placeholder={isLast ? 'JFK' : 'DXB'}
                   />
-                </div>
-                <MonoText className="text-2xl text-cyan text-center pb-2 hidden sm:block">
-                  →
-                </MonoText>
-                <div>
-                  <label
-                    htmlFor={`${destId}-${index}`}
-                    className="block text-xs font-body font-medium text-navy/60 mb-1"
-                  >
-                    {t('trips.to')}
-                  </label>
-                  <AirportSelect
-                    inputId={`${destId}-${index}`}
-                    value={leg.destination}
-                    onChange={(v) => patchLeg(index, { destination: v })}
-                    onPick={(a) =>
-                      patchLeg(index, { destinationCountry: a.country_iso })
-                    }
-                    required
-                    placeholder="JFK"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="min-w-[12rem] flex-1">
-                  <label
-                    htmlFor={`${departId}-${index}`}
-                    className="block text-xs font-body font-medium text-navy/60 mb-1"
-                  >
-                    {t('trips.newTripCell.date')}
-                  </label>
-                  {/* Time is part of the answer, not a tail on the date: 29.8 %
-                      of real posts state the hour, and the handover window is
-                      counted back from it. */}
-                  <input
-                    id={`${departId}-${index}`}
-                    type="datetime-local"
-                    value={leg.departAt}
-                    onChange={(e) => patchLeg(index, { departAt: e.target.value })}
-                    required
-                    className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-                  />
-                  {/* T3.11.07 — the account's own clock, echoed under the field.
-                      `datetime-local` is a native control: the browser draws its
-                      calendar and picks 12- or 24-hour from the **device**
-                      locale, and no attribute overrides that. So the setting is
-                      honoured where we control the pixels — here, in the preview
-                      and on every card — and this line is what tells a carrier
-                      which hour they actually chose. */}
-                  {leg.departAt && (
-                    <MonoText className="block mt-1 text-[11px] text-navy/40">
-                      {formatDeparture(leg.departAt)}
-                    </MonoText>
+                  {/* The last stop has no departure — nobody leaves the place
+                      they are going to. Time is part of the answer rather than
+                      a tail on the date: 29.8 % of real posts state the hour,
+                      and the handover window is counted back from it. */}
+                  {!isLast && (
+                    <div>
+                      <label
+                        htmlFor={`${departId}-${index}`}
+                        className="block text-[11px] font-body text-navy/40 mb-1"
+                      >
+                        {node.code
+                          ? t('trips.departureFrom', { code: node.code })
+                          : t('trips.newTripCell.date')}
+                      </label>
+                      {/* T3.11.07 — our own picker, not `datetime-local`. The
+                          native one takes 12- or 24-hour from the **device**
+                          locale with no attribute to override it, so an account
+                          set to "European" still read `02:30 PM` inside the
+                          calendar — the setting looked broken because it was
+                          honoured everywhere except the one control people
+                          actually use. */}
+                      <DateTimeField
+                        id={`${departId}-${index}`}
+                        value={node.departAt}
+                        onChange={(v) => patchNode(index, { departAt: v })}
+                        style={prefs.style}
+                        /* Each departure is after the one before it, so the
+                           calendar cannot offer a day that would fail
+                           validation two clicks later. */
+                        min={index > 0 ? draft.nodes[index - 1].departAt : undefined}
+                        required
+                      />
+                    </div>
                   )}
-                </div>
+                </li>
+              )
+            })}
+          </ol>
 
-                {draft.legs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeLeg(index)}
-                    className="text-xs font-body text-navy/40 hover:text-danger transition-colors py-2 min-h-[2.75rem]"
-                  >
-                    {t('trips.removeLeg')}
-                  </button>
-                )}
-              </div>
-            </fieldset>
-          ))}
-
-          {/* The next flight is offered only once this one is answered: handing
-              out empty rows in advance shows work nobody asked for. */}
-          {draft.legs.length < MAX_LEGS && (
+          {/* A transfer is offered only once the route is answered: handing out
+              empty rows in advance shows work nobody asked for. */}
+          {draft.nodes.length < MAX_NODES && (
             <button
               type="button"
-              onClick={addLeg}
-              disabled={!isLegComplete(draft.legs[draft.legs.length - 1])}
-              title={
-                isLegComplete(draft.legs[draft.legs.length - 1])
-                  ? undefined
-                  : (t('trips.addLegBlocked') as string)
-              }
+              onClick={addTransfer}
+              disabled={!routeAnswered}
+              title={routeAnswered ? undefined : (t('trips.addTransferBlocked') as string)}
               className="w-full border border-dashed border-navy/25 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-body text-navy/60 hover:border-cyan hover:text-navy transition-colors disabled:opacity-40 disabled:hover:border-navy/25 disabled:hover:text-navy/60 disabled:cursor-not-allowed"
             >
-              {t('trips.addLeg')}
+              {t('trips.addTransfer')}
             </button>
           )}
 
@@ -1203,19 +1269,51 @@ export default function NewTripPage() {
                 </button>
               ))}
             </div>
-            <div className="flex items-baseline gap-2">
-              <input
-                id={capacityId}
-                type="number"
-                step="0.5"
-                min="0"
-                max={scale.max}
-                value={draft.capacity}
-                onChange={(e) => patch({ capacity: e.target.value })}
-                placeholder="23"
-                className="w-24 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
-              />
-              <MonoText className="text-sm text-navy/60">{prefs.unit}</MonoText>
+            {/* T3.11.07 — the number and the suitcase size on one line (owner's
+                decision 2026-09-06). They are two ways of answering the same
+                question — "how much room" — and stacking them made the second
+                read as a further question rather than as the alternative it is.
+                Kilograms are named in 2.4 % of real posts and "small / not big"
+                in 9.9 %, so the qualitative half is the one more carriers use.
+                The size is chosen once: it is a radio group, not chips. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="flex items-baseline gap-2">
+                <input
+                  id={capacityId}
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max={scale.max}
+                  value={draft.capacity}
+                  onChange={(e) => patch({ capacity: e.target.value })}
+                  placeholder="23"
+                  className="w-20 border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-lg font-mono text-navy focus:outline-none focus:border-cyan"
+                />
+                <MonoText className="text-sm text-navy/60">{prefs.unit}</MonoText>
+              </div>
+              <fieldset className="flex flex-wrap items-center gap-2">
+                <legend className="sr-only">{t('trips.sizeHint.label')}</legend>
+                {SIZE_HINTS.map((size) => (
+                  <label
+                    key={size}
+                    className={`text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center rounded-field border cursor-pointer transition-colors ${
+                      draft.sizeHint === size
+                        ? 'border-cyan bg-cyan/10 text-navy'
+                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sizeHint"
+                      value={size}
+                      checked={draft.sizeHint === size}
+                      onChange={() => patch({ sizeHint: size })}
+                      className="sr-only"
+                    />
+                    {t(`trips.sizeHint.${size}`)}
+                  </label>
+                ))}
+              </fieldset>
             </div>
             <div>
               <input
@@ -1230,14 +1328,20 @@ export default function NewTripPage() {
                   // field is optional, and `null` is what the API stores for it.
                   patch({ capacity: e.target.value === '0' ? '' : e.target.value })
                 }
-                className="w-full accent-cyan"
+                className="capacity-slider"
               />
               {/* A ruler, not a caption. Every kilogram gets a tick so 7 is
                   findable by eye; only the eight numbers people actually say
-                  are printed, because labelling all 33 hides the eight. */}
+                  are printed, because labelling all 33 hides the eight.
+
+                  T3.11.07 — inset by half a thumb on each side (`.capacity-ruler`,
+                  owner's decision 2026-09-06). The thumb's centre never reaches
+                  either edge of the track, so ticks laid out across the full
+                  width put "0" left of where the handle can go and the ceiling
+                  right of it — wrong exactly where a carrier checks it. */}
               <div
                 aria-hidden="true"
-                className="relative h-7 mt-1 select-none"
+                className="capacity-ruler relative h-7 mt-1 select-none"
               >
                 {Array.from({ length: scale.max + 1 }, (_, mark) => {
                   const labelled = (scale.labelled as readonly number[]).includes(mark)
@@ -1262,35 +1366,6 @@ export default function NewTripPage() {
                 })}
               </div>
             </div>
-            {/* The second way to answer the same question. Kilograms are named
-                in 2.4 % of real posts and "small / not big" in 9.9 %. */}
-            <fieldset>
-              <legend className="block text-[11px] font-body text-navy/40 mb-1">
-                {t('trips.sizeHint.label')}
-              </legend>
-              <div className="flex flex-wrap gap-2">
-                {SIZE_HINTS.map((size) => (
-                  <label
-                    key={size}
-                    className={`text-xs font-body px-3 py-2 min-h-[2.75rem] flex items-center rounded-field border cursor-pointer transition-colors ${
-                      draft.sizeHint === size
-                        ? 'border-cyan bg-cyan/10 text-navy'
-                        : 'border-navy/20 text-navy/50 hover:border-navy/40'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="sizeHint"
-                      value={size}
-                      checked={draft.sizeHint === size}
-                      onChange={() => patch({ sizeHint: size })}
-                      className="sr-only"
-                    />
-                    {t(`trips.sizeHint.${size}`)}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
           </div>
 
           {/* The customs allowance — the other capacity. A ceiling alone cannot
@@ -1301,28 +1376,75 @@ export default function NewTripPage() {
             </p>
             <p className="text-[11px] font-body text-navy/40 -mt-1">
               {t('trips.customsHint')}
-            </p>
             {/* T3.11.07 — the number is what is **left**, not a ceiling. It
                 carried a separate `open / exhausted` state for a few hours;
                 once the label says "free", zero already says "spent", and the
-                second field was a second place for one fact to be wrong. */}
+                second field was a second place for one fact to be wrong.
+
+                Steps of 200 on the arrows and the wheel (owner's decision
+                2026-09-06). Allowances are round: $2 000 into the US, and the
+                figures carriers quote move in hundreds, not in ones. Typing
+                stays free — `step` constrains the stepper, not the keyboard —
+                so an exact 1 750 is still one field away. */}
             <div className="flex items-end gap-2">
-              <label className="flex-1">
+              <label className="flex-1 min-w-[7rem]">
                 <span className="block text-[11px] font-body text-navy/40 mb-1">
                   {t('trips.maxDeclaredValue')}
                 </span>
                 <input
                   type="number"
-                  step="any"
+                  step={ALLOWANCE_STEP}
                   min="0"
                   value={draft.maxDeclaredValue}
                   onChange={(e) => patch({ maxDeclaredValue: e.target.value })}
+                  /* The wheel is handled rather than left to the browser:
+                     Chrome scrolls a focused number input and Firefox does not,
+                     so half the carriers would find the wheel dead. Only while
+                     focused, and the page scroll is left alone otherwise — a
+                     field that eats the wheel in passing is the reason most
+                     products disable this. */
+                  onWheel={(e) => {
+                    if (document.activeElement !== e.currentTarget) return
+                    e.preventDefault()
+                    const current = Number(draft.maxDeclaredValue || 0)
+                    const next = Math.max(
+                      0,
+                      current + (e.deltaY < 0 ? ALLOWANCE_STEP : -ALLOWANCE_STEP),
+                    )
+                    patch({ maxDeclaredValue: String(next) })
+                  }}
                   className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
                 />
               </label>
+              {/* Its own currency, not the trip's. An allowance is denominated
+                  by the country the parcel lands in — $2 000 into the US —
+                  while the price is whatever the carrier quotes in, and one
+                  shared field would mean picking the allowance's currency
+                  silently re-prices the trip. Nothing chosen means "same as the
+                  trip", which is the ordinary case. */}
+              <label className="w-28 shrink-0">
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t('trips.allowanceCurrency')}
+                </span>
+                <select
+                  value={draft.maxDeclaredValueCurrency}
+                  onChange={(e) => patch({ maxDeclaredValueCurrency: e.target.value })}
+                  className="w-full border border-navy/20 rounded-field px-2 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+                >
+                  <option value="">
+                    {draft.currency || prefs.currency}
+                  </option>
+                  {CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </label>
               {/* Premium, and said so plainly rather than shown as a working
                   button. `§9.1`: a control that looks live and is not is worse
-                  than one that names its price. The feature itself is T6.1. */}
+                  than one that names its price. The feature itself is T6.1 —
+                  it is where the corridor's real allowance gets fetched. */}
               <button
                 type="button"
                 disabled
@@ -1582,9 +1704,45 @@ export default function NewTripPage() {
                 <span className="block text-[11px] font-body text-navy/40 mb-1">
                   {t('trips.paymentSystems')}
                 </span>
-                {/* Arrival country first, then departure — the order the API
-                    returns them in. Cash is the first entry of the global set,
-                    not a settlement model of its own. */}
+                {/* T3.11.07 — the carrier's own shortlist first (owner's
+                    decision 2026-09-06). «Наличные при встрече», «Каспи»,
+                    «Зелле» are the same three answers on every trip, and the
+                    corridor catalogue below cannot know them: it knows what
+                    exists in a country, not what this person accepts. Kept
+                    once in «Как со мной рассчитаться» and offered here. */}
+                {myMethods.length > 0 && (
+                  <span className="flex flex-wrap gap-2 mb-2">
+                    {myMethods.map((name) => {
+                      const current = splitChips(draft.paymentSystems) ?? []
+                      const chosen = current.includes(name)
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          aria-pressed={chosen}
+                          onClick={() =>
+                            patch({
+                              paymentSystems: (chosen
+                                ? current.filter((x) => x !== name)
+                                : [...current, name]
+                              ).join(', '),
+                            })
+                          }
+                          className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                            chosen
+                              ? 'border-cyan bg-cyan/10 text-navy'
+                              : 'border-cyan/30 text-navy/70 hover:border-cyan'
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      )
+                    })}
+                  </span>
+                )}
+                {/* Then the corridor: arrival country first, then departure —
+                    the order the API returns them in. Cash is the first entry
+                    of the global set, not a settlement model of its own. */}
                 {systems.length > 0 && (
                   <span className="flex flex-wrap gap-2 mb-2">
                     {systems.slice(0, 12).map((s) => {

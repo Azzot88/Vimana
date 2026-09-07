@@ -82,6 +82,33 @@ class UserUpdate(BaseModel):
     interaction_rules: str | None = Field(default=None, max_length=4000)
     payment_instructions: str | None = Field(default=None, max_length=4000)
 
+    # T3.11.07 — the ways this carrier can be paid, written once instead of
+    # retyped on every trip. Free strings and deliberately not a closed list:
+    # what people transfer through is local and changes faster than a vocabulary
+    # we could ship. An empty list is a legal value — it means "I have not said".
+    payment_methods: list[str] | None = Field(default=None, max_length=12)
+
+    @field_validator("payment_methods")
+    @classmethod
+    def _tidy_methods(cls, v: list[str] | None) -> list[str] | None:
+        """Trimmed, deduplicated, order kept, and each one bounded.
+
+        Bounded rather than validated: a taxonomy of the world's payment rails
+        is not something this field can be right about, but a 4 000-character
+        "method" is a note in the wrong box and the column is `VARCHAR(60)`.
+
+        Case is left alone, unlike the currency codes: `Zelle` and `Каспи` are
+        names people wrote, not codes to match on, and upper-casing them would
+        shout at the reader. Deduplication is therefore exact.
+        """
+        if v is None:
+            return None
+        cleaned = [m.strip() for m in v if m and m.strip()]
+        for method in cleaned:
+            if len(method) > 60:
+                raise ValueError("a payment method may be at most 60 characters")
+        return list(dict.fromkeys(cleaned))
+
     @field_validator("default_currencies")
     @classmethod
     def _known_currencies(cls, v: list[str] | None) -> list[str] | None:
@@ -234,6 +261,10 @@ class MeOut(UserOut):
     unit_weight: str = "kg"
     date_format: str = "eu"
     default_currencies: list[str] = Field(default_factory=lambda: ["USD"])
+    # T3.11.07 — owner-only, like the rest of `MeOut`. How the carrier can be
+    # paid is theirs to send when they choose; putting it on the public
+    # `UserOut` would publish a wallet to anyone who opened a profile page.
+    payment_methods: list[str] = Field(default_factory=list)
     carriage_rules: str | None = None
     # T_UX.21 — owner-only, like the rest of `MeOut`. They are meant for a
     # counterparty, but the carrier decides when to send them: putting them on

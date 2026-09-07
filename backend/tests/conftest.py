@@ -1176,6 +1176,9 @@ async def _ensure_display_prefs_columns(engine) -> None:
             "ADD COLUMN IF NOT EXISTS default_currencies VARCHAR(4)[] "
             "NOT NULL DEFAULT '{USD}'",
             "DROP COLUMN IF EXISTS default_currency",
+            # 0070 — the carrier's own shortlist of ways to be paid.
+            "ADD COLUMN IF NOT EXISTS payment_methods VARCHAR(60)[] "
+            "NOT NULL DEFAULT '{}'",
         ):
             await conn.execute(text(f"ALTER TABLE users {ddl}"))
         await conn.execute(
@@ -1374,6 +1377,14 @@ async def _ensure_trip_chain(engine) -> None:
             await conn.execute(
                 text(f"ALTER TABLE {table} ALTER COLUMN currency TYPE VARCHAR(4)")
             )
+        # 0069 — the customs allowance counts in the arrival country's money,
+        # which is not the currency the carrier quotes prices in.
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD COLUMN IF NOT EXISTS "
+                "max_declared_value_currency VARCHAR(4)"
+            )
+        )
         await conn.execute(
             text(
                 "UPDATE trips SET excluded = (SELECT COALESCE(json_agg(value), "

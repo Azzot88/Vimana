@@ -131,6 +131,7 @@ async def create_trip(
         min_deal_price=body.min_deal_price,
         currency=body.currency,
         max_declared_value=body.max_declared_value,
+        max_declared_value_currency=body.max_declared_value_currency,
         # T3.11.15 — the two capacities and the two ends of the handover.
         space_kind=body.space_kind,
         size_hint=body.size_hint,
@@ -327,6 +328,7 @@ async def list_trips(
                     min_deal_price=t.min_deal_price,
                     currency=t.currency,
                     max_declared_value=t.max_declared_value,
+                    max_declared_value_currency=t.max_declared_value_currency,
                     # T3.11.15 — a trip whose chain is invisible in the listing
                     # is a trip whose second flight nobody can find, and the
                     # second flight is present in 36.6 % of real posts.

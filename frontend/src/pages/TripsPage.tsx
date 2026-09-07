@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -44,6 +44,14 @@ export default function TripsPage() {
   const [orderLoading, setOrderLoading] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [error, setError] = useState('')
+  /* T3.11.07 — the trip that was just published (owner's request 2026-09-06).
+     Publishing used to drop the carrier on the board with no way to tell which
+     of the cards was the one they had just written — on a busy corridor it is
+     not even the first. The id travels in the query string rather than in
+     router state so the page survives a reload and the link can be shared with
+     nobody in particular. */
+  const [params, setParams] = useSearchParams()
+  const justPublished = params.get('trip')
 
   const fetchTrips = async () => {
     setLoading(true)
@@ -134,6 +142,29 @@ export default function TripsPage() {
         </div>
       )}
 
+      {/* T3.11.07 — «посмотреть свой рейс после публикации» (owner's request
+          2026-09-06). The form used to hand the carrier the board and nothing
+          else: the trip was there, in a list of other people's, with no way to
+          tell which one had just been written. Dismissing drops the query
+          parameter rather than hiding a banner, so a reload does not bring it
+          back and the ring goes with it. */}
+      {justPublished && (
+        <div className="bg-cyan/5 border border-cyan/30 rounded-card p-4 flex items-center justify-between gap-3">
+          <p className="text-sm font-body text-navy">{t('trips.published')}</p>
+          <button
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(params)
+              next.delete('trip')
+              setParams(next, { replace: true })
+            }}
+            className="text-xs font-body text-navy/50 hover:text-navy shrink-0"
+          >
+            {t('common.close')}
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12">
           <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
@@ -145,7 +176,25 @@ export default function TripsPage() {
       ) : (
         <div className="grid gap-4">
           {trips.map((trip) => (
-            <div key={trip.id} className="bg-white rounded-card border border-navy/10 p-4 sm:p-5">
+            <div
+              key={trip.id}
+              /* T3.11.07 — the card the carrier just published, scrolled to and
+                 ringed. `ref` rather than an effect keyed on the list: the node
+                 exists exactly once, when it renders, and waiting for a second
+                 render to find it by id is how this ends up scrolling to the
+                 wrong card on a slow fetch. */
+              ref={
+                trip.id === justPublished
+                  ? (node) =>
+                      node?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  : undefined
+              }
+              className={`bg-white rounded-card border p-4 sm:p-5 ${
+                trip.id === justPublished
+                  ? 'border-cyan ring-2 ring-cyan/30'
+                  : 'border-navy/10'
+              }`}
+            >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="space-y-2">
                   <MonoText className="text-base text-navy font-medium">

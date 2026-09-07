@@ -664,17 +664,24 @@
     "maxDeclaredValue": "Free customs allowance",
     "priceOnRequest": "on request",
     "termsHint": "Your baseline. A sender may still counter in chat.",
-    "categoriesMore": "+ {{count}} more",
     "categoriesNoneChosen": "Nothing chosen yet — pick from below.",
     "rulesHint": "Prefilled from your profile. Edit for this trip only; leave empty for no rules.",
     "hasRules": "has rules",
     "sameAsLast": "Same as last time",
     "sameAsLastHint": "Fills everything except the dates — those you set yourself.",
     "routeHint": "Every flight of this trip. Senders search on the first and last of them; the ones in between show on the card.",
-    "legNumber": "Flight {{n}}",
-    "addLeg": "+ Add a flight",
-    "addLegBlocked": "Finish this flight first — from, to and the departure time.",
-    "removeLeg": "Remove this flight",
+    "stop": {
+      "from": "From",
+      "to": "To",
+      "transfer": "Transfer"
+    },
+    "addTransfer": "+ Add a transfer",
+    "addTransferBlocked": "Finish the route first — the cities and the departure time.",
+    "removeTransfer": "Remove this transfer",
+    "departureFrom": "Departure from {{code}}",
+    "pickDateTime": "Pick a date and time",
+    "allowanceCurrency": "Currency",
+    "published": "Your trip is published — here it is on the board.",
     "flownBy": {
       "label": "Who is flying",
       "self": "I am",
@@ -1433,8 +1440,22 @@
       "desc": "Sent to the other party in the chat when you choose to. Vimana neither checks nor processes these details — you agree between yourselves.",
       "label": "Method and details",
       "labelDesc": "Cash on handover, a transfer, a wallet — however you prefer to be paid.",
-      "placeholder": "Cash on handover, or a transfer — I will send the details in the chat."
+      "placeholder": "Cash on handover, or a transfer — I will send the details in the chat.",
+      "methodsLabel": "What you can be paid with",
+      "methodsDesc": "Add your own once — they show up as chips on the trip form, so you stop typing them on every publication.",
+      "methodsPlaceholder": "Cash on handover",
+      "methodsLimit": "You can add at most {{max}}."
     }
+  },
+  "calendar": {
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "time": "Time",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "clear": "Clear",
+    "today": "Today",
+    "save": "Save"
   },
   "prefs": {
     "title": "Region and formats",

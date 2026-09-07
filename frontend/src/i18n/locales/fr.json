@@ -617,17 +617,24 @@
     "maxDeclaredValue": "Franchise douanière restante",
     "priceOnRequest": "sur demande",
     "termsHint": "Votre base. L'expéditeur peut toujours faire une contre-offre.",
-    "categoriesMore": "+ {{count}} autres",
     "categoriesNoneChosen": "Rien de choisi — cliquez ci-dessous.",
     "rulesHint": "Pré-remplies depuis votre profil. À modifier pour ce trajet ; vide = aucune règle.",
     "hasRules": "règles définies",
     "sameAsLast": "Comme la dernière fois",
     "sameAsLastHint": "Remplit tout sauf les dates — celles-là, vous les mettez.",
     "routeHint": "Tous les vols de ce trajet. La recherche porte sur le premier et le dernier ; les autres figurent sur la fiche.",
-    "legNumber": "Vol {{n}}",
-    "addLeg": "+ Ajouter un vol",
-    "addLegBlocked": "Terminez d'abord ce vol — départ, arrivée et heure.",
-    "removeLeg": "Retirer ce vol",
+    "stop": {
+      "from": "Départ",
+      "to": "Arrivée",
+      "transfer": "Escale"
+    },
+    "addTransfer": "+ Ajouter une escale",
+    "addTransferBlocked": "Complétez d'abord l'itinéraire — les villes et l'heure de départ.",
+    "removeTransfer": "Retirer cette escale",
+    "departureFrom": "Départ de {{code}}",
+    "pickDateTime": "Choisir la date et l'heure",
+    "allowanceCurrency": "Monnaie",
+    "published": "Votre vol est publié — le voici sur le tableau.",
     "flownBy": {
       "label": "Qui voyage",
       "self": "Moi",
@@ -1389,8 +1396,22 @@
       "desc": "Envoyé à l'autre partie dans le chat quand vous le décidez. Vimana ne vérifie pas ces informations et ne traite aucun paiement — vous vous arrangez entre vous.",
       "label": "Moyen et coordonnées",
       "labelDesc": "Espèces à la remise, virement, portefeuille — comme vous préférez être payé.",
-      "placeholder": "En espèces à la remise, ou par virement — je donne les coordonnées dans le chat."
+      "placeholder": "En espèces à la remise, ou par virement — je donne les coordonnées dans le chat.",
+      "methodsLabel": "Comment on peut vous payer",
+      "methodsDesc": "Ajoutez vos moyens une fois — ils apparaissent en pastilles dans le formulaire de vol, et vous ne les retapez plus.",
+      "methodsPlaceholder": "Espèces à la remise",
+      "methodsLimit": "Vous pouvez en ajouter {{max}} au maximum."
     }
+  },
+  "calendar": {
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "time": "Heure",
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "clear": "Effacer",
+    "today": "Aujourd'hui",
+    "save": "Enregistrer"
   },
   "prefs": {
     "title": "Région et formats",

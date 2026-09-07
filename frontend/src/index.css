@@ -102,3 +102,62 @@ body {
   padding: 0.1em 0.3em;
   border-radius: 3px;
 }
+
+/* T3.11.07 — the weight slider, and the reason it is here rather than inline.
+ *
+ * The ruler under it prints ticks at 0 %…100 % of its own width, but a native
+ * range thumb never reaches either edge: its centre travels from half a thumb
+ * in to half a thumb short of the end. So "0" on the ruler sat left of where
+ * the thumb could go and "32" sat right of it, and the number under the handle
+ * was wrong at both ends — worst exactly where carriers check it, at the
+ * minimum and at the airline ceiling.
+ *
+ * Owning the thumb is what makes the correction exact: `--thumb` is a number
+ * both halves can use, so the ruler is inset by half of it (owner's wording:
+ * the slider is a little longer than the ruler at both ends) and the centre of
+ * the handle lines up with the first and last tick. Guessing the browser's
+ * default thumb width would have been right in one browser.
+ */
+.capacity-slider {
+  --thumb: 20px;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+}
+.capacity-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(10, 22, 38, 0.12);
+}
+.capacity-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(10, 22, 38, 0.12);
+}
+.capacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((6px - var(--thumb)) / 2);
+  border-radius: 999px;
+  background: #58B0D9;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(10, 22, 38, 0.3);
+  cursor: pointer;
+}
+.capacity-slider::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 999px;
+  background: #58B0D9;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(10, 22, 38, 0.3);
+  cursor: pointer;
+}
+/* Half a thumb in from each side: the span the thumb's centre actually covers. */
+.capacity-ruler {
+  margin-left: calc(var(--thumb, 20px) / 2);
+  margin-right: calc(var(--thumb, 20px) / 2);
+}

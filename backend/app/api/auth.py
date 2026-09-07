@@ -1074,6 +1074,10 @@ _NOT_NULL_UPDATE_FIELDS = {
     "unit_weight",
     "date_format",
     "default_currencies",
+    # T3.11.07 — clearing the list is `[]`, which is a real answer ("I have not
+    # said"). `null` is what an unset field looks like and must not reach the
+    # column, which is `NOT NULL`.
+    "payment_methods",
     "notify_email",
     "notify_telegram",
     "notify_whatsapp",

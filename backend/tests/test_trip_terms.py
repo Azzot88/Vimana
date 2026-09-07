@@ -389,3 +389,138 @@ async def test_currency_preference_does_not_touch_published_trips(
     await client.patch(
         "/api/auth/me", headers=carrier_headers, json={"default_currencies": ["USD"]}
     )
+
+
+# ── T3.11.07 · the carrier's own ways to be paid ───────────────────────────
+
+
+async def test_payment_methods_are_kept_in_order_and_deduplicated(
+    client, carrier_headers
+):
+    """Free strings, and the order is the carrier's: the first is what they
+    offer first. Case is left alone — `Zelle` and «Каспи» are names people
+    wrote, not codes to match on."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={
+            "payment_methods": [
+                "  Наличные при встрече ",
+                "Каспи",
+                "Наличные при встрече",
+                "Zelle",
+            ]
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["payment_methods"] == ["Наличные при встрече", "Каспи", "Zelle"]
+
+    back = await client.get("/api/auth/me", headers=carrier_headers)
+    assert back.json()["payment_methods"] == ["Наличные при встрече", "Каспи", "Zelle"]
+
+    # Put back: the test database is never reset, and a list left behind would
+    # follow this carrier through every later test.
+    await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"payment_methods": []}
+    )
+
+
+async def test_empty_payment_methods_is_a_real_answer(client, carrier_headers):
+    """Unlike the currencies, an empty list is legal here: "I have not said" is
+    what most carriers mean, and refusing it would leave no way to clear one."""
+    r = await client.patch(
+        "/api/auth/me", headers=carrier_headers, json={"payment_methods": []}
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["payment_methods"] == []
+
+
+async def test_an_overlong_payment_method_is_refused(client, carrier_headers):
+    """The column is `VARCHAR(60)`. A 4 000-character "method" is a note in the
+    wrong box, and truncating it silently would store something the carrier
+    never wrote."""
+    r = await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"payment_methods": ["x" * 61]},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_payment_methods_do_not_reach_the_public_listing(
+    client, carrier_headers, sender_headers
+):
+    """Owner-only, like the rest of `MeOut`: how to pay somebody is theirs to
+    send when they choose, not something a stranger reads off a board.
+
+    Asserted against the trip listing rather than a profile endpoint, because
+    the listing is the public surface this account actually has — and it is the
+    one that carries the carrier's name, so it is where a leak would land.
+    """
+    await client.patch(
+        "/api/auth/me",
+        headers=carrier_headers,
+        json={"payment_methods": ["Каспи 4400 0000 0000 0000"]},
+    )
+    try:
+        published = await client.post(
+            "/api/trips", headers=carrier_headers, json=_payload()
+        )
+        assert published.status_code == 201, published.text
+        listing = await client.get("/api/trips", headers=sender_headers)
+        assert listing.status_code == 200, listing.text
+        assert "4400" not in listing.text
+        assert "payment_methods" not in listing.text
+    finally:
+        await client.patch(
+            "/api/auth/me", headers=carrier_headers, json={"payment_methods": []}
+        )
+
+
+# ── T3.11.07 · the customs allowance has its own currency ──────────────────
+
+
+async def test_allowance_currency_is_stored_beside_the_price_currency(
+    client, carrier_headers
+):
+    """An allowance is denominated by the country the parcel lands in — $2 000
+    into the US — while the price is whatever the carrier quotes in. One shared
+    field would mean choosing the allowance's currency re-prices the trip."""
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            currency="EUR",
+            max_declared_value=2000,
+            max_declared_value_currency="usd",
+        ),
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["currency"] == "EUR"
+    assert body["max_declared_value_currency"] == "USD"
+
+
+async def test_allowance_currency_omitted_means_the_trips_own(
+    client, carrier_headers
+):
+    """Null rather than defaulted: "the same money as the price" is a different
+    answer from "USD", and writing the second would put a currency on every trip
+    whose carrier never chose one."""
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(currency="EUR", max_declared_value=2000),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["max_declared_value_currency"] is None
+
+
+async def test_unknown_allowance_currency_is_refused(client, carrier_headers):
+    """The same closed list as everywhere else money is named."""
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(max_declared_value=2000, max_declared_value_currency="RUUB"),
+    )
+    assert r.status_code == 422, r.text

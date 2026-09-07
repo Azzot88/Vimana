@@ -137,6 +137,12 @@ class TripCreate(BaseModel):
     # code is a price nobody can compare.
     currency: str = Field(default="USD", min_length=3, max_length=4)
     max_declared_value: float | None = Field(default=None, ge=0)
+    # T3.11.07 — the allowance is denominated by the country the parcel lands in
+    # ($2 000 into the US), which is routinely not the currency the carrier
+    # quotes prices in. `None` means "same as the trip", the common case.
+    max_declared_value_currency: str | None = Field(
+        default=None, min_length=3, max_length=4
+    )
     # T3.11.07 — a closed list, so a sender can filter on it. `None` means the
     # carrier said nothing, which is what 94 % of this market does; an empty
     # list would claim they considered the question and had no exclusions.
@@ -164,6 +170,24 @@ class TripCreate(BaseModel):
     # combined list is a second way to say the same thing.
     handover_origin: HandoverSide | None = None
     handover_destination: HandoverSide | None = None
+
+    @field_validator("max_declared_value_currency")
+    @classmethod
+    def _known_allowance_currency(cls, v: str | None) -> str | None:
+        """Same closed list as `currency`, and `None` stays `None`.
+
+        Nullable rather than defaulted: "the trip's currency" is a different
+        answer from "USD", and writing the second would put a currency on every
+        trip whose carrier never chose one.
+        """
+        if v is None:
+            return None
+        code = v.strip().upper()
+        if not code:
+            return None
+        if code not in CURRENCIES:
+            raise ValueError(f"unknown currency: {code}")
+        return code
 
     @field_validator("currency")
     @classmethod
@@ -228,8 +252,10 @@ class TripOut(BaseModel):
     price_per_kg: float | None = None
     min_deal_price: float | None = None
     currency: str = "USD"
-    # T3.11.07 — the customs allowance the carrier has left, not a ceiling.
+    # T3.11.07 — the customs allowance the carrier has left, not a ceiling, and
+    # the currency it is counted in. `None` on the currency means the trip's own.
     max_declared_value: float | None = None
+    max_declared_value_currency: str | None = None
     space_kind: str = "unspecified"
     size_hint: str | None = None
     handover_origin: dict | None = None

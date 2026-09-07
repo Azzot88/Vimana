@@ -141,6 +141,22 @@ class User(Base):
     default_currencies: Mapped[list[str]] = mapped_column(
         ARRAY(String(4)), default=lambda: ["USD"], server_default="{USD}"
     )
+    # T3.11.07 — how this carrier can be paid, written once (owner's decision
+    # 2026-09-06). «Наличные при встрече», «Каспи», «Zelle» — the same three or
+    # four answers on every trip, retyped every time because the trip form had
+    # only a free-text box and a country-derived catalogue.
+    #
+    # **Free strings, not codes.** Same reasoning as `Trip.payment_systems`:
+    # what people transfer through is local and changes faster than a vocabulary
+    # we could ship, and a carrier naming one we had not heard of would be told
+    # they are wrong. The catalogue in `core/directories` still suggests; this
+    # is what the carrier actually settled on.
+    #
+    # Order is the carrier's own — first is what they offer first — so an array
+    # rather than a set, exactly like `default_currencies`.
+    payment_methods: Mapped[list[str]] = mapped_column(
+        ARRAY(String(60)), default=list, server_default="{}"
+    )
     # T_UX.15 — the carrier's standing carriage rules, written once and copied
     # into each trip. Copied rather than referenced: a rule changed in March
     # must not silently rewrite what a sender agreed to in February.

@@ -130,6 +130,10 @@ export interface User {
    *  re-picked on every publication. **Order is meaningful**: the first entry
    *  is what the form pre-fills, the rest are offered beside it. */
   default_currencies?: string[]
+  /** T3.11.07 — the ways this carrier can be paid, written once instead of
+   *  retyped on every trip. Free strings, and the order is theirs: the first is
+   *  what they offer first. Owner-only, like the rest of `MeOut`. */
+  payment_methods?: string[]
   /** T_UX.15 — standing carriage rules, copied into each new trip. */
   carriage_rules?: string | null
   /** T_UX.21 — the other two standing notes, and unlike the carriage rules
@@ -302,6 +306,7 @@ export interface UserUpdate {
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
   default_currencies?: string[]
+  payment_methods?: string[]
   carriage_rules?: string | null
   interaction_rules?: string | null
   payment_instructions?: string | null

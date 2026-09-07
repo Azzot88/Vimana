@@ -123,33 +123,38 @@ async def test_retired_categories_leave_the_picker(client):
     assert "gift" not in keys
 
 
-async def test_cold_start_order_follows_the_market(client):
-    """With every `usage_count` at zero the fallback used to be alphabetical —
-    an order about spelling rather than about cargo. `sort_order` seeds the
-    market's own frequency instead."""
+async def test_picker_order_is_the_one_the_owner_named(client):
+    """T3.11.07 — documents, clothes, electronics, medicine, animals, art, other.
+
+    Named outright by the owner (2026-09-06) rather than derived, so it is
+    asserted as a sequence and not as a handful of pairwise comparisons: the
+    point of a stated order is that every position in it is intended.
+    """
     resp = await client.get("/api/categories")
     order = [c["name_key"] for c in resp.json() if c["is_default"]]
-    assert order.index("document") < order.index("clothing")
-    assert order.index("clothing") < order.index("electronics")
-    assert order.index("electronics") < order.index("medicine")
-    assert order.index("other") == len(order) - 1
+    assert order == [
+        "document",
+        "clothing",
+        "electronics",
+        "medicine",
+        "animal",
+        "art",
+        "other",
+    ]
 
 
-async def test_own_traffic_outranks_the_seed(client, session_maker):
-    """The seed decides the cold start and nothing after it: a category this
-    platform actually uses climbs above one the market talks about more.
+async def test_own_traffic_does_not_reorder_the_picker(client, session_maker):
+    """`usage_count` is counted and returned; it no longer decides position.
 
-    Two things this test learned the hard way, both worth keeping.
+    It used to outrank `sort_order`, on the argument that this platform's own
+    traffic beats a seeded guess. Once the owner named the order, that stopped
+    being a tie to break — a picker that quietly rearranges itself as deals
+    close is one where a carrier's muscle memory lands on the wrong chip.
 
-    The count is read from the API rather than assumed. `api/deals` increments
-    `usage_count` on every match, and the test database is never reset
-    (ENVIRONMENT §8) — so `document` carries the accumulated total of every deal
-    ever created by this suite, and a hard-coded ceiling is a number that works
-    until it does not.
-
-    And the claim is "art overtakes document", not "art is first": something
-    outside the defaults could legitimately sit on top, and an absolute
-    assertion would fail for a reason that has nothing to do with ordering.
+    The count is read from the API rather than assumed: `api/deals` increments
+    it on every match and the test database is never reset (ENVIRONMENT §8), so
+    `document` carries the accumulated total of every deal this suite ever made
+    and a hard-coded ceiling is a number that works until it does not.
     """
     from sqlalchemy import select
 
@@ -163,18 +168,15 @@ async def test_own_traffic_outranks_the_seed(client, session_maker):
             row.usage_count = value
             await db.commit()
 
-    before = (await client.get("/api/categories")).json()
-    art = next(c for c in before if c["name_key"] == "art")
-    # If this ever fails, the ordering is fine and the seed is not: `is_default`
-    # sorts first, so a default that lost the flag can never climb.
-    assert art["is_default"] is True
-    ceiling = max(c["usage_count"] for c in before)
+    before = [c["name_key"] for c in (await client.get("/api/categories")).json()]
+    art = next(
+        c for c in (await client.get("/api/categories")).json() if c["name_key"] == "art"
+    )
+    ceiling = max(c["usage_count"] for c in (await client.get("/api/categories")).json())
 
-    await set_usage("art", ceiling + 1)
+    await set_usage("art", ceiling + 1000)
     try:
-        order = [c["name_key"] for c in (await client.get("/api/categories")).json()]
-        # `document` is seeded first (86.2 % of the market names it) and is the
-        # thing the seed would keep on top if the seed still decided.
-        assert order.index("art") < order.index("document")
+        after = [c["name_key"] for c in (await client.get("/api/categories")).json()]
+        assert after == before
     finally:
         await set_usage("art", art["usage_count"])

@@ -17,27 +17,25 @@ import { listCategories, type Category } from '../api/categories'
  *  tick. It also halves the vertical space, which matters once this lives in a
  *  step of a wizard rather than a full page.
  *
- *  The first `VISIBLE` are shown and the rest hide behind "more". Order comes
- *  from the server (`usage_count`, then the market frequency seeded in 0063) —
- *  deliberately not re-sorted here: a picker that orders by its own rule would
- *  disagree with the one the API decided, and the disagreement would be
- *  invisible.
+ *  T3.11.07 — all of them, in the order the owner named (2026-09-06):
+ *  documents, clothes, electronics, medicine, animals, art, other. Six were
+ *  shown and the rest hid behind "more", which put "other" — the one a carrier
+ *  reaches for when nothing else fits — behind a button. Seven chips are not a
+ *  list to work through.
+ *
+ *  Order comes from the server (`sort_order`) and is deliberately not re-sorted
+ *  here: a picker that orders by its own rule would disagree with the one the
+ *  API decided, and the disagreement would be invisible.
  */
 interface Props {
   selected: string[]
   onChange: (next: string[]) => void
 }
 
-/** Enough to cover the market's real answers — documents, parcels, clothing,
- *  medicine, electronics account for 86.2 / ≈71 / 34 / 32.8 / 15 % of posts —
- *  without turning the step into a list to work through. */
-const VISIBLE = 6
-
 export default function CategoryBubbles({ selected, onChange }: Props) {
   const { t } = useTranslation()
   const [all, setAll] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     listCategories('')
@@ -55,11 +53,6 @@ export default function CategoryBubbles({ selected, onChange }: Props) {
         : [...selected, key],
     )
 
-  // A chosen category is never hidden behind "more": collapsing the list must
-  // not take an answer off the screen.
-  const hidden = all.slice(VISIBLE).filter((c) => !selected.includes(c.name_key))
-  const shown = expanded ? all : all.filter((c) => !hidden.includes(c))
-
   if (loading) {
     return <p className="text-xs font-body text-navy/30">{t('common.loading')}</p>
   }
@@ -67,7 +60,7 @@ export default function CategoryBubbles({ selected, onChange }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {shown.map((c) => {
+        {all.map((c) => {
           const chosen = selected.includes(c.name_key)
           return (
             <button
@@ -86,16 +79,6 @@ export default function CategoryBubbles({ selected, onChange }: Props) {
             </button>
           )
         })}
-
-        {!expanded && hidden.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="px-3 py-2 min-h-[2.75rem] rounded-field text-xs font-body border border-dashed border-navy/25 text-navy/50 hover:border-cyan hover:text-navy transition-colors"
-          >
-            {t('trips.categoriesMore', { count: hidden.length })}
-          </button>
-        )}
       </div>
 
       {selected.length === 0 && (

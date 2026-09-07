@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import desc, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -31,17 +31,17 @@ async def list_categories(
     q_norm = q.strip().lower()
     if q_norm:
         stmt = stmt.where(Category.name_key.ilike(f"%{q_norm}%"))
-    # T3.11.07 — `usage_count` first, `sort_order` second. This platform's own
-    # traffic is the better signal and outranks the seed the moment it exists;
-    # the seed (taken from the market analysis) decides only the cold start,
-    # when every count is still zero and the fallback would otherwise be
-    # alphabetical — which is an order about spelling, not about cargo.
-    stmt = stmt.order_by(
-        desc(Category.is_default),
-        desc(Category.usage_count),
-        Category.sort_order,
-        Category.name_key,
-    ).limit(15)
+    # T3.11.07 — `sort_order`, and nothing above it (owner's decision
+    # 2026-09-06). It shipped as `usage_count` first, on the argument that this
+    # platform's own traffic beats a seeded guess. The owner has since named the
+    # order outright — documents, clothes, electronics, medicine, animals, art,
+    # other — and an order that is stated is not a tie for traffic to break: a
+    # picker that quietly rearranges itself as deals close is one where the
+    # carrier's muscle memory lands on the wrong chip.
+    #
+    # `usage_count` is still counted and still returned; it just no longer
+    # decides where a chip sits.
+    stmt = stmt.order_by(Category.sort_order, Category.name_key).limit(15)
     result = await db.execute(stmt)
     return [
         CategoryOut(

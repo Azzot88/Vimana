@@ -90,6 +90,10 @@ export interface Trip {
   min_deal_price?: number | null
   currency?: string
   max_declared_value?: number | null
+  /** T3.11.07 — the money the allowance is counted in. Null means "the trip's
+   *  currency": a customs allowance is denominated by the country the parcel
+   *  lands in, which is routinely not what the carrier quotes prices in. */
+  max_declared_value_currency?: string | null
   space_kind?: SpaceKind
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
@@ -120,6 +124,7 @@ export interface CreateTripPayload {
   min_deal_price?: number | null
   currency?: string
   max_declared_value?: number | null
+  max_declared_value_currency?: string | null
   space_kind?: SpaceKind
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null

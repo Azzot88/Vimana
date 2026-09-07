@@ -23,9 +23,9 @@ class TripStatus(str, enum.Enum):
 # two commonest words on this market after "documents" had no key to be filed
 # under, so a carrier saying "возьму посылки" could not say it here at all.
 #
-# Order matters: it seeds `Category.sort_order`, which breaks ties while every
-# `usage_count` is still zero. Once this platform has its own traffic,
-# `usage_count` wins and this list stops deciding anything.
+# Order matters: it seeds `Category.sort_order`, and since the owner named the
+# order outright (2026-09-06) that seed is the whole rule — `usage_count` no
+# longer outranks it. This tuple is the picker, in the order it is drawn.
 DEFAULT_CATEGORIES = (
     "document",
     "clothing",
@@ -56,10 +56,11 @@ class Category(Base):
     name_key: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     usage_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    # T3.11.07 — where this sits in the picker before this platform has traffic
-    # of its own. Seeded from the market analysis; `usage_count` outranks it as
-    # soon as there is any, so the seed decides only the cold start. Carrier-
-    # added categories default to the end.
+    # T3.11.07 — where this sits in the picker. Seeded from `DEFAULT_CATEGORIES`
+    # and **not** overridden by traffic (owner's decision 2026-09-06): a stated
+    # order is not a tie for `usage_count` to break, and a picker that quietly
+    # rearranges itself as deals close is one where muscle memory lands on the
+    # wrong chip. Carrier-added categories default to the end.
     sort_order: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
     # T3.11.07 — offered in the picker. Separate from `is_default`, which means
     # "shipped with the product": a category can be ours and retired at the same
@@ -139,6 +140,18 @@ class Trip(Base):
     # is a second place for the same fact to be wrong. The label the carrier
     # reads says «свободный таможенный лимит» for exactly that reason.
     max_declared_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # T3.11.07 — the allowance has a currency of its own (owner's decision
+    # 2026-09-06), and it is **not** `Trip.currency`. A customs allowance is
+    # denominated by the country the parcel lands in — $2 000 into the US — while
+    # the price is whatever the carrier quotes in, and those are routinely two
+    # different currencies. One shared field would mean picking the allowance's
+    # currency silently re-prices the trip.
+    #
+    # `NULL` means "the trip's currency", which is the common case and keeps the
+    # form from having to answer a question nobody asked.
+    max_declared_value_currency: Mapped[str | None] = mapped_column(
+        String(4), nullable=True
+    )
     bond_tier: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # T3.11.15 — physical room, the other capacity. `capacity` stays the number
     # of kilograms; these two say what kind of room it is and how big a thing

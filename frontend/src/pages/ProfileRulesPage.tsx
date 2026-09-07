@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AddressesSection from '../components/AddressesSection'
+import PaymentMethodsField from '../components/PaymentMethodsField'
 import MeetingPlacesSection from '../components/MeetingPlacesSection'
 import StandingNoteSection from '../components/StandingNoteSection'
 
@@ -83,6 +84,10 @@ export default function ProfileRulesPage() {
             placeholderKey: 'rules.payment.placeholder',
           },
         ]}
+        /* T3.11.07 — the shortlist lives inside this card rather than beside
+           it: «как со мной рассчитаться» is one question, and two headings for
+           it would make the chips look like a different subject. */
+        extra={<PaymentMethodsField />}
       />
     </div>
   )

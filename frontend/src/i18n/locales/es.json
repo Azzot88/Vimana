@@ -617,17 +617,24 @@
     "maxDeclaredValue": "Franquicia aduanera libre",
     "priceOnRequest": "a consultar",
     "termsHint": "Tu base. El remitente aún puede contraofertar en el chat.",
-    "categoriesMore": "+ {{count}} más",
     "categoriesNoneChosen": "Nada elegido todavía — pulsa abajo.",
     "rulesHint": "Rellenadas desde tu perfil. Edítalas solo para este viaje; vacío = sin reglas.",
     "hasRules": "con reglas",
     "sameAsLast": "Como la última vez",
     "sameAsLastHint": "Rellena todo menos las fechas: esas las pones tú.",
     "routeHint": "Todos los vuelos de este viaje. La búsqueda usa el primero y el último; los intermedios se ven en la ficha.",
-    "legNumber": "Vuelo {{n}}",
-    "addLeg": "+ Añadir un vuelo",
-    "addLegBlocked": "Completa antes este vuelo: origen, destino y hora de salida.",
-    "removeLeg": "Quitar este vuelo",
+    "stop": {
+      "from": "Desde",
+      "to": "Hasta",
+      "transfer": "Escala"
+    },
+    "addTransfer": "+ Añadir una escala",
+    "addTransferBlocked": "Completa antes la ruta: las ciudades y la hora de salida.",
+    "removeTransfer": "Quitar esta escala",
+    "departureFrom": "Salida desde {{code}}",
+    "pickDateTime": "Elegir fecha y hora",
+    "allowanceCurrency": "Moneda",
+    "published": "Tu vuelo está publicado: aquí lo tienes en el tablero.",
     "flownBy": {
       "label": "Quién vuela",
       "self": "Yo",
@@ -1389,8 +1396,22 @@
       "desc": "Se envía a la otra parte en el chat cuando tú quieras. Vimana no verifica estos datos ni procesa pagos — os ponéis de acuerdo entre vosotros.",
       "label": "Método y datos",
       "labelDesc": "Efectivo en la entrega, transferencia, monedero — como prefieras cobrar.",
-      "placeholder": "En efectivo en la entrega, o por transferencia — te paso los datos en el chat."
+      "placeholder": "En efectivo en la entrega, o por transferencia — te paso los datos en el chat.",
+      "methodsLabel": "Con qué se te puede pagar",
+      "methodsDesc": "Añade tus opciones una vez: aparecen como fichas en el formulario del vuelo y dejas de escribirlas cada vez.",
+      "methodsPlaceholder": "Efectivo en la entrega",
+      "methodsLimit": "Puedes añadir como máximo {{max}}."
     }
+  },
+  "calendar": {
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "time": "Hora",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "clear": "Borrar",
+    "today": "Hoy",
+    "save": "Guardar"
   },
   "prefs": {
     "title": "Región y formatos",
