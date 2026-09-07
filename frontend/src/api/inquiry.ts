@@ -3,10 +3,17 @@ import type { Page } from './pagination'
 
 export interface Inquiry {
   id: string
-  trip_id: string
+  /** T3.11.23 — echoed back when you opened the chat from a trip; the chat
+   *  itself does not belong to one, so the list leaves it out. */
+  trip_id: string | null
   sender_id: string
   carrier_id: string
   deal_id: string | null
+  /** T3.11.23 — the person the chat is with, by name, and how many deals are
+   *  nested in it. The list of chats is a list of people; the count decides
+   *  whether a choice of deal is offered at all. */
+  counterparty_name?: string | null
+  deal_count?: number
   created_at: string
 }
 

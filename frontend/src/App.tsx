@@ -29,6 +29,7 @@ const NewTripPage = lazy(() => import('./pages/NewTripPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const DealsPage = lazy(() => import('./pages/DealsPage'))
 const DealsByPersonPage = lazy(() => import('./pages/DealsByPersonPage'))
+const ChatPage = lazy(() => import('./pages/ChatPage'))
 const DealVaultPage = lazy(() => import('./pages/DealVaultPage'))
 const IdentityPage = lazy(() => import('./pages/IdentityPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
@@ -157,6 +158,10 @@ export default function App() {
                   any of them. `/history` stays what it became in T_UX.18: the
                   archive you look something up in. */}
               <Route path="/deals" element={<DealsByPersonPage />} />
+              {/* T3.11.23 — the chat with a person, and the deals nested in it.
+                  Reachable from the person, never from a deal: the vault has no
+                  link upward, on purpose (owner's model 2026-09-07). */}
+              <Route path="/chats/:chatId" element={<ChatPage />} />
               <Route path="/disputes" element={<DisputesPage />} />
               <Route path="/carriers/:carrierId" element={<CarrierPage />} />
               {/* T3.11.26 — the deal opens where the conversation is. The card

@@ -464,6 +464,12 @@
       "openMaps": "Abrir en Maps"
     }
   },
+  "chats": {
+    "allDeals": "Todos los acuerdos",
+    "theDeal": "Acuerdo",
+    "pickDeal": "{{count}} acuerdos — elige en cuál hablar",
+    "closedDeals": "Cerrados: {{count}}"
+  },
   "inquiry": {
     "chatButton": "Chat",
     "chatWith": "Chat con {{name}}",
@@ -710,6 +716,7 @@
     "carrier": "Transportista",
     "cargo": "Carga",
     "category": "Categoría",
+    "shipmentNo": "Número de envío",
     "dealId": "ID del acuerdo",
     "accept": "Aceptar el acuerdo",
     "recordHandoff": "Registrar la entrega",

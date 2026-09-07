@@ -512,6 +512,12 @@
       "openMaps": "Открыть на карте"
     }
   },
+  "chats": {
+    "allDeals": "Все сделки",
+    "theDeal": "Сделка",
+    "pickDeal": "Сделок: {{count}} — выберите, в какой говорить",
+    "closedDeals": "Закрытые: {{count}}"
+  },
   "inquiry": {
     "chatButton": "Чат",
     "chatWith": "Чат с {{name}}",
@@ -758,6 +764,7 @@
     "carrier": "Перевозчик",
     "cargo": "Груз",
     "category": "Категория",
+    "shipmentNo": "Номер отправки",
     "dealId": "ID сделки",
     "accept": "Принять сделку",
     "recordHandoff": "Зафиксировать передачу",

@@ -31,6 +31,13 @@ export interface Deal {
    *  column of truncated UUIDs is a list nobody can choose from. */
   sender_name?: string | null
   carrier_name?: string | null
+  /** T3.11.23 — the deal card: the number people say out loud, the chat the
+   *  deal is nested in, and the two halves of a name nobody has to type. */
+  shipment_no?: string | null
+  chat_id?: string | null
+  cargo_category?: string | null
+  price_total?: number | null
+  currency?: string | null
 }
 
 export interface DealDetail extends Deal {
@@ -83,6 +90,8 @@ export const confirmDeal = (dealId: string) =>
   api.post<Deal>(`/api/deals/${dealId}/confirm`)
 
 export interface DealListParams {
+  /** T3.11.23 — only the deals nested in this chat, closed ones included. */
+  chat_id?: string
   after?: string
   limit?: number
 }

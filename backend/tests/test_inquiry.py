@@ -343,8 +343,9 @@ async def test_a_matched_deal_gets_a_chat_and_a_spoken_number(
 
     from app.models.deal import Deal
 
-    # Read off the row: the number is not on `DealOut` yet — the card that shows
-    # it is this task's frontend half.
+    # Read off the row rather than through the API: what the card shows is
+    # covered by `test_the_deal_card_carries_number_name_and_price`, and what is
+    # checked here is that the column itself is filled at match time.
     async with session_maker() as db:
         deal = (
             await db.execute(
@@ -414,3 +415,150 @@ async def test_asks_are_only_about_my_own_trips(
     theirs = await client.get("/api/trips/ask-counts", headers=sender_headers)
     assert trip_id in mine.json()
     assert trip_id not in theirs.json()
+
+
+async def test_the_deal_card_carries_number_name_and_price(
+    client, sender_headers, carrier_headers
+):
+    """T3.11.23 — a deal in a list has to be identifiable without opening it.
+
+    The card is three things: the number people dictate, a name **derived** from
+    what is being carried and where (the client joins category and route — a
+    name field would come back empty), and the agreed price. The price appears
+    only once both sides have agreed: a deal under negotiation has none, and a
+    zero would be a claim neither side made.
+    """
+    from tests.conftest import agree_terms
+
+    trip_id = await _make_open_trip(client, carrier_headers)
+    deal_id = (
+        await client.post(
+            "/api/deals/match",
+            headers=sender_headers,
+            json={
+                "trip_id": trip_id,
+                "order": {
+                    "recipient_contact": "+10000000001",
+                    "origin": "INQ",
+                    "destination": "TST",
+                    "category": "document",
+                    "declared_value": 100.0,
+                },
+            },
+        )
+    ).json()["id"]
+
+    def _find(items):
+        return next(d for d in items if d["id"] == deal_id)
+
+    before = await client.get("/api/deals", headers=sender_headers)
+    assert before.status_code == 200, before.text
+    card = _find(before.json()["items"])
+    assert card["shipment_no"] and len(card["shipment_no"]) == 8
+    assert card["chat_id"]
+    assert card["cargo_category"] == "document"
+    assert (card["origin"], card["destination"]) == ("INQ", "TST")
+    # Nothing agreed yet — and that is printed as nothing, not as zero.
+    assert card["price_total"] is None
+
+    await agree_terms(
+        client, sender_headers, carrier_headers, deal_id, price_total=140
+    )
+    after = await client.get("/api/deals", headers=sender_headers)
+    card = _find(after.json()["items"])
+    assert card["price_total"] == 140
+    assert card["currency"] == "USD"
+
+
+async def test_deals_can_be_narrowed_to_one_chat(
+    client, sender_headers, carrier_headers
+):
+    """T3.11.23 — the chat screen lists the deals nested in *this* chat.
+
+    Filtering is stacked on top of the ownership filter, never instead of it: a
+    chat id is not a capability, and a guessed one must not read anybody's deals
+    but the caller's own.
+    """
+    trip_id = await _make_open_trip(client, carrier_headers)
+    order = {
+        "recipient_contact": "+10000000002",
+        "origin": "INQ",
+        "destination": "TST",
+        "category": "document",
+        "declared_value": 10.0,
+    }
+    deal_id = (
+        await client.post(
+            "/api/deals/match",
+            headers=sender_headers,
+            json={"trip_id": trip_id, "order": order},
+        )
+    ).json()["id"]
+    chat_id = (
+        await client.post(f"/api/trips/{trip_id}/inquiry", headers=sender_headers)
+    ).json()["id"]
+
+    mine = await client.get(
+        "/api/deals", headers=sender_headers, params={"chat_id": chat_id}
+    )
+    assert mine.status_code == 200, mine.text
+    assert deal_id in [d["id"] for d in mine.json()["items"]]
+    assert all(d["chat_id"] == chat_id for d in mine.json()["items"])
+
+    # The carrier's own page filtered by the same chat sees the same deal —
+    # they are the other participant.
+    theirs = await client.get(
+        "/api/deals", headers=carrier_headers, params={"chat_id": chat_id}
+    )
+    assert deal_id in [d["id"] for d in theirs.json()["items"]]
+
+    # A stranger holding the same id sees nothing: the ownership filter runs
+    # first, and the chat id only narrows what is already the caller's.
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
+
+    email = unique_email("chatfilter")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Stranger"}
+    )
+    stranger = {"Authorization": f"Bearer {await _login(client, email)}"}
+    seen = await client.get(
+        "/api/deals", headers=stranger, params={"chat_id": chat_id}
+    )
+    assert seen.status_code == 200, seen.text
+    assert seen.json()["items"] == []
+
+
+async def test_chat_list_names_the_person_and_counts_deals(
+    client, sender_headers, carrier_headers
+):
+    """T3.11.23 — a list of chats is a list of people.
+
+    `counterparty_name` is what makes the row openable; `deal_count` is what the
+    screen asks before offering a choice of deal, since the owner wanted the
+    picker «только если появляется вторая сделка».
+    """
+    trip_id = await _make_open_trip(client, carrier_headers)
+    chat_id = (
+        await client.post(f"/api/trips/{trip_id}/inquiry", headers=sender_headers)
+    ).json()["id"]
+    await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={
+            "trip_id": trip_id,
+            "order": {
+                "recipient_contact": "+10000000003",
+                "origin": "INQ",
+                "destination": "TST",
+                "category": "document",
+                "declared_value": 10.0,
+            },
+        },
+    )
+
+    chats = await client.get("/api/inquiries", headers=sender_headers)
+    assert chats.status_code == 200, chats.text
+    row = next(c for c in chats.json() if c["id"] == chat_id)
+    assert row["counterparty_name"]
+    assert row["carrier_id"] != row["sender_id"]
+    assert row["deal_count"] >= 1

@@ -217,6 +217,20 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
               </p>
             </div>
           )}
+          {/* T3.11.23 — the shipment number stands above the UUID and in a
+              readable size: it is the one identifier that gets dictated on the
+              phone and pasted into a message. The UUID stays for support, where
+              exactness beats speakability. */}
+          {deal.shipment_no && (
+            <div>
+              <p className="text-xs font-body font-medium text-navy/40 mb-1">
+                {t('deals.shipmentNo')}
+              </p>
+              <MonoText className="text-sm text-navy tracking-wide">
+                {deal.shipment_no}
+              </MonoText>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.dealId')}</p>
             <MonoText className="text-xs text-navy/50 break-all">{deal.id}</MonoText>

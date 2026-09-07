@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listDeals, type Deal } from '../api/deals'
+import { listMyInquiries } from '../api/inquiry'
+import DealCard from '../components/DealCard'
 import MonoText from '../components/MonoText'
-import StatusBadge from '../components/StatusBadge'
-import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.26 — every deal, grouped by the person it is with.
  *
@@ -29,9 +29,9 @@ type SortKey = 'recent' | 'count'
 
 export default function DealsByPersonPage() {
   const { t } = useTranslation()
-  const prefs = usePrefs()
   const user = useAuthStore((s) => s.user)
   const [deals, setDeals] = useState<Deal[]>([])
+  const [chats, setChats] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState<SortKey>('recent')
   const [openFor, setOpenFor] = useState<string | null>(null)
@@ -41,6 +41,17 @@ export default function DealsByPersonPage() {
       .then((r) => setDeals(r.data.items))
       .catch(() => setDeals([]))
       .finally(() => setLoading(false))
+    /* T3.11.23 — the person's chat, by person. This page **is** the contact
+       list until `T3.11.24` builds one, and «зайти в чат можно только через
+       контакт человека» needs a door somewhere. A chat that fails to load
+       costs the button, not the page: the deals are what you came for. */
+    listMyInquiries()
+      .then((r) =>
+        setChats(
+          Object.fromEntries(r.data.map((c) => [c.carrier_id, c.id])),
+        ),
+      )
+      .catch(() => setChats({}))
   }, [])
 
   /** The counterparty of a deal — whoever is not me. A deal always has both a
@@ -137,50 +148,48 @@ export default function DealsByPersonPage() {
                 key={group.id}
                 className="bg-white rounded-card border border-navy/10 overflow-hidden"
               >
-                <button
-                  type="button"
-                  onClick={() => setOpenFor(open ? null : group.id)}
-                  aria-expanded={open}
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-ivory transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-body font-medium text-navy truncate">
-                      {group.name}
-                    </p>
-                    <p className="text-xs font-body text-navy/45">
-                      {t('deals.countWithPerson', { count: group.deals.length })}
-                    </p>
-                  </div>
-                  <MonoText className="text-navy/30 shrink-0">
-                    {open ? '−' : '+'}
-                  </MonoText>
-                </button>
+                <div className="flex items-center gap-1 pr-3">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFor(open ? null : group.id)}
+                    aria-expanded={open}
+                    className="flex-1 flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-ivory transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-body font-medium text-navy truncate">
+                        {group.name}
+                      </p>
+                      <p className="text-xs font-body text-navy/45">
+                        {t('deals.countWithPerson', { count: group.deals.length })}
+                      </p>
+                    </div>
+                    <MonoText className="text-navy/30 shrink-0">
+                      {open ? '−' : '+'}
+                    </MonoText>
+                  </button>
+                  {/* T3.11.23 — the way into the conversation with this person.
+                      It sits beside the expander rather than inside it: a link
+                      nested in a button is neither, and keyboards prove it
+                      first. Shown only when a chat exists — one is created by
+                      writing or by starting a deal, never by looking. */}
+                  {chats[group.id] && (
+                    <Link
+                      to={`/chats/${chats[group.id]}`}
+                      className="shrink-0 px-3 py-2 min-h-[2.75rem] flex items-center rounded-field border border-navy/15 text-xs font-body text-navy/60 hover:border-cyan hover:text-cyan transition-colors"
+                    >
+                      {t('inquiry.chatButton')}
+                    </Link>
+                  )}
+                </div>
 
                 {open && (
-                  <ul className="border-t border-navy/10 divide-y divide-navy/5">
+                  <div className="border-t border-navy/10 p-3 grid gap-2 bg-ivory/40">
+                    {/* The same card the chat draws: one deal looks like one
+                        deal wherever it is listed. */}
                     {group.deals.map((deal) => (
-                      <li key={deal.id}>
-                        {/* Straight into the conversation, like everywhere else
-                            since the card stopped being a screen of its own. */}
-                        <Link
-                          to={`/deals/${deal.id}/vault`}
-                          className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-ivory transition-colors"
-                        >
-                          <div className="min-w-0 space-y-0.5">
-                            <MonoText className="text-sm text-navy">
-                              {deal.origin && deal.destination
-                                ? `${deal.origin} → ${deal.destination}`
-                                : deal.id.slice(0, 8)}
-                            </MonoText>
-                            <MonoText className="block text-xs text-navy/40">
-                              {prefs.dateTime(deal.created_at)}
-                            </MonoText>
-                          </div>
-                          <StatusBadge status={deal.status} />
-                        </Link>
-                      </li>
+                      <DealCard key={deal.id} deal={deal} />
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             )

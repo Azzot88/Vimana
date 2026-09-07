@@ -478,6 +478,12 @@
       "openMaps": "Відкрити на мапі"
     }
   },
+  "chats": {
+    "allDeals": "Усі угоди",
+    "theDeal": "Угода",
+    "pickDeal": "Угод: {{count}} — оберіть, у якій говорити",
+    "closedDeals": "Закриті: {{count}}"
+  },
   "inquiry": {
     "chatButton": "Чат",
     "chatWith": "Чат із {{name}}",
@@ -724,6 +730,7 @@
     "carrier": "Перевізник",
     "cargo": "Вантаж",
     "category": "Категорія",
+    "shipmentNo": "Номер відправлення",
     "dealId": "ID угоди",
     "accept": "Прийняти угоду",
     "recordHandoff": "Зафіксувати передачу",

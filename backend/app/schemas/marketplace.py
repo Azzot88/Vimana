@@ -375,6 +375,10 @@ class DealDetailOut(BaseModel):
     # from the trip's own copy, not the carrier's current template: a rule
     # edited after the match is not the rule this deal was struck under.
     carriage_rules: str | None = None
+    # T3.11.23 — the number people say out loud. It belongs on the detail as
+    # well as in the list: the boarding pass is where someone looks it up to
+    # dictate it, and the UUID beside it is for support, not for speech.
+    shipment_no: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

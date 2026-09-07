@@ -511,6 +511,12 @@
       "openMaps": "Open in Maps"
     }
   },
+  "chats": {
+    "allDeals": "All deals",
+    "theDeal": "Deal",
+    "pickDeal": "{{count}} deals — pick the one to talk in",
+    "closedDeals": "Closed: {{count}}"
+  },
   "inquiry": {
     "chatButton": "Chat",
     "chatWith": "Chat with {{name}}",
@@ -757,6 +763,7 @@
     "carrier": "Carrier",
     "cargo": "Cargo",
     "category": "Category",
+    "shipmentNo": "Shipment number",
     "dealId": "Deal ID",
     "accept": "Accept the deal",
     "recordHandoff": "Record the hand-off",

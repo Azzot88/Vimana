@@ -465,6 +465,12 @@
       "openMaps": "Otwórz w mapach"
     }
   },
+  "chats": {
+    "allDeals": "Wszystkie transakcje",
+    "theDeal": "Transakcja",
+    "pickDeal": "Transakcji: {{count}} — wybierz, w której rozmawiać",
+    "closedDeals": "Zamknięte: {{count}}"
+  },
   "inquiry": {
     "chatButton": "Czat",
     "chatWith": "Czat z {{name}}",
@@ -711,6 +717,7 @@
     "carrier": "Przewoźnik",
     "cargo": "Ładunek",
     "category": "Kategoria",
+    "shipmentNo": "Numer przesyłki",
     "dealId": "ID transakcji",
     "accept": "Przyjmij transakcję",
     "recordHandoff": "Zarejestruj przekazanie",

@@ -464,6 +464,12 @@
       "openMaps": "Ouvrir dans Maps"
     }
   },
+  "chats": {
+    "allDeals": "Toutes les transactions",
+    "theDeal": "Transaction",
+    "pickDeal": "{{count}} transactions — choisissez celle où parler",
+    "closedDeals": "Fermées : {{count}}"
+  },
   "inquiry": {
     "chatButton": "Chat",
     "chatWith": "Chat avec {{name}}",
@@ -710,6 +716,7 @@
     "carrier": "Transporteur",
     "cargo": "Colis",
     "category": "Catégorie",
+    "shipmentNo": "Numéro d'envoi",
     "dealId": "ID de la transaction",
     "accept": "Accepter la transaction",
     "recordHandoff": "Enregistrer la remise",
