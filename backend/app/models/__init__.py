@@ -1,7 +1,7 @@
 from app.models.address import MeetingPlace, ReceivingAddress
 from app.models.user import RecoveryCode, User
 from app.models.social import InviteLink, Connection
-from app.models.marketplace import Trip, TripLeg, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, TripInquiry, InquiryMessage
+from app.models.marketplace import Trip, TripLeg, Order, TripStatus, OrderStatus, Category, DEFAULT_CATEGORIES, Chat, ChatMessage
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, OperatorAccessGrant, DealParticipant, DealParticipantRole, CardState, CardAckRole
 from app.models.metrics import PublishMetric
 from app.models.notices import (
@@ -20,7 +20,7 @@ __all__ = [
     "User", "RecoveryCode", "ReceivingAddress", "MeetingPlace",
     "InviteLink", "Connection",
     "Trip", "TripLeg", "Order", "TripStatus", "OrderStatus", "Category", "DEFAULT_CATEGORIES",
-    "TripInquiry", "InquiryMessage",
+    "Chat", "ChatMessage",
     "Deal", "DealEvent", "DealVaultMessage", "Attachment", "Dispute",
     "DealStatus", "DealEventType", "AttachmentKind", "DisputeStatus",
     "OperatorAccessGrant", "PublishMetric",

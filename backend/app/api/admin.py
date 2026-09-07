@@ -497,7 +497,7 @@ async def delete_user(
 
     # Async cascade — mirrors the sync cleanup in `app/tasks/cleanup.py`.
     # Keep in sync when the schema grows.
-    from sqlalchemy import delete
+    from sqlalchemy import delete, update
     from app.models.deal import (
         Attachment,
         Deal,
@@ -506,7 +506,7 @@ async def delete_user(
         Dispute,
         OperatorAccessGrant,
     )
-    from app.models.marketplace import InquiryMessage, Order, Trip, TripInquiry
+    from app.models.marketplace import Chat, ChatMessage, Order, Trip
     from app.models.social import Connection, InviteLink
     from app.models.trust import TrustEdge
 
@@ -561,20 +561,33 @@ async def delete_user(
         )
         await db.execute(delete(Deal).where(Deal.id.in_(deal_ids)))
     if trip_ids:
-        inquiry_ids = [
-            r[0]
-            for r in (
-                await db.execute(
-                    select(TripInquiry.id).where(TripInquiry.trip_id.in_(trip_ids))
-                )
-            ).all()
-        ]
-        if inquiry_ids:
-            await db.execute(
-                delete(InquiryMessage).where(InquiryMessage.inquiry_id.in_(inquiry_ids))
-            )
-            await db.execute(delete(TripInquiry).where(TripInquiry.id.in_(inquiry_ids)))
+        # T3.11.23 — a deleted trip no longer takes a conversation with it: the
+        # chat belongs to two people and outlives any one thing they discussed.
+        # Messages that named the trip lose the reference and keep the words.
+        await db.execute(
+            update(ChatMessage)
+            .where(ChatMessage.about_trip_id.in_(trip_ids))
+            .values(about_trip_id=None)
+        )
         await db.execute(delete(Trip).where(Trip.id.in_(trip_ids)))
+    # T3.11.23 — the chats this account is in, and everything said in them.
+    # Messages first: the chat is their parent, and a chat deleted out from under
+    # them leaves rows pointing at nothing. Both sides of the pair are checked —
+    # a chat has no owner, only two participants.
+    chat_ids = [
+        r[0]
+        for r in (
+            await db.execute(
+                select(Chat.id).where(
+                    (Chat.user_low_id.in_(ids)) | (Chat.user_high_id.in_(ids))
+                )
+            )
+        ).all()
+    ]
+    if chat_ids:
+        await db.execute(delete(ChatMessage).where(ChatMessage.chat_id.in_(chat_ids)))
+        await db.execute(delete(Chat).where(Chat.id.in_(chat_ids)))
+    await db.execute(delete(ChatMessage).where(ChatMessage.sender_id.in_(ids)))
     await db.execute(
         delete(TrustEdge).where(
             (TrustEdge.from_user_id.in_(ids)) | (TrustEdge.to_user_id.in_(ids))

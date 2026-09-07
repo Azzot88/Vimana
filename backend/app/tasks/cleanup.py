@@ -42,7 +42,7 @@ from app.models.deal import (
     Dispute,
     OperatorAccessGrant,
 )
-from app.models.marketplace import InquiryMessage, Order, Trip, TripInquiry
+from app.models.marketplace import Chat, ChatMessage, Order, Trip
 from app.models.notices import PlatformNotice, RouteNote
 from app.models.social import Connection, InviteLink
 from app.models.trust import TrustEdge
@@ -145,21 +145,16 @@ def cleanup_e2e_users() -> dict:
             db.execute(delete(Deal).where(Deal.id.in_(deal_ids)))
 
         if trip_ids:
-            inquiry_ids = [
-                row[0]
-                for row in db.execute(
-                    select(TripInquiry.id).where(TripInquiry.trip_id.in_(trip_ids))
-                ).all()
-            ]
-            if inquiry_ids:
-                db.execute(
-                    delete(InquiryMessage).where(
-                        InquiryMessage.inquiry_id.in_(inquiry_ids)
-                    )
-                )
-                db.execute(
-                    delete(TripInquiry).where(TripInquiry.id.in_(inquiry_ids))
-                )
+            # T3.11.23 — a deleted trip no longer takes a conversation with it.
+            # There is no per-trip thread any more: the chat belongs to the two
+            # people, and it outlives any one thing they talked about. Messages
+            # that named the trip lose the reference and keep the words, which is
+            # what a reader of their own history would expect.
+            db.execute(
+                update(ChatMessage)
+                .where(ChatMessage.about_trip_id.in_(trip_ids))
+                .values(about_trip_id=None)
+            )
             db.execute(delete(Trip).where(Trip.id.in_(trip_ids)))
 
         # Rows the user *authored on platform content* — the content itself is
@@ -197,26 +192,28 @@ def cleanup_e2e_users() -> dict:
             delete(IdentityContainer).where(IdentityContainer.owner_id.in_(user_ids))
         )
 
-        # Inquiries the user started on *other people's* trips (the trip-scoped
-        # sweep above only covers their own).
-        stray_inquiries = [
+        # T3.11.23 — chats the user is in, and everything said in them. One row
+        # per pair now, so this is the whole conversation with each of those
+        # people rather than one thread per trip they once asked about.
+        #
+        # Messages first: the chat is their parent, and a chat deleted out from
+        # under them leaves rows pointing at nothing.
+        stray_chats = [
             row[0]
             for row in db.execute(
-                select(TripInquiry.id).where(
-                    (TripInquiry.sender_id.in_(user_ids))
-                    | (TripInquiry.carrier_id.in_(user_ids))
+                select(Chat.id).where(
+                    (Chat.user_low_id.in_(user_ids))
+                    | (Chat.user_high_id.in_(user_ids))
                 )
             ).all()
         ]
-        if stray_inquiries:
+        if stray_chats:
             db.execute(
-                delete(InquiryMessage).where(
-                    InquiryMessage.inquiry_id.in_(stray_inquiries)
-                )
+                delete(ChatMessage).where(ChatMessage.chat_id.in_(stray_chats))
             )
-            db.execute(delete(TripInquiry).where(TripInquiry.id.in_(stray_inquiries)))
+            db.execute(delete(Chat).where(Chat.id.in_(stray_chats)))
         db.execute(
-            delete(InquiryMessage).where(InquiryMessage.sender_id.in_(user_ids))
+            delete(ChatMessage).where(ChatMessage.sender_id.in_(user_ids))
         )
 
         # Participation in deals that are not theirs.

@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, is_superuser
+from app.core.chats import chat_for_pair
 from app.core.database import get_db
 from app.core.identity import require_live_identity
 from app.core.pagination import Page, clamp_limit, paginate_desc
@@ -20,6 +21,7 @@ from app.core.deal_chain import (
     verify_content,
 )
 from app.core.nostr_publish import get_own_relay_url
+from app.core.shipment_no import new_shipment_no
 from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.tasks.notifications import notify_deal_status
 from app.models.deal import (
@@ -30,7 +32,7 @@ from app.models.deal import (
     DealStatus,
     DealVaultMessage,
 )
-from app.models.marketplace import Category, Order, OrderStatus, Trip, TripInquiry, TripStatus
+from app.models.marketplace import Category, Order, OrderStatus, Trip, TripStatus
 from app.models.user import User
 from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
 
@@ -96,6 +98,15 @@ async def match_deal(
         sender_id=current_user.id,
         carrier_id=trip.carrier_id,
         status=DealStatus.matched,
+        # T3.11.23 — the deal is nested in the chat with this carrier, found or
+        # opened here. «Кнопка с доски открывает сделку, но также сначала
+        # открывает чат, а уже внутри него сделку» (owner, 2026-09-07): the chat
+        # is the container, and it exists before the deal it holds.
+        chat_id=(await chat_for_pair(db, current_user.id, trip.carrier_id)).id,
+        # T3.11.23 — the number people say out loud. Random rather than
+        # sequential; see `core.shipment_no`. The unique index is the guard, and
+        # a collision at 2×10¹² combinations is a retry, not a design.
+        shipment_no=new_shipment_no(),
     )
     db.add(deal)
     await db.flush()
@@ -112,17 +123,10 @@ async def match_deal(
         author=current_user,
     )
 
-    # T1.22: link existing inquiry thread (if any) to the new deal so pre-deal
-    # chat history is scoped to the deal afterwards.
-    inquiry_result = await db.execute(
-        select(TripInquiry).where(
-            TripInquiry.trip_id == trip.id,
-            TripInquiry.sender_id == current_user.id,
-        )
-    )
-    inquiry = inquiry_result.scalar_one_or_none()
-    if inquiry and inquiry.deal_id is None:
-        inquiry.deal_id = deal.id
+    # T3.11.23 — nothing to link here any more. The pre-deal conversation is in
+    # the chat this deal now belongs to, and the deal points at it rather than
+    # the other way round: one chat holds many deals, so a `deal_id` on the
+    # thread could only ever name one of them.
 
     # T_UX.2 pt.4 — pin corridor note as system-message if the corridor is
     # flagged. Informational only; never blocks the match.

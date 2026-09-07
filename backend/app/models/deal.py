@@ -101,6 +101,25 @@ class Deal(Base):
     sealed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # T3.11.23 — the chat this deal is nested in (owner's model 2026-09-07).
+    # One chat per person, many deals inside it.
+    #
+    # Nullable only for rows that predate the chat; every new deal has one, and
+    # a deal without a chat is a conversation with nowhere to happen.
+    chat_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("chats.id"), nullable=True, index=True
+    )
+    # T3.11.23 — the number people say out loud (owner's request 2026-09-07:
+    # «должно быть понятно какая сделка для чего — название, цена, номер
+    # отправки»). A UUID is neither dictated nor pasted into a message.
+    #
+    # **Random, not sequential.** A counter publishes how many deals the
+    # platform has ever had, to every user, forever — and for a young
+    # marketplace that is a number to keep. Generated in `core.shipment_no`,
+    # which also drops the characters that get misread aloud.
+    shipment_no: Mapped[str | None] = mapped_column(
+        String(12), unique=True, nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

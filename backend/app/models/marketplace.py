@@ -358,38 +358,73 @@ class Order(Base):
     )
 
 
-class TripInquiry(Base):
-    """T1.22: pre-deal chat thread between a sender and the trip's carrier.
-    Unique per (trip_id, sender_id) — reuse the same thread if sender re-opens."""
-    __tablename__ = "trip_inquiries"
+class Chat(Base):
+    """T3.11.23 — one chat per person, and only one, forever.
+
+    Owner's model, 2026-09-07: «Чаты привязаны к пользователям и существуют в
+    единственном числе на человека. Сделок может быть много… Сделка это чат,
+    вложенный в чат.» The nested chat already existed — `Deal` plus
+    `DealVaultMessage` is exactly that. What did not was the outer one.
+
+    It replaces `TripInquiry`, which was keyed `(trip_id, sender_id)`: writing to
+    one carrier about three trips produced three threads with the same person,
+    and none of them was «our conversation».
+
+    **The pair is stored ordered**, low id first, so `(A, B)` and `(B, A)` are
+    one row rather than a rule every caller has to remember. The unique index is
+    what makes «existing in a single copy per person» a fact of the database
+    instead of a habit of the code.
+
+    Roles are deliberately absent. A pair is a pair: today one of them sends and
+    the other carries, tomorrow it is the other way round, and a chat that had
+    baked the roles in would need a second row for the same two people.
+    """
+
+    __tablename__ = "chats"
     __table_args__ = (
-        UniqueConstraint("trip_id", "sender_id", name="uq_trip_inquiries_trip_sender"),
+        UniqueConstraint("user_low_id", "user_high_id", name="uq_chats_pair"),
+        CheckConstraint("user_low_id < user_high_id", name="ck_chats_pair_ordered"),
+        Index("ix_chats_low", "user_low_id"),
+        Index("ix_chats_high", "user_high_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id"))
-    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    carrier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    deal_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("deals.id"), nullable=True)
+    user_low_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    user_high_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
 
-class InquiryMessage(Base):
-    """T1.22: encrypted messages inside a TripInquiry thread. Same at-rest
-    scheme as DealVaultMessage (T1.21) — `text` is a property that wraps the
-    ciphertext/nonce columns."""
-    __tablename__ = "inquiry_messages"
+class ChatMessage(Base):
+    """T3.11.23 — a message in the outer chat. Encrypted at rest like every
+    other message on this platform (T1.21): `text` is a property over the
+    ciphertext/nonce pair.
+
+    Was `InquiryMessage`, keyed to a per-trip thread.
+
+    `about_trip_id` is how «рейс становится содержимым, а не личностью треда»
+    survives contact with the carrier's panel. That panel counts how many people
+    asked about a given trip, and with one thread per person there is no
+    per-trip thread left to count — so the trip moves onto the message that
+    mentions it. The count becomes «chats with a message about this trip», which
+    is the same number and a truer sentence.
+    """
+
+    __tablename__ = "chat_messages"
     # Same read shape as the vault chat: filter by thread, order by time
     # (T_PERF.1, 0034).
     __table_args__ = (
-        Index("ix_inquiry_messages_inquiry_created", "inquiry_id", "created_at", "id"),
+        Index("ix_chat_messages_chat_created", "chat_id", "created_at", "id"),
+        Index("ix_chat_messages_about_trip", "about_trip_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    inquiry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trip_inquiries.id"))
+    chat_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chats.id"))
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    about_trip_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("trips.id"), nullable=True
+    )
     text_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     text_nonce: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

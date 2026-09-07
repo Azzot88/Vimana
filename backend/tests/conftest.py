@@ -991,9 +991,10 @@ async def _ensure_hot_path_indexes(engine) -> None:
             ),
             ("ix_attachments_message_id", "attachments (message_id)"),
             (
-                "ix_inquiry_messages_inquiry_created",
-                "inquiry_messages (inquiry_id, created_at, id)",
+                "ix_chat_messages_chat_created",
+                "chat_messages (chat_id, created_at, id)",
             ),
+            ("ix_chat_messages_about_trip", "chat_messages (about_trip_id)"),
             ("ix_trust_edges_to_user_id", "trust_edges (to_user_id)"),
             (
                 "ix_verification_requests_deal_id",
@@ -1005,12 +1006,37 @@ async def _ensure_hot_path_indexes(engine) -> None:
             ),
         ):
             await conn.execute(text(f"CREATE INDEX IF NOT EXISTS {name} ON {target}"))
-
-
 async def _ensure_inquiry_tables(engine) -> None:
-    """T1.22 schema fix: trip_inquiries + inquiry_messages. Idempotent."""
+    """T3.11.23 — `chats` + `chat_messages`, and the fold away from per-trip
+    threads. Mirrors `0073`; idempotent.
+
+    A test database created before 0073 has `trip_inquiries` and
+    `inquiry_messages` and no chats. The migration folds one into the other, and
+    so does this — otherwise the suite would run against a schema the product
+    has not had since 2026-09-07, which is the trap `_ensure_*` exists to avoid
+    (`TECHSTATE §3`: `create_all` makes missing tables and never changes an
+    existing one).
+    """
     async with engine.begin() as conn:
-        row = (
+        await conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS chats ("
+                "id UUID PRIMARY KEY, "
+                "user_low_id UUID NOT NULL REFERENCES users(id), "
+                "user_high_id UUID NOT NULL REFERENCES users(id), "
+                "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
+                "CONSTRAINT uq_chats_pair UNIQUE (user_low_id, user_high_id), "
+                "CONSTRAINT ck_chats_pair_ordered CHECK (user_low_id < user_high_id))"
+            )
+        )
+        await conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_chats_low ON chats(user_low_id)")
+        )
+        await conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_chats_high ON chats(user_high_id)")
+        )
+
+        legacy = (
             await conn.execute(
                 text(
                     "SELECT 1 FROM information_schema.tables "
@@ -1018,39 +1044,65 @@ async def _ensure_inquiry_tables(engine) -> None:
                 )
             )
         ).fetchone()
-        if not row:
+        if legacy:
+            # Fold, exactly as 0073 does, then drop. `LEAST`/`GREATEST` is what
+            # makes (A,B) and (B,A) one pair.
             await conn.execute(
                 text(
-                    "CREATE TABLE trip_inquiries ("
-                    "id UUID PRIMARY KEY, "
-                    "trip_id UUID NOT NULL REFERENCES trips(id), "
-                    "sender_id UUID NOT NULL REFERENCES users(id), "
-                    "carrier_id UUID NOT NULL REFERENCES users(id), "
-                    "deal_id UUID REFERENCES deals(id), "
-                    "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
-                    "CONSTRAINT uq_trip_inquiries_trip_sender UNIQUE (trip_id, sender_id))"
+                    "INSERT INTO chats (id, user_low_id, user_high_id, created_at) "
+                    "SELECT gen_random_uuid(), pair.lo, pair.hi, pair.started FROM ("
+                    "  SELECT LEAST(sender_id, carrier_id) AS lo,"
+                    "         GREATEST(sender_id, carrier_id) AS hi,"
+                    "         MIN(created_at) AS started"
+                    "  FROM trip_inquiries WHERE sender_id <> carrier_id"
+                    "  GROUP BY 1, 2"
+                    ") AS pair ON CONFLICT (user_low_id, user_high_id) DO NOTHING"
                 )
             )
-        row = (
+            await conn.execute(text("ALTER TABLE inquiry_messages RENAME TO chat_messages"))
+            for ddl in (
+                "ADD COLUMN IF NOT EXISTS chat_id UUID REFERENCES chats(id)",
+                "ADD COLUMN IF NOT EXISTS about_trip_id UUID REFERENCES trips(id)",
+            ):
+                await conn.execute(text(f"ALTER TABLE chat_messages {ddl}"))
             await conn.execute(
                 text(
-                    "SELECT 1 FROM information_schema.tables "
-                    "WHERE table_name = 'inquiry_messages'"
+                    "UPDATE chat_messages m SET chat_id = c.id "
+                    "FROM trip_inquiries i "
+                    "JOIN chats c ON c.user_low_id = LEAST(i.sender_id, i.carrier_id) "
+                    "            AND c.user_high_id = GREATEST(i.sender_id, i.carrier_id) "
+                    "WHERE m.inquiry_id = i.id"
                 )
             )
-        ).fetchone()
-        if not row:
-            await conn.execute(
-                text(
-                    "CREATE TABLE inquiry_messages ("
-                    "id UUID PRIMARY KEY, "
-                    "inquiry_id UUID NOT NULL REFERENCES trip_inquiries(id), "
-                    "sender_id UUID NOT NULL REFERENCES users(id), "
-                    "text_ciphertext BYTEA, "
-                    "text_nonce BYTEA, "
-                    "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"
-                )
+            await conn.execute(text("DELETE FROM chat_messages WHERE chat_id IS NULL"))
+            await conn.execute(text("ALTER TABLE chat_messages ALTER COLUMN chat_id SET NOT NULL"))
+            await conn.execute(text("ALTER TABLE chat_messages DROP COLUMN inquiry_id"))
+            await conn.execute(text("DROP TABLE trip_inquiries"))
+
+        await conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS chat_messages ("
+                "id UUID PRIMARY KEY, "
+                "chat_id UUID NOT NULL REFERENCES chats(id), "
+                "sender_id UUID NOT NULL REFERENCES users(id), "
+                "about_trip_id UUID REFERENCES trips(id), "
+                "text_ciphertext BYTEA, "
+                "text_nonce BYTEA, "
+                "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"
             )
+        )
+        # 0073 — the deal is nested in a chat and carries a spoken number.
+        for ddl in (
+            "ADD COLUMN IF NOT EXISTS chat_id UUID REFERENCES chats(id)",
+            "ADD COLUMN IF NOT EXISTS shipment_no VARCHAR(12)",
+        ):
+            await conn.execute(text(f"ALTER TABLE deals {ddl}"))
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_deals_shipment_no "
+                "ON deals(shipment_no)"
+            )
+        )
 
 
 async def _ensure_encrypted_messages(engine) -> None:
