@@ -381,6 +381,8 @@
     "remove": "Usuń z kontaktów"
   },
   "recipient": {
+    "foundOnPlatform": "Znaleziono na platformie",
+    "pendingInvite": "Zaproszenie wysłane",
     "pickerTitle": "Kto odbiera przesyłkę",
     "searchPlaceholder": "Imię lub klucz publiczny",
     "byKey": "Dodaj po kluczu",
@@ -741,6 +743,7 @@
     "carrier": "Przewoźnik",
     "cargo": "Ładunek",
     "category": "Kategoria",
+    "recipients": "Odbiorcy",
     "shipmentNo": "Numer przesyłki",
     "dealId": "ID transakcji",
     "accept": "Przyjmij transakcję",
@@ -760,6 +763,8 @@
     "carriageRules": "Zasady przewozu"
   },
   "profile": {
+    "handle": "Nazwa użytkownika",
+    "handleHint": "Po niej cię znajdą — tak jak po e-mailu i telefonie z panelu",
     "meetingPlaces": {
       "title": "Miejsca spotkań",
       "hint": "Gdzie chcesz się spotykać, własnymi słowami. Proponowane w formularzu lotu przy odbiorze i przekazaniu osobistym.",

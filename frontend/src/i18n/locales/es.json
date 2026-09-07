@@ -380,6 +380,8 @@
     "remove": "Quitar de contactos"
   },
   "recipient": {
+    "foundOnPlatform": "Encontrados en la plataforma",
+    "pendingInvite": "Invitación enviada",
     "pickerTitle": "Quién recibe el paquete",
     "searchPlaceholder": "Nombre o clave pública",
     "byKey": "Añadir por clave",
@@ -740,6 +742,7 @@
     "carrier": "Transportista",
     "cargo": "Carga",
     "category": "Categoría",
+    "recipients": "Destinatarios",
     "shipmentNo": "Número de envío",
     "dealId": "ID del acuerdo",
     "accept": "Aceptar el acuerdo",
@@ -759,6 +762,8 @@
     "carriageRules": "Reglas de transporte"
   },
   "profile": {
+    "handle": "Identificador",
+    "handleHint": "Te encuentran por él — igual que por el correo y el teléfono del panel",
     "meetingPlaces": {
       "title": "Puntos de encuentro",
       "hint": "Dónde aceptas quedar, con tus palabras. Se ofrecen en el formulario de viaje cuando recoges o entregas en persona.",

@@ -6,6 +6,8 @@ import { usePrefs } from '../hooks/usePrefs'
 import { openDispute } from '../api/admin'
 import { getDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
+import { listParticipants, type Participant } from '../api/participants'
+import AddContactButton from '../components/AddContactButton'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
 import PlatformNoticeBanner from '../components/PlatformNoticeBanner'
@@ -46,6 +48,7 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   const [verifyRequestFor, setVerifyRequestFor] = useState<'sender' | 'carrier' | null>(null)
   const [pendingRespond, setPendingRespond] = useState<VerificationRequestT | null>(null)
   const [verifySuccess, setVerifySuccess] = useState(false)
+  const [participants, setParticipants] = useState<Participant[]>([])
 
   const handleDispute = async () => {
     if (!dealId || !disputeReason.trim()) return
@@ -101,6 +104,17 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   }
 
   useEffect(() => { load() }, [dealId, user?.id])
+
+  /* T3.11.24 — who else is on this deal. Its own request rather than a field on
+     the deal: participants change without the deal changing, and folding them
+     into the detail response would mean re-reading a whole deal to learn that
+     one recipient accepted. Failure costs the list, not the page. */
+  useEffect(() => {
+    if (!dealId) return
+    listParticipants(dealId)
+      .then(({ data }) => setParticipants(data))
+      .catch(() => setParticipants([]))
+  }, [dealId])
 
   const handleAction = async (action: 'handoff' | 'confirm') => {
     if (!dealId) return
@@ -183,19 +197,54 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
         </div>
 
         <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* T3.11.24 — the deal's participants are the other place «добавить в
+              контакты» belongs: this is where you have just dealt with somebody
+              and know whether you would deal with them again. The button draws
+              nothing for yourself, so each side sees exactly one. */}
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.sender')}</p>
-            <p className="text-sm font-body text-navy font-medium">{deal.sender_name}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-body text-navy font-medium">{deal.sender_name}</p>
+              <AddContactButton userId={deal.sender_id} inline />
+            </div>
           </div>
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.carrier')}</p>
-            <Link
-              to={`/carriers/${deal.carrier_id}`}
-              className="text-sm font-body text-navy font-medium hover:text-cyan transition-colors underline decoration-navy/20 underline-offset-2"
-            >
-              {deal.carrier_name}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/carriers/${deal.carrier_id}`}
+                className="text-sm font-body text-navy font-medium hover:text-cyan transition-colors underline decoration-navy/20 underline-offset-2"
+              >
+                {deal.carrier_name}
+              </Link>
+              <AddContactButton userId={deal.carrier_id} inline />
+            </div>
           </div>
+          {/* The recipients, when there are any. Until now this list existed on
+              the server and nowhere on screen: a deal could have a third person
+              reading it and neither principal could see who. */}
+          {participants.length > 0 && (
+            <div className="sm:col-span-2">
+              <p className="text-xs font-body font-medium text-navy/40 mb-1">
+                {t('deals.recipients')}
+              </p>
+              <div className="space-y-1">
+                {participants.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <p className="text-sm font-body text-navy">
+                      {p.display_name ?? t('recipient.pendingInvite')}
+                    </p>
+                    {p.accepted_at === null && (
+                      <span className="text-[10px] font-mono uppercase bg-navy/5 text-navy/50 px-1.5 py-0.5 rounded">
+                        {t('recipient.pendingInvite')}
+                      </span>
+                    )}
+                    {p.user_id && <AddContactButton userId={p.user_id} inline />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <p className="text-xs font-body font-medium text-navy/40 mb-1">{t('deals.cargo')}</p>
             <p className="text-sm font-body text-navy">{deal.cargo_description}</p>

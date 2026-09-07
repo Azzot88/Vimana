@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime
 from typing import Literal
@@ -104,6 +105,10 @@ class UserUpdate(BaseModel):
     display_name: str | None = None
     phone: str | None = None
     locale: str | None = None
+    # T3.11.24 — chosen in the cabinet, used to be found. Nullable end to end:
+    # `None` is «not sent», and an empty string is «take mine away», which is a
+    # different answer and a real one.
+    handle: str | None = Field(default=None, max_length=33)
     # T_UX.14 — display preferences.
     unit_weight: Literal["kg", "lb"] | None = None
     date_format: Literal["eu", "us"] | None = None
@@ -150,6 +155,28 @@ class UserUpdate(BaseModel):
             seen.add(key)
             out.append(method)
         return out
+
+    @field_validator("handle")
+    @classmethod
+    def _tidy_handle(cls, v: str | None) -> str | None:
+        """`@Igor_88` and `igor_88` are the same handle, and it is stored once.
+
+        The `@` is stripped because people type it — it is how the thing is
+        written, not part of the value — and the rest is lower-cased so that two
+        spellings cannot become two accounts. An empty string survives as
+        `None`: «убрать хэндл» is an answer, and it is not the same as not
+        sending the field.
+        """
+        if v is None:
+            return None
+        clean = v.strip().lstrip("@").lower()
+        if not clean:
+            return None
+        if not re.fullmatch(r"[a-z0-9_]{3,32}", clean):
+            raise ValueError(
+                "handle: 3–32 characters, latin letters, digits and underscore"
+            )
+        return clean
 
     @field_validator("default_currencies")
     @classmethod
@@ -277,6 +304,11 @@ class UserOut(BaseModel):
     email: str | None
     phone: str | None
     display_name: str
+    # T3.11.24 — public on purpose: the handle exists to be found and quoted,
+    # which is the opposite of the email and phone beside it (those are here
+    # only because this schema predates the split and are already visible to
+    # whoever can see the row).
+    handle: str | None = None
     can_carry: bool = True
     can_send: bool = True
     active_mode: str = "sender"

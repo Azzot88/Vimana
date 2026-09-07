@@ -1,3 +1,5 @@
+import uuid
+
 from tests.conftest import make_account, unique_email
 
 
@@ -300,3 +302,106 @@ async def test_removing_a_contact_leaves_theirs_alone(client):
 
     b_list = await client.get("/api/me/connections", headers=b_h)
     assert a_id in [c["connected_user_id"] for c in b_list.json()]
+
+
+# ── T3.11.24 pt.2: handle and lookup ────────────────────────────────────────
+
+
+async def test_handle_is_chosen_and_normalised(client):
+    """Owner's request 2026-09-07: a handle picked in the cabinet.
+
+    `@Igor_88` and `igor_88` are the same handle — the `@` is how it is written,
+    not part of the value, and case must not be able to make two accounts.
+    """
+    mine, _ = await _account(client, "handler")
+    r = await client.patch("/api/auth/me", headers=mine, json={"handle": "@Vimana_Test1"})
+    assert r.status_code == 200, r.text
+    assert r.json()["handle"] == "vimana_test1"
+
+
+async def test_handle_must_be_free(client):
+    a_h, _ = await _account(client, "hand-a")
+    b_h, _ = await _account(client, "hand-b")
+    taken = f"taken{uuid.uuid4().hex[:8]}"
+    assert (
+        await client.patch("/api/auth/me", headers=a_h, json={"handle": taken})
+    ).status_code == 200
+    clash = await client.patch("/api/auth/me", headers=b_h, json={"handle": taken})
+    assert clash.status_code == 409
+
+
+async def test_keeping_your_own_handle_is_not_a_clash(client):
+    """The uniqueness check excludes the caller — re-saving a profile form with
+    the handle untouched must not be an error."""
+    mine, _ = await _account(client, "hand-same")
+    same = f"same{uuid.uuid4().hex[:8]}"
+    await client.patch("/api/auth/me", headers=mine, json={"handle": same})
+    again = await client.patch("/api/auth/me", headers=mine, json={"handle": same})
+    assert again.status_code == 200
+
+
+async def test_malformed_handle_is_refused(client):
+    mine, _ = await _account(client, "hand-bad")
+    for bad in ["дв", "ab", "with space", "sym!bol"]:
+        r = await client.patch("/api/auth/me", headers=mine, json={"handle": bad})
+        assert r.status_code == 422, f"{bad!r} was accepted"
+
+
+async def test_handle_can_be_given_up(client):
+    mine, _ = await _account(client, "hand-drop")
+    handle = f"drop{uuid.uuid4().hex[:8]}"
+    await client.patch("/api/auth/me", headers=mine, json={"handle": handle})
+    cleared = await client.patch("/api/auth/me", headers=mine, json={"handle": ""})
+    assert cleared.status_code == 200
+    assert cleared.json()["handle"] is None
+
+
+async def test_lookup_finds_by_handle_email_and_phone(client):
+    """«Поиск сделаем по почте и номеру телефона указанному в личном кабинете»,
+    plus the handle chosen there."""
+    mine, _ = await _account(client, "seeker")
+    theirs, their_id = await _account(client, "sought")
+    handle = f"sought{uuid.uuid4().hex[:8]}"
+    await client.patch("/api/auth/me", headers=theirs, json={"handle": handle})
+    me = await client.get("/api/auth/me", headers=theirs)
+    email = me.json()["email"]
+    # A random Russian mobile: `9` plus nine digits is the whole national
+    # pattern, so any draw is a valid number, and the space is big enough that
+    # a database which is never reset (`ENVIRONMENT §8`) will not collide on the
+    # unique column.
+    phone = f"+79{uuid.uuid4().int % 10**9:09d}"
+    await client.patch("/api/auth/me", headers=theirs, json={"phone": phone})
+
+    for needle in (handle, f"@{handle}", email, phone):
+        r = await client.get("/api/users/lookup", headers=mine, params={"q": needle})
+        assert r.status_code == 200, r.text
+        assert their_id in [u["id"] for u in r.json()], f"{needle!r} found nobody"
+
+    # And what comes back is a name and a handle — never a second contact
+    # detail the searcher did not already have.
+    body = (
+        await client.get("/api/users/lookup", headers=mine, params={"q": handle})
+    ).json()[0]
+    assert set(body) == {"id", "display_name", "handle"}
+
+
+async def test_lookup_is_exact_not_a_prefix(client):
+    """A prefix search over emails or numbers is an address-book harvester. The
+    searcher must already hold the whole value."""
+    mine, _ = await _account(client, "prefixer")
+    theirs, their_id = await _account(client, "prefixed")
+    handle = f"exact{uuid.uuid4().hex[:8]}"
+    await client.patch("/api/auth/me", headers=theirs, json={"handle": handle})
+
+    partial = await client.get(
+        "/api/users/lookup", headers=mine, params={"q": handle[:-2]}
+    )
+    assert their_id not in [u["id"] for u in partial.json()]
+
+
+async def test_lookup_never_returns_yourself(client):
+    mine, my_id = await _account(client, "myself")
+    handle = f"self{uuid.uuid4().hex[:8]}"
+    await client.patch("/api/auth/me", headers=mine, json={"handle": handle})
+    r = await client.get("/api/users/lookup", headers=mine, params={"q": handle})
+    assert my_id not in [u["id"] for u in r.json()]

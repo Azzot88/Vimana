@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { listConnections, searchConnections, type Connection } from '../api/social'
+import {
+  listConnections,
+  lookupUser,
+  searchConnections,
+  type Connection,
+  type FoundUser,
+} from '../api/social'
 import { inviteRecipient, setRecipient } from '../api/participants'
 import MonoText from './MonoText'
 
@@ -42,6 +48,11 @@ export default function RecipientModal({
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [contacts, setContacts] = useState<Connection[]>([])
+  /** People found on the platform who are not (yet) my contacts. Kept apart
+   *  from the contact list on purpose: «мой контакт» and «нашёлся по почте» are
+   *  different degrees of knowing somebody, and merging them would quietly
+   *  present a stranger as somebody I keep. */
+  const [found, setFound] = useState<FoundUser[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -67,6 +78,18 @@ export default function RecipientModal({
     const id = window.setTimeout(() => {
       const call = needle ? searchConnections(needle) : listConnections()
       call.then(({ data }) => setContacts(data)).catch(() => setContacts([]))
+
+      /* T3.11.24 — and beyond my own contacts: «поиск сделаем по почте и
+         номеру телефона указанному в личном кабинете» plus the handle. The
+         server matches those three **whole**, so this fires for anything long
+         enough to be one of them and simply finds nobody otherwise. */
+      if (needle.length >= 3) {
+        lookupUser(needle)
+          .then(({ data }) => setFound(data))
+          .catch(() => setFound([]))
+      } else {
+        setFound([])
+      }
     }, 250)
     return () => window.clearTimeout(id)
   }, [query, open])
@@ -192,6 +215,40 @@ export default function RecipientModal({
                 )}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Found by email, phone or handle — and shown as a separate group,
+            because «мой контакт» and «нашёлся по почте» are different degrees
+            of knowing somebody. Anyone already in the list above is dropped
+            rather than printed twice. */}
+        {found.filter(
+          (f) => !contacts.some((c) => c.connected_user_id === f.id),
+        ).length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-body font-medium text-navy/40">
+              {t('recipient.foundOnPlatform')}
+            </p>
+            {found
+              .filter((f) => !contacts.some((c) => c.connected_user_id === f.id))
+              .map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => attach({ user_id: f.id }, f.display_name)}
+                  className="w-full flex items-center justify-between gap-3 p-3 rounded-field border border-navy/10 hover:border-cyan text-left disabled:opacity-50"
+                >
+                  <span className="text-sm font-body text-navy truncate">
+                    {f.display_name}
+                  </span>
+                  {f.handle && (
+                    <MonoText className="shrink-0 text-xs text-navy/40">
+                      @{f.handle}
+                    </MonoText>
+                  )}
+                </button>
+              ))}
           </div>
         )}
 

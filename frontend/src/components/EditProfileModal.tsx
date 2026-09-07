@@ -19,6 +19,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
   const { user, token, setAuth } = useAuthStore()
 
   const [displayName, setDisplayName] = useState(user?.display_name ?? '')
+  const [handle, setHandle] = useState(user?.handle ?? '')
   const parsed = user?.phone ? parsePhoneNumberFromString(user.phone) : null
   const [phoneIso, setPhoneIso] = useState<CountryCode | ''>(
     (parsed?.country ?? '') as CountryCode | '',
@@ -34,6 +35,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open || !user) return
     setDisplayName(user.display_name ?? '')
+    setHandle(user.handle ?? '')
     const p = user.phone ? parsePhoneNumberFromString(user.phone) : null
     setPhoneIso((p?.country ?? '') as CountryCode | '')
     setPhoneNational(p?.nationalNumber ?? (user.phone ?? '').replace(/^\+\d+/, ''))
@@ -75,6 +77,13 @@ export default function EditProfileModal({ open, onClose }: Props) {
       const patch: Record<string, string | undefined> = {}
       if (displayName.trim() && displayName !== user?.display_name) {
         patch.display_name = displayName.trim()
+      }
+      /* T3.11.24 — sent whenever it differs, empty string included: clearing
+         the box means «убрать хэндл», and the backend reads `''` as exactly
+         that. Comparing against `?? ''` keeps an account that never had one
+         from sending a pointless empty write on every save. */
+      if (handle.trim().toLowerCase() !== (user?.handle ?? '')) {
+        patch.handle = handle.trim().toLowerCase()
       }
       if (phoneIso && phoneNational) {
         const dial = getCountryCallingCode(phoneIso as CountryCode)
@@ -161,6 +170,36 @@ export default function EditProfileModal({ open, onClose }: Props) {
             maxLength={120}
             className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
           />
+        </div>
+
+        {/* T3.11.24 — the handle, chosen here and used to be found. Prefixed
+            with a fixed `@` rather than asking people to type one: it is how
+            the thing is written, and the field would otherwise fill up with
+            values that differ only by a character nobody means. */}
+        <div>
+          <label
+            htmlFor="profile-handle"
+            className="block text-xs font-body font-medium text-navy/60 mb-1"
+          >
+            {t('profile.handle')}
+          </label>
+          <div className="flex items-center border border-navy/20 rounded-field focus-within:border-cyan">
+            <span className="pl-3 font-mono text-sm text-navy/40">@</span>
+            <input
+              id="profile-handle"
+              type="text"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value.replace(/^@+/, ''))}
+              maxLength={32}
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="igor_88"
+              className="flex-1 bg-transparent px-2 py-2 text-sm font-mono text-navy focus:outline-none"
+            />
+          </div>
+          <p className="text-xs font-body text-navy/40 mt-1">
+            {t('profile.handleHint')}
+          </p>
         </div>
 
         <div>

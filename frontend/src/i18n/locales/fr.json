@@ -380,6 +380,8 @@
     "remove": "Retirer des contacts"
   },
   "recipient": {
+    "foundOnPlatform": "Trouvés sur la plateforme",
+    "pendingInvite": "Invitation envoyée",
     "pickerTitle": "Qui reçoit le colis",
     "searchPlaceholder": "Nom ou clé publique",
     "byKey": "Ajouter par clé",
@@ -740,6 +742,7 @@
     "carrier": "Transporteur",
     "cargo": "Colis",
     "category": "Catégorie",
+    "recipients": "Destinataires",
     "shipmentNo": "Numéro d'envoi",
     "dealId": "ID de la transaction",
     "accept": "Accepter la transaction",
@@ -759,6 +762,8 @@
     "carriageRules": "Règles de transport"
   },
   "profile": {
+    "handle": "Identifiant",
+    "handleHint": "On vous trouve par là — comme par l'e-mail et le téléphone du compte",
     "meetingPlaces": {
       "title": "Points de rencontre",
       "hint": "Où vous acceptez de vous retrouver, dans vos mots. Proposés dans le formulaire de trajet pour une remise en personne.",

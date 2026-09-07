@@ -83,3 +83,15 @@ export const setConnectionTier = (userId: string, tier: ConnectionTier) =>
  *  has to hand when looking somebody up. */
 export const searchConnections = (q: string) =>
   api.get<Connection[]>('/api/me/connections', { params: { q } })
+
+/** T3.11.24 — one person, by something you already know about them: their
+ *  handle, the email or the phone in their cabinet. **Exact match**, on the
+ *  server's insistence: a prefix search over addresses is a harvester. */
+export interface FoundUser {
+  id: string
+  display_name: string
+  handle: string | null
+}
+
+export const lookupUser = (q: string) =>
+  api.get<FoundUser[]>('/api/users/lookup', { params: { q } })

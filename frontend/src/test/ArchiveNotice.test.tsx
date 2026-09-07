@@ -34,6 +34,7 @@ vi.mock('../stores/auth', () => ({
 const retiredUser: User = {
   id: 'u1',
   display_name: 'Nick',
+  handle: null,
   email: 'a@b.test',
   phone: null,
   can_carry: true,

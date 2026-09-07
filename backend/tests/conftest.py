@@ -236,6 +236,15 @@ async def _ensure_connection_tier(engine) -> None:
                 "DROP NOT NULL"
             )
         )
+        await conn.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS handle VARCHAR(32)")
+        )
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_handle "
+                "ON users (handle)"
+            )
+        )
 
 
 async def _ensure_role_column(engine) -> None:

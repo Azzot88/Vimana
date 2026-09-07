@@ -24,6 +24,7 @@ import { updateMe } from '../api/auth'
 const base: User = {
   id: 'u1',
   display_name: 'Nick',
+  handle: null,
   email: 'nick@example.test',
   phone: null,
   can_carry: true,

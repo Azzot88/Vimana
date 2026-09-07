@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -11,7 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
+from app.core.contacts import normalize
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.core.social import (
     TIERS,
     add_connection as add_contact,
@@ -19,6 +21,7 @@ from app.core.social import (
     pair_state,
 )
 from app.core.trust import add_invited
+from app.models.contact import UserContact
 from app.models.social import Connection, InviteLink
 from app.models.user import User
 from app.schemas.social import ConnectionOut, InviteLinkOut, MyInviteOut
@@ -324,3 +327,92 @@ async def set_tier(
         tier=row.tier,
         state=await closeness(db, current_user.id, user_id),
     )
+
+
+class FoundUser(BaseModel):
+    """T3.11.24 — the least a picker needs to show a person and attach them.
+
+    Deliberately not `UserOut`: that one carries the email and phone, and this
+    endpoint is reached by anybody who can type. What comes back is what the
+    searcher already had (the handle they typed, or nothing) plus a name to
+    recognise — never a second contact detail they did not have.
+    """
+
+    id: uuid.UUID
+    display_name: str
+    handle: str | None = None
+
+
+@router.get("/users/lookup", response_model=list[FoundUser])
+@limiter.limit("30/minute")
+async def lookup_user(
+    request: Request,
+    q: str = Query(min_length=3, max_length=255),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Find one person by something you already know about them.
+
+    Owner's decision 2026-09-07: «поиск сделаем по почте и номеру телефона
+    указанному в личном кабинете», plus the handle chosen there.
+
+    **Exact match only, on all three.** Not a nicety — a prefix search over
+    emails or phone numbers is an address-book harvester: `+9715...` would walk
+    a country's numbering plan a page at a time. Requiring the whole value means
+    the searcher already had it, which is the same standing every messenger
+    grants a contact import.
+
+    Handles are matched whole for the same reason, though the argument is
+    weaker: a handle is chosen to be public. Prefix search over handles can come
+    later as a product decision; it is not one to make silently inside a
+    contacts feature.
+
+    Phone numbers are normalised to E.164 first — `+7 900 000-00-00` and
+    `+79000000000` are one number, and comparing raw text would find neither.
+    Both `users.phone` and confirmed `user_contacts` rows are searched: an
+    account may have arrived by email and added a phone afterwards, and the two
+    live in different places for reasons `T3.25` explains.
+
+    Rate-limited because exact match still answers «does this address have an
+    account here», one guess at a time. Thirty a minute is a person typing; a
+    list of addresses being tested is not.
+    """
+    needle = q.strip()
+
+    handle = needle.lstrip("@").lower()
+    email = normalize("email", needle)
+    phone = normalize("sms", needle)
+
+    conditions = [User.handle == handle]
+    if email:
+        conditions.append(User.email == email)
+    if phone:
+        conditions.append(User.phone == phone)
+    rows = (await db.execute(select(User).where(or_(*conditions)))).scalars().all()
+    found = {u.id: u for u in rows}
+
+    if email or phone:
+        contact_rows = (
+            await db.execute(
+                select(UserContact.user_id).where(
+                    UserContact.value.in_([v for v in (email, phone) if v]),
+                    UserContact.verified_at.isnot(None),
+                )
+            )
+        ).scalars().all()
+        extra = [uid for uid in contact_rows if uid not in found]
+        if extra:
+            for u in (
+                (await db.execute(select(User).where(User.id.in_(extra))))
+                .scalars()
+                .all()
+            ):
+                found[u.id] = u
+
+    return [
+        FoundUser(id=u.id, display_name=u.display_name, handle=u.handle)
+        for u in found.values()
+        # Finding yourself is not a result: the picker would offer to make you
+        # your own contact, and the API refuses that anyway.
+        if u.id != current_user.id
+    ]

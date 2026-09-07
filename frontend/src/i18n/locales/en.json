@@ -414,6 +414,8 @@
     "remove": "Remove from contacts"
   },
   "recipient": {
+    "foundOnPlatform": "Found on the platform",
+    "pendingInvite": "Invite sent",
     "pickerTitle": "Who receives the parcel",
     "searchPlaceholder": "Name or public key",
     "byKey": "Add by key",
@@ -780,6 +782,7 @@
     "carrier": "Carrier",
     "cargo": "Cargo",
     "category": "Category",
+    "recipients": "Recipients",
     "shipmentNo": "Shipment number",
     "dealId": "Deal ID",
     "accept": "Accept the deal",
@@ -799,6 +802,8 @@
     "carriageRules": "Carriage rules"
   },
   "profile": {
+    "handle": "Handle",
+    "handleHint": "People find you by it — as by the email and phone in your cabinet",
     "meetingPlaces": {
       "title": "Meeting places",
       "hint": "Where you are willing to meet, in your own words. Offered in the trip form when you accept or hand over in person.",

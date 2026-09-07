@@ -30,6 +30,18 @@ class User(Base):
     # live without a password at all.
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str] = mapped_column(String(100))
+    # T3.11.24 — the name a person can be looked up by and say out loud, chosen
+    # by them (owner's request 2026-09-07: «в кабинете должна быть возможность
+    # выбрать handle типа "@***"»).
+    #
+    # Display names are not unique and never will be — two Igors are two Igors,
+    # and forcing the second to become «Igor2» to keep a search working is the
+    # wrong trade. The handle is the identifier: unique, lowercase on the way in
+    # so `@Igor` and `@igor` cannot be two accounts, and **nullable**, because
+    # nobody is made to pick one before they can use the platform.
+    handle: Mapped[str | None] = mapped_column(
+        String(32), unique=True, index=True, nullable=True
+    )
     # T1.24 dual role: capability flags (can this user do X?) + active UI mode.
     # Everyone can both carry and send by default — mode is a UI preference,
     # authorization is by capability. `active_mode` ∈ {'sender', 'carrier'}.

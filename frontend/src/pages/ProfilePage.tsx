@@ -76,6 +76,11 @@ export default function ProfilePage() {
               <p className="font-display font-semibold text-lg text-navy truncate">
                 {user?.display_name}
               </p>
+              {/* T3.11.24 — shown, not hidden behind the edit modal: a handle
+                  people cannot see is a handle they cannot give out. */}
+              {user?.handle && (
+                <p className="text-xs font-mono text-navy/50">@{user.handle}</p>
+              )}
               <p className="text-xs font-mono text-navy/40">
                 {user?.active_mode === 'carrier'
                   ? t('dashboard.carrier')

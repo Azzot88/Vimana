@@ -1102,6 +1102,21 @@ async def update_me(
         raise HTTPException(
             status_code=409, detail="The archive is closed — that choice is final"
         )
+    # T3.11.24 — a handle is unique, and the honest answer to «занято» is 409,
+    # not an IntegrityError surfacing as 500. Checked rather than caught because
+    # the same request may carry other fields: a caught constraint would have
+    # already rolled back the display name the person edited in the same form.
+    if fields.get("handle"):
+        taken = (
+            await db.execute(
+                select(User.id).where(
+                    User.handle == fields["handle"], User.id != current_user.id
+                )
+            )
+        ).scalar_one_or_none()
+        if taken is not None:
+            raise HTTPException(status_code=409, detail="That handle is taken")
+
     for field, value in fields.items():
         if value is None and field in _NOT_NULL_UPDATE_FIELDS:
             raise HTTPException(

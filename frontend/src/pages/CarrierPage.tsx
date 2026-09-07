@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { listTrips, type Trip } from '../api/trips'
-import { addConnection } from '../api/social'
+import AddContactButton from '../components/AddContactButton'
 import { usePrefs } from '../hooks/usePrefs'
 import { useAuthStore } from '../stores/auth'
 import InquiryPanel from '../components/InquiryPanel'
@@ -35,10 +35,6 @@ export default function CarrierPage() {
   const [chatTrip, setChatTrip] = useState<{ id: string; carrierName: string } | null>(
     null,
   )
-  const [contactBusy, setContactBusy] = useState(false)
-  /* Local, not re-read: the answer is a row that exists, and the only thing the
-     button has to stop doing afterwards is offering itself again. */
-  const [added, setAdded] = useState(false)
 
   useEffect(() => {
     if (!carrierId) return
@@ -85,25 +81,10 @@ export default function CarrierPage() {
             exchange an invite link, which is the wrong shape for «этот
             перевозчик возит мой коридор». One direction: nothing is written
             into their list, and they are not asked. */}
-        {!isMe && carrierId && (
-          <button
-            type="button"
-            disabled={contactBusy || added}
-            onClick={async () => {
-              setContactBusy(true)
-              try {
-                await addConnection(carrierId)
-                setAdded(true)
-              } catch {
-                setError(t('common.errorGeneric') as string)
-              } finally {
-                setContactBusy(false)
-              }
-            }}
-            className="mt-3 text-xs font-display font-medium border border-cyan/40 text-cyan px-3 py-2 min-h-[2.75rem] rounded-field hover:bg-cyan/10 disabled:opacity-40"
-          >
-            {added ? t('contacts.contact') : t('contacts.add')}
-          </button>
+        {carrierId && (
+          <div className="mt-3">
+            <AddContactButton userId={carrierId} />
+          </div>
         )}
       </div>
 

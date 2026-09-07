@@ -43,6 +43,7 @@ const user = (role: string): User =>
   ({
     id: 'u1',
     display_name: 'Adm',
+    handle: null,
     email: 'a@b.test',
     phone: null,
     can_carry: false,

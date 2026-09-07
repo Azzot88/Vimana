@@ -69,6 +69,9 @@ export type NotificationPrefs = Record<string, Record<string, boolean>>
 export interface User {
   id: string
   display_name: string
+  /** T3.11.24 — the @handle chosen in the cabinet; null until somebody picks
+   *  one. Stored lower-case, written with an @ and never with one. */
+  handle: string | null
   email: string | null
   phone: string | null
   can_carry: boolean
@@ -322,6 +325,8 @@ export interface UserUpdate {
   interaction_rules?: string | null
   payment_instructions?: string | null
   display_name?: string
+  /** T3.11.24 — `""` clears it; the backend reads an empty string as «убрать». */
+  handle?: string
   /** T3.25 — E.164 or the request is refused; the backend normalises and
    *  rejects anything unparseable rather than storing it as text. */
   phone?: string

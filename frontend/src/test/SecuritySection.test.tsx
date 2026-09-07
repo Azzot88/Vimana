@@ -32,6 +32,7 @@ vi.mock('../api/auth', async () => {
 const base: User = {
   id: 'u1',
   display_name: 'Nick',
+  handle: null,
   email: 'old@example.test',
   phone: null,
   can_carry: true,
