@@ -209,6 +209,11 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
     return JSONResponse(
         status_code=422,
         content=jsonable_encoder({
+            # No `include_context=False` here, unlike `api/cards`: this is
+            # FastAPI's `RequestValidationError`, whose `errors()` takes no
+            # arguments at all — passing any would turn every 422 into a 500.
+            # The raw exception object a custom validator leaves under `ctx`
+            # survives because `jsonable_encoder` flattens it to `{}`.
             "detail": exc.errors(),
             "request_id": _req_id(request),
         }),

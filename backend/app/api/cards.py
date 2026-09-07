@@ -56,7 +56,15 @@ def _validate_payload(spec: CardSpec, raw: dict) -> dict:
     try:
         return model(**raw).model_dump(mode="json")
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+        # T3.11.22 — `errors()` carries the original exception object under
+        # `ctx` for anything raised by a custom validator, and FastAPI cannot
+        # serialise that: the 422 became a 500 the moment a payload model grew
+        # its first `model_validator`. `include_context=False` drops the object
+        # and keeps the message, which is the part a client can act on.
+        raise HTTPException(
+            status_code=422,
+            detail=exc.errors(include_context=False, include_url=False),
+        ) from exc
 
 
 async def _agreed_terms(db: AsyncSession, deal_id: uuid.UUID) -> DealVaultMessage | None:
