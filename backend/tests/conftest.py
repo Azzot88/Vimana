@@ -2172,6 +2172,56 @@ async def seed_deal(session_maker, seed_carrier, seed_sender, seed_trip) -> Deal
         return deal
 
 
+@pytest_asyncio.fixture(scope="session")
+async def fresh_vault_deal(session_maker, seed_carrier, seed_sender, seed_trip) -> Deal:
+    """A deal whose vault starts empty, made new on every run.
+
+    T_TEST.8 (2026-09-07) — the three slowest tests in the suite shared one
+    cause: they walk **every page** of `seed_deal`'s vault, and that vault has
+    no floor. `vimana_test` is never reset (ENVIRONMENT §8), `seed_deal` is
+    found rather than created, and every run that writes a message into it makes
+    every later run slower — each row decrypted on read, twice per test. One of
+    them had the symptom in its own docstring ("seed_deal accumulates messages
+    across the suite") and treated it as a fact of life rather than as the bug.
+
+    So the tests that need to walk a vault get one that is theirs. Deliberately
+    **not** `scope="function"`: three tests share it within a run, which is what
+    keeps the pagination test meaningful — it needs more than one message — and
+    the cost is one deal per run rather than one per test.
+
+    The old deals stay in the database like everything else here; nothing walks
+    them again, which is the whole point.
+
+    Called by: `test_dealvault`, `test_encryption`, `test_hardening_block5`.
+    """
+    async with session_maker() as db:
+        order = Order(
+            sender_id=seed_sender.id,
+            recipient_contact="+10000000000",
+            origin=seed_trip.origin,
+            destination=seed_trip.destination,
+            category="document",
+            declared_value=100.0,
+            currency="USD",
+            description=f"Vault-walk order {uuid.uuid4().hex[:8]}",
+            status=OrderStatus.matched,
+            trip_id=seed_trip.id,
+        )
+        db.add(order)
+        await db.flush()
+        deal = Deal(
+            order_id=order.id,
+            trip_id=seed_trip.id,
+            sender_id=seed_sender.id,
+            carrier_id=seed_carrier.id,
+            status=DealStatus.matched,
+        )
+        db.add(deal)
+        await db.commit()
+        await db.refresh(deal)
+        return deal
+
+
 @pytest_asyncio.fixture
 async def client() -> AsyncClient:
     transport = ASGITransport(app=app)

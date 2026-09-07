@@ -80,12 +80,19 @@ async def test_trips_invalid_cursor_returns_empty(client):
     assert body["next_cursor"] is None
 
 
-async def test_dealvault_pagination_ascending_by_created_at(client, sender_headers, seed_deal):
+async def test_dealvault_pagination_ascending_by_created_at(
+    client, sender_headers, fresh_vault_deal
+):
+    # T_TEST.8 — `fresh_vault_deal`, not `seed_deal`: this walks every page of
+    # the vault, and `seed_deal` collects a message from every run that ever
+    # wrote into it (the database is never reset). The property under test is
+    # ordering, and ordering is provable in three messages — it does not need
+    # a thousand of somebody else's.
     # Create 3 messages
     created_ids = []
     for i in range(3):
         r = await client.post(
-            f"/api/deals/{seed_deal.id}/dealvault/messages",
+            f"/api/deals/{fresh_vault_deal.id}/dealvault/messages",
             headers=sender_headers,
             json={"text": f"paging msg {i} {uuidlib.uuid4().hex[:4]}", "is_system": False},
         )
@@ -100,7 +107,7 @@ async def test_dealvault_pagination_ascending_by_created_at(client, sender_heade
         if cursor:
             params["after"] = cursor
         r = await client.get(
-            f"/api/deals/{seed_deal.id}/dealvault",
+            f"/api/deals/{fresh_vault_deal.id}/dealvault",
             headers=sender_headers,
             params=params,
         )

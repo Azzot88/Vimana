@@ -85,14 +85,21 @@ async def test_message_stored_encrypted_in_db(
 
 
 async def test_message_roundtrip_via_api(
-    client, carrier_headers, sender_headers, seed_deal
+    client, carrier_headers, sender_headers, fresh_vault_deal
 ):
-    """POST + GET returns the same plaintext. Walks pagination — seed_deal
-    accumulates messages across the suite, so the new message can be past
-    the first page (ASC-ordered)."""
+    """POST + GET returns the same plaintext, walking pagination to find it.
+
+    T_TEST.8 (2026-09-07) — on `fresh_vault_deal`, not `seed_deal`. The old
+    docstring named the problem and lived with it: «seed_deal accumulates
+    messages across the suite, so the new message can be past the first page».
+    Every message on the way to it is decrypted on read, and the vault has no
+    floor because the database is never reset — so the cost grew with every run
+    that had ever written into that deal. The round trip is the property; the
+    thousand messages in front of it were never part of it.
+    """
     plaintext = "Привет, курьер! Готов к передаче."
     post = await client.post(
-        f"/api/deals/{seed_deal.id}/dealvault/messages",
+        f"/api/deals/{fresh_vault_deal.id}/dealvault/messages",
         headers=sender_headers,
         json={"text": plaintext, "is_system": False},
     )
@@ -102,7 +109,7 @@ async def test_message_roundtrip_via_api(
     texts: list[str] = []
     cursor: str | None = None
     for _ in range(50):  # generous cap for cursor walking
-        url = f"/api/deals/{seed_deal.id}/dealvault?limit=100"
+        url = f"/api/deals/{fresh_vault_deal.id}/dealvault?limit=100"
         if cursor:
             url += f"&after={cursor}"
         got = await client.get(url, headers=carrier_headers)

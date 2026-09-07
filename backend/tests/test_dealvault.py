@@ -26,18 +26,22 @@ async def _count_all_messages(client, headers, deal_id) -> int:
     return total
 
 
-async def test_create_message_appends(client, sender_headers, seed_deal):
-    before_count = await _count_all_messages(client, sender_headers, seed_deal.id)
+async def test_create_message_appends(client, sender_headers, fresh_vault_deal):
+    # T_TEST.8 — `fresh_vault_deal`, not `seed_deal`: this walks every page of
+    # the vault twice, and `seed_deal` collects a message from every run that
+    # ever wrote into it (the database is never reset). It was the slowest test
+    # in the suite at nine seconds and got slower every run.
+    before_count = await _count_all_messages(client, sender_headers, fresh_vault_deal.id)
 
     resp = await client.post(
-        f"/api/deals/{seed_deal.id}/dealvault/messages",
+        f"/api/deals/{fresh_vault_deal.id}/dealvault/messages",
         headers=sender_headers,
         json={"text": "Hello from sender", "is_system": False},
     )
     assert resp.status_code == 201
     assert resp.json()["text"] == "Hello from sender"
 
-    after_count = await _count_all_messages(client, sender_headers, seed_deal.id)
+    after_count = await _count_all_messages(client, sender_headers, fresh_vault_deal.id)
     assert after_count == before_count + 1
 
 
