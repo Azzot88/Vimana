@@ -26,9 +26,11 @@ export default function ArbiterQueue() {
   const [resolvingId, setResolvingId] = useState<string | null>(null)
   const [verdict, setVerdict] = useState('')
   const [closesDeal, setClosesDeal] = useState(false)
+  // T3.11.27 — the ruling's money half. Empty means «no charge», which is how
+  // most disputes end: a sum of zero and no sum at all are different answers.
+  const [chargeTo, setChargeTo] = useState<'' | 'carrier' | 'sender'>('')
+  const [chargeAmount, setChargeAmount] = useState('')
   const [error, setError] = useState('')
-
-
 
   const load = async () => {
     setLoading(true)
@@ -60,13 +62,28 @@ export default function ArbiterQueue() {
     if (!verdict.trim()) return
     setError('')
     try {
-      await resolveDispute(id, verdict.trim(), closesDeal)
+      const amount = Number(chargeAmount)
+      await resolveDispute(
+        id,
+        verdict.trim(),
+        closesDeal,
+        chargeTo && Number.isFinite(amount) && amount > 0
+          ? { charge_to: chargeTo, charge_amount: amount }
+          : null,
+      )
       setResolvingId(null)
       setVerdict('')
       setClosesDeal(false)
+      setChargeTo('')
+      setChargeAmount('')
       await load()
-    } catch {
-      setError(t('admin.resolveError'))
+    } catch (e) {
+      // The server refuses a charge above the declared value and half a charge;
+      // both refusals name the reason, and a generic «не получилось» would send
+      // the arbiter looking for a bug instead of reading the ceiling.
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response
+        ?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('admin.resolveError'))
     }
   }
 
@@ -168,6 +185,50 @@ export default function ArbiterQueue() {
                       />
                       {t('admin.closeDeal')}
                     </label>
+
+                    {/* T3.11.27 — «арбитр может списать с залога перевозчика».
+                        Deposits are Фаза 5, so this writes the ruling into the
+                        deal's chain rather than moving anything; the note under
+                        it says so, because an arbiter who thinks money moved
+                        today would stop following it up. The server bounds the
+                        sum by the declared value. */}
+                    <div className="flex flex-wrap gap-2 items-end">
+                      <label className="flex-1 min-w-[7rem]">
+                        <span className="block text-[11px] font-body text-navy/40 mb-1">
+                          {t('admin.chargeTo')}
+                        </span>
+                        <select
+                          value={chargeTo}
+                          onChange={(e) =>
+                            setChargeTo(e.target.value as '' | 'carrier' | 'sender')
+                          }
+                          className="w-full border border-navy/20 rounded-field px-2 py-1.5 text-xs font-body text-navy"
+                        >
+                          <option value="">{t('admin.chargeNobody')}</option>
+                          <option value="carrier">{t('admin.chargeCarrier')}</option>
+                          <option value="sender">{t('admin.chargeSender')}</option>
+                        </select>
+                      </label>
+                      <label className="flex-1 min-w-[7rem]">
+                        <span className="block text-[11px] font-body text-navy/40 mb-1">
+                          {t('admin.chargeAmount')}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={chargeAmount}
+                          disabled={!chargeTo}
+                          onChange={(e) => setChargeAmount(e.target.value)}
+                          className="w-full border border-navy/20 rounded-field px-2 py-1.5 text-xs font-body text-navy disabled:bg-navy/5"
+                        />
+                      </label>
+                    </div>
+                    {chargeTo && (
+                      <p className="text-[11px] font-body text-navy/45">
+                        {t('admin.chargeNotSettled')}
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleResolve(d.id)}

@@ -7,7 +7,7 @@ Access model:
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -83,6 +83,54 @@ class DisputeOut(BaseModel):
 class ResolveBody(BaseModel):
     verdict: str
     closes_deal: bool = False
+    #: T3.11.27 — «Груз потерян при объявленной стоимости → спор, и арбитр может
+    #: списать с залога перевозчика» (owner, 2026-09-07).
+    #:
+    #: **Deposits do not exist before Фаза 5**, so nothing is moved: this is the
+    #: arbiter's decision written down, in the hash chain and in the card the two
+    #: parties read. When deposits arrive (`T5.x`) they will execute rulings that
+    #: were already recorded rather than start a ledger from the day they ship —
+    #: a verdict a year old that named no amount cannot be executed later, and
+    #: asking the arbiter to remember it is not a record.
+    charge_to: Literal["carrier", "sender"] | None = None
+    charge_amount: float | None = Field(default=None, ge=0)
+
+
+async def _declared_value(db: AsyncSession, deal: Deal | None) -> tuple[float | None, str]:
+    """What the two of them agreed the parcel was worth, and in what.
+
+    Read from the agreed card rather than from the order: the order is what the
+    sender typed on the board, the agreement is what the carrier accepted, and
+    a charge is measured against the second. Falls back to the order for deals
+    struck before the card carried the figure.
+
+    Called by: `resolve_dispute`, to bound a ruling by what was declared.
+    """
+    from app.core.cards import CardKind
+    from app.models.marketplace import Order
+
+    if deal is None:
+        return None, "USD"
+    agreed = (
+        await db.execute(
+            select(DealVaultMessage)
+            .where(
+                DealVaultMessage.deal_id == deal.id,
+                DealVaultMessage.card_kind == CardKind.terms_agreed.value,
+            )
+            .order_by(DealVaultMessage.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    payload = (agreed.card_payload or {}) if agreed else {}
+    value = payload.get("declared_value")
+    currency = payload.get("currency") or "USD"
+    if value is None:
+        order = await db.get(Order, deal.order_id)
+        if order is not None:
+            value = order.declared_value
+            currency = order.currency or currency
+    return (float(value) if value is not None else None), currency
 
 
 @router.post("/deals/{deal_id}/dispute", response_model=DisputeOut, status_code=201)
@@ -293,13 +341,48 @@ async def resolve_dispute(
     dispute.resolved_at = datetime.now(timezone.utc)
 
     deal = await db.get(Deal, dispute.deal_id)
+
+    # T3.11.27 — a charge is only a charge against something the deal declared.
+    # Owner's rule 2026-09-07: «Груз потерян **при объявленной стоимости**». An
+    # amount pulled out of the air, or one above what the two of them agreed the
+    # parcel was worth, is not a ruling on this deal — it is a number, and Фаза 5
+    # would execute it years later with nobody left to question it.
+    charge: dict | None = None
+    if body.charge_amount is not None or body.charge_to is not None:
+        if body.charge_amount is None or body.charge_to is None:
+            raise HTTPException(
+                status_code=422,
+                detail="A charge needs both an amount and who it is charged to",
+            )
+        declared, currency = await _declared_value(db, deal)
+        if declared is None or declared <= 0:
+            raise HTTPException(
+                status_code=409,
+                detail="This deal declared no value, so there is nothing to charge against",
+            )
+        if body.charge_amount > declared:
+            raise HTTPException(
+                status_code=422,
+                detail=f"A charge cannot exceed the declared value ({declared} {currency})",
+            )
+        charge = {
+            "to": body.charge_to,
+            "amount": body.charge_amount,
+            "currency": currency,
+            "declared_value": declared,
+            # Stated in the record itself, because the record outlives this
+            # comment: nothing moves money today, and Фаза 5 must be able to see
+            # that this ruling was written before deposits existed.
+            "settled": False,
+        }
+
     if deal:
         await append_deal_event(
             db,
             deal_id=deal.id,
             event_type=DealEventType.dispute_resolved,
             actor_id=current_user.id,
-            payload={"verdict": body.verdict[:500]},
+            payload={"verdict": body.verdict[:500], "charge": charge},
             author=current_user,
         )
         # Emitted before the closing branch: a verdict that closes the deal
@@ -310,7 +393,11 @@ async def resolve_dispute(
             deal,
             CardKind.dispute_resolved,
             current_user,
-            payload={"dispute_id": str(dispute.id), "verdict": body.verdict[:500]},
+            payload={
+                "dispute_id": str(dispute.id),
+                "verdict": body.verdict[:500],
+                "charge": charge,
+            },
         )
         if body.closes_deal:
             deal.status = DealStatus.closed

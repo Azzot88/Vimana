@@ -519,3 +519,113 @@ async def test_anchor_backend_defaults_to_nostr(
             )
         ).scalar_one()
     assert backend == "nostr"
+
+
+# ── T3.11.27 · the arbiter's ruling on a lost parcel ──────────────────────
+
+
+async def _disputed(client, carrier_headers, sender_headers, arbiter_user):
+    """A claimed dispute on a fresh deal, ready to be resolved."""
+    deal_id = await _fresh_deal(client, carrier_headers, sender_headers)
+    dispute = await client.post(
+        f"/api/deals/{deal_id}/dispute",
+        headers=sender_headers,
+        json={"reason": "undelivered", "details": "parcel never arrived"},
+    )
+    assert dispute.status_code == 201, dispute.text
+    dispute_id = dispute.json()["id"]
+    claimed = await client.post(
+        f"/api/disputes/{dispute_id}/claim", headers=arbiter_user["headers"]
+    )
+    assert claimed.status_code == 200, claimed.text
+    return deal_id, dispute_id
+
+
+async def test_verdict_records_the_charge_against_the_declared_value(
+    client, session_maker, carrier_headers, sender_headers, arbiter_user
+):
+    """Owner's rule 2026-09-07: «Груз потерян при объявленной стоимости → спор,
+    и арбитр может списать с залога перевозчика».
+
+    Deposits arrive in Фаза 5, so nothing moves today. What must exist today is
+    the ruling itself, in the chain: a verdict a year old that named no amount
+    cannot be executed later, and asking the arbiter to remember it is not a
+    record. `settled: false` says so in the row rather than in a comment.
+    """
+    deal_id, dispute_id = await _disputed(
+        client, carrier_headers, sender_headers, arbiter_user
+    )
+    r = await client.post(
+        f"/api/disputes/{dispute_id}/resolve",
+        headers=arbiter_user["headers"],
+        json={
+            "verdict": "parcel lost in transit",
+            "charge_to": "carrier",
+            "charge_amount": 80.0,
+        },
+    )
+    assert r.status_code == 200, r.text
+
+    events = await _events_of(session_maker, deal_id, DealEventType.dispute_resolved)
+    charge = events[-1].payload["charge"]
+    assert charge["to"] == "carrier"
+    assert charge["amount"] == 80.0
+    assert charge["declared_value"] == 100.0
+    assert charge["settled"] is False
+
+
+async def test_a_charge_cannot_exceed_what_was_declared(
+    client, carrier_headers, sender_headers, arbiter_user
+):
+    """The declared value is the ceiling the two of them agreed to.
+
+    Above it the number stops being a ruling on this deal, and Фаза 5 would
+    execute it years later with nobody left to question it.
+    """
+    _, dispute_id = await _disputed(
+        client, carrier_headers, sender_headers, arbiter_user
+    )
+    r = await client.post(
+        f"/api/disputes/{dispute_id}/resolve",
+        headers=arbiter_user["headers"],
+        json={
+            "verdict": "parcel lost",
+            "charge_to": "carrier",
+            "charge_amount": 5000.0,
+        },
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_a_charge_needs_both_halves(
+    client, carrier_headers, sender_headers, arbiter_user
+):
+    """An amount charged to nobody is not a ruling."""
+    _, dispute_id = await _disputed(
+        client, carrier_headers, sender_headers, arbiter_user
+    )
+    r = await client.post(
+        f"/api/disputes/{dispute_id}/resolve",
+        headers=arbiter_user["headers"],
+        json={"verdict": "parcel lost", "charge_amount": 10.0},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_a_verdict_without_a_charge_still_resolves(
+    client, session_maker, carrier_headers, sender_headers, arbiter_user
+):
+    """Most disputes end in words, not money. The charge is optional and its
+    absence is recorded as absence rather than as zero."""
+    deal_id, dispute_id = await _disputed(
+        client, carrier_headers, sender_headers, arbiter_user
+    )
+    r = await client.post(
+        f"/api/disputes/{dispute_id}/resolve",
+        headers=arbiter_user["headers"],
+        json={"verdict": "both sides agreed to split the cost"},
+    )
+    assert r.status_code == 200, r.text
+
+    events = await _events_of(session_maker, deal_id, DealEventType.dispute_resolved)
+    assert events[-1].payload["charge"] is None

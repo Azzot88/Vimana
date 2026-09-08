@@ -43,11 +43,29 @@ export const listDisputes = (params?: { after?: string; limit?: number }) =>
 export const claimDispute = (disputeId: string) =>
   api.post<Dispute>(`/api/disputes/${disputeId}/claim`)
 
+/** T3.11.27 — the arbiter's ruling, optionally with a sum.
+ *
+ *  «Груз потерян при объявленной стоимости → арбитр может списать с залога
+ *  перевозчика» (owner, 2026-09-07). Deposits arrive in Фаза 5, so nothing
+ *  moves: the amount is recorded in the deal's hash chain now so it can be
+ *  executed then. The server bounds it by the declared value and refuses half
+ *  a charge — an amount owed by nobody is not a ruling. */
+export interface DisputeCharge {
+  charge_to: 'carrier' | 'sender'
+  charge_amount: number
+}
+
 export const resolveDispute = (
   disputeId: string,
   verdict: string,
   closes_deal = false,
-) => api.post<Dispute>(`/api/disputes/${disputeId}/resolve`, { verdict, closes_deal })
+  charge?: DisputeCharge | null,
+) =>
+  api.post<Dispute>(`/api/disputes/${disputeId}/resolve`, {
+    verdict,
+    closes_deal,
+    ...(charge ?? {}),
+  })
 
 export const readVaultAsArbiter = (
   dealId: string,
