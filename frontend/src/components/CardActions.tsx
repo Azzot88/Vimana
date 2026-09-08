@@ -20,9 +20,24 @@ interface Props {
   dealId: string
   myRole: DealRole | null
   onDone: () => void
+  /** T3.11.17 — the card kinds this stage offers, in the order they happen.
+   *  Role still decides who may raise each one; the stage decides when it is
+   *  worth offering at all. Omitted means «everything this role may raise»,
+   *  which is what the screen did before the ladder existed. */
+  only?: string[]
+  /** Drawn quieter: the «ещё» row holds a problem and a cancellation, which are
+   *  needed when something has gone wrong and should not compete with the step
+   *  somebody is trying to take. */
+  muted?: boolean
 }
 
-export default function CardActions({ dealId, myRole, onDone }: Props) {
+export default function CardActions({
+  dealId,
+  myRole,
+  onDone,
+  only,
+  muted = false,
+}: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState<CardFormSpec | null>(null)
   const [values, setValues] = useState<Record<string, string | boolean>>({})
@@ -30,7 +45,15 @@ export default function CardActions({ dealId, myRole, onDone }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const available = formsForRole(myRole)
+  /* Ordered by the stage, not by the catalogue: `only` lists the kinds in the
+     order they are meant to happen, and a row of buttons in protocol order
+     reads as a sequence rather than as a menu. */
+  const byRole = formsForRole(myRole)
+  const available = only
+    ? only
+        .map((kind) => byRole.find((f) => f.kind === kind))
+        .filter((f): f is CardFormSpec => Boolean(f))
+    : byRole
   if (available.length === 0) return null
 
   const start = (spec: CardFormSpec) => {
@@ -115,13 +138,17 @@ export default function CardActions({ dealId, myRole, onDone }: Props) {
 
   if (!open) {
     return (
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="flex flex-wrap gap-2">
         {available.map((spec) => (
           <button
             key={spec.kind}
             type="button"
             onClick={() => start(spec)}
-            className="px-3 py-1.5 rounded-full border border-navy/15 text-xs font-body text-navy/70 hover:border-cyan hover:text-cyan"
+            className={
+              muted
+                ? 'px-3 py-1.5 rounded-full text-xs font-body text-navy/40 hover:text-amber'
+                : 'px-3 py-2 rounded-field border border-navy/15 text-sm font-body text-navy/80 hover:border-cyan hover:text-cyan'
+            }
           >
             {t(kindKey(spec.kind), spec.kind)}
           </button>

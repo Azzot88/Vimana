@@ -782,9 +782,33 @@
       "luxury": "Luxury goods"
     }
   },
+  "stages": {
+    "terms": "Terms",
+    "handover": "Handover",
+    "transit": "In transit",
+    "delivery": "Delivery",
+    "payment": "Payment",
+    "closed": "Closed",
+    "more": "more",
+    "stillTravelling": "Still in the post — you may close it, the carrier has done their part",
+    "hint": {
+      "terms": "Agree the price and how the parcel changes hands. Nothing starts until the terms are fixed.",
+      "handover": "The terms are fixed. Agree where and when, then mark the handover with a photo.",
+      "transit": "The carrier has the parcel. Post updates, and at the end: posted by mail or handed to delivery.",
+      "delivery": "What is left is confirming receipt.",
+      "payment": "Settling up.",
+      "closed": "The deal is closed. The record stays as it is."
+    },
+    "photo": {
+      "handover": "Photo of the handover",
+      "transit": "Photo before sealing",
+      "delivery": "Photo of receipt"
+    }
+  },
   "deals": {
     "title": "Deals",
     "noDeals": "No deals yet",
+    "proposeTerms": "Propose terms",
     "notFound": "Deal not found",
     "actionFailed": "That did not go through. Please try again.",
     "boardingPass": "Boarding pass",
@@ -809,7 +833,7 @@
       "matched": "Matched",
       "accepted": "Accepted",
       "in_transit": "In transit",
-      "posted": "Posted",
+      "posted": "Posted by mail",
       "delivered": "Delivered",
       "confirmed": "Confirmed",
       "closed": "Closed",
@@ -1419,16 +1443,16 @@
     "uploadFailed": "Could not upload the photo",
     "kind": {
       "handover_conditions": "Handover conditions",
-      "pickup_proposed": "Propose pickup",
+      "pickup_proposed": "Agree on the pickup",
       "pickup_confirmed": "Pickup confirmed",
-      "dropoff_proposed": "Propose drop-off",
+      "dropoff_proposed": "Agree on the drop-off",
       "dropoff_confirmed": "Drop-off confirmed",
-      "handoff_declared": "Declare handover",
+      "handoff_declared": "Handed to the carrier",
       "handoff_confirmed": "Handover confirmed",
       "transit_update": "Transit update",
-      "posted_declared": "Declare posting",
+      "posted_declared": "Posted by mail",
       "posted_confirmed": "Posting confirmed",
-      "delivery_declared": "Declare delivery",
+      "delivery_declared": "Handed to delivery",
       "delivery_confirmed": "Delivery confirmed",
       "payment_method_agreed": "Payment method",
       "payment_declared": "Declare payment",

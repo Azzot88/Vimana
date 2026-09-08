@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
 import { openDispute } from '../api/admin'
-import { getDeal, addEvent, confirmDeal, type DealDetail } from '../api/deals'
+import { getDeal, type DealDetail } from '../api/deals'
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import { listParticipants, type Participant } from '../api/participants'
 import AddContactButton from '../components/AddContactButton'
@@ -38,7 +38,6 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   const [loading, setLoading] = useState(true)
   // T_UX.2 pt.3 — RouteNotes for this corridor (empty until deal loads).
   const { notes: routeNotes } = useRouteNotes(deal?.origin, deal?.destination)
-  const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeReason, setDisputeReason] = useState('')
@@ -116,28 +115,6 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
       .catch(() => setParticipants([]))
   }, [dealId])
 
-  const handleAction = async (action: 'handoff' | 'confirm') => {
-    if (!dealId) return
-    setActionLoading(true)
-    setError('')
-    try {
-      if (action === 'handoff') {
-        // T_UX.7 pt.3 — no free-text note. It was persisted into the event payload
-        // and hashed into the chain, so one party's UI language ended up inside
-        // shared evidence the other party reads. `event_type` already says
-        // exactly this, and both sides render it in their own language.
-        await addEvent(dealId, 'handoff')
-        await load()
-      } else if (action === 'confirm') {
-        await confirmDeal(dealId)
-        await load()
-      }
-    } catch {
-      setError(t('deals.actionFailed'))
-    } finally {
-      setActionLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -293,41 +270,15 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
         )}
 
         <div className="px-4 sm:px-6 pb-6 flex flex-col sm:flex-row sm:flex-wrap gap-3">
-          {/* T3.35 — a deal is accepted by agreeing terms, not by a bare
-              button. Two routes to one status is how a deal ends up in a state
-              nobody expected; the contract card in the vault is the only one. */}
-          {isCarrier && deal.status === 'matched' && (
-            <Link
-              to={`/deals/${deal.id}/vault`}
-              className="bg-cyan text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity inline-flex items-center"
-            >
-              {t('deals.agreeTerms')}
-            </Link>
-          )}
-          {isCarrier && deal.status === 'accepted' && (
-            <button
-              onClick={() => handleAction('handoff')}
-              disabled={actionLoading}
-              className="bg-amber text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {actionLoading ? '...' : t('deals.recordHandoff')}
-            </button>
-          )}
-          {isSender && deal.status === 'delivered' && (
-            <button
-              onClick={() => handleAction('confirm')}
-              disabled={actionLoading}
-              className="bg-success text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {actionLoading ? '...' : t('deals.confirmReceipt')}
-            </button>
-          )}
-          <Link
-            to={`/deals/${deal.id}/vault`}
-            className="border border-navy/20 text-navy font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:border-cyan transition-colors text-center"
-          >
-            DealVault →
-          </Link>
+          {/* T3.11.17 — three buttons left this row (owner's decision
+              2026-09-07). «Согласовать условия» and «DealVault →» were links to
+              the screen this card is now drawn on, and «Зафиксировать передачу»
+              was a second route to a status the handover card already reaches —
+              with the difference that it skipped the photograph and the other
+              side's confirmation. What the deal *does* now lives on the stage
+              panel, in one place, in the order it happens. What is left here is
+              what belongs to the card rather than to the step: asking the other
+              side for a document, and opening a dispute. */}
           {isCarrier &&
             ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
               <button

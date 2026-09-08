@@ -5,23 +5,22 @@ import {
   attachExistingFile,
   createMessage,
   listMessages,
-  sendPhotoMessage,
   shareAddressInVault,
   type AttachmentKind,
   type E2EParties,
   type VaultMessage,
 } from '../api/dealvault'
 import api from '../api/client'
+import type { DealStatus } from '../api/deals'
 import RecipientModal from '../components/RecipientModal'
 import SafeFilePicker from '../components/SafeFilePicker'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
 import TermsCard from '../components/TermsCard'
-import TermsProposeForm from '../components/TermsProposeForm'
+import DealStages from '../components/DealStages'
 import DealCard from '../components/DealCard'
 import DealPage from './DealPage'
-import CardActions from '../components/CardActions'
 import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
@@ -49,7 +48,6 @@ export default function DealVaultPage() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>('')
-  const [uploadKind, setUploadKind] = useState<AttachmentKind>('handoff_photo')
   /* T3.11.24 — the recipient picker. Sender-only, like the button that opens
      it: the server refuses anybody else, and a control drawn in order to be
      refused is worse than one that is not drawn. */
@@ -59,17 +57,25 @@ export default function DealVaultPage() {
      warning. */
   const [notice, setNotice] = useState('')
   const [safeOpen, setSafeOpen] = useState(false)
+  /* T3.11.17 — where the deal stands. The stage ladder is drawn from it, and
+     it is refetched with the messages so an accepted card moves the stage
+     without a reload. */
+  const [dealStatus, setDealStatus] = useState<DealStatus>('matched')
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
-  const [termsOpen, setTermsOpen] = useState(false)
   const [parties, setParties] = useState<{
     e2e: E2EParties | null
     senderId: string | null
     carrierId: string | null
   }>({ e2e: null, senderId: null, carrierId: null })
   const [decrypted, setDecrypted] = useState<Record<string, string>>({})
-  const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  /* T3.11.17 — stage one is not over until the price is agreed. Read from the
+     vault rather than from the status: `accepted` is what the agreement sets,
+     but the card is the thing that says it, and the stage panel asks about the
+     agreement, not about its consequence. */
+  const termsAgreed = messages.some((m) => m.card_kind === 'terms.agreed')
 
   // T3.35 — a card that awaits the other side must not offer this user a
   // button the server will refuse anyway.
@@ -94,16 +100,24 @@ export default function DealVaultPage() {
 
   useEffect(() => { load() }, [dealId])
 
+  /* T3.11.17 — refetched with the messages, not once on mount: accepting a card
+     moves the deal to the next stage, and a ladder that only updated on reload
+     would leave the person looking at the step they have just finished. */
   useEffect(() => {
     if (!dealId) return
     api
       .get<{
         sender_id: string
         carrier_id: string
+        status: DealStatus
         sender_npub: string | null
         carrier_npub: string | null
       }>(`/api/deals/${dealId}`)
       .then(({ data }) => {
+        /* T3.11.17 — the stage is read off the status the server keeps, never
+           worked out here: a screen with its own opinion about where a deal
+           stands is a second answer to a question that must have one. */
+        setDealStatus(data.status)
         setParties({
           e2e:
             data.sender_npub && data.carrier_npub
@@ -116,7 +130,7 @@ export default function DealVaultPage() {
       .catch(() => {
         // deal-detail fetch is best-effort — plaintext send path still works.
       })
-  }, [dealId])
+  }, [dealId, messages.length])
 
   // Try to decrypt e2e messages using own read_package + author's npub.
   // Failures (custodial user, missing extension, corrupt blob) leave the
@@ -170,24 +184,6 @@ export default function DealVaultPage() {
       setError(t('chat.sendFailed'))
     } finally {
       setSending(false)
-    }
-  }
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !dealId) return
-    setSending(true)
-    setError('')
-    try {
-      const msg = await sendPhotoMessage(dealId, file, uploadKind)
-      setMessages((prev) => [...prev, msg])
-    } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : t('chat.uploadFailed'))
-    } finally {
-      setSending(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -303,7 +299,7 @@ export default function DealVaultPage() {
      part that can scroll without losing anything — and the page scrolls
      normally for everything else. */
   return (
-    <div className="max-w-2xl flex flex-col">
+    <div className="max-w-6xl flex flex-col">
       <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
         {/* T3.11.26 — back to the panel, not to a deal card. It used to point at
            `/deals/:id`, which now redirects here: the link would have been a
@@ -347,6 +343,26 @@ export default function DealVaultPage() {
         </div>
       </details>
 
+      {/* T3.11.17 — the deal on the left, the conversation on the right
+          (owner's decision 2026-09-07, 60/40). They are two different readings
+          of the same thing: what is happening, and what was said about it. On a
+          phone the split becomes a stack — stage first, chat under it — because
+          the stage is what the person came to act on. */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+        <section className="lg:col-span-3 bg-white rounded-card border border-navy/10 p-4">
+          {dealId && (
+            <DealStages
+              dealId={dealId}
+              status={dealStatus}
+              myRole={dealRole}
+              termsAgreed={termsAgreed}
+              onDone={load}
+              onMessage={(msg) => setMessages((prev) => [...prev, msg])}
+            />
+          )}
+        </section>
+
+        <div className="lg:col-span-2 flex flex-col">
       <div className="bg-navy/5 rounded-field px-3 py-2 sm:px-4 sm:py-2.5 mb-3 sm:mb-4 shrink-0 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan"></span>
         <MonoText className="text-xs text-navy/60">{t('chat.immutable')}</MonoText>
@@ -393,28 +409,13 @@ export default function DealVaultPage() {
         )}
 
         <div className="border-t border-navy/10 p-3 sm:p-4 space-y-2 sm:space-y-3 shrink-0">
+          {/* T3.11.17 — what is left in the conversation is what belongs to a
+              conversation: a message, a file, an address. The photograph of a
+              step and the step's own actions moved to the stage on the left,
+              where the step is — including the kind selector, which asked at
+              the moment somebody is holding a parcel and a phone a question
+              with exactly one answer. */}
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={uploadKind}
-              onChange={(e) => setUploadKind(e.target.value as AttachmentKind)}
-              className="text-xs font-mono border border-navy/20 rounded-field px-2 py-2 min-h-[2.5rem] text-navy focus:outline-none focus:border-cyan"
-            >
-              <option value="handoff_photo">{t("chat.kind.handoff_photo")}</option>
-              <option value="receipt_photo">{t("chat.kind.receipt_photo")}</option>
-              <option value="doc">{t("chat.kind.doc")}</option>
-              <option value="payment_receipt">{t("chat.kind.payment_receipt")}</option>
-            </select>
-            <label className="cursor-pointer border border-navy/20 rounded-field px-3 py-2 min-h-[2.5rem] text-xs font-body text-navy/60 hover:border-cyan transition-colors flex items-center">
-              {sending ? t('common.sending') : t('chat.uploadPhoto')}
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
-                onChange={handleUpload}
-                className="hidden"
-                disabled={sending}
-              />
-            </label>
             <button
               type="button"
               onClick={() => {
@@ -426,10 +427,9 @@ export default function DealVaultPage() {
             >
               📍 {t('chat.shareAddress.button')}
             </button>
-            {/* T3.11.25 — beside the upload, not instead of it: a document this
-                account has sent before is attached from the safe in one action,
-                and the deal records that as its own event with the original
-                date rather than as a fresh provision. */}
+            {/* T3.11.25 — a document this account has sent before is attached
+                from the safe in one action, and the deal records that as its own
+                event with the original date rather than as a fresh provision. */}
             <button
               type="button"
               onClick={() => {
@@ -442,30 +442,6 @@ export default function DealVaultPage() {
               🗄 {t('safe.button')}
             </button>
           </div>
-          {dealRole && dealId && (
-            <CardActions dealId={dealId} myRole={dealRole} onDone={load} />
-          )}
-          {dealRole && (
-            <div className="mb-3">
-              {termsOpen ? (
-                <TermsProposeForm
-                  dealId={dealId!}
-                  onDone={() => {
-                    setTermsOpen(false)
-                    void load()
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setTermsOpen(true)}
-                  className="text-xs font-body text-cyan"
-                >
-                  {t('terms.proposeTitle')}
-                </button>
-              )}
-            </div>
-          )}
           <form onSubmit={handleSend} className="flex gap-2">
             <input
               type="text"
@@ -483,6 +459,8 @@ export default function DealVaultPage() {
               {sending ? '…' : t('chat.send')}
             </button>
           </form>
+        </div>
+        </div>
         </div>
       </div>
 
