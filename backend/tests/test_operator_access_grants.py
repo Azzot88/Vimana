@@ -93,7 +93,7 @@ async def _open_dispute(client, session_maker):
     disp = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=s_headers,
-        json={"reason": "test dispute"},
+        json={"reason": "other", "details": "test dispute"},
     )
     assert disp.status_code == 201
     dispute_id = disp.json()["id"]

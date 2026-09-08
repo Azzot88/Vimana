@@ -16,6 +16,12 @@
   "dispute": {
     "openButton": "Open dispute",
     "modalTitle": "Open dispute",
+    "reason": {
+      "unpaid": "Not paid",
+      "undelivered": "Not delivered",
+      "damaged": "Damaged",
+      "other": "Other"
+    },
     "modalHint": "Describe what went wrong. The other party will see this reason and an arbiter will be able to review the chat.",
     "reasonPlaceholder": "Reason…",
     "submit": "Open dispute",

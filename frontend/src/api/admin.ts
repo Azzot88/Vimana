@@ -18,8 +18,24 @@ export interface Dispute {
   resolved_at: string | null
 }
 
-export const openDispute = (dealId: string, reason: string) =>
-  api.post<Dispute>(`/api/deals/${dealId}/dispute`, { reason })
+/** T3.11.27 — the reason is chosen from four, not typed (owner's decision
+ *  2026-09-07). A category is something an arbiter can sort a queue by and the
+ *  platform can count; the sentence still travels, in `details`, beside it
+ *  rather than instead of it. */
+export type DisputeReason = 'unpaid' | 'undelivered' | 'damaged' | 'other'
+
+export const DISPUTE_REASONS: DisputeReason[] = [
+  'unpaid',
+  'undelivered',
+  'damaged',
+  'other',
+]
+
+export const openDispute = (
+  dealId: string,
+  reason: DisputeReason,
+  details?: string,
+) => api.post<Dispute>(`/api/deals/${dealId}/dispute`, { reason, details })
 
 export const listDisputes = (params?: { after?: string; limit?: number }) =>
   api.get<Page<Dispute>>('/api/admin/disputes', { params })

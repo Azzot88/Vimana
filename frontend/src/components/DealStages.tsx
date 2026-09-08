@@ -9,6 +9,7 @@ import {
   stageOf,
   type DealStageKey,
 } from '../lib/dealStages'
+import type { Terms } from '../api/terms'
 import type { DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
 import TermsProposeForm from './TermsProposeForm'

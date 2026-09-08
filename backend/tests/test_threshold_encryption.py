@@ -326,7 +326,7 @@ async def test_arbiter_reveal_returns_unwrapped_shares_with_audit(
     disp = await client.post(
         f"/api/deals/{d['deal_id']}/dispute",
         headers=d["sender_headers"],
-        json={"reason": "test"},
+        json={"reason": "other", "details": "test"},
     )
     assert disp.status_code == 201, disp.json()
 

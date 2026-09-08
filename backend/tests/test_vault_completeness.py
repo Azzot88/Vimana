@@ -324,7 +324,7 @@ async def test_dispute_unseals_and_closing_verdict_reseals(
     dispute = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "item damaged, noticed after confirm"},
+        json={"reason": "other", "details": "item damaged, noticed after confirm"},
     )
     assert dispute.status_code == 201, dispute.text
     async with session_maker() as db:
@@ -369,7 +369,7 @@ async def test_arbiter_read_of_sealed_vault_is_audited_without_content(
     dispute = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "post-close problem"},
+        json={"reason": "other", "details": "post-close problem"},
     )
     dispute_id = dispute.json()["id"]
     assert (

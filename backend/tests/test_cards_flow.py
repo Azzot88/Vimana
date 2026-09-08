@@ -386,7 +386,7 @@ async def test_dispute_leaves_a_card_in_the_vault(
     r = await client.post(
         f"/api/deals/{deal.id}/dispute",
         headers=sender_headers,
-        json={"reason": "parcel never arrived"},
+        json={"reason": "other", "details": "parcel never arrived"},
     )
     assert r.status_code == 201, r.text
 

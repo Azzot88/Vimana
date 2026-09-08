@@ -177,8 +177,13 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         # The payer declares, the receiver of the money confirms. That second
         # card is what separates "said they paid" from "confirmed it arrived",
         # and the deal does not close without it — even in cash.
+        # T3.11.27 — raised by **the payer**, who is named in the agreement
+        # (owner's decision 2026-09-07): with a recipient who pays on delivery
+        # it is not the sender. Both are listed here and the actual one is
+        # resolved from the agreed card in `api.cards` — a static role cannot
+        # know what two people wrote into their own terms.
         _s(CardKind.payment_declared, "settlement",
-           creator_roles=frozenset({CardAckRole.sender}),
+           creator_roles=frozenset({CardAckRole.sender, CardAckRole.recipient}),
            ack_by=CardAckRole.carrier,
            on_accept_status=DealStatus.confirmed,
            on_accept_emit=CardKind.payment_confirmed,

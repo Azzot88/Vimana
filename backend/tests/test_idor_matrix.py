@@ -225,7 +225,7 @@ MATRIX: dict[tuple[str, str], Case] = {
     ),
     # ---- disputes / arbiter --------------------------------------------
     ("POST", "/api/deals/{deal_id}/dispute"): Case(
-        DENIED, "only participants dispute a deal", json={"reason": "idor probe"}
+        DENIED, "only participants dispute a deal", json={"reason": "other", "details": "idor probe"}
     ),
     ("POST", "/api/disputes/{dispute_id}/grant-access"): Case(
         DENIED, "consent to arbiter access belongs to the parties"
@@ -552,7 +552,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
     dispute = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "victim dispute for the matrix"},
+        json={"reason": "other", "details": "victim dispute for the matrix"},
     )
     assert dispute.status_code == 201, dispute.text
     dispute_id = dispute.json()["id"]
@@ -943,7 +943,7 @@ async def disputed_deal(client, carrier_headers, sender_headers) -> dict:
     dispute = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "consent lifecycle test"},
+        json={"reason": "other", "details": "consent lifecycle test"},
     )
     assert dispute.status_code == 201, dispute.text
     return {"deal_id": deal_id, "dispute_id": dispute.json()["id"]}

@@ -86,7 +86,7 @@ async def test_dispute_open_by_participant(client, carrier_headers, sender_heade
     resp = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "Carrier stopped responding after handoff"},
+        json={"reason": "other", "details": "Carrier stopped responding after handoff"},
     )
     assert resp.status_code == 201, resp.text
     assert resp.json()["status"] == "open"
@@ -104,7 +104,7 @@ async def test_dispute_open_by_outsider_forbidden(client, carrier_headers, sende
     resp = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=outsider,
-        json={"reason": "not mine"},
+        json={"reason": "other", "details": "not mine"},
     )
     assert resp.status_code == 403
 
@@ -114,13 +114,13 @@ async def test_dispute_duplicate_returns_409(client, carrier_headers, sender_hea
     first = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "first"},
+        json={"reason": "other", "details": "first"},
     )
     assert first.status_code == 201
     second = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "second"},
+        json={"reason": "other", "details": "second"},
     )
     assert second.status_code == 409
 
@@ -141,7 +141,7 @@ async def test_arbiter_reads_vault_after_claim_writes_audit(
     dispute_resp = await client.post(
         f"/api/deals/{deal_id}/dispute",
         headers=sender_headers,
-        json={"reason": "Need help"},
+        json={"reason": "other", "details": "Need help"},
     )
     dispute_id = dispute_resp.json()["id"]
 
@@ -183,7 +183,7 @@ async def test_arbiter_cannot_claim_own_deal(client, carrier_headers, sender_hea
         dispute_resp = await client.post(
             f"/api/deals/{deal_id}/dispute",
             headers=sender_headers,
-            json={"reason": "self-dispute"},
+            json={"reason": "other", "details": "self-dispute"},
         )
         dispute_id = dispute_resp.json()["id"]
         claim = await client.post(

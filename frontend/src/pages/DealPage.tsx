@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
-import { openDispute } from '../api/admin'
+import {
+  DISPUTE_REASONS,
+  openDispute,
+  type DisputeReason,
+} from '../api/admin'
 import { getDeal, type DealDetail } from '../api/deals'
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import { listParticipants, type Participant } from '../api/participants'
@@ -40,7 +44,8 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   const { notes: routeNotes } = useRouteNotes(deal?.origin, deal?.destination)
   const [error, setError] = useState('')
   const [disputeOpen, setDisputeOpen] = useState(false)
-  const [disputeReason, setDisputeReason] = useState('')
+  const [disputeReason, setDisputeReason] = useState<DisputeReason>('unpaid')
+  const [disputeDetails, setDisputeDetails] = useState('')
   const [disputeSubmitting, setDisputeSubmitting] = useState(false)
   const [disputeError, setDisputeError] = useState('')
   const [disputeCreated, setDisputeCreated] = useState(false)
@@ -50,14 +55,15 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   const [participants, setParticipants] = useState<Participant[]>([])
 
   const handleDispute = async () => {
-    if (!dealId || !disputeReason.trim()) return
+    if (!dealId) return
     setDisputeSubmitting(true)
     setDisputeError('')
     try {
-      await openDispute(dealId, disputeReason.trim())
+      await openDispute(dealId, disputeReason, disputeDetails.trim() || undefined)
       setDisputeCreated(true)
       setDisputeOpen(false)
-      setDisputeReason('')
+      setDisputeReason('unpaid')
+      setDisputeDetails('')
       await load()
     } catch {
       setDisputeError(t('dispute.openError'))
@@ -383,10 +389,25 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
             <p className="text-sm font-body text-navy/60">
               {t('dispute.modalHint')}
             </p>
-            <textarea
+            {/* T3.11.27 — the reason is chosen, not written (owner's decision
+                2026-09-07). Four categories an arbiter can sort a queue by;
+                the sentence goes underneath, where it explains the category
+                rather than replacing it. */}
+            <select
               value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value)}
-              rows={4}
+              onChange={(e) => setDisputeReason(e.target.value as DisputeReason)}
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            >
+              {DISPUTE_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {t(`dispute.reason.${r}`)}
+                </option>
+              ))}
+            </select>
+            <textarea
+              value={disputeDetails}
+              onChange={(e) => setDisputeDetails(e.target.value)}
+              rows={3}
               placeholder={t('dispute.reasonPlaceholder') as string}
               className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
             />
@@ -402,7 +423,7 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
               </button>
               <button
                 onClick={handleDispute}
-                disabled={disputeSubmitting || !disputeReason.trim()}
+                disabled={disputeSubmitting}
                 className="bg-danger text-white font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
               >
                 {disputeSubmitting ? '…' : t('dispute.submit')}

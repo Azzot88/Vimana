@@ -232,6 +232,24 @@ async def create_card(
     if kind is CardKind.handoff_declared:
         await _guard_departure(db, deal, current_user)
 
+    # T3.11.27 — the money is declared by whoever the agreement says pays.
+    # Read from the agreed card rather than from a role: «кто платит» is one of
+    # the four sections the two of them negotiate, and with a recipient who pays
+    # on delivery the sender is not the one settling. Defaults to the sender —
+    # that is the field's own default and the shape of every deal written before
+    # the section existed.
+    if kind is CardKind.payment_declared:
+        agreed = await _agreed_terms(db, deal.id)
+        payer = (agreed.card_payload or {}).get("payer", "sender") if agreed else "sender"
+        expected = (
+            CardAckRole.recipient if payer == "recipient" else CardAckRole.sender
+        )
+        if creator is not expected:
+            raise HTTPException(
+                status_code=403,
+                detail=f"The agreement says the {payer} pays",
+            )
+
     payload = _validate_payload(spec, body.payload)
 
     msg = DealVaultMessage(
@@ -324,6 +342,26 @@ async def apply_acceptance(
                 db,
                 deal_id=deal.id,
                 event_type=event,
+                actor_id=actor.id,
+                payload={"card_kind": card.card_kind, "message_id": str(card.id)},
+                author=actor,
+            )
+
+        # T3.11.27 — the settled money closes the deal. Owner's rule 2026-09-07:
+        # «нажать кнопку "Оплата произведена", вторая сторона подтверждает такой
+        # же кнопкой, действие отображается в чате и сделка закрывается».
+        #
+        # Two entries rather than one status jumped over: `confirmed` is «the
+        # money is confirmed» and `closed` is «there is nothing left to do», and
+        # a record that shows the second without the first cannot answer when
+        # the payment was agreed.
+        if spec.on_accept_status is DealStatus.confirmed:
+            deal.status = DealStatus.closed
+            await db.flush()
+            await append_deal_event(
+                db,
+                deal_id=deal.id,
+                event_type=DealEventType.closed,
                 actor_id=actor.id,
                 payload={"card_kind": card.card_kind, "message_id": str(card.id)},
                 author=actor,

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -45,8 +45,26 @@ router = APIRouter()
 # ─────────────────────────────────────────────────────────────
 
 
+#: T3.11.27 — why the arbiter is being called in, chosen from a list rather
+#: than typed (owner's decision 2026-09-07). A reason picked from four is a
+#: reason the arbiter can sort a queue by and the platform can count; free text
+#: is a sentence somebody has to read before they know whether it is theirs.
+#: The free-text explanation still travels — in `details`, where it belongs:
+#: beside the category rather than instead of it.
+DISPUTE_REASONS = ("unpaid", "undelivered", "damaged", "other")
+
+
 class DisputeCreate(BaseModel):
     reason: str
+    details: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("reason")
+    @classmethod
+    def _known_reason(cls, v: str) -> str:
+        code = v.strip().lower()
+        if code not in DISPUTE_REASONS:
+            raise ValueError(f"unknown reason: {code}")
+        return code
 
 
 class DisputeOut(BaseModel):
@@ -87,7 +105,13 @@ async def open_dispute(
     dispute = Dispute(
         deal_id=deal_id,
         opened_by=current_user.id,
-        reason=body.reason.strip(),
+        # T3.11.27 — the category is the reason; the sentence, if there is one,
+        # is appended so an arbiter reads both without a second column to fetch.
+        reason=(
+            f"{body.reason}: {body.details.strip()}"
+            if body.details and body.details.strip()
+            else body.reason
+        ),
         status=DisputeStatus.open,
     )
     db.add(dispute)
