@@ -25,6 +25,22 @@ export interface TermsPayload {
   agreed_at?: string
   proposal_id?: string
   platform_params?: Record<string, string>
+  // T3.11.27 — the rest of the agreement: one card holds what four used to.
+  cargo_what?: string | null
+  cargo_packaging?: string | null
+  cargo_fragile?: boolean
+  cargo_open_on_handover?: boolean
+  cargo_url?: string | null
+  handover_method?: string | null
+  handover_place?: string | null
+  handover_at?: string | null
+  delivery_method?: string | null
+  delivery_place?: string | null
+  delivery_at?: string | null
+  /** Who pays the carrier — it decides whose button closes the deal. */
+  payer?: 'sender' | 'recipient'
+  /** Sections the carrier has locked in this deal. */
+  locked?: string[]
 }
 
 export interface Terms {
@@ -49,6 +65,22 @@ export interface TermsInput {
   payment_method?: 'cash' | 'platform' | 'escrow'
   description?: string | null
   supersedes_id?: string | null
+  // T3.11.27 — the four sections. Every one optional: a deal born from the
+  // board form has a price and a weight and nothing else, and a half-filled
+  // agreement is the normal state of the first stage.
+  cargo_what?: string | null
+  cargo_packaging?: string | null
+  cargo_fragile?: boolean
+  cargo_open_on_handover?: boolean
+  cargo_url?: string | null
+  handover_method?: string | null
+  handover_place?: string | null
+  handover_at?: string | null
+  delivery_method?: string | null
+  delivery_place?: string | null
+  delivery_at?: string | null
+  payer?: 'sender' | 'recipient'
+  locked?: string[]
 }
 
 /** Current contract, or the proposal still awaiting an answer. `null` when

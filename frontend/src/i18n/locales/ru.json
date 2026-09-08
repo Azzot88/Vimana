@@ -783,6 +783,34 @@
       "luxury": "Люкс"
     }
   },
+  "agreement": {
+    "empty": "Условия ещё не предложены.",
+    "locked": "закрыто перевозчиком",
+    "section": {
+      "cargo": "Груз",
+      "handover": "Передача",
+      "delivery": "Вручение",
+      "payment": "Оплата"
+    },
+    "payer": {
+      "sender": "Отправитель",
+      "recipient": "Получатель"
+    },
+    "field": {
+      "what": "Что везём",
+      "weight": "Вес",
+      "declared": "Объявленная стоимость",
+      "packaging": "Упаковка",
+      "fragile": "Хрупкое",
+      "openOnHandover": "Вскрыть при передаче",
+      "url": "Ссылка на товар",
+      "method": "Способ",
+      "place": "Место",
+      "at": "Когда",
+      "price": "Цена",
+      "payer": "Кто платит"
+    }
+  },
   "stages": {
     "terms": "Условия",
     "handover": "Передача",
@@ -813,6 +841,7 @@
     "notFound": "Сделка не найдена",
     "actionFailed": "Действие не выполнено. Попробуйте ещё раз.",
     "boardingPass": "Посадочный талон",
+    "moreAboutDeal": "Ещё о сделке",
     "byPersonTitle": "Сделки по людям",
     "countWithPerson": "Сделок: {{count}}",
     "sortBy": {

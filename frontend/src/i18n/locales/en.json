@@ -782,6 +782,34 @@
       "luxury": "Luxury goods"
     }
   },
+  "agreement": {
+    "empty": "No terms proposed yet.",
+    "locked": "locked by the carrier",
+    "section": {
+      "cargo": "Cargo",
+      "handover": "Handover",
+      "delivery": "Delivery",
+      "payment": "Payment"
+    },
+    "payer": {
+      "sender": "Sender",
+      "recipient": "Recipient"
+    },
+    "field": {
+      "what": "What we carry",
+      "weight": "Weight",
+      "declared": "Declared value",
+      "packaging": "Packaging",
+      "fragile": "Fragile",
+      "openOnHandover": "Open on handover",
+      "url": "Item link",
+      "method": "Method",
+      "place": "Place",
+      "at": "When",
+      "price": "Price",
+      "payer": "Who pays"
+    }
+  },
   "stages": {
     "terms": "Terms",
     "handover": "Handover",
@@ -812,6 +840,7 @@
     "notFound": "Deal not found",
     "actionFailed": "That did not go through. Please try again.",
     "boardingPass": "Boarding pass",
+    "moreAboutDeal": "More about the deal",
     "byPersonTitle": "Deals by person",
     "countWithPerson": "{{count}} deals",
     "sortBy": {

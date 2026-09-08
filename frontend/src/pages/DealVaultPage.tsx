@@ -11,13 +11,15 @@ import {
   type VaultMessage,
 } from '../api/dealvault'
 import api from '../api/client'
-import type { DealStatus } from '../api/deals'
+import { getDeal, type DealDetail, type DealStatus } from '../api/deals'
+import { getTerms, type Terms } from '../api/terms'
 import RecipientModal from '../components/RecipientModal'
 import SafeFilePicker from '../components/SafeFilePicker'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
 import TermsCard from '../components/TermsCard'
+import DealAgreementCard from '../components/DealAgreementCard'
 import DealStages from '../components/DealStages'
 import DealCard from '../components/DealCard'
 import DealPage from './DealPage'
@@ -61,6 +63,11 @@ export default function DealVaultPage() {
      it is refetched with the messages so an accepted card moves the stage
      without a reload. */
   const [dealStatus, setDealStatus] = useState<DealStatus>('matched')
+  /* T3.11.27 — the deal card replaced the boarding pass, so the screen needs
+     the deal and the agreement rather than the status alone. */
+  const [deal, setDeal] = useState<DealDetail | null>(null)
+  const [terms, setTerms] = useState<Terms | null>(null)
+  const [cardOpen, setCardOpen] = useState(true)
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [parties, setParties] = useState<{
@@ -130,6 +137,27 @@ export default function DealVaultPage() {
       .catch(() => {
         // deal-detail fetch is best-effort — plaintext send path still works.
       })
+  }, [dealId, messages.length])
+
+  /* T3.11.27 — the agreement, alongside the deal. Refetched with the messages
+     for the same reason the status is: confirming the card is a message, and a
+     card that only refreshed on reload would keep showing «ждём подтверждения»
+     to the person who has just given it. */
+  useEffect(() => {
+    if (!dealId) return
+    getDeal(dealId)
+      .then(({ data }) => setDeal(data))
+      .catch(() => setDeal(null))
+    getTerms(dealId)
+      .then((data) => {
+        setTerms(data)
+        /* Open while it is not agreed by both — that is the first stage. Once
+           agreed it folds itself away: the screen is about the parcel from
+           then on. A person who opened it by hand is not overruled, because
+           this only runs when the answer changes. */
+        setCardOpen(data?.card_kind !== 'terms.agreed')
+      })
+      .catch(() => setTerms(null))
   }, [dealId, messages.length])
 
   // Try to decrypt e2e messages using own read_package + author's npub.
@@ -328,15 +356,33 @@ export default function DealVaultPage() {
         )}
       </div>
 
-      {/* T3.11.26 — the deal itself, folded (owner's decision 2026-09-07). The
-          screen that used to stand in front of the conversation is gone, and
-          everything that was on it — boarding pass, terms, verification, the
-          dispute button — is here. Closed by default: the person came to talk,
-          and a card open above the thread pushes the last message off screen on
-          a phone. */}
+      {/* T3.11.27 — the deal card replaced the boarding pass (owner's decision
+          2026-09-07). Collapsed it is the header: route, date, price, number,
+          who is who. Expanded it is the agreement — four sections the two sides
+          negotiate.
+
+          **Open while it is not confirmed by both**, because agreeing it *is*
+          the first stage, and a collapsed card there would have been an empty
+          screen with a chat beside it. Once confirmed it folds away on its own:
+          from then on the screen is about the parcel, not about the paperwork.
+
+          What was left of the old boarding pass — the verification request and
+          the dispute button — moved under it rather than disappearing: they
+          belong to the deal as a whole rather than to any one stage. */}
+      {deal && (
+        <div className="mb-3 sm:mb-4 shrink-0">
+          <DealAgreementCard
+            deal={deal}
+            terms={terms}
+            open={cardOpen}
+            onToggle={() => setCardOpen((v) => !v)}
+          />
+        </div>
+      )}
+
       <details className="mb-3 sm:mb-4 shrink-0 rounded-field border border-navy/10 bg-white">
         <summary className="cursor-pointer px-3 py-2 text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-          {t('deals.boardingPass')}
+          {t('deals.moreAboutDeal')}
         </summary>
         <div className="px-3 pb-3">
           <DealPage embedded />
