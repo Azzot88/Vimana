@@ -8,7 +8,6 @@ it exists.
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
 
 import pytest_asyncio
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
@@ -430,15 +429,29 @@ async def test_the_two_minute_window_belongs_to_whoever_opened_it(
 ):
     """T3.11.27 — «две минуты это окно для правки, пока другой ждёт».
 
-    While it is open the card belongs to its author: the other side neither
-    edits nor confirms, so what they read next is a finished change rather than
-    somebody's second thoughts.
+    The window is **taken before the change and released by it**. A first
+    attempt read a freshly submitted proposal as an open window, which froze the
+    other side for two minutes at exactly the moment they were meant to answer
+    it — five tests said so on the first run.
     """
     mine = await _propose(client, sender_headers, deal.id, price_total=90)
     card_id = mine.json()["id"]
 
+    # Nothing is held yet: a submitted proposal is finished, and answering it is
+    # the whole point.
+    quiet = await _propose(
+        client, carrier_headers, deal.id, price_total=92, supersedes_id=card_id
+    )
+    assert quiet.status_code == 201, quiet.text
+    card_id = quiet.json()["id"]
+
+    held = await client.post(
+        f"/api/deals/{deal.id}/terms/hold", headers=carrier_headers
+    )
+    assert held.status_code == 200, held.text
+
     theirs = await _propose(
-        client, carrier_headers, deal.id, price_total=95, supersedes_id=card_id
+        client, sender_headers, deal.id, price_total=95, supersedes_id=card_id
     )
     assert theirs.status_code == 409, theirs.text
     assert "editing" in theirs.text.lower()
@@ -447,23 +460,35 @@ async def test_the_two_minute_window_belongs_to_whoever_opened_it(
     # agreement to a half-written change is still an agreement in the record.
     ack = await client.post(
         f"/api/deals/{deal.id}/dealvault/messages/{card_id}/ack",
-        headers=carrier_headers,
+        headers=sender_headers,
         json={"decision": "accepted"},
     )
     assert ack.status_code == 409, ack.text
 
-    # The author is not held by their own window.
+    # The holder is not held by their own window, and submitting ends it.
     again = await _propose(
-        client, sender_headers, deal.id, price_total=95, supersedes_id=card_id
+        client, carrier_headers, deal.id, price_total=95, supersedes_id=card_id
     )
     assert again.status_code == 201, again.text
+
+    freed = await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{again.json()['id']}/ack",
+        headers=sender_headers,
+        json={"decision": "accepted"},
+    )
+    assert freed.status_code == 200, freed.text
 
 
 async def test_the_window_does_not_hold_the_other_cards(
     client, sender_headers, carrier_headers, deal
 ):
     """A rule about typing must not reach people standing in a car park with a
-    parcel: only the agreement is held, never a handover."""
+    parcel: an open editing window holds the agreement, never a handover."""
+    held = await client.post(
+        f"/api/deals/{deal.id}/terms/hold", headers=sender_headers
+    )
+    assert held.status_code == 200, held.text
+
     proposed = await _card_via_generic(
         client, sender_headers, deal.id, "pickup.proposed", {"method": "in_person"}
     )
@@ -492,36 +517,27 @@ async def test_a_locked_section_is_the_carriers(
     card_id = locked.json()["id"]
     assert locked.json()["payload"]["locked"] == ["handover"]
 
-    import asyncio
+    # Nobody is holding the window, so what is refused below is the lock rather
+    # than the clock.
+    clash = await _propose(
+        client,
+        sender_headers,
+        deal.id,
+        handover_method="courier",
+        locked=["handover"],
+        supersedes_id=card_id,
+    )
+    assert clash.status_code == 403, clash.text
+    assert "handover" in clash.text
 
-    # Past the window, so what is refused is the lock rather than the clock.
-    from app.api import terms as terms_module
-
-    original = terms_module.EDIT_WINDOW
-    terms_module.EDIT_WINDOW = timedelta(seconds=0)
-    try:
-        await asyncio.sleep(0)
-        clash = await _propose(
-            client,
-            sender_headers,
-            deal.id,
-            handover_method="courier",
-            locked=["handover"],
-            supersedes_id=card_id,
-        )
-        assert clash.status_code == 403, clash.text
-        assert "handover" in clash.text
-
-        # A section they were not locked out of still moves.
-        fine = await _propose(
-            client,
-            sender_headers,
-            deal.id,
-            handover_method="in_person",
-            locked=["handover"],
-            price_total=123,
-            supersedes_id=card_id,
-        )
-        assert fine.status_code == 201, fine.text
-    finally:
-        terms_module.EDIT_WINDOW = original
+    # A section they were not locked out of still moves.
+    fine = await _propose(
+        client,
+        sender_headers,
+        deal.id,
+        handover_method="in_person",
+        locked=["handover"],
+        price_total=123,
+        supersedes_id=card_id,
+    )
+    assert fine.status_code == 201, fine.text

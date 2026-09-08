@@ -273,7 +273,20 @@ async def _ensure_connection_tier(engine) -> None:
         await conn.execute(
             text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ")
         )
-        # T3.11.27 — the cancellation timeout each account keeps (`0080`).
+        # T3.11.27 — the cancellation timeout each account keeps (`0080`) and
+        # the editing hold on the deal (`0081`).
+        await conn.execute(
+            text(
+                "ALTER TABLE deals ADD COLUMN IF NOT EXISTS "
+                "edit_hold_by_id UUID REFERENCES users(id)"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE deals ADD COLUMN IF NOT EXISTS "
+                "edit_hold_until TIMESTAMPTZ"
+            )
+        )
         await conn.execute(
             text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS "

@@ -147,6 +147,24 @@ class Deal(Base):
     shipment_no: Mapped[str | None] = mapped_column(
         String(12), unique=True, nullable=True, index=True
     )
+    # T3.11.27 — who is editing the agreement right now, and until when.
+    #
+    # Owner's rule 2026-09-07: «две минуты — это окно для правки, пока другой
+    # ждёт; если справился раньше — молодец, нет — запускай ещё раз». The hold is
+    # taken **before** the change and released by it, which is the opposite of
+    # what a first attempt did: it started the window at submission, so every
+    # proposal froze the other side for two minutes exactly when they were meant
+    # to answer it.
+    #
+    # Two columns on the deal rather than a table: a hold is one fact about one
+    # deal, it never needs history, and it expires by comparison rather than by
+    # a sweeper.
+    edit_hold_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    edit_hold_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -114,6 +114,9 @@ MATRIX: dict[tuple[str, str], Case] = {
             "payment_method": "cash",
         },
     ),
+    ("POST", "/api/deals/{deal_id}/terms/hold"): Case(
+        DENIED, "taking the editing window on a stranger's deal"
+    ),
     # ---- DealVault -----------------------------------------------------
     ("GET", "/api/deals/{deal_id}/dealvault"): Case(
         DENIED, "the vault is the deal's private content"

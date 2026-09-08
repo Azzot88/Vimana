@@ -632,13 +632,16 @@ async def ack_card(
             status_code=403, detail="This card awaits the other side"
         )
 
-    # T3.11.27 — the two-minute editing window holds confirmation too, not only
-    # editing. The author may still be finishing the change; confirming what is
-    # half-written would leave both sides bound to a version neither meant, and
-    # the record would show an agreement to it.
-    from app.api.terms import _hold_is_somebody_else_s
+    # T3.11.27 — an open editing window holds confirmation too, not only editing:
+    # the other side may be mid-change, and agreeing to a half-written version
+    # would put that agreement into the record. Only while the window is
+    # actually open — a submitted card is finished, and answering it is the
+    # whole point.
+    from app.api.terms import AGREEMENT_KINDS, _hold_is_somebody_else_s
 
-    if _hold_is_somebody_else_s(msg, current_user):
+    if msg.card_kind in AGREEMENT_KINDS and _hold_is_somebody_else_s(
+        deal, current_user
+    ):
         raise HTTPException(
             status_code=409,
             detail="The other side is still editing — try again in a moment",

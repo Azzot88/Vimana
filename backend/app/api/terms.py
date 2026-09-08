@@ -14,6 +14,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,38 +99,76 @@ async def _build_payload(db: AsyncSession, trip: Trip, body: TermsIn) -> dict:
 #: not hold the deal: «если справился раньше — молодец, нет — запускай ещё раз».
 EDIT_WINDOW = timedelta(minutes=2)
 
-#: The cards the window applies to — the agreement and nothing else.
+#: The cards an open editing window may hold. Only the agreement: while somebody
+#: edits the terms, a handover confirmation between two people standing together
+#: with a parcel has nothing to do with it and must not be refused.
 AGREEMENT_KINDS = frozenset(
     {CardKind.terms_proposed.value, CardKind.terms_countered.value}
 )
 
 
-def _hold_is_somebody_else_s(card: DealVaultMessage | None, actor: User) -> bool:
-    """Is a pending card still inside somebody else's editing window?
 
-    The window needs no column: a pending card carries who wrote it and when,
-    which is the whole question. Storing a lock would add a second place where
-    «who is editing» is recorded, and the two would disagree the first time a
-    request failed halfway.
+def _hold_is_somebody_else_s(deal: Deal, actor: User) -> bool:
+    """Is somebody else in the middle of editing this deal's agreement?
 
-    Called by: `propose_terms`, `ack_terms`.
+    The hold lives on the deal, is taken before the change and released by it.
+    An expired hold is simply not a hold — «запускай ещё раз» is the owner's own
+    answer to being too slow, so nothing has to clear it.
+
+    Called by: `propose_terms`, `take_edit_hold`, `api.dealvault.ack_card`.
     """
-    if card is None or card.card_state is not CardState.pending:
+    if deal.edit_hold_by_id is None or deal.edit_hold_by_id == actor.id:
         return False
-    # **Only the agreement.** The window exists so an edit is read finished
-    # rather than mid-thought; every other card is a single act with nothing to
-    # finish. Applied to all of them it would stop a carrier confirming a
-    # handover for two minutes while both of them stand there holding the
-    # parcel — a rule about typing, imposed on people meeting in a car park.
-    if card.card_kind not in AGREEMENT_KINDS:
+    until = deal.edit_hold_until
+    if until is None:
         return False
-    if card.sender_id is None or card.sender_id == actor.id:
-        return False
-    written = card.created_at
-    if written.tzinfo is None:
-        written = written.replace(tzinfo=timezone.utc)
-    return datetime.now(timezone.utc) - written < EDIT_WINDOW
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return until > datetime.now(timezone.utc)
 
+
+def _release_hold(deal: Deal, actor: User) -> None:
+    """A submitted change ends the window it was made in."""
+    if deal.edit_hold_by_id == actor.id:
+        deal.edit_hold_by_id = None
+        deal.edit_hold_until = None
+
+
+class EditHoldOut(BaseModel):
+    """Until when the card is mine to change."""
+
+    until: datetime
+
+
+@router.post("/{deal_id}/terms/hold", response_model=EditHoldOut)
+async def take_edit_hold(
+    deal_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.27 — «я сейчас правлю», for the next two minutes.
+
+    Pressing «Редактировать» takes this before the form opens, so the other side
+    reads a finished change rather than somebody's second thoughts — and so two
+    people cannot answer each other's half-written versions in a loop.
+
+    Re-taking my own hold extends it: a person still typing has not stopped
+    editing, and making them lose the window mid-sentence would be a rule about
+    typing speed.
+
+    Nothing releases a stale hold and nothing needs to: two minutes after it was
+    taken it stops being one, and the person who ran out «запускает ещё раз».
+    """
+    deal = await _deal_as_party(deal_id, current_user, db)
+    if _hold_is_somebody_else_s(deal, current_user):
+        raise HTTPException(
+            status_code=409,
+            detail="The other side is editing — try again in a moment",
+        )
+    deal.edit_hold_by_id = current_user.id
+    deal.edit_hold_until = datetime.now(timezone.utc) + EDIT_WINDOW
+    await db.commit()
+    return EditHoldOut(until=deal.edit_hold_until)
 
 def _locked_against(payload: dict | None, editor: CardAckRole) -> list[str]:
     """Sections this editor may not touch.
@@ -171,6 +210,16 @@ async def propose_terms(
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
 
+    # T3.11.27 — somebody else's editing window blocks the change itself, not
+    # the proposal that came before it. Checked once, before anything is built:
+    # the point of the window is that two people do not answer each other's
+    # half-written versions in a loop.
+    if _hold_is_somebody_else_s(deal, current_user):
+        raise HTTPException(
+            status_code=409,
+            detail="The other side is editing — try again in a moment",
+        )
+
     superseded: DealVaultMessage | None = None
     if body.supersedes_id is not None:
         superseded = (
@@ -186,16 +235,6 @@ async def propose_terms(
         if superseded.card_state is not CardState.pending:
             raise HTTPException(
                 status_code=409, detail="That proposal is no longer pending"
-            )
-        # T3.11.27 — the two-minute window. While it is open the card belongs to
-        # whoever opened it: the other side neither edits nor confirms, so what
-        # they read next is a finished change rather than somebody's second
-        # thoughts. Refused rather than queued — «запускай ещё раз» is the
-        # owner's own answer to being too slow.
-        if _hold_is_somebody_else_s(superseded, current_user):
-            raise HTTPException(
-                status_code=409,
-                detail="The other side is editing — try again in a moment",
             )
         # A locked section is the carrier's. Refused by name, so the sender is
         # told which part they may not touch rather than that the whole card is
@@ -290,6 +329,11 @@ async def propose_terms(
             },
             author=current_user,
         )
+
+    # The change is made, so the window it was made in is over — «справился
+    # раньше» is the ordinary case, and holding the deal until the two minutes
+    # run out would punish being quick.
+    _release_hold(deal, current_user)
 
     await db.commit()
     await db.refresh(msg)
