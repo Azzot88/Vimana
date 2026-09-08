@@ -10,6 +10,10 @@ export type DealStatus =
   | 'delivered'
   | 'confirmed'
   | 'closed'
+  // T3.11.27 — called off before the parcel moved. Not 'closed': a cancelled
+  // deal is not a completed one, and a rating built on top has to tell them
+  // apart.
+  | 'cancelled'
   | 'disputed'
 
 export interface Deal {

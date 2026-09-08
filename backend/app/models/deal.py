@@ -23,6 +23,11 @@ class DealStatus(str, enum.Enum):
     delivered = "delivered"
     confirmed = "confirmed"
     closed = "closed"
+    # T3.11.27 — called off before the parcel moved, by both sides or by a
+    # timeout nobody answered. Its own state and not `closed`: a deal that was
+    # cancelled is not a deal that was completed, and the record has to be able
+    # to tell somebody's cancellation rate from their delivery rate.
+    cancelled = "cancelled"
     disputed = "disputed"
 
 
@@ -50,6 +55,9 @@ class DealEventType(str, enum.Enum):
     # false in the one place the product exists to keep true. Same hash, own
     # event, its own date.
     file_reattached = "file_reattached"
+    # T3.11.27 — the deal was called off. Distinct from `closed` for the same
+    # reason the status is: a cancellation is not a completion.
+    cancelled = "cancelled"
     # T3.11.17 — the parcel was handed to a postal service inside the
     # destination country. Its own event because it is its own leg: the carrier
     # is done, the parcel is not there yet, and an arbiter asked «where was it

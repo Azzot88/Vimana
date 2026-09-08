@@ -301,6 +301,15 @@ async def _ensure_connection_tier(engine) -> None:
                 " WHERE expires_at IS NULL"
             )
         )
+        # T3.11.27 — the cancellation outcome (`0082`). A cancelled deal is
+        # not a closed one; both enums learn the word.
+        for value, type_name in (
+            ("cancelled", "dealstatus"),
+            ("cancelled", "dealeventtype"),
+        ):
+            await conn.execute(
+                text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS '{value}'")
+            )
         await conn.execute(
             text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_handle "
@@ -2166,10 +2175,35 @@ def sync_sessions(monkeypatch):
         if hasattr(module, "SyncSessionLocal"):
             monkeypatch.setattr(module, "SyncSessionLocal", maker)
 
+    # T3.11.27 — the same hole, async. `close_stale_cancellations` writes
+    # through `AsyncSessionLocal` because what it calls (`append_deal_event`,
+    # `record_card`) is async; unpatched, that reaches production exactly as the
+    # sync maker did on 2026-07-26. Same loop, same tuple, same rule: a task
+    # module that names a session maker gets it rebound.
+    async_engine = create_async_engine(
+        TEST_DATABASE_URL, echo=False, poolclass=NullPool
+    )
+    async_maker = async_sessionmaker(async_engine, expire_on_commit=False)
+    for module in (
+        chain_anchor,
+        cleanup,
+        nostr_publish,
+        nostr_whitelist,
+        notifications,
+        tasks_uba,
+        core_uba,
+    ):
+        if hasattr(module, "AsyncSessionLocal"):
+            monkeypatch.setattr(module, "AsyncSessionLocal", async_maker)
+
     # Yielded so tests that seed rows for a task can use the very same binding
     # instead of reaching for `app.core.database.SyncSessionLocal` themselves.
     yield maker
     engine.dispose()
+    # NullPool holds nothing, but the underlying sync engine still owns a
+    # dialect and a logger; disposing it keeps a long suite from accumulating
+    # one per test.
+    async_engine.sync_engine.dispose()
 
 
 @pytest.fixture(autouse=True)

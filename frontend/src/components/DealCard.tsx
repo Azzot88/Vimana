@@ -2,6 +2,7 @@ import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ackCard, uploadAttachment, type VaultMessage } from '../api/dealvault'
 import { kindKey, specForKind, type DealRole } from '../lib/cardForms'
+import { usePrefs } from '../hooks/usePrefs'
 import MonoText from '../components/MonoText'
 
 /** T3.36–T3.39 — one renderer for every card that is not the contract.
@@ -21,6 +22,7 @@ interface Props {
 
 export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props) {
   const { t } = useTranslation()
+  const { dateTime } = usePrefs()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -38,6 +40,15 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
   const awaitingMe =
     msg.card_state === 'pending' && msg.requires_ack_by === myRole && !needsPhoto
   const awaitingThem = msg.card_state === 'pending' && !awaitingMe && !needsPhoto
+  // T3.11.27 — a cancellation stops waiting. The server stamps the moment onto
+  // the card (the shorter of the two accounts' timeouts, capped by departure);
+  // silence past it cancels the deal. Shown as a sentence rather than as one
+  // more `key: value` row, because it is the only field on this card that
+  // changes what happens if nobody touches the screen.
+  const deadline =
+    msg.card_state === 'pending' && typeof payload.expires_at === 'string'
+      ? (payload.expires_at as string)
+      : null
 
   const answer = async (decision: 'accepted' | 'declined') => {
     setBusy(true)
@@ -88,7 +99,10 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
       </div>
 
       {Object.entries(payload).map(([key, value]) =>
-        value === null || value === undefined || typeof value === 'object' ? null : (
+        value === null ||
+        value === undefined ||
+        typeof value === 'object' ||
+        key === 'expires_at' ? null : (
           <div key={key} className="flex justify-between gap-4 py-0.5">
             <span className="text-xs font-body text-navy/50">
               {t(`cards.field.${key}`, key)}
@@ -172,6 +186,12 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
 
       {awaitingThem && (
         <p className="mt-3 text-xs font-body text-navy/40">{t('cards.awaitingOther')}</p>
+      )}
+
+      {deadline && (
+        <p className="mt-1 text-xs font-body text-navy/45">
+          {t('cards.cancelDeadline', { at: dateTime(deadline) })}
+        </p>
       )}
     </div>
   )

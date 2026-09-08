@@ -5,6 +5,7 @@ import { sendPhotoMessage, type VaultMessage } from '../api/dealvault'
 import {
   ALWAYS_AVAILABLE,
   DEAL_STAGES,
+  TERMINAL_STATUSES,
   stageIndex,
   stageOf,
   type DealStageKey,
@@ -132,12 +133,20 @@ export default function DealStages({
       </ol>
 
       <div className="border-t border-navy/10 pt-4 space-y-3">
+        {/* A cancelled deal stands on the last rung without having walked it, so
+            the heading says so: «Завершено» over a delivery that never happened
+            is the record telling the two people the opposite of what they
+            agreed. */}
         <div>
           <h2 className="font-display font-semibold text-base text-navy">
-            {t(`stages.${currentKey}`)}
+            {t(status === 'cancelled' ? 'stages.cancelled' : `stages.${currentKey}`)}
           </h2>
           <p className="text-xs font-body text-navy/50 mt-0.5">
-            {t(`stages.hint.${currentKey}`)}
+            {t(
+              status === 'cancelled'
+                ? 'stages.hint.cancelled'
+                : `stages.hint.${currentKey}`,
+            )}
           </p>
         </div>
 
@@ -226,7 +235,7 @@ export default function DealStages({
         {/* Never gated by stage, never in the way: a problem and a cancellation
             are needed exactly when the ladder has stopped describing what is
             happening. */}
-        {myRole && (
+        {myRole && !TERMINAL_STATUSES.includes(status) && (
           <div className="pt-2 border-t border-navy/5">
             {moreOpen ? (
               <CardActions

@@ -104,8 +104,17 @@ export const DEAL_STAGES: DealStage[] = [
  *  2026-09-07) — always reachable, never in the way. */
 export const ALWAYS_AVAILABLE = ['issue.reported', 'cancel.requested']
 
+/** T3.11.27 — nothing is left to do on these, and `ALWAYS_AVAILABLE` is hidden
+ *  for them: offering «запросить отмену» on a deal already cancelled is a
+ *  control that can only fail. */
+export const TERMINAL_STATUSES: DealStatus[] = ['confirmed', 'closed', 'cancelled']
+
 export function stageOf(status: DealStatus): DealStageKey {
   if (status === 'disputed') return 'delivery'
+  // T3.11.27 — a cancelled deal stands at the end of the ladder without having
+  // walked it. Not a stage of its own: the strip shows how far a delivery got,
+  // and a stage nobody can ever be on would be a rung nobody climbs.
+  if (status === 'cancelled') return 'closed'
   const found = DEAL_STAGES.find((s) => s.statuses.includes(status))
   return found ? found.key : 'terms'
 }

@@ -8,6 +8,7 @@ status moves only through a card.
 from __future__ import annotations
 
 import base64
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest_asyncio
@@ -325,7 +326,129 @@ async def test_cancellation_takes_both_sides(
     assert r.status_code == 200, r.text
 
     detail = await client.get(f"/api/deals/{deal.id}", headers=sender_headers)
-    assert detail.json()["status"] == "closed"
+    # T3.11.27 — `cancelled`, not `closed`. A deal called off is not a deal
+    # completed, and a rating built on these words has to tell them apart.
+    assert detail.json()["status"] == "cancelled"
+
+
+async def test_cancellation_carries_its_own_deadline(
+    client, sender_headers, session_maker, deal
+):
+    """The request says when it stops waiting, and the *server* says it.
+
+    A deadline the caller could choose is not a deadline. It is the shorter of
+    the two accounts' `cancel_timeout_hours` and the departure — the trip here
+    leaves in five days and the accounts keep the 48-hour default, so the
+    timeout is what lands, and the cap is asserted as the rule that holds
+    whichever of the two is nearer.
+    """
+    from app.models.marketplace import Trip
+
+    r = await _card(
+        client, sender_headers, deal.id, "cancel.requested", {"costs_borne_by": "none"}
+    )
+    assert r.status_code == 201, r.text
+    stamped = r.json()["card_payload"]["expires_at"]
+    assert stamped, "a cancellation with no deadline never closes itself"
+
+    when = datetime.fromisoformat(stamped)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    assert when > datetime.now(timezone.utc)
+
+    async with session_maker() as db:
+        trip = await db.get(Trip, deal.trip_id)
+        depart = trip.depart_at
+    if depart.tzinfo is None:
+        depart = depart.replace(tzinfo=timezone.utc)
+    assert when <= depart
+
+
+async def test_cancellation_refused_once_the_parcel_moved(
+    client, sender_headers, session_maker, deal
+):
+    """After the handover the question is «where is it», and that is a dispute.
+
+    Accepted mid-flight, a cancellation would close a deal whose cargo is in the
+    air and leave the record saying nothing was ever carried.
+    """
+    from app.models.deal import Deal, DealStatus
+
+    async with session_maker() as db:
+        row = await db.get(Deal, deal.id)
+        row.status = DealStatus.in_transit
+        await db.commit()
+
+    r = await _card(
+        client, sender_headers, deal.id, "cancel.requested", {"costs_borne_by": "none"}
+    )
+    assert r.status_code == 409, r.text
+
+
+async def test_unanswered_cancellation_closes_itself(
+    client, sender_headers, session_maker, deal
+):
+    """Silence past the deadline is the answer.
+
+    Otherwise a party who simply stops replying keeps the other one's cargo slot
+    booked until the plane leaves. The card ends `expired` — nobody accepted it
+    — while the deal ends `cancelled`.
+    """
+    from app.models.deal import CardState, Deal, DealStatus, DealVaultMessage
+    from app.tasks.cleanup import _close_stale_cancellations
+
+    r = await _card(
+        client, sender_headers, deal.id, "cancel.requested", {"costs_borne_by": "none"}
+    )
+    assert r.status_code == 201, r.text
+    card_id = r.json()["id"]
+
+    past = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    async with session_maker() as db:
+        card = await db.get(DealVaultMessage, uuid.UUID(card_id))
+        # Reassigned rather than mutated: a JSON column tracks the attribute,
+        # not the dict inside it, so an in-place edit is not written back.
+        card.card_payload = {**(card.card_payload or {}), "expires_at": past}
+        await db.commit()
+
+    assert (await _close_stale_cancellations(50))["closed"] >= 1
+
+    async with session_maker() as db:
+        assert (await db.get(Deal, deal.id)).status is DealStatus.cancelled
+        card = await db.get(DealVaultMessage, uuid.UUID(card_id))
+        assert card.card_state is CardState.expired
+
+
+async def test_stale_cancellation_lapses_when_the_deal_moved_on(
+    client, sender_headers, session_maker, deal
+):
+    """A request that sat there while the parcel was handed over just lapses.
+
+    Cancelling then would be the platform rewriting an outcome it did not
+    witness — so the card expires and the deal is left exactly as it is.
+    """
+    from app.models.deal import CardState, Deal, DealStatus, DealVaultMessage
+    from app.tasks.cleanup import _close_stale_cancellations
+
+    r = await _card(
+        client, sender_headers, deal.id, "cancel.requested", {"costs_borne_by": "none"}
+    )
+    card_id = r.json()["id"]
+
+    past = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    async with session_maker() as db:
+        card = await db.get(DealVaultMessage, uuid.UUID(card_id))
+        card.card_payload = {**(card.card_payload or {}), "expires_at": past}
+        row = await db.get(Deal, deal.id)
+        row.status = DealStatus.in_transit
+        await db.commit()
+
+    await _close_stale_cancellations(50)
+
+    async with session_maker() as db:
+        assert (await db.get(Deal, deal.id)).status is DealStatus.in_transit
+        card = await db.get(DealVaultMessage, uuid.UUID(card_id))
+        assert card.card_state is CardState.expired
 
 
 # ── the generic rules ─────────────────────────────────────────────────────

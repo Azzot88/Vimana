@@ -218,6 +218,56 @@ describe('DealCard', () => {
       expect(screen.getByText(/no photo attached/i)).toBeInTheDocument(),
     )
   })
+
+  it('says when an unanswered cancellation stops waiting', () => {
+    // T3.11.27 — the one field on this card that changes what happens if
+    // nobody touches the screen, so it is a sentence rather than one more
+    // `key: value` row printing a raw ISO string.
+    renderWithProviders(
+      <DealCard
+        msg={msg({
+          card_kind: 'cancel.requested',
+          card_state: 'pending',
+          requires_ack_by: 'carrier',
+          card_payload: {
+            costs_borne_by: 'split',
+            expires_at: '2026-09-09T10:00:00Z',
+          },
+        })}
+        dealId="d1"
+        myRole="carrier"
+        mine={false}
+        onChanged={() => {}}
+      />,
+    )
+    expect(
+      screen.getByText(/cancels itself|отменится сама/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('2026-09-09T10:00:00Z')).not.toBeInTheDocument()
+  })
+
+  it('drops the deadline once the card is answered', () => {
+    renderWithProviders(
+      <DealCard
+        msg={msg({
+          card_kind: 'cancel.requested',
+          card_state: 'accepted',
+          requires_ack_by: null,
+          card_payload: {
+            costs_borne_by: 'split',
+            expires_at: '2026-09-09T10:00:00Z',
+          },
+        })}
+        dealId="d1"
+        myRole="carrier"
+        mine={false}
+        onChanged={() => {}}
+      />,
+    )
+    expect(
+      screen.queryByText(/cancels itself|отменится сама/i),
+    ).not.toBeInTheDocument()
+  })
 })
 
 // ── raising a card ────────────────────────────────────────────────────────

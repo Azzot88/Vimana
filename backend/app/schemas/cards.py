@@ -136,6 +136,11 @@ class CancelRequested(BaseModel):
     # question surfaces anyway and answering it later means answering it in a
     # dispute.
     costs_borne_by: Literal["sender", "carrier", "split", "none"] = "none"
+    #: T3.11.27 — when this stops waiting for an answer. Stamped by the server
+    #: at request time, never sent by the client: it is the shorter of the two
+    #: accounts' timeouts, capped by the flight, and a deadline a caller could
+    #: choose would not be a deadline.
+    expires_at: datetime | None = None
 
 
 PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {

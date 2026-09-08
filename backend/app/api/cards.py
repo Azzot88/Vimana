@@ -9,7 +9,7 @@ them drift.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
@@ -18,7 +18,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
-from app.core.cards import CATALOGUE, CardKind, CardSpec, resolve_ack_role, role_of
+from app.core.cards import (
+    CANCELLABLE_STATUSES,
+    CATALOGUE,
+    CardKind,
+    CardSpec,
+    resolve_ack_role,
+    role_of,
+)
 from app.core.database import get_db
 from app.core.deal_chain import append_deal_event, content_hash_of
 from app.core.params import resolve_all
@@ -154,6 +161,45 @@ async def _fixation_payload(db: AsyncSession, deal: Deal) -> dict:
     }
 
 
+async def _cancel_deadline(db: AsyncSession, deal: Deal) -> datetime:
+    """When an unanswered cancellation stops waiting.
+
+    T3.11.27 — «по таймауту или по времени вылета», whichever comes first, and
+    the timeout is **the shorter of the two accounts'** (owner's decision
+    2026-09-07): whoever is in more of a hurry sets the pace, which is right for
+    the side whose plans are burning.
+
+    The flight caps it because after departure there is nothing left to cancel —
+    the trip either took the parcel or it did not, and that is a different
+    conversation from calling the deal off.
+
+    Called by: `create_card`, for `cancel.requested`.
+    """
+    people = (
+        (
+            await db.execute(
+                select(User.cancel_timeout_hours).where(
+                    User.id.in_([deal.sender_id, deal.carrier_id])
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    hours = min(people) if people else 48
+    deadline = datetime.now(timezone.utc) + timedelta(hours=int(hours))
+
+    trip = (
+        await db.execute(select(Trip).where(Trip.id == deal.trip_id))
+    ).scalar_one_or_none()
+    if trip is not None and trip.depart_at is not None:
+        depart = trip.depart_at
+        if depart.tzinfo is None:
+            depart = depart.replace(tzinfo=timezone.utc)
+        deadline = min(deadline, depart)
+    return deadline
+
+
 async def _guard_departure(db: AsyncSession, deal: Deal, actor: User) -> None:
     """T3.35 / §6.9.4 — the fixation window closes when the flight leaves.
 
@@ -231,6 +277,29 @@ async def create_card(
 
     if kind is CardKind.handoff_declared:
         await _guard_departure(db, deal, current_user)
+
+    # T3.11.27 — a cancellation is a thing you do *before* the parcel moves.
+    # Owner's rule 2026-09-07: «Отмена до передачи должна подтверждаться обоими
+    # участниками». Once it has changed hands the question is no longer «do we
+    # call this off» but «where is it», and that is a dispute — a cancellation
+    # accepted mid-flight would close a deal whose cargo is still in the air.
+    #
+    # It also carries its own deadline: unanswered, it closes itself «по
+    # таймауту или по времени вылета», whichever comes first. Stamped onto the
+    # card rather than computed when the sweeper runs, because both settings and
+    # the flight can change afterwards, and a deadline that moved after it was
+    # announced would be a promise the platform took back.
+    if kind is CardKind.cancel_requested:
+        if deal.status not in CANCELLABLE_STATUSES:
+            raise HTTPException(
+                status_code=409,
+                detail="The parcel has already changed hands — open an issue instead",
+            )
+        payload = {
+            **body.payload,
+            "expires_at": (await _cancel_deadline(db, deal)).isoformat(),
+        }
+        body = CardCreate(kind=body.kind, payload=payload, text=body.text)
 
     # T3.11.27 — the money is declared by whoever the agreement says pays.
     # Read from the agreed card rather than from a role: «кто платит» is one of
@@ -335,6 +404,7 @@ async def apply_acceptance(
             DealStatus.delivered: DealEventType.received,
             DealStatus.confirmed: DealEventType.confirmed,
             DealStatus.closed: DealEventType.closed,
+            DealStatus.cancelled: DealEventType.cancelled,
         }.get(spec.on_accept_status)
         if event is not None:
             await db.flush()

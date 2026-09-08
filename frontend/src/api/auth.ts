@@ -129,6 +129,11 @@ export interface User {
    *  from the browser. */
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
+  /** T3.11.27 — hours a one-sided cancellation waits for the other side before
+   *  it closes the deal by itself. Both parties keep their own and the shorter
+   *  applies, so it is a statement about my own patience rather than about any
+   *  one deal. Capped by departure at the moment the request is raised. */
+  cancel_timeout_hours?: number
   /** T3.11.07 — the currencies new trips may start in, chosen once instead of
    *  re-picked on every publication. **Order is meaningful**: the first entry
    *  is what the form pre-fills, the rest are offered beside it. */
@@ -319,6 +324,11 @@ export interface PaymentMethod {
 export interface UserUpdate {
   unit_weight?: 'kg' | 'lb'
   date_format?: 'eu' | 'us'
+  /** T3.11.27 — hours a one-sided cancellation waits for the other side before
+   *  it closes the deal by itself. Both parties keep their own and the shorter
+   *  applies, so it is a statement about my own patience rather than about any
+   *  one deal. Capped by departure at the moment the request is raised. */
+  cancel_timeout_hours?: number
   default_currencies?: string[]
   payment_methods?: PaymentMethod[]
   carriage_rules?: string | null

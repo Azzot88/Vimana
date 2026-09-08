@@ -26,18 +26,22 @@ fail loudly on that case instead.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete, select, update
 
-from app.core.database import SyncSessionLocal
+from app.core.database import AsyncSessionLocal, SyncSessionLocal
 from app.models.deal import (
     Attachment,
+    CardState,
     Deal,
     DealChainAnchor,
     DealEvent,
+    DealEventType,
     DealParticipant,
+    DealStatus,
     DealVaultMessage,
     Dispute,
     OperatorAccessGrant,
@@ -313,3 +317,124 @@ def purge_old_sign_ins() -> dict:
     removed = result.rowcount or 0
     logger.info("purge_old_sign_ins removed %d rows", removed)
     return {"deleted": removed}
+
+
+def _cancel_deadline_of(payload: dict | None) -> datetime | None:
+    """The `expires_at` the server stamped on a `cancel.requested` card.
+
+    Absent or unparsable means «no deadline», and the sweeper leaves the card
+    alone: a request that cannot say when it stops waiting must not be closed by
+    a guess about when it should have.
+    """
+    raw = (payload or {}).get("expires_at")
+    if not isinstance(raw, str):
+        return None
+    try:
+        moment = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+@celery_app.task(name="app.tasks.cleanup.close_stale_cancellations")
+def close_stale_cancellations(limit: int = 200) -> dict:
+    """T3.11.27 — a cancellation nobody answered goes through.
+
+    Owner's rule, 2026-09-07: «Отмена до передачи должна подтверждаться обоими
+    участниками… закроется по таймауту или по времени вылета». The deadline is
+    stamped onto the card when it is raised (`api/cards._cancel_deadline`): the
+    shorter of the two accounts' `cancel_timeout_hours`, capped by departure.
+    Silence past it is the answer — otherwise a party who simply stops replying
+    keeps the other one's cargo slot booked until the plane leaves.
+
+    The card ends `expired`, not `accepted`: nobody accepted it. The deal ends
+    `cancelled`, and the chain entry says `"by": "timeout"`, so a later reader
+    can tell a cancellation both sides agreed to from one the clock decided.
+
+    Called by: celery beat (`worker.beat_schedule`). Tests await
+    `_close_stale_cancellations` directly — `asyncio.run` inside pytest-asyncio's
+    running loop raises, and the bridge is not what they are checking.
+    """
+    return asyncio.run(_close_stale_cancellations(limit))
+
+
+async def _close_stale_cancellations(limit: int) -> dict:
+    # `AsyncSessionLocal` is deliberately the module-level import rather than a
+    # local one: `tests/conftest.sync_sessions` rebinds it on this module so a
+    # task run from a test talks to `vimana_test`. A local import would resolve
+    # `app.core.database` at call time and reach past the patch into production
+    # — the exact shape of the 2026-07-26 incident that fixture exists for.
+    #
+    # These three stay local: the worker has no reason to build the API's
+    # dependency graph, and `api.cards` pulls in `api.deps`.
+    from app.api.cards import record_card
+    from app.core.cards import CANCELLABLE_STATUSES, CardKind
+    from app.core.deal_chain import append_deal_event
+
+    now = datetime.now(tz=timezone.utc)
+    closed = 0
+    async with AsyncSessionLocal() as db:
+        cards = (
+            await db.execute(
+                select(DealVaultMessage)
+                .where(
+                    DealVaultMessage.card_kind == CardKind.cancel_requested.value,
+                    DealVaultMessage.card_state == CardState.pending,
+                )
+                .order_by(DealVaultMessage.created_at)
+                .limit(limit)
+            )
+        ).scalars().all()
+
+        for card in cards:
+            deadline = _cancel_deadline_of(card.card_payload)
+            if deadline is None or deadline > now:
+                continue
+            deal = await db.get(Deal, card.deal_id)
+            if deal is None:
+                continue
+            # `_emit` needs an actor and the chain has no «the platform did it».
+            # A card with no author cannot be closed by the clock, so it is left
+            # pending for a human answer rather than half-applied.
+            requester = (
+                await db.get(User, card.sender_id) if card.sender_id else None
+            )
+            if requester is None:
+                continue
+
+            card.card_state = CardState.expired
+            # The deal moved on while the request sat there — a handover, a
+            # dispute. The request lapses and nothing else happens: cancelling
+            # a deal whose parcel is already flying would be the platform
+            # rewriting an outcome it did not witness.
+            if deal.status not in CANCELLABLE_STATUSES:
+                await db.commit()
+                continue
+
+            await db.flush()
+            await record_card(
+                db,
+                deal,
+                CardKind.cancel_confirmed,
+                requester,
+                payload={"by": "timeout", "request_id": str(card.id)},
+            )
+            deal.status = DealStatus.cancelled
+            await db.flush()
+            await append_deal_event(
+                db,
+                deal_id=deal.id,
+                event_type=DealEventType.cancelled,
+                actor_id=requester.id,
+                payload={
+                    "card_kind": card.card_kind,
+                    "message_id": str(card.id),
+                    "by": "timeout",
+                },
+                author=requester,
+            )
+            await db.commit()
+            closed += 1
+
+    logger.info("close_stale_cancellations closed %d deals", closed)
+    return {"closed": closed}

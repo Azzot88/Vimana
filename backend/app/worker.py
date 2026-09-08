@@ -68,6 +68,14 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.chain_anchor.anchor_deal_chains",
         "schedule": 3600.0,
     },
+    # T3.11.27 — a cancellation request nobody answered. Hourly, because the
+    # deadline is a wall-clock moment (the shorter of the two accounts'
+    # timeouts, capped by departure) and a daily sweep would let a deal sit
+    # cancelled-in-fact for most of a day.
+    "close-stale-cancellations-hourly": {
+        "task": "app.tasks.cleanup.close_stale_cancellations",
+        "schedule": 3600.0,
+    },
     # T3.11.07 — checks the vendored payment catalogue and **reports**; writing
     # stays a human act (`app.cli.refresh_payment_systems --write`). Monthly,
     # because a list of payment services moves at the speed of the payments

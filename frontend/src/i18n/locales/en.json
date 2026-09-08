@@ -824,6 +824,7 @@
     "delivery": "Delivery",
     "payment": "Payment",
     "closed": "Closed",
+    "cancelled": "Cancelled",
     "more": "more",
     "stillTravelling": "Still in the post — you may close it, the carrier has done their part",
     "hint": {
@@ -832,7 +833,8 @@
       "transit": "The carrier has the parcel. Post updates, and at the end: posted by mail or handed to delivery.",
       "delivery": "What is left is confirming receipt.",
       "payment": "Settling up.",
-      "closed": "The deal is closed. The record stays as it is."
+      "closed": "The deal is closed. The record stays as it is.",
+      "cancelled": "Called off before the handover. The record stays as it is."
     },
     "photo": {
       "handover": "Photo of the handover",
@@ -874,6 +876,7 @@
       "delivered": "Delivered",
       "confirmed": "Confirmed",
       "closed": "Closed",
+      "cancelled": "Cancelled",
       "disputed": "Disputed"
     },
     "agreeTerms": "Agree terms",
@@ -1477,6 +1480,7 @@
     "awaitingPhoto": "Waiting for the photo",
     "answerFailed": "Could not send the answer",
     "raiseFailed": "Could not raise the card",
+    "cancelDeadline": "If nobody answers by {{at}}, the deal cancels itself",
     "uploadFailed": "Could not upload the photo",
     "kind": {
       "handover_conditions": "Handover conditions",
@@ -1556,6 +1560,13 @@
     }
   },
   "rules": {
+    "cancelTimeout": {
+      "title": "Cancellation nobody answers",
+      "hint": "How long to wait for the other side after you ask to cancel. One setting for all your deals. It happens sooner if the flight leaves sooner.",
+      "label": "Wait for an answer",
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours"
+    },
     "work": {
       "title": "Working rules",
       "desc": "Your terms and how you work. Written once, then sent to a client in the chat.",

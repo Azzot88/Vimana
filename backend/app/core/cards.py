@@ -85,6 +85,25 @@ class CardKind(str, enum.Enum):
 PARTIES = frozenset({CardAckRole.sender, CardAckRole.carrier})
 ALL_PARTIES = PARTIES | {CardAckRole.recipient}
 
+#: T3.11.27 — the statuses a cancellation may still touch, declared once.
+#:
+#: Owner's rule 2026-09-07: «Отмена до передачи должна подтверждаться обоими
+#: участниками». After the handover the parcel exists somewhere and somebody is
+#: carrying it; the question stops being «do we call this off» and becomes
+#: «where is it», which is a dispute. A cancellation accepted mid-flight would
+#: close a deal whose cargo is in the air, and leave the record saying nothing
+#: was ever carried.
+#:
+#: Read by `api/cards.create_card` (refuses the request) and by
+#: `tasks.cleanup.close_stale_cancellations` (lets a stale request lapse instead
+#: of cancelling a deal that moved on while it waited). One tuple, because the
+#: two of them disagreeing means the sweeper undoing a handover.
+CANCELLABLE_STATUSES: tuple[DealStatus, ...] = (
+    DealStatus.draft,
+    DealStatus.matched,
+    DealStatus.accepted,
+)
+
 
 @dataclass(frozen=True)
 class CardSpec:
@@ -198,8 +217,12 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         # ── group 5 · exceptions ───────────────────────────────────────────
         _s(CardKind.issue_reported, "exceptions", creator_roles=ALL_PARTIES,
            implemented=True),
+        # T3.11.27 — a cancellation is agreed by both, and reaches `cancelled`
+        # rather than `closed`: a deal called off is not a deal completed, and
+        # the record has to keep the two apart. Unanswered, it closes itself by
+        # the timeout on the card (`tasks.cleanup.close_stale_cancellations`).
         _s(CardKind.cancel_requested, "exceptions", creator_roles=PARTIES,
-           ack_by=COUNTERPARTY, on_accept_status=DealStatus.closed,
+           ack_by=COUNTERPARTY, on_accept_status=DealStatus.cancelled,
            on_accept_emit=CardKind.cancel_confirmed, implemented=True),
         _s(CardKind.cancel_confirmed, "exceptions", implemented=True),
         _s(CardKind.dispute_opened, "exceptions"),

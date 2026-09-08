@@ -12,6 +12,10 @@ const statusClass: Record<DealStatus, string> = {
   delivered:  'bg-success/10 text-success',
   confirmed:  'bg-success/10 text-success',
   closed:     'bg-navy/10 text-navy',
+  // T3.11.27 — grey like 'closed' and never red: calling a deal off is an
+  // outcome, not a failure, and danger colour would tell the two people who
+  // agreed to it that they did something wrong.
+  cancelled:  'bg-navy/10 text-navy/50',
   disputed:   'bg-amber/10 text-amber',
 }
 
