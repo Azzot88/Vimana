@@ -365,6 +365,98 @@ async def create_card(
     return _build_message_out(loaded)
 
 
+#: T3.11.27 — which end of the route a meeting-point card is about, and which
+#: fields of the agreement it writes. `pickup` is the handover in the departure
+#: city, `dropoff` the delivery in the arrival one; they were deliberately kept
+#: apart so «перенесли встречу в Дубае» never reads as «перенесли вручение в
+#: Нью-Йорке».
+_MEETING_SECTION: dict[CardKind, str] = {
+    CardKind.pickup_proposed: "handover",
+    CardKind.dropoff_proposed: "delivery",
+}
+
+
+async def _amend_meeting_point(
+    db: AsyncSession, deal: Deal, card: DealVaultMessage, actor: User
+) -> None:
+    """Write an agreed meeting point back into the agreement.
+
+    T3.11.27, owner's rule 2026-09-07: «Место встречи меняется отдельно» — время
+    переносят чаще всего, и ради этого не должна пересогласовываться вся
+    карточка. **Но подтверждение второй стороны нужно и здесь**, which is what
+    `pickup.proposed` / `dropoff.proposed` already are: one side names a place,
+    the other accepts it. What was missing is this half — the agreement kept
+    showing the old address, so the card and the chat disagreed about where two
+    people were meeting tomorrow.
+
+    Superseded rather than edited in place. `CardState.superseded` is how a
+    correction looks in this protocol (a card is never edited), and the agreed
+    contract is the last row that should quietly change under a reader: a party
+    who scrolls back has to find the version they answered, still saying what it
+    said. Only the one section moves; the price, the cargo and the payer come
+    across untouched, so nobody re-agrees a price to move a meeting by an hour.
+
+    Called by: `apply_acceptance`, for the two meeting-point cards.
+    """
+    section = _MEETING_SECTION.get(CardKind(card.card_kind))
+    if section is None:
+        return
+    agreed = await _agreed_terms(db, deal.id)
+    if agreed is None:
+        # Nothing agreed yet — the meeting point *is* the news, and there is no
+        # contract for it to contradict.
+        return
+
+    proposal = card.card_payload or {}
+    moved = {
+        f"{section}_method": proposal.get("method"),
+        f"{section}_place": proposal.get("city"),
+        f"{section}_at": proposal.get("at"),
+    }
+    # A field the proposal did not carry is not an erasure: `MeetingPoint` makes
+    # everything but the method optional, and a card that named only a new time
+    # must not blank the address it was agreed at.
+    moved = {k: v for k, v in moved.items() if v is not None}
+    if not moved:
+        return
+
+    payload = {**(agreed.card_payload or {}), **moved}
+    if payload == agreed.card_payload:
+        return
+
+    amended = DealVaultMessage(
+        deal_id=deal.id,
+        sender_id=None,
+        text=None,
+        is_system=True,
+        card_kind=CardKind.terms_agreed.value,
+        card_payload=payload,
+        card_state=CardState.accepted,
+        requires_ack_by=None,
+        supersedes_id=agreed.id,
+    )
+    db.add(amended)
+    agreed.card_state = CardState.superseded
+    await db.flush()
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.message_added,
+        actor_id=actor.id,
+        payload={
+            "message_id": str(amended.id),
+            "content_hash": content_hash_of(None, None),
+            "card_kind": CardKind.terms_agreed.value,
+            # Named the same way `propose_terms` names it, so an arbiter reading
+            # the chain sees one vocabulary for "the agreement moved" whether it
+            # moved through the form or through a meeting-point card.
+            "changed_sections": [section],
+            "amended_by": str(card.id),
+        },
+        author=actor,
+    )
+
+
 async def apply_acceptance(
     db: AsyncSession, deal: Deal, card: DealVaultMessage, actor: User
 ) -> None:
@@ -395,6 +487,9 @@ async def apply_acceptance(
         await _emit(
             db, deal, spec.on_accept_emit, actor, payload=payload, supersedes=card.id
         )
+
+    # T3.11.27 — an agreed meeting point moves the agreement, not only the chat.
+    await _amend_meeting_point(db, deal, card, actor)
 
     if spec.on_accept_status is not None:
         deal.status = spec.on_accept_status

@@ -100,6 +100,20 @@ export default function DealStages({
   const canAttach =
     current?.photo && myRole && (current.photoBy ?? []).includes(myRole)
 
+  /* T3.11.27 — «Плательщик определён на этапе условий, поэтому
+     получатель-неплательщик жмёт только "Получил", а деньги закрывает тот, кто
+     по карточке платит» (owner, 2026-09-07).
+
+     The server reads the same field and refuses anybody else with a 403, so
+     this is not a permission check — it is the difference between a screen that
+     offers one button and a screen that offers two, one of which always fails.
+     Defaults to the sender: that is the field's own default and the shape of
+     every deal agreed before the section existed. */
+  const payer = terms?.payload?.payer ?? 'sender'
+  const stageKinds = (current?.kinds ?? []).filter(
+    (kind) => kind !== 'payment.declared' || myRole === payer,
+  )
+
   return (
     <div className="space-y-4">
       {/* The ladder. Done, now, ahead — the «список смены статусов», read off
@@ -183,22 +197,28 @@ export default function DealStages({
           </div>
         )}
 
-        {current && current.kinds.length > 0 && (
+        {stageKinds.length > 0 && (
           <CardActions
             dealId={dealId}
             myRole={myRole}
-            only={current.kinds}
+            only={stageKinds}
             onDone={onDone}
           />
         )}
 
-        {/* T3.11.17 — «Подтвердить получение» lives at the delivery stage now,
-            not on the boarding pass. The owner's answer 2026-09-07: after
-            «Отправлено по почте» the sender may close straight away — the
-            carrier has done everything that depends on them, and holding the
-            deal open for somebody else's postal schedule punishes them for the
-            post office's pace. */}
-        {currentKey === 'delivery' && myRole === 'sender' && (
+        {/* T3.11.17 / T3.11.27 — the one-press close, and **only** for a parcel
+            in the post. The owner's answer 2026-09-07: after «Отправлено по
+            почте» the sender may close straight away — the carrier has done
+            everything that depends on them, and holding the deal open for
+            somebody else's postal schedule punishes them for the post office's
+            pace.
+
+            It used to show on `delivered` too, which handed the sender a second
+            route to closure past the pair the owner asked for: «"получил" и
+            "рассчитался"… вторая сторона подтверждает такой же кнопкой, и
+            сделка закрывается». A parcel handed over in person closes through
+            that pair, so this button is not offered there. */}
+        {status === 'posted' && myRole === 'sender' && (
           <div className="space-y-1">
             <button
               type="button"
@@ -206,13 +226,11 @@ export default function DealStages({
               disabled={busy}
               className="bg-success text-white font-display font-medium text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:opacity-90 disabled:opacity-50"
             >
-              {t('deals.confirmReceipt')}
+              {t('deals.closeDeal')}
             </button>
-            {status === 'posted' && (
-              <p className="text-xs font-body text-navy/45">
-                {t('stages.stillTravelling')}
-              </p>
-            )}
+            <p className="text-xs font-body text-navy/45">
+              {t('stages.stillTravelling')}
+            </p>
           </div>
         )}
 

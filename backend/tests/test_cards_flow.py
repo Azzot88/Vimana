@@ -259,11 +259,27 @@ async def test_delivery_is_confirmed_by_the_sender_when_there_is_no_recipient(
 
 
 async def test_payment_confirmation_closes_the_deal(
-    client, sender_headers, carrier_headers, deal
+    client, session_maker, sender_headers, carrier_headers, deal
 ):
     """`payment.confirmed` is what separates "said they paid" from "confirmed
-    it arrived" — and the deal does not reach `confirmed` without it, even in
-    cash."""
+    it arrived" — and the deal does not settle without it, even in cash.
+
+    T3.11.27, owner's rule 2026-09-07: «вторая сторона подтверждает такой же
+    кнопкой… и сделка закрывается». So the acceptance lands on `closed`, not on
+    `confirmed` — the deal does not wait for a further button that nobody was
+    ever going to press.
+
+    **Both entries are in the chain, though.** `confirmed` is «деньги
+    подтверждены» and `closed` is «делать больше нечего»; a record showing the
+    second without the first cannot answer when the payment was agreed, which is
+    the one question a settlement dispute opens with.
+    """
+    import uuid as uuidlib
+
+    from sqlalchemy import select
+
+    from app.models.deal import DealEvent, DealEventType
+
     declared = await _card(
         client, sender_headers, deal.id, "payment.declared",
         {"amount": 120, "currency": "USD", "method": "cash"},
@@ -275,7 +291,22 @@ async def test_payment_confirmation_closes_the_deal(
     assert r.status_code == 200, r.text
 
     detail = await client.get(f"/api/deals/{deal.id}", headers=sender_headers)
-    assert detail.json()["status"] == "confirmed"
+    assert detail.json()["status"] == "closed"
+
+    async with session_maker() as db:
+        kinds = (
+            (
+                await db.execute(
+                    select(DealEvent.event_type).where(
+                        DealEvent.deal_id == uuidlib.UUID(str(deal.id))
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert DealEventType.confirmed in kinds
+    assert DealEventType.closed in kinds
 
 
 async def test_carrier_cannot_declare_the_payment(client, carrier_headers, deal):

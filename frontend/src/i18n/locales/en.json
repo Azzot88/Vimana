@@ -865,8 +865,7 @@
     "shipmentNo": "Shipment number",
     "dealId": "Deal ID",
     "accept": "Accept the deal",
-    "recordHandoff": "Record the hand-off",
-    "confirmReceipt": "Confirm receipt",
+    "closeDeal": "Close the deal",
     "status": {
       "draft": "Draft",
       "matched": "Matched",
@@ -879,7 +878,6 @@
       "cancelled": "Cancelled",
       "disputed": "Disputed"
     },
-    "agreeTerms": "Agree terms",
     "carriageRules": "Carriage rules"
   },
   "profile": {
@@ -1484,10 +1482,10 @@
     "uploadFailed": "Could not upload the photo",
     "kind": {
       "handover_conditions": "Handover conditions",
-      "pickup_proposed": "Agree on the pickup",
-      "pickup_confirmed": "Pickup confirmed",
-      "dropoff_proposed": "Agree on the drop-off",
-      "dropoff_confirmed": "Drop-off confirmed",
+      "pickup_proposed": "Move the meeting",
+      "pickup_confirmed": "Meeting moved",
+      "dropoff_proposed": "Move the delivery",
+      "dropoff_confirmed": "Delivery moved",
       "handoff_declared": "Handed to the carrier",
       "handoff_confirmed": "Handover confirmed",
       "transit_update": "Transit update",
@@ -1496,8 +1494,8 @@
       "delivery_declared": "Handed to delivery",
       "delivery_confirmed": "Delivery confirmed",
       "payment_method_agreed": "Payment method",
-      "payment_declared": "Declare payment",
-      "payment_confirmed": "Payment confirmed",
+      "payment_declared": "Payment made",
+      "payment_confirmed": "Settled",
       "issue_reported": "Report an issue",
       "cancel_requested": "Request cancellation",
       "cancel_confirmed": "Cancellation confirmed",

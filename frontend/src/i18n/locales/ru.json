@@ -866,8 +866,7 @@
     "shipmentNo": "Номер отправки",
     "dealId": "ID сделки",
     "accept": "Принять сделку",
-    "recordHandoff": "Зафиксировать передачу",
-    "confirmReceipt": "Подтвердить получение",
+    "closeDeal": "Закрыть сделку",
     "status": {
       "draft": "Черновик",
       "matched": "Подобрано",
@@ -880,7 +879,6 @@
       "cancelled": "Отменено",
       "disputed": "Спор"
     },
-    "agreeTerms": "Согласовать условия",
     "carriageRules": "Правила перевозки"
   },
   "profile": {
@@ -1485,10 +1483,10 @@
     "uploadFailed": "Не удалось загрузить фото",
     "kind": {
       "handover_conditions": "Условия передачи",
-      "pickup_proposed": "Договориться о передаче",
-      "pickup_confirmed": "Передача согласована",
-      "dropoff_proposed": "Договориться о вручении",
-      "dropoff_confirmed": "Вручение согласовано",
+      "pickup_proposed": "Перенести встречу",
+      "pickup_confirmed": "Встреча перенесена",
+      "dropoff_proposed": "Перенести вручение",
+      "dropoff_confirmed": "Вручение перенесено",
       "handoff_declared": "Передал перевозчику",
       "handoff_confirmed": "Передача подтверждена",
       "transit_update": "Статус в пути",
@@ -1497,8 +1495,8 @@
       "delivery_declared": "Передано в доставку",
       "delivery_confirmed": "Вручение подтверждено",
       "payment_method_agreed": "Способ оплаты",
-      "payment_declared": "Заявить оплату",
-      "payment_confirmed": "Оплата подтверждена",
+      "payment_declared": "Оплата произведена",
+      "payment_confirmed": "Расчёт подтверждён",
       "issue_reported": "Сообщить о проблеме",
       "cancel_requested": "Запросить отмену",
       "cancel_confirmed": "Отмена подтверждена",

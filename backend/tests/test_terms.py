@@ -541,3 +541,139 @@ async def test_a_locked_section_is_the_carriers(
         supersedes_id=card_id,
     )
     assert fine.status_code == 201, fine.text
+
+
+# ── T3.11.27 · moving the meeting without re-agreeing the deal ─────────────
+
+
+async def _agree(client, sender_headers, carrier_headers, deal_id, **overrides):
+    """Propose and accept, returning the id of the resulting `terms.agreed`."""
+    proposal = await _propose(client, sender_headers, deal_id, **overrides)
+    assert proposal.status_code == 201, proposal.text
+    ack = await client.post(
+        f"/api/deals/{deal_id}/dealvault/messages/{proposal.json()['id']}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert ack.status_code == 200, ack.text
+    current = await client.get(f"/api/deals/{deal_id}/terms", headers=sender_headers)
+    return current.json()["id"]
+
+
+async def _meeting(client, headers, deal_id, kind, payload):
+    return await client.post(
+        f"/api/deals/{deal_id}/cards",
+        headers=headers,
+        json={"kind": kind, "payload": payload},
+    )
+
+
+async def test_agreed_pickup_moves_only_the_handover_section(
+    client, sender_headers, carrier_headers, deal
+):
+    """Owner's rule 2026-09-07: «Место встречи меняется отдельно… Но
+    подтверждение второй стороны нужно и здесь».
+
+    Time is what gets moved most often, and the whole card should not be
+    re-agreed for it. The half that was missing is this one: until now the
+    agreement kept showing the old address while the chat showed the new one,
+    so the two disagreed about where two people were meeting tomorrow.
+    """
+    first = await _agree(
+        client,
+        sender_headers,
+        carrier_headers,
+        deal.id,
+        price_total=140,
+        handover_place="Dubai Mall",
+        delivery_place="Brooklyn",
+    )
+
+    proposed = await _meeting(
+        client,
+        sender_headers,
+        deal.id,
+        "pickup.proposed",
+        {"method": "in_person", "city": "Dubai Marina"},
+    )
+    assert proposed.status_code == 201, proposed.text
+    ack = await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{proposed.json()['id']}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert ack.status_code == 200, ack.text
+
+    current = await client.get(f"/api/deals/{deal.id}/terms", headers=sender_headers)
+    body = current.json()
+    assert body["card_kind"] == "terms.agreed"
+    assert body["payload"]["handover_place"] == "Dubai Marina"
+    assert body["payload"]["handover_method"] == "in_person"
+    # Nobody re-agreed a price to move a meeting by a mile.
+    assert body["payload"]["price_total"] == 140
+    # The other end of the route is a separate section on purpose: «перенесли
+    # встречу в Дубае» must never read as «перенесли вручение в Нью-Йорке».
+    assert body["payload"]["delivery_place"] == "Brooklyn"
+    # A correction supersedes; it does not edit. The version the carrier
+    # answered is still there, still saying what it said.
+    assert body["supersedes_id"] == first
+    assert body["id"] != first
+
+
+async def test_agreed_dropoff_moves_the_delivery_section(
+    client, sender_headers, carrier_headers, deal
+):
+    first = await _agree(
+        client,
+        sender_headers,
+        carrier_headers,
+        deal.id,
+        handover_place="Dubai Mall",
+        delivery_place="Brooklyn",
+    )
+
+    proposed = await _meeting(
+        client,
+        sender_headers,
+        deal.id,
+        "dropoff.proposed",
+        {"method": "courier", "city": "Queens"},
+    )
+    assert proposed.status_code == 201, proposed.text
+    await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{proposed.json()['id']}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+
+    body = (
+        await client.get(f"/api/deals/{deal.id}/terms", headers=sender_headers)
+    ).json()
+    assert body["payload"]["delivery_place"] == "Queens"
+    assert body["payload"]["handover_place"] == "Dubai Mall"
+    assert body["supersedes_id"] == first
+
+
+async def test_meeting_card_before_any_agreement_amends_nothing(
+    client, sender_headers, carrier_headers, deal
+):
+    """The meeting point *is* the news when there is no contract yet.
+
+    Emitting a `terms.agreed` here would manufacture an agreement out of one
+    card about an address — and the screen reads that card as the deal.
+    """
+    proposed = await _meeting(
+        client,
+        sender_headers,
+        deal.id,
+        "pickup.proposed",
+        {"method": "in_person", "city": "Dubai Marina"},
+    )
+    await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{proposed.json()['id']}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+
+    current = await client.get(f"/api/deals/{deal.id}/terms", headers=sender_headers)
+    assert current.json() is None

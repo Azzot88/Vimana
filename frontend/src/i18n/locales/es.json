@@ -762,8 +762,6 @@
     "shipmentNo": "Número de envío",
     "dealId": "ID del acuerdo",
     "accept": "Aceptar el acuerdo",
-    "recordHandoff": "Registrar la entrega",
-    "confirmReceipt": "Confirmar recepción",
     "status": {
       "draft": "Borrador",
       "matched": "Emparejado",
@@ -775,7 +773,6 @@
       "closed": "Cerrado",
       "disputed": "Disputa"
     },
-    "agreeTerms": "Acordar condiciones",
     "carriageRules": "Reglas de transporte"
   },
   "profile": {

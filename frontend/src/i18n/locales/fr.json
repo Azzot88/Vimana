@@ -762,8 +762,6 @@
     "shipmentNo": "Numéro d'envoi",
     "dealId": "ID de la transaction",
     "accept": "Accepter la transaction",
-    "recordHandoff": "Enregistrer la remise",
-    "confirmReceipt": "Confirmer la réception",
     "status": {
       "draft": "Brouillon",
       "matched": "Associé",
@@ -775,7 +773,6 @@
       "closed": "Clôturé",
       "disputed": "Litige"
     },
-    "agreeTerms": "Convenir des conditions",
     "carriageRules": "Règles de transport"
   },
   "profile": {

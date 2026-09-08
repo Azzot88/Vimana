@@ -133,7 +133,13 @@ export const CARD_FORMS: CardFormSpec[] = [
   },
   {
     kind: 'payment.declared',
-    roles: ['sender'],
+    /* T3.11.27 — whoever the agreement says pays. The recipient is on this list
+       because a deal can be «получатель платит на месте», and the server reads
+       `payer` from the agreed card and refuses anybody else (403). The screen
+       narrows it further by that same field: see `DealStages`, which drops this
+       kind for the party who owes nothing rather than offering them a button
+       that only ever returns a refusal. */
+    roles: ['sender', 'recipient'],
     fields: [
       { name: 'amount', type: 'number', required: true },
       { name: 'currency', type: 'text' },

@@ -763,8 +763,6 @@
     "shipmentNo": "Numer przesyłki",
     "dealId": "ID transakcji",
     "accept": "Przyjmij transakcję",
-    "recordHandoff": "Zarejestruj przekazanie",
-    "confirmReceipt": "Potwierdź odbiór",
     "status": {
       "draft": "Szkic",
       "matched": "Dopasowano",
@@ -776,7 +774,6 @@
       "closed": "Zamknięto",
       "disputed": "Spór"
     },
-    "agreeTerms": "Uzgodnij warunki",
     "carriageRules": "Zasady przewozu"
   },
   "profile": {
