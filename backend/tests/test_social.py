@@ -410,3 +410,38 @@ async def test_lookup_never_returns_yourself(client):
     await client.patch("/api/auth/me", headers=mine, json={"handle": handle})
     r = await client.get("/api/users/lookup", headers=mine, params={"q": handle})
     assert my_id not in [u["id"] for u in r.json()]
+
+
+async def test_cancel_timeout_is_a_personal_setting(client):
+    """T3.11.27 — «у обоих своя, действует меньшая» (owner, 2026-09-07).
+
+    A cancellation nobody answered closes itself, and how long it waits belongs
+    to whoever is in a hurry: a carrier flying tomorrow cannot wait a week, and
+    neither can a sender whose parcel is packed. So it is a profile setting, not
+    a field of the deal — one number per account, compared at the moment of
+    cancelling.
+    """
+    mine, _ = await _account(client, "patience")
+
+    default = await client.get("/api/auth/me", headers=mine)
+    assert default.json()["cancel_timeout_hours"] == 48
+
+    changed = await client.patch(
+        "/api/auth/me", headers=mine, json={"cancel_timeout_hours": 168}
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["cancel_timeout_hours"] == 168
+
+    # A week is the ceiling the owner named, and an hour the floor: below it the
+    # «wait for an answer» is not a wait.
+    for bad in (0, 169):
+        r = await client.patch(
+            "/api/auth/me", headers=mine, json={"cancel_timeout_hours": bad}
+        )
+        assert r.status_code == 422, f"{bad} was accepted"
+
+    # Null is not «no timeout» — it is a deal nobody can close by walking away.
+    cleared = await client.patch(
+        "/api/auth/me", headers=mine, json={"cancel_timeout_hours": None}
+    )
+    assert cleared.status_code == 422

@@ -273,6 +273,13 @@ async def _ensure_connection_tier(engine) -> None:
         await conn.execute(
             text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ")
         )
+        # T3.11.27 — the cancellation timeout each account keeps (`0080`).
+        await conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "cancel_timeout_hours INTEGER NOT NULL DEFAULT 48"
+            )
+        )
         await conn.execute(
             text(
                 "UPDATE trips SET expires_at = COALESCE("

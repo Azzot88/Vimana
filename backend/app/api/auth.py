@@ -1073,6 +1073,9 @@ _NOT_NULL_UPDATE_FIELDS = {
     # is a screen that cannot decide how to print a weight.
     "unit_weight",
     "date_format",
+    # T3.11.27 — a timeout with no value is not «no timeout», it is a deal
+    # nobody can close by walking away.
+    "cancel_timeout_hours",
     "default_currencies",
     # T3.11.07 — clearing the list is `[]`, which is a real answer ("I have not
     # said"). `null` is what an unset field looks like and must not reach the

@@ -112,6 +112,10 @@ class UserUpdate(BaseModel):
     # T_UX.14 — display preferences.
     unit_weight: Literal["kg", "lb"] | None = None
     date_format: Literal["eu", "us"] | None = None
+    # T3.11.27 — hours a one-sided cancellation waits for the other side. Both
+    # parties keep their own and the shorter applies, so this is a statement
+    # about my own patience rather than about the deal.
+    cancel_timeout_hours: int | None = Field(default=None, ge=1, le=168)
     # T3.11.07 — the currencies new trips may start in, first one primary.
     # Validated against a closed list: a typo in a code is a price nobody can
     # compare, and this is the one field on a trip where free text buys nothing.
@@ -334,6 +338,7 @@ class UserOut(BaseModel):
 class MeOut(UserOut):
     unit_weight: str = "kg"
     date_format: str = "eu"
+    cancel_timeout_hours: int = 48
     default_currencies: list[str] = Field(default_factory=lambda: ["USD"])
     # T3.11.07 — owner-only, like the rest of `MeOut`. How the carrier can be
     # paid is theirs to send when they choose; putting it on the public

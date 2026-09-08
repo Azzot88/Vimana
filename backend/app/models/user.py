@@ -135,6 +135,19 @@ class User(Base):
     date_format: Mapped[str] = mapped_column(
         String(2), default="eu", server_default="eu"
     )
+    # T3.11.27 — how long a one-sided cancellation waits for the other side
+    # before it closes itself (owner's decision 2026-09-07). **Both parties keep
+    # their own, and the shorter one applies**: whoever is in more of a hurry
+    # sets the pace, which is right for the side whose plans are burning — a
+    # carrier flying tomorrow cannot wait a week for an answer, and a sender
+    # who already has the parcel packed cannot either.
+    #
+    # Hours rather than a duration string: the value is compared, summed into a
+    # deadline and shown as «сутки», and the three would each parse the string
+    # their own way. Up to a week, which is the ceiling the owner named.
+    cancel_timeout_hours: Mapped[int] = mapped_column(
+        Integer, default=48, server_default="48"
+    )
     # T3.11.07 — the currencies this account prices in. **Several** (owner's
     # decision 2026-09-06): a carrier on two corridors quotes in two, and one
     # who settles in a stablecoin quotes in that as well. The first is the one a
