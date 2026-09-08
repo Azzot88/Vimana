@@ -393,7 +393,7 @@ describe('DealStages', () => {
     expect(
       screen.getByText(/invite an arbiter|Позовите арбитра/i),
     ).toBeInTheDocument()
-    expect(screen.getByText(/open a dispute|Открыть спор/i)).toBeInTheDocument()
+    expect(screen.getByText(/open dispute|Открыть спор/i)).toBeInTheDocument()
   })
 
   it('does not put the arbiter in the way while the terms are being agreed', () => {
@@ -402,7 +402,7 @@ describe('DealStages', () => {
       screen.queryByText(/invite an arbiter|Позовите арбитра/i),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText(/open a dispute|Открыть спор/i),
+      screen.queryByText(/open dispute|Открыть спор/i),
     ).not.toBeInTheDocument()
   })
 
