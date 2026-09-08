@@ -58,6 +58,11 @@ export const DEAL_STAGES: DealStage[] = [
     // worth a screen of its own), so what is left here is what else has to be
     // agreed before anything moves.
     kinds: ['handover.conditions', 'payment.method_agreed'],
+    // T3.11.27 — «вот что я отправляю», seen by the carrier **before** they
+    // agree to anything. The other half of the same answer is a link
+    // (`terms.cargo_url`) in the form above; whichever the sender has.
+    photo: 'cargo_photo',
+    photoBy: ['sender'],
   },
   {
     key: 'handover',

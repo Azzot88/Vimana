@@ -97,6 +97,36 @@ async def test_upload_accepts_pdf_for_doc_kind(client, sender_headers, seed_deal
     assert resp.json()["r2_key"].endswith(".pdf")
 
 
+async def test_cargo_photo_is_its_own_kind_and_takes_images_only(
+    client, sender_headers, seed_deal
+):
+    """T3.11.27 — «вот что я отправляю», attached at the terms stage.
+
+    Its own kind rather than `doc`: this is the only photograph in a deal's
+    record taken while the deal could still be refused, and an arbiter reads
+    these labels. Images only, for the reason the other photo kinds are —
+    a PDF of a thing is not a picture of it.
+    """
+    msg_id = await _create_message(client, sender_headers, seed_deal.id)
+
+    ok = await client.post(
+        f"/api/deals/{seed_deal.id}/dealvault/messages/{msg_id}/attachments",
+        headers=sender_headers,
+        files={"file": ("item.png", PNG_1X1, "image/png")},
+        data={"kind": "cargo_photo"},
+    )
+    assert ok.status_code == 201, ok.text
+    assert ok.json()["kind"] == "cargo_photo"
+
+    refused = await client.post(
+        f"/api/deals/{seed_deal.id}/dealvault/messages/{msg_id}/attachments",
+        headers=sender_headers,
+        files={"file": ("item.pdf", b"%PDF-1.4", "application/pdf")},
+        data={"kind": "cargo_photo"},
+    )
+    assert refused.status_code == 415
+
+
 async def test_upload_rejects_oversized_via_content_length(client, sender_headers, seed_deal):
     msg_id = await _create_message(client, sender_headers, seed_deal.id)
 

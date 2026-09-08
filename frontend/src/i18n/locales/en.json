@@ -530,7 +530,8 @@
       "doc": "Document",
       "payment_receipt": "Payment receipt",
       "identity_doc": "Identity document",
-      "pre_seal_photo": "Photo before sealing"
+      "pre_seal_photo": "Photo before sealing",
+      "cargo_photo": "Photo of the item"
     },
     "shareAddress": {
       "button": "Share my address",
@@ -837,6 +838,7 @@
       "cancelled": "Called off before the handover. The record stays as it is."
     },
     "photo": {
+      "terms": "Photo of the item",
       "handover": "Photo of the handover",
       "transit": "Photo before sealing",
       "delivery": "Photo of receipt"

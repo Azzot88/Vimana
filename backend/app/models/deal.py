@@ -113,6 +113,15 @@ class AttachmentKind(str, enum.Enum):
     # передачи» on a picture of an open parcel would misdescribe the one piece
     # of evidence the postal leg has.
     pre_seal_photo = "pre_seal_photo"
+    # T3.11.27 — «вот что я отправляю», shown at the terms stage, before the
+    # carrier agrees to anything. Owner's decision 2026-09-07: a photo **or** a
+    # link (`terms.cargo_url`) — whichever the sender has. The same slot is what
+    # a buy-and-carry deal will use for the item being bought (`T3.11.17` part 2).
+    #
+    # Its own kind rather than `doc`: an arbiter reads these labels, and this one
+    # is evidence of what the parcel was *before* anybody packed or carried it —
+    # the only picture in the record taken while the deal could still be refused.
+    cargo_photo = "cargo_photo"
 
 
 class Deal(Base):

@@ -301,11 +301,12 @@ async def _ensure_connection_tier(engine) -> None:
                 " WHERE expires_at IS NULL"
             )
         )
-        # T3.11.27 — the cancellation outcome (`0082`). A cancelled deal is
-        # not a closed one; both enums learn the word.
+        # T3.11.27 — the cancellation outcome (`0082`) and the photograph of
+        # the cargo taken before anybody agreed (`0083`).
         for value, type_name in (
             ("cancelled", "dealstatus"),
             ("cancelled", "dealeventtype"),
+            ("cargo_photo", "attachmentkind"),
         ):
             await conn.execute(
                 text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS '{value}'")

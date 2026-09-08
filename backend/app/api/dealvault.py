@@ -55,6 +55,9 @@ ALLOWED_MIME_BY_KIND: dict[AttachmentKind, set[str]] = {
     # parcel is not a thing, and the two document kinds above accept one because
     # a receipt genuinely arrives as one.
     AttachmentKind.pre_seal_photo: _PHOTO_MIME,
+    # T3.11.27 — «вот что я отправляю». Images only, for the same reason: this
+    # is a picture of a thing, and a PDF of a thing is not one.
+    AttachmentKind.cargo_photo: _PHOTO_MIME,
 }
 
 MIME_TO_EXT: dict[str, str] = {

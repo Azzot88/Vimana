@@ -18,6 +18,9 @@ export type AttachmentKind =
   | 'payment_receipt'
   | 'identity_doc'
   | 'pre_seal_photo'
+  /** T3.11.27 — «вот что я отправляю», at the terms stage, before the carrier
+   *  agrees. The link half of the same answer is `terms.cargo_url`. */
+  | 'cargo_photo'
 
 export interface Attachment {
   id: string

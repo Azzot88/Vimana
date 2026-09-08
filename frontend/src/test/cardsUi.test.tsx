@@ -319,8 +319,21 @@ describe('cardForms', () => {
   })
 
   it('gives the recipient only what concerns their end', () => {
+    // T3.11.27 — `payment.declared` joined this list because a deal can be
+    // «получатель платит на месте». The catalogue is as far as the role can
+    // take it; which of the two parties actually owes the money is written in
+    // the agreement, and `DealStages` reads `payer` to drop the button for the
+    // one who owes nothing.
     const kinds = formsForRole('recipient').map((f) => f.kind)
-    expect(kinds).toEqual(['dropoff.proposed', 'issue.reported'])
+    expect(kinds).toEqual([
+      'dropoff.proposed',
+      'payment.declared',
+      'issue.reported',
+    ])
+    // Still nothing about the cargo itself: the recipient neither hands it over
+    // nor carries it.
+    expect(kinds).not.toContain('handoff.declared')
+    expect(kinds).not.toContain('transit.update')
   })
 
   it('drops empty optionals so the server default applies', () => {
