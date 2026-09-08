@@ -409,6 +409,19 @@ class DealDetailOut(BaseModel):
     # well as in the list: the boarding pass is where someone looks it up to
     # dictate it, and the UUID beside it is for support, not for speech.
     shipment_no: str | None = None
+    # T3.11.27 — what the board form already answered, so the deal card opens
+    # filled in rather than blank. Owner's decision 2026-09-07: «Форма на доске
+    # остаётся как есть, карточка подставляется заполненной из неё.»
+    #
+    # A blank first stage asks the sender to retype what they typed on the board
+    # a minute ago, and every retyped number is a chance for the two records to
+    # disagree about the same parcel.
+    order_deadline: datetime | None = None
+    #: The carrier's own rate, for the card to suggest a total from a weight.
+    #: A suggestion, never a value the server writes: the price is what the two
+    #: of them agree, and `price_total` stays the field they answer.
+    trip_price_per_kg: float | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

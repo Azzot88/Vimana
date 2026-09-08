@@ -767,3 +767,25 @@ async def test_only_the_carrier_declares_the_posting(client, sender_headers, dea
         {"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
     )
     assert r.status_code == 403, r.text
+
+
+async def test_deal_detail_carries_what_the_board_form_answered(
+    client, sender_headers, deal
+):
+    """T3.11.27 — «Форма на доске остаётся как есть, карточка подставляется
+    заполненной из неё» (owner, 2026-09-07).
+
+    The first version of the agreement opens filled in from these. Asking the
+    sender to retype what they typed on the board a minute ago is how the order
+    and the agreement end up disagreeing about the same parcel — and it is the
+    agreement an arbiter reads.
+    """
+    r = await client.get(f"/api/deals/{deal.id}", headers=sender_headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["declared_value"] == 1200.0
+    assert body["currency"] == "USD"
+    # The carrier's own rate, so the card can suggest a total from a weight.
+    # A suggestion only: `price_total` is still what the two of them answer.
+    assert body["trip_price_per_kg"] == 25.0
+    assert "order_deadline" in body

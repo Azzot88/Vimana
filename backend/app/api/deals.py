@@ -326,6 +326,10 @@ async def get_deal(
         # rule edited after the match is not the rule this deal was struck under.
         carriage_rules=trip.carriage_rules if trip else None,
         shipment_no=deal.shipment_no,
+        # T3.11.27 — the board form's own answers, so the deal card opens filled
+        # in instead of asking for them a second time.
+        order_deadline=order.deadline if order else None,
+        trip_price_per_kg=trip.price_per_kg if trip else None,
     )
 
 

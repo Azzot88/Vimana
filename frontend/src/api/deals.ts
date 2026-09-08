@@ -58,6 +58,13 @@ export interface DealDetail extends Deal {
   /** T_UX.15 — the rules copied into this trip when it was published, not the
    *  carrier's current template. */
   carriage_rules?: string | null
+  /** T3.11.27 — what the board form already answered, so the deal card opens
+   *  filled in rather than blank. Retyping a number a minute after typing it is
+   *  how two records end up disagreeing about the same parcel. */
+  order_deadline?: string | null
+  /** The carrier's rate, for suggesting a total from a weight. A suggestion:
+   *  the price is still what the two of them agree on. */
+  trip_price_per_kg?: number | null
 }
 
 export interface MatchDealPayload {

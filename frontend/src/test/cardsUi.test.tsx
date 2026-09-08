@@ -379,6 +379,7 @@ describe('DealStages', () => {
       status={over.status ?? 'delivered'}
       myRole={over.myRole ?? 'sender'}
       terms={null}
+      deal={null}
       onDone={() => {}}
       onMessage={() => {}}
     />

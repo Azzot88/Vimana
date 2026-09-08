@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { proposeTerms, takeEditHold, type TermsPayload } from '../api/terms'
 import { HANDOVER_METHODS } from '../lib/cardForms'
+import type { DealDetail } from '../api/deals'
 import type { DealRole } from '../lib/cardForms'
 
 /** T3.11.27 — the agreement, in the four sections the two sides negotiate.
@@ -20,16 +21,38 @@ import type { DealRole } from '../lib/cardForms'
  *  typed into.
  *
  *  Functions (PROJECT §6.2a):
- *  - `TermsProposeForm({ dealId, current, supersedesId, myRole, onDone })` —
- *    default export. Called by: `components/DealStages`.
+ *  - `TermsProposeForm({ dealId, current, fromBoard, supersedesId, myRole,
+ *    onDone })` — default export. Called by: `components/DealStages`.
  */
 interface Props {
   dealId: string
   /** The version being edited, if there is one. */
   current?: TermsPayload | null
+  /** T3.11.27 — «Форма на доске остаётся как есть, карточка подставляется
+   *  заполненной из неё» (owner, 2026-09-07). Used only when there is nothing
+   *  to edit yet: an existing version is always the sharper answer, and letting
+   *  the board overwrite it would resurrect numbers two people had moved past. */
+  fromBoard?: DealDetail | null
   supersedesId?: string | null
   myRole: DealRole | null
   onDone: () => void
+}
+
+/** What the board form already answered. Read once, at the top of the first
+ *  version — the sender typed these a minute ago on the way here, and asking
+ *  again is how the order and the agreement end up disagreeing about the same
+ *  parcel. */
+function boardDefaults(deal: DealDetail | null | undefined): TermsPayload {
+  if (!deal) return {}
+  // Deliberately not the route. `origin`/`destination` are airport codes, and
+  // «DXB» in a field that wants «Dubai Mall, вход у фонтана» is worse than an
+  // empty one: it looks answered.
+  return {
+    cargo_what: deal.cargo_description || null,
+    declared_value: deal.declared_value,
+    currency: deal.currency,
+    deadline: deal.order_deadline ?? null,
+  }
 }
 
 const SECTIONS = ['cargo', 'handover', 'delivery', 'payment'] as const
@@ -37,14 +60,14 @@ const SECTIONS = ['cargo', 'handover', 'delivery', 'payment'] as const
 export default function TermsProposeForm({
   dealId,
   current,
+  fromBoard,
   supersedesId,
   myRole,
   onDone,
 }: Props) {
   const { t } = useTranslation()
-  const p = current ?? {}
+  const p = current ?? boardDefaults(fromBoard)
   const str = (v: unknown) => (v === null || v === undefined ? '' : String(v))
-
   const [weight, setWeight] = useState(str(p.weight_kg))
   const [price, setPrice] = useState(str(p.price_total))
   const [declared, setDeclared] = useState(str(p.declared_value))
@@ -64,6 +87,17 @@ export default function TermsProposeForm({
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  /* A suggestion, not a value: the carrier's own rate times the weight the
+     sender is about to type. It fills the price box on the first version and
+     never afterwards — the price is what the two of them agree, and a number
+     the screen keeps re-deriving would quietly undo an agreed one. */
+  const suggestPrice = (kg: string) => {
+    const rate = fromBoard?.trip_price_per_kg
+    const kilos = Number(kg)
+    if (current || !rate || !Number.isFinite(kilos) || kilos <= 0) return
+    setPrice(String(Math.round(rate * kilos * 100) / 100))
+  }
 
   const lockedForMe = (section: string) =>
     myRole !== 'carrier' && locked.includes(section)
@@ -196,11 +230,18 @@ export default function TermsProposeForm({
       {heading(SECTIONS[0])}
       <div className="flex flex-wrap gap-3">
         {box(t('agreement.field.what'), what, setWhat, { section: 'cargo' })}
-        {box(t('terms.weight'), weight, setWeight, {
-          type: 'number',
-          section: 'cargo',
-          required: true,
-        })}
+        {box(
+          t('terms.weight'),
+          weight,
+          (v) => {
+            setWeight(v)
+            // T3.11.27 — the price box fills itself from the carrier's rate the
+            // first time a weight is typed. Only on the first version, and only
+            // while the price is still the form's own suggestion.
+            suggestPrice(v)
+          },
+          { type: 'number', section: 'cargo', required: true },
+        )}
         {box(t('terms.declaredValue'), declared, setDeclared, {
           type: 'number',
           section: 'cargo',

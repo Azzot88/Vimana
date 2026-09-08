@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { confirmDeal, type DealStatus } from '../api/deals'
+import { confirmDeal, type DealDetail, type DealStatus } from '../api/deals'
 import { DISPUTE_REASONS, openDispute, type DisputeReason } from '../api/admin'
 import { sendPhotoMessage, type VaultMessage } from '../api/dealvault'
 import {
@@ -24,6 +24,10 @@ interface Props {
    *  first stage is not over until it is agreed, and nothing below it should be
    *  offered before that. */
   terms: Terms | null
+  /** T3.11.27 — the deal as the board form left it. Used to open the first
+   *  version of the agreement already filled in; ignored once there is an
+   *  agreement to edit, which is the sharper source. */
+  deal: DealDetail | null
   onDone: () => void
   onMessage: (msg: VaultMessage) => void
 }
@@ -61,6 +65,7 @@ export default function DealStages({
   status,
   myRole,
   terms,
+  deal,
   onDone,
   onMessage,
 }: Props) {
@@ -222,6 +227,7 @@ export default function DealStages({
               <TermsProposeForm
                 dealId={dealId}
                 current={terms?.payload ?? null}
+                fromBoard={deal}
                 supersedesId={
                   terms && terms.card_state === 'pending' ? terms.id : null
                 }

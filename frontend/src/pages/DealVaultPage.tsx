@@ -397,6 +397,11 @@ export default function DealVaultPage() {
               status={dealStatus}
               myRole={dealRole}
               terms={terms}
+              /* T3.11.27 — «Форма на доске остаётся как есть, карточка
+                 подставляется заполненной из неё». The deal already carries
+                 what the sender typed on the board; passing it down is what
+                 stops the first stage asking for it a second time. */
+              deal={deal}
               onDone={load}
               onMessage={(msg) => setMessages((prev) => [...prev, msg])}
             />
