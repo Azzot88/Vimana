@@ -785,6 +785,7 @@
   "agreement": {
     "empty": "No terms proposed yet.",
     "locked": "locked by the carrier",
+    "lockIt": "lock this",
     "section": {
       "cargo": "Cargo",
       "handover": "Handover",
@@ -837,6 +838,7 @@
     "title": "Deals",
     "noDeals": "No deals yet",
     "proposeTerms": "Propose terms",
+    "editTerms": "Edit",
     "notFound": "Deal not found",
     "actionFailed": "That did not go through. Please try again.",
     "boardingPass": "Boarding pass",

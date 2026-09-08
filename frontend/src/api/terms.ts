@@ -105,3 +105,13 @@ export async function raiseCard(
   const { data } = await api.post(`/api/deals/${dealId}/cards`, { kind, payload, text })
   return data
 }
+
+/** T3.11.27 — «я сейчас правлю», for the next two minutes.
+ *
+ *  Taken before the change and released by it. While it is open the other side
+ *  neither edits nor confirms the agreement, so what they read next is a
+ *  finished version rather than somebody's second thoughts. `409` means the
+ *  other side got there first — «запускай ещё раз».
+ */
+export const takeEditHold = (dealId: string) =>
+  api.post<{ until: string }>(`/api/deals/${dealId}/terms/hold`)

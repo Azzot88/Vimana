@@ -78,12 +78,6 @@ export default function DealVaultPage() {
   const [decrypted, setDecrypted] = useState<Record<string, string>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  /* T3.11.17 — stage one is not over until the price is agreed. Read from the
-     vault rather than from the status: `accepted` is what the agreement sets,
-     but the card is the thing that says it, and the stage panel asks about the
-     agreement, not about its consequence. */
-  const termsAgreed = messages.some((m) => m.card_kind === 'terms.agreed')
-
   // T3.35 — a card that awaits the other side must not offer this user a
   // button the server will refuse anyway.
   const dealRole: 'sender' | 'carrier' | null =
@@ -401,7 +395,7 @@ export default function DealVaultPage() {
               dealId={dealId}
               status={dealStatus}
               myRole={dealRole}
-              termsAgreed={termsAgreed}
+              terms={terms}
               onDone={load}
               onMessage={(msg) => setMessages((prev) => [...prev, msg])}
             />

@@ -17,9 +17,10 @@ interface Props {
   dealId: string
   status: DealStatus
   myRole: DealRole | null
-  /** Whether the terms have been agreed. The first stage is not over until they
-   *  are, and nothing below it should be offered before that. */
-  termsAgreed: boolean
+  /** The agreement as it stands: `null` before anybody proposes anything. The
+   *  first stage is not over until it is agreed, and nothing below it should be
+   *  offered before that. */
+  terms: Terms | null
   onDone: () => void
   onMessage: (msg: VaultMessage) => void
 }
@@ -49,7 +50,7 @@ export default function DealStages({
   dealId,
   status,
   myRole,
-  termsAgreed,
+  terms,
   onDone,
   onMessage,
 }: Props) {
@@ -141,11 +142,20 @@ export default function DealStages({
 
         {/* Stage one is the terms, and the terms are a form rather than a chip:
             the price is the one answer on this screen that costs money. */}
-        {currentKey === 'terms' && !termsAgreed && myRole && (
+        {currentKey === 'terms' && myRole && (
           <div>
             {termsOpen ? (
+              /* Prefilled with the version being edited: the API takes the whole
+                 card, so somebody moving a meeting place would otherwise retype
+                 the price to keep it — and a retyped number is where a deal
+                 quietly changes value. */
               <TermsProposeForm
                 dealId={dealId}
+                current={terms?.payload ?? null}
+                supersedesId={
+                  terms && terms.card_state === 'pending' ? terms.id : null
+                }
+                myRole={myRole}
                 onDone={() => {
                   setTermsOpen(false)
                   onDone()
@@ -157,7 +167,7 @@ export default function DealStages({
                 onClick={() => setTermsOpen(true)}
                 className="bg-navy text-ivory font-display font-medium text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-navy-mid transition-colors"
               >
-                {t('deals.proposeTerms')}
+                {terms ? t('deals.editTerms') : t('deals.proposeTerms')}
               </button>
             )}
           </div>

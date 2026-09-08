@@ -23,7 +23,9 @@ vi.mock('../api/platformParams', async () => {
 })
 vi.mock('../api/terms', async () => {
   const actual = await vi.importActual<typeof import('../api/terms')>('../api/terms')
-  return { ...actual, proposeTerms: vi.fn() }
+  // T3.11.27 — `takeEditHold` is mocked alongside: the form takes the editing
+  // window before it submits, and an unmocked one would reach the network.
+  return { ...actual, proposeTerms: vi.fn(), takeEditHold: vi.fn() }
 })
 
 import { listParams, paramHistory, setParam } from '../api/platformParams'
@@ -146,22 +148,30 @@ describe('TermsProposeForm', () => {
   it('sends the numbers as numbers', async () => {
     const onDone = vi.fn()
     renderWithProviders(
-      <TermsProposeForm dealId="d1" onDone={onDone} />,
+      <TermsProposeForm dealId="d1" myRole="sender" onDone={onDone} />,
     )
+    // T3.11.27 — the form grew from three numbers to the four sections of the
+    // agreement, and the numeric boxes now read weight, declared value, price:
+    // the price moved to the payment section at the bottom, which is where a
+    // reader looks for it.
     const numbers = screen.getAllByRole('spinbutton')
     fireEvent.change(numbers[0], { target: { value: '4' } })
-    fireEvent.change(numbers[1], { target: { value: '120' } })
-    fireEvent.change(numbers[2], { target: { value: '900' } })
+    fireEvent.change(numbers[1], { target: { value: '900' } })
+    fireEvent.change(numbers[2], { target: { value: '120' } })
     fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
 
     await waitFor(() =>
-      expect(proposeTerms).toHaveBeenCalledWith('d1', {
-        weight_kg: 4,
-        price_total: 120,
-        declared_value: 900,
-        description: null,
-        supersedes_id: null,
-      }),
+      expect(proposeTerms).toHaveBeenCalledWith(
+        'd1',
+        expect.objectContaining({
+          weight_kg: 4,
+          price_total: 120,
+          declared_value: 900,
+          description: null,
+          supersedes_id: null,
+          payer: 'sender',
+        }),
+      ),
     )
     await waitFor(() => expect(onDone).toHaveBeenCalled())
   })
@@ -170,7 +180,12 @@ describe('TermsProposeForm', () => {
     // A counter that does not point at what it replaces leaves two live
     // proposals and no way to tell which one is the offer.
     renderWithProviders(
-      <TermsProposeForm dealId="d1" supersedesId="m-old" onDone={() => {}} />,
+      <TermsProposeForm
+        dealId="d1"
+        supersedesId="m-old"
+        myRole="sender"
+        onDone={() => {}}
+      />,
     )
     const numbers = screen.getAllByRole('spinbutton')
     fireEvent.change(numbers[0], { target: { value: '1' } })
@@ -189,7 +204,9 @@ describe('TermsProposeForm', () => {
   it('reports a refusal instead of pretending it sent', async () => {
     vi.mocked(proposeTerms).mockRejectedValue(new Error('nope'))
     const onDone = vi.fn()
-    renderWithProviders(<TermsProposeForm dealId="d1" onDone={onDone} />)
+    renderWithProviders(
+      <TermsProposeForm dealId="d1" myRole="sender" onDone={onDone} />,
+    )
     const numbers = screen.getAllByRole('spinbutton')
     fireEvent.change(numbers[0], { target: { value: '1' } })
     fireEvent.change(numbers[1], { target: { value: '50' } })
