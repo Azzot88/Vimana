@@ -677,3 +677,77 @@ async def test_meeting_card_before_any_agreement_amends_nothing(
 
     current = await client.get(f"/api/deals/{deal.id}/terms", headers=sender_headers)
     assert current.json() is None
+
+
+# ── T3.11.27 · the price stops moving when the parcel does ────────────────
+
+
+async def _move_deal(session_maker, deal_id, status):
+    from app.models.deal import Deal, DealStatus
+
+    async with session_maker() as db:
+        row = await db.get(Deal, deal_id)
+        row.status = DealStatus(status)
+        await db.commit()
+
+
+async def test_price_is_frozen_once_the_parcel_moved(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """Owner's rule 2026-09-07: «Цена не меняется на полпути».
+
+    The carrier is already carrying it, so a new number is not a negotiation —
+    it is one side changing the deal while holding the other side's property.
+    `MASTERPLAN §4.1` fixes the price at the handover; this is the edit path
+    learning the same rule.
+    """
+    await _agree(client, sender_headers, carrier_headers, deal.id, price_total=140)
+    await _move_deal(session_maker, deal.id, "in_transit")
+
+    r = await _propose(client, sender_headers, deal.id, price_total=200)
+    assert r.status_code == 409, r.text
+    assert "price" in r.json()["detail"].lower()
+
+
+async def test_the_rest_of_the_card_still_moves_after_the_handover(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """A frozen price must not freeze the address.
+
+    A recipient who cannot come, a new meeting place — those changes happen
+    exactly while the parcel is in the air, and refusing them here pushes them
+    back into the chat, where nothing confirms them.
+    """
+    await _agree(
+        client,
+        sender_headers,
+        carrier_headers,
+        deal.id,
+        price_total=140,
+        delivery_place="Brooklyn",
+    )
+    await _move_deal(session_maker, deal.id, "in_transit")
+
+    r = await _propose(
+        client,
+        sender_headers,
+        deal.id,
+        price_total=140,
+        delivery_place="Queens",
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_the_same_price_in_a_different_shape_is_not_a_change(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """The client posts the whole card on every edit.
+
+    `100` coming back as `100.0` is the same price, and refusing it would make
+    the freeze a rule about JSON rather than about money.
+    """
+    await _agree(client, sender_headers, carrier_headers, deal.id, price_total=100)
+    await _move_deal(session_maker, deal.id, "posted")
+
+    r = await _propose(client, sender_headers, deal.id, price_total=100.0)
+    assert r.status_code == 201, r.text

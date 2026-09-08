@@ -21,6 +21,7 @@ from app.api.deps import get_current_user
 from app.core.cards import (
     CANCELLABLE_STATUSES,
     CATALOGUE,
+    PAYABLE_STATUSES,
     CardKind,
     CardSpec,
     resolve_ack_role,
@@ -308,6 +309,22 @@ async def create_card(
     # that is the field's own default and the shape of every deal written before
     # the section existed.
     if kind is CardKind.payment_declared:
+        # T3.11.27 — «Деньги отдаются после получения груза: это и есть порядок,
+        # который закрывает сделку» (owner, 2026-09-07).
+        #
+        # The order is the protection. Paid before the parcel arrives, the money
+        # is gone and the leverage with it — and this platform moves no money of
+        # its own until Фаза 5, so the sequence is the only thing standing
+        # between a sender and a stranger with their cash and their cargo.
+        #
+        # `posted` counts: the carrier's part ends at the tracking code
+        # (`USERJOURNEY` Этап 4a), and holding their payment for a postal service's
+        # schedule would charge them for somebody else's pace.
+        if deal.status not in PAYABLE_STATUSES:
+            raise HTTPException(
+                status_code=409,
+                detail="The money is settled after the parcel arrives, not before",
+            )
         agreed = await _agreed_terms(db, deal.id)
         payer = (agreed.card_payload or {}).get("payer", "sender") if agreed else "sender"
         expected = (

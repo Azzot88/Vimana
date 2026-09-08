@@ -104,6 +104,22 @@ CANCELLABLE_STATUSES: tuple[DealStatus, ...] = (
     DealStatus.accepted,
 )
 
+#: T3.11.27 — the statuses in which the money may be declared.
+#:
+#: Owner's rule 2026-09-07: «Деньги отдаются после получения груза — это и есть
+#: порядок, который закрывает сделку». The sequence is the protection: nothing
+#: on this platform holds the money until Фаза 5, so «cargo first» is the only
+#: thing between a sender and a stranger holding both their cash and their
+#: parcel.
+#:
+#: `posted` is on the list beside `delivered`. The carrier's part ends at the
+#: tracking code (`USERJOURNEY` Этап 4a), and making them wait for a postal
+#: service would charge them for somebody else's schedule.
+PAYABLE_STATUSES: tuple[DealStatus, ...] = (
+    DealStatus.posted,
+    DealStatus.delivered,
+)
+
 
 @dataclass(frozen=True)
 class CardSpec:

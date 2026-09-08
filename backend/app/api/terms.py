@@ -19,7 +19,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.cards import CardKind, changed_sections, role_of
+from app.core.cards import (
+    CANCELLABLE_STATUSES,
+    CardKind,
+    changed_sections,
+    role_of,
+)
 from app.core.database import get_db
 from app.core.deal_chain import append_deal_event, content_hash_of
 from app.core.params import resolve_all
@@ -184,6 +189,55 @@ def _locked_against(payload: dict | None, editor: CardAckRole) -> list[str]:
     return list((payload or {}).get("locked") or [])
 
 
+#: T3.11.27 — the fields that stop being negotiable once the parcel has moved.
+#:
+#: The amount and the currency it is owed in, and nothing else. `payer` is not
+#: here on purpose: who hands the money over is a practical arrangement two
+#: people may still fix on the day, and it changes no number.
+_PRICE_FIELDS: tuple[str, ...] = ("price_total", "currency")
+
+
+async def _current_agreed(db: AsyncSession, deal_id: uuid.UUID) -> DealVaultMessage | None:
+    """The contract in force. Latest `terms.agreed`, or None before there is one.
+
+    Called by: `propose_terms`, to compare a new proposal against what stands.
+    """
+    return (
+        await db.execute(
+            select(DealVaultMessage)
+            .where(
+                DealVaultMessage.deal_id == deal_id,
+                DealVaultMessage.card_kind == CardKind.terms_agreed.value,
+            )
+            .order_by(DealVaultMessage.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+def _price_moved(agreed: dict | None, body: TermsIn) -> list[str]:
+    """Which frozen fields this proposal would change.
+
+    Compared as floats where both are numbers, so `100` and `100.0` are the same
+    price: the client re-sends the whole card on every edit, and a proposal that
+    kept the price would otherwise be refused for the shape of the number it
+    came back as.
+    """
+    before = agreed or {}
+    moved: list[str] = []
+    for field in _PRICE_FIELDS:
+        old = before.get(field)
+        new = getattr(body, field, None)
+        if old is None or new is None:
+            continue
+        if isinstance(old, (int, float)) and isinstance(new, (int, float)):
+            if float(old) != float(new):
+                moved.append(field)
+        elif old != new:
+            moved.append(field)
+    return moved
+
+
 @router.post("/{deal_id}/terms", response_model=TermsOut, status_code=201)
 async def propose_terms(
     deal_id: uuid.UUID,
@@ -219,6 +273,32 @@ async def propose_terms(
             status_code=409,
             detail="The other side is editing — try again in a moment",
         )
+
+    # T3.11.27 — «Цена не меняется на полпути» (owner, 2026-09-07).
+    #
+    # Once the parcel has changed hands the price is fixed (`MASTERPLAN §4.1`):
+    # the carrier is already carrying it, and a new number now is not a
+    # negotiation — it is one side changing the deal while holding the other
+    # side's property. When circumstances really did change, the answer is a
+    # linked deal with its own terms, which the owner deferred as rare and not
+    # worth guessing the shape of.
+    #
+    # Refused by name rather than by closing the whole card: the rest of the
+    # agreement still moves — a recipient who cannot come, a new address — and
+    # freezing everything because one field is frozen would push those changes
+    # back into the chat, where nothing confirms them.
+    if deal.status not in CANCELLABLE_STATUSES:
+        agreed = await _current_agreed(db, deal.id)
+        if agreed is not None:
+            frozen = _price_moved(agreed.card_payload, body)
+            if frozen:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "The price is fixed once the parcel has changed hands: "
+                        f"{', '.join(frozen)}"
+                    ),
+                )
 
     superseded: DealVaultMessage | None = None
     if body.supersedes_id is not None:

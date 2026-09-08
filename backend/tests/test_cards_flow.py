@@ -258,6 +258,37 @@ async def test_delivery_is_confirmed_by_the_sender_when_there_is_no_recipient(
 # ── group 4 · settlement ──────────────────────────────────────────────────
 
 
+async def _deliver(session_maker, deal_id):
+    """Put the deal where money is allowed to be declared.
+
+    T3.11.27 — «Деньги отдаются после получения груза». The settlement tests are
+    about who may declare and what closes the deal, not about the order, so they
+    start from a parcel that has arrived instead of walking the whole ladder.
+    """
+    from app.models.deal import Deal, DealStatus
+
+    async with session_maker() as db:
+        row = await db.get(Deal, deal_id)
+        row.status = DealStatus.delivered
+        await db.commit()
+
+
+async def test_money_is_not_declared_before_the_parcel_arrives(
+    client, sender_headers, deal
+):
+    """The sequence is the protection.
+
+    Nothing here holds the money until Фаза 5, so «груз сначала» is the only
+    thing between a sender and a stranger holding both their cash and their
+    parcel. The fixture's deal is `accepted` — agreed, nothing carried yet.
+    """
+    r = await _card(
+        client, sender_headers, deal.id, "payment.declared",
+        {"amount": 120, "currency": "USD", "method": "cash"},
+    )
+    assert r.status_code == 409, r.text
+
+
 async def test_payment_confirmation_closes_the_deal(
     client, session_maker, sender_headers, carrier_headers, deal
 ):
@@ -280,6 +311,7 @@ async def test_payment_confirmation_closes_the_deal(
 
     from app.models.deal import DealEvent, DealEventType
 
+    await _deliver(session_maker, deal.id)
     declared = await _card(
         client, sender_headers, deal.id, "payment.declared",
         {"amount": 120, "currency": "USD", "method": "cash"},
@@ -309,14 +341,20 @@ async def test_payment_confirmation_closes_the_deal(
     assert DealEventType.closed in kinds
 
 
-async def test_carrier_cannot_declare_the_payment(client, carrier_headers, deal):
+async def test_carrier_cannot_declare_the_payment(
+    client, session_maker, carrier_headers, deal
+):
+    await _deliver(session_maker, deal.id)
     r = await _card(
         client, carrier_headers, deal.id, "payment.declared", {"amount": 10}
     )
     assert r.status_code == 403, r.text
 
 
-async def test_payment_amount_must_be_positive(client, sender_headers, deal):
+async def test_payment_amount_must_be_positive(
+    client, session_maker, sender_headers, deal
+):
+    await _deliver(session_maker, deal.id)
     r = await _card(
         client, sender_headers, deal.id, "payment.declared", {"amount": 0}
     )
