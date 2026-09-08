@@ -404,20 +404,17 @@ async def upload_attachment(
             detail=f"File content failed validation: {exc.reason}",
         )
 
-    # Extension derived from MIME (whitelisted), never from user-supplied filename
-    ext = MIME_TO_EXT.get(content_type, "")
-    r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
-
-    # Blocking PUT — off the event loop (T_PERF.1). Attachments here are the
-    # largest files the product accepts, so this is the worst place to hold it.
-    await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
-
     # T3.11.25 — the file lands in the uploader's own safe at the same moment it
-    # lands in the deal. Not a second copy of the bytes: the safe row points at
-    # the object just written, and re-attaching later points a new attachment at
-    # the same key. One row per (owner, hash) — sending the same passport twice
-    # is one file, and `created_at` is «впервые предоставлен», which must have
-    # exactly one answer.
+    # lands in the deal. One row per (owner, hash): sending the same passport
+    # twice is one document, and `created_at` is «впервые предоставлен», which
+    # must have exactly one answer.
+    #
+    # **Looked up before the upload, not after.** Identical bytes have an
+    # identical hash, so an object for them is already in storage — writing a
+    # second copy costs a PUT and leaves two keys for one file, and then the
+    # attachment and the safe entry point at different objects with the same
+    # content. Found on 2026-09-07 by the re-attachment test, which compared the
+    # two keys and got two answers.
     safe_file = (
         await db.execute(
             select(UserFile).where(
@@ -426,7 +423,17 @@ async def upload_attachment(
             )
         )
     ).scalar_one_or_none()
-    if safe_file is None:
+
+    if safe_file is not None:
+        r2_key = safe_file.r2_key
+    else:
+        # Extension from MIME (whitelisted), never from a user-supplied filename.
+        ext = MIME_TO_EXT.get(content_type, "")
+        r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
+        # Blocking PUT — off the event loop (T_PERF.1). Attachments here are the
+        # largest files the product accepts, so this is the worst place to hold
+        # it.
+        await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
         safe_file = UserFile(
             owner_id=current_user.id,
             r2_key=r2_key,

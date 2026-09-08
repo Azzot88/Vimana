@@ -314,9 +314,14 @@ async def test_handle_is_chosen_and_normalised(client):
     not part of the value, and case must not be able to make two accounts.
     """
     mine, _ = await _account(client, "handler")
-    r = await client.patch("/api/auth/me", headers=mine, json={"handle": "@Vimana_Test1"})
+    # Randomised, like every other handle here: a handle is unique for the life
+    # of the database, and `vimana_test` is never reset (`ENVIRONMENT §8`), so a
+    # fixed one passes on the run that claims it and answers 409 on every run
+    # after — the account is fresh, the name is not.
+    chosen = f"Vimana_{uuid.uuid4().hex[:8]}"
+    r = await client.patch("/api/auth/me", headers=mine, json={"handle": f"@{chosen}"})
     assert r.status_code == 200, r.text
-    assert r.json()["handle"] == "vimana_test1"
+    assert r.json()["handle"] == chosen.lower()
 
 
 async def test_handle_must_be_free(client):
