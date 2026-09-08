@@ -38,6 +38,7 @@ const KIND_KEY: Record<AttachmentKind, string> = {
   payment_receipt: 'chat.kind.payment_receipt',
   identity_doc: 'chat.kind.identity_doc',
   pre_seal_photo: 'chat.kind.pre_seal_photo',
+  cargo_photo: 'chat.kind.cargo_photo',
 }
 
 export default function DealVaultPage() {
