@@ -305,8 +305,11 @@ export default function DealStages({
         {/* T3.11.27 — «Отдано, но не оплачено — доступно "Пригласить арбитра"».
             Stated as a sentence with the action under it: the person reading it
             is holding an unpaid delivery and needs to be told this is a normal
-            thing to do, not to hunt for a button. */}
-        {handedOverUnpaid && status !== 'disputed' && (
+            thing to do, not to hunt for a button.
+
+            A deal already in dispute cannot be here: `handedOverUnpaid` is
+            `posted` or `delivered`, and `disputed` is neither. */}
+        {handedOverUnpaid && (
           <div className="pt-2 border-t border-navy/5 space-y-1">
             <p className="text-xs font-body text-navy/50">
               {t('stages.unpaidHint')}
