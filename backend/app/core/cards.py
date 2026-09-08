@@ -253,3 +253,61 @@ def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole 
     return (
         CardAckRole.carrier if creator is CardAckRole.sender else CardAckRole.sender
     )
+
+
+# ── T3.11.27 · the agreement in four sections ───────────────────────────────
+
+#: The four parts of one deal card, in reading order. They exist so a change can
+#: be announced by name — «изменены условия: Груз, Оплата» — and so the two ends
+#: of the route stay distinguishable: editing the meeting place in Dubai must not
+#: read as editing the delivery in New York (owner's decision 2026-09-07).
+DEAL_SECTIONS: tuple[str, ...] = ("cargo", "handover", "delivery", "payment")
+
+#: Which section each payload field belongs to. Fields absent from this map are
+#: not part of the agreement people negotiate — `normalized` is computed,
+#: `below_carrier_minimum` is a warning about a value already listed under
+#: payment — and naming them in a change notice would report noise as news.
+SECTION_OF: dict[str, str] = {
+    "weight_kg": "cargo",
+    "dimensions_cm": "cargo",
+    "declared_value": "cargo",
+    "cargo_what": "cargo",
+    "cargo_packaging": "cargo",
+    "cargo_fragile": "cargo",
+    "cargo_open_on_handover": "cargo",
+    "cargo_url": "cargo",
+    "handover_method": "handover",
+    "handover_place": "handover",
+    "handover_at": "handover",
+    "delivery_method": "delivery",
+    "delivery_place": "delivery",
+    "delivery_at": "delivery",
+    "deadline": "delivery",
+    "price_total": "payment",
+    "currency": "payment",
+    "payment_method": "payment",
+    "payer": "payment",
+}
+
+
+def changed_sections(before: dict | None, after: dict) -> list[str]:
+    """Which sections of the agreement this edit actually touched.
+
+    Ordered by `DEAL_SECTIONS` rather than by dictionary order, so the notice
+    reads the same way every time.
+
+    A field the editor did not send is not a change: the client posts the whole
+    card, and a missing optional value would otherwise look like somebody
+    deleting a packaging note they never saw.
+
+    Called by: `api.terms.propose_terms`.
+    """
+    if not before:
+        return []
+    touched = set()
+    for field, section in SECTION_OF.items():
+        if field not in after:
+            continue
+        if before.get(field) != after.get(field):
+            touched.add(section)
+    return [s for s in DEAL_SECTIONS if s in touched]

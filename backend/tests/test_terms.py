@@ -8,6 +8,7 @@ it exists.
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 import pytest_asyncio
 from tests.conftest import SEED_PASSWORD, make_account, unique_email
@@ -59,6 +60,16 @@ BASE = {
     "currency": "USD",
     "payment_method": "cash",
 }
+
+
+async def _card_via_generic(client, headers, deal_id, kind, payload):
+    """A card raised through the generic endpoint — used here only to show that
+    the agreement's editing window does not reach the other kinds."""
+    return await client.post(
+        f"/api/deals/{deal_id}/cards",
+        headers=headers,
+        json={"kind": kind, "payload": payload},
+    )
 
 
 async def _propose(client, headers, deal_id, **overrides):
@@ -347,3 +358,170 @@ def test_corridor_of_real_airports():
 
     assert corridor_of("DXB", "JFK") == "AE->US"
     assert corridor_of("NOPE", "JFK") is None
+
+
+# ── T3.11.27 · one card, four sections, and who may move them ───────────────
+
+
+async def test_the_card_carries_all_four_sections(client, sender_headers, deal):
+    """T3.11.27 — one card instead of four (owner's decision 2026-09-07).
+
+    Cargo, handover, delivery and payment used to live in `terms.*`,
+    `handover.conditions`, `pickup.proposed` and `dropoff.proposed`, which made
+    «договориться о передаче» a step *after* both sides had agreed the deal —
+    describing an agreement they had already reached.
+    """
+    r = await _propose(
+        client,
+        sender_headers,
+        deal.id,
+        cargo_what="Конструктор",
+        cargo_fragile=True,
+        handover_method="in_person",
+        handover_place="Дубай, у метро",
+        delivery_method="local_post",
+        delivery_place="Нью-Йорк",
+        payer="recipient",
+    )
+    assert r.status_code == 201, r.text
+    payload = r.json()["payload"]
+    assert payload["cargo_what"] == "Конструктор"
+    assert payload["cargo_fragile"] is True
+    assert payload["handover_place"] == "Дубай, у метро"
+    assert payload["delivery_method"] == "local_post"
+    # T3.11.27 — who pays decides whose button closes the deal.
+    assert payload["payer"] == "recipient"
+
+
+async def test_an_edit_announces_which_sections_moved(
+    client, sender_headers, carrier_headers, deal
+):
+    """«В чате появляется сервисное сообщение: изменены условия Доставки, или
+    Оплаты, или всего вместе» (owner, 2026-09-07).
+
+    A card that quietly changes colour is how somebody ends up carrying a parcel
+    under terms they never read.
+    """
+    first = await _propose(
+        client, sender_headers, deal.id, price_total=100, cargo_what="Документы"
+    )
+    card_id = first.json()["id"]
+
+    countered = await _propose(
+        client,
+        carrier_headers,
+        deal.id,
+        price_total=140,
+        cargo_what="Документы",
+        supersedes_id=card_id,
+    )
+    assert countered.status_code == 201, countered.text
+
+    listing = await client.get(f"/api/deals/{deal.id}/dealvault", headers=sender_headers)
+    notices = [
+        m for m in listing.json()["items"] if m["card_kind"] == "terms.amended"
+    ]
+    assert notices, "no service line announced the change"
+    assert notices[-1]["card_payload"]["sections"] == ["payment"]
+
+
+async def test_the_two_minute_window_belongs_to_whoever_opened_it(
+    client, sender_headers, carrier_headers, deal
+):
+    """T3.11.27 — «две минуты это окно для правки, пока другой ждёт».
+
+    While it is open the card belongs to its author: the other side neither
+    edits nor confirms, so what they read next is a finished change rather than
+    somebody's second thoughts.
+    """
+    mine = await _propose(client, sender_headers, deal.id, price_total=90)
+    card_id = mine.json()["id"]
+
+    theirs = await _propose(
+        client, carrier_headers, deal.id, price_total=95, supersedes_id=card_id
+    )
+    assert theirs.status_code == 409, theirs.text
+    assert "editing" in theirs.text.lower()
+
+    # Confirming is held by the same window and for the same reason: an
+    # agreement to a half-written change is still an agreement in the record.
+    ack = await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{card_id}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert ack.status_code == 409, ack.text
+
+    # The author is not held by their own window.
+    again = await _propose(
+        client, sender_headers, deal.id, price_total=95, supersedes_id=card_id
+    )
+    assert again.status_code == 201, again.text
+
+
+async def test_the_window_does_not_hold_the_other_cards(
+    client, sender_headers, carrier_headers, deal
+):
+    """A rule about typing must not reach people standing in a car park with a
+    parcel: only the agreement is held, never a handover."""
+    proposed = await _card_via_generic(
+        client, sender_headers, deal.id, "pickup.proposed", {"method": "in_person"}
+    )
+    assert proposed.status_code == 201, proposed.text
+    ack = await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{proposed.json()['id']}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert ack.status_code == 200, ack.text
+
+
+async def test_a_locked_section_is_the_carriers(
+    client, sender_headers, carrier_headers, deal
+):
+    """T3.11.27 — the carrier locks a section **in this deal**: stricter with one
+    sender, softer with another. A lock is «I carry it this way or not at all»,
+    so nobody but the carrier may set one."""
+    locked = await _propose(
+        client,
+        carrier_headers,
+        deal.id,
+        handover_method="in_person",
+        locked=["handover"],
+    )
+    card_id = locked.json()["id"]
+    assert locked.json()["payload"]["locked"] == ["handover"]
+
+    import asyncio
+
+    # Past the window, so what is refused is the lock rather than the clock.
+    from app.api import terms as terms_module
+
+    original = terms_module.EDIT_WINDOW
+    terms_module.EDIT_WINDOW = timedelta(seconds=0)
+    try:
+        await asyncio.sleep(0)
+        clash = await _propose(
+            client,
+            sender_headers,
+            deal.id,
+            handover_method="courier",
+            locked=["handover"],
+            supersedes_id=card_id,
+        )
+        assert clash.status_code == 403, clash.text
+        assert "handover" in clash.text
+
+        # A section they were not locked out of still moves.
+        fine = await _propose(
+            client,
+            sender_headers,
+            deal.id,
+            handover_method="in_person",
+            locked=["handover"],
+            price_total=123,
+            supersedes_id=card_id,
+        )
+        assert fine.status_code == 201, fine.text
+    finally:
+        terms_module.EDIT_WINDOW = original

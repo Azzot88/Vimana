@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.currencies import CURRENCIES
+from app.schemas.cards import HandoverMethod
 
 PaymentMethod = Literal["cash", "platform", "escrow"]
 
@@ -32,6 +33,59 @@ class TermsIn(BaseModel):
     description: str | None = None
     # Set when countering: the proposal this one replaces.
     supersedes_id: uuid.UUID | None = None
+
+    # ── T3.11.27 — the whole agreement, in four sections ──────────────────
+    #
+    # Owner's decision 2026-09-07: one card instead of four. The same facts used
+    # to be spread across `terms.*`, `handover.conditions`, `pickup.proposed`
+    # and `dropoff.proposed`, and «договориться о передаче» stood as a separate
+    # step *after* both sides had agreed the deal — describing an agreement they
+    # had already reached.
+    #
+    # The fields are flat with section prefixes rather than nested: the sections
+    # exist to name what changed («изменены условия: Груз, Оплата»), and a flat
+    # shape keeps every caller that already sends a price working unchanged.
+    # `SECTION_OF` in `api.terms` is what maps one to the other.
+    #
+    # All of them optional: a deal born from the board form has a price and a
+    # weight and nothing else, and a half-filled agreement is the normal state
+    # of the first stage rather than an error.
+    cargo_what: str | None = Field(default=None, max_length=200)
+    cargo_packaging: str | None = Field(default=None, max_length=200)
+    cargo_fragile: bool = False
+    cargo_open_on_handover: bool = False
+    #: A link to the item, for a deal that starts as «купи и привези». The photo
+    #: itself is an attachment — this is the address of the thing.
+    cargo_url: str | None = Field(default=None, max_length=500)
+
+    handover_method: HandoverMethod | None = None
+    handover_place: str | None = Field(default=None, max_length=200)
+    handover_at: datetime | None = None
+
+    delivery_method: HandoverMethod | None = None
+    delivery_place: str | None = Field(default=None, max_length=200)
+    delivery_at: datetime | None = None
+
+    #: T3.11.27 — who pays the carrier. It decides whose button closes the deal:
+    #: «получил» and «рассчитался» are one press for the person who does both,
+    #: and two presses when the recipient is somebody who owes nothing.
+    payer: Literal["sender", "recipient"] = "sender"
+
+    #: Sections the **carrier** has locked in this deal. A locked section is
+    #: theirs to edit; everything else is open to both. Per deal rather than per
+    #: trip (owner's decision 2026-09-07): a carrier is stricter with one sender
+    #: and softer with another.
+    locked: list[str] = Field(default_factory=list)
+
+    @field_validator("locked")
+    @classmethod
+    def _known_sections(cls, v: list[str]) -> list[str]:
+        from app.core.cards import DEAL_SECTIONS
+
+        unknown = set(v) - set(DEAL_SECTIONS)
+        if unknown:
+            raise ValueError(f"unknown sections: {sorted(unknown)}")
+        return list(dict.fromkeys(v))
 
     @field_validator("currency")
     @classmethod
