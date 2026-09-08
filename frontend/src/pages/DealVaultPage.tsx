@@ -289,13 +289,21 @@ export default function DealVaultPage() {
     )
   }
 
-  // T_UX.17 — the chat grows with its content instead of always claiming the
-  // whole viewport. A fixed height meant a two-message deal showed a screenful
-  // of emptiness with the composer stranded at the bottom; `min-h` keeps it
-  // from collapsing, `max-h` hands scrolling to the message list once the
-  // conversation outgrows the screen.
+  /* T_UX.17 — the chat grows with its content instead of always claiming the
+     whole viewport. A fixed height meant a two-message deal showed a screenful
+     of emptiness with the composer stranded at the bottom.
+
+     T3.11.17 (2026-09-07, owner's report) — the **page** no longer carries that
+     cap. It did, and the boarding pass above the chat is expandable: opening it
+     had to come out of somebody's height, and in a column of `shrink-0`
+     siblings it came out of the conversation, which was squeezed to a sliver
+     with its composer spilling over the card's edge. Two blocks that both want
+     room must push each other, not overlap.
+     So the cap moved down one level — onto the message list, which is the one
+     part that can scroll without losing anything — and the page scrolls
+     normally for everything else. */
   return (
-    <div className="max-w-2xl flex flex-col min-h-[22rem] max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-10rem)]">
+    <div className="max-w-2xl flex flex-col">
       <div className="flex items-center gap-3 mb-3 sm:mb-4 shrink-0">
         {/* T3.11.26 — back to the panel, not to a deal card. It used to point at
            `/deals/:id`, which now redirects here: the link would have been a
@@ -352,8 +360,12 @@ export default function DealVaultPage() {
         </div>
       )}
 
-      <div className="flex-1 bg-white rounded-card border border-navy/10 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="bg-white rounded-card border border-navy/10 overflow-hidden flex flex-col">
+        {/* The one element with a height of its own: messages scroll, so a long
+            conversation costs a scrollbar rather than a page nobody can reach
+            the end of. `min-h` keeps a two-message deal from collapsing into a
+            strip; everything else on this screen sizes to its content. */}
+        <div className="min-h-[16rem] max-h-[55vh] overflow-y-auto p-4 space-y-3">
           {loading ? (
             <div className="text-center py-8">
               <MonoText className="text-navy/40 text-sm">{t('common.loading')}</MonoText>
