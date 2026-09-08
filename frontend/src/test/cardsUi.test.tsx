@@ -3,7 +3,10 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'
 import TermsCard from '../components/TermsCard'
 import DealCard from '../components/DealCard'
 import CardActions from '../components/CardActions'
+import DealStages from '../components/DealStages'
 import type { VaultMessage } from '../api/dealvault'
+import type { DealStatus } from '../api/deals'
+import type { DealRole } from '../lib/cardForms'
 import { buildPayload, formsForRole, specForKind } from '../lib/cardForms'
 import { renderWithProviders } from './render'
 
@@ -364,5 +367,62 @@ describe('cardForms', () => {
   it('ignores a number that is not one', () => {
     const spec = specForKind('payment.declared')!
     expect(buildPayload(spec, { amount: 'lots' })).toEqual({})
+  })
+})
+
+// ── the stage panel ───────────────────────────────────────────────────────
+
+describe('DealStages', () => {
+  const panel = (over: { status?: DealStatus; myRole?: DealRole } = {}) => (
+    <DealStages
+      dealId="d1"
+      status={over.status ?? 'delivered'}
+      myRole={over.myRole ?? 'sender'}
+      terms={null}
+      onDone={() => {}}
+      onMessage={() => {}}
+    />
+  )
+
+  it('names the arbiter when the parcel is handed over and unpaid', () => {
+    // T3.11.27 — «Отдано, но не оплачено — доступно "Пригласить арбитра"».
+    // Somebody in this position is already unsure whether they are allowed to
+    // complain, so the panel says it rather than hiding it behind «ещё».
+    renderWithProviders(panel({ status: 'delivered' }))
+    expect(
+      screen.getByText(/invite an arbiter|Позовите арбитра/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/open a dispute|Открыть спор/i)).toBeInTheDocument()
+  })
+
+  it('does not put the arbiter in the way while the terms are being agreed', () => {
+    renderWithProviders(panel({ status: 'draft' }))
+    expect(
+      screen.queryByText(/invite an arbiter|Позовите арбитра/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/open a dispute|Открыть спор/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('offers no closing shortcut once the parcel changed hands in person', () => {
+    // The pair «получил» + «рассчитался» is what closes such a deal; a second
+    // route past it would let one side close without the other's press.
+    renderWithProviders(panel({ status: 'delivered' }))
+    expect(
+      screen.queryByText(/close the deal|Закрыть сделку/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps the shortcut for a parcel still in the post', () => {
+    renderWithProviders(panel({ status: 'posted' }))
+    expect(
+      screen.getByText(/close the deal|Закрыть сделку/i),
+    ).toBeInTheDocument()
+  })
+
+  it('says nothing is left to do on a cancelled deal', () => {
+    renderWithProviders(panel({ status: 'cancelled' }))
+    expect(screen.queryByText(/^more$|^ещё$/i)).not.toBeInTheDocument()
   })
 })

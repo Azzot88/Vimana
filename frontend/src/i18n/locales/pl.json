@@ -18,8 +18,7 @@
     "modalHint": "Opisz, co poszło nie tak. Druga strona zobaczy powód, arbiter będzie mógł otworzyć czat.",
     "reasonPlaceholder": "Powód…",
     "submit": "Otwórz spór",
-    "openError": "Nie udało się otworzyć sporu",
-    "createdNotice": "Spór otwarty. Czekamy na arbitra."
+    "openError": "Nie udało się otworzyć sporu"
   },
   "admin": {
     "scanQueue": {

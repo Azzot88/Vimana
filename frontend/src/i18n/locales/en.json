@@ -25,8 +25,7 @@
     "modalHint": "Describe what went wrong. The other party will see this reason and an arbiter will be able to review the chat.",
     "reasonPlaceholder": "Reason…",
     "submit": "Open dispute",
-    "openError": "Failed to open dispute",
-    "createdNotice": "Dispute opened. Waiting for an arbiter to claim it."
+    "openError": "Failed to open dispute"
   },
   "admin": {
     "scanQueue": {
@@ -828,6 +827,7 @@
     "cancelled": "Cancelled",
     "more": "more",
     "stillTravelling": "Still in the post — you may close it, the carrier has done their part",
+    "unpaidHint": "Handed over but not settled? Invite an arbiter — they see the conversation and where the deal stands.",
     "hint": {
       "terms": "Agree the price and how the parcel changes hands. Nothing starts until the terms are fixed.",
       "handover": "The terms are fixed. Agree where and when, then mark the handover with a photo.",

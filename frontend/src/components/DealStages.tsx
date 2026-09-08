@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { confirmDeal, type DealStatus } from '../api/deals'
+import { DISPUTE_REASONS, openDispute, type DisputeReason } from '../api/admin'
 import { sendPhotoMessage, type VaultMessage } from '../api/dealvault'
 import {
   ALWAYS_AVAILABLE,
@@ -45,6 +46,13 @@ interface Props {
  *  rather than chosen from a dropdown — that dropdown asked, at the moment
  *  somebody is holding a parcel and a phone, a question with one answer.
  *
+ *  **The arbiter lives here too** (T3.11.27). It used to sit in `DealPage`,
+ *  which is now rendered folded inside «Ещё о сделке» — an accordion whose own
+ *  label says it holds background. «Спор как этап вклинивается в сделку на
+ *  любом моменте» (owner, 2026-09-07): an action for any moment cannot be two
+ *  clicks and a scroll away, and least of all at the one moment it is most
+ *  needed — a parcel handed over and no money.
+ *
  *  Functions (PROJECT §6.2a):
  *  - `DealStages({...})` — default export. Called by: `pages/DealVaultPage`.
  */
@@ -62,6 +70,17 @@ export default function DealStages({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  // T3.11.27 — the arbiter moved here from «Ещё о сделке». Owner's rule
+  // 2026-09-07: «Спор как этап вклинивается в сделку на любом моменте» and
+  // «Отдано, но не оплачено — доступно "Пригласить арбитра"». It was behind a
+  // collapsed accordion whose own label says it holds background — which is the
+  // wrong place for the one action somebody takes when the ladder has stopped
+  // describing what is happening.
+  const [disputeOpen, setDisputeOpen] = useState(false)
+  const [disputeReason, setDisputeReason] = useState<DisputeReason>('unpaid')
+  const [disputeDetails, setDisputeDetails] = useState('')
+  const [disputeBusy, setDisputeBusy] = useState(false)
+  const [disputeError, setDisputeError] = useState('')
 
   const currentKey: DealStageKey = stageOf(status)
   const current = DEAL_STAGES.find((s) => s.key === currentKey)
@@ -97,8 +116,35 @@ export default function DealStages({
     }
   }
 
+  const raiseDispute = async () => {
+    setDisputeBusy(true)
+    setDisputeError('')
+    try {
+      await openDispute(dealId, disputeReason, disputeDetails.trim() || undefined)
+      setDisputeOpen(false)
+      setDisputeDetails('')
+      onDone()
+    } catch {
+      setDisputeError(t('dispute.openError'))
+    } finally {
+      setDisputeBusy(false)
+    }
+  }
+
   const canAttach =
     current?.photo && myRole && (current.photoBy ?? []).includes(myRole)
+
+  /* T3.11.27 — «Отдано, но не оплачено» (owner, 2026-09-07). The parcel is with
+     the person it was for and the money has not been settled: the one moment
+     the arbiter stops being a last resort and becomes the next step. Named on
+     the panel rather than left to be found, because somebody in this position
+     is already unsure whether they are allowed to complain. */
+  const handedOverUnpaid =
+    (status === 'delivered' || status === 'posted') && Boolean(myRole)
+
+  const canDispute =
+    Boolean(myRole) &&
+    ['accepted', 'in_transit', 'posted', 'delivered'].includes(status)
 
   /* T3.11.27 — «Плательщик определён на этапе условий, поэтому
      получатель-неплательщик жмёт только "Получил", а деньги закрывает тот, кто
@@ -250,19 +296,52 @@ export default function DealStages({
 
         {error && <p className="text-xs font-body text-amber">{error}</p>}
 
-        {/* Never gated by stage, never in the way: a problem and a cancellation
-            are needed exactly when the ladder has stopped describing what is
-            happening. */}
+        {/* T3.11.27 — «Отдано, но не оплачено — доступно "Пригласить арбитра"».
+            Stated as a sentence with the action under it: the person reading it
+            is holding an unpaid delivery and needs to be told this is a normal
+            thing to do, not to hunt for a button. */}
+        {handedOverUnpaid && status !== 'disputed' && (
+          <div className="pt-2 border-t border-navy/5 space-y-1">
+            <p className="text-xs font-body text-navy/50">
+              {t('stages.unpaidHint')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setDisputeOpen(true)}
+              className="border border-danger/30 text-danger font-body font-medium text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-danger/5 transition-colors"
+            >
+              {t('dispute.openButton')}
+            </button>
+          </div>
+        )}
+
+        {/* Never gated by stage, never in the way: a problem, a cancellation and
+            the arbiter are needed exactly when the ladder has stopped describing
+            what is happening. */}
         {myRole && !TERMINAL_STATUSES.includes(status) && (
           <div className="pt-2 border-t border-navy/5">
             {moreOpen ? (
-              <CardActions
-                dealId={dealId}
-                myRole={myRole}
-                only={ALWAYS_AVAILABLE}
-                muted
-                onDone={onDone}
-              />
+              <div className="space-y-2">
+                <CardActions
+                  dealId={dealId}
+                  myRole={myRole}
+                  only={ALWAYS_AVAILABLE}
+                  muted
+                  onDone={onDone}
+                />
+                {/* Reachable at any point, quiet until it is needed. Hidden
+                    above once the parcel has been handed over, where it is
+                    already stated at full weight. */}
+                {canDispute && !handedOverUnpaid && (
+                  <button
+                    type="button"
+                    onClick={() => setDisputeOpen(true)}
+                    className="text-xs font-body text-danger/70 hover:text-danger"
+                  >
+                    {t('dispute.openButton')}
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 type="button"
@@ -275,6 +354,65 @@ export default function DealStages({
           </div>
         )}
       </div>
+
+      {/* T3.11.27 — one action with a reason from a list (owner, 2026-09-07):
+          «не заплатили · не довезли · повреждено · другое». Four categories an
+          arbiter can sort a queue by; the sentence goes underneath, where it
+          explains the category rather than replacing it. */}
+      {disputeOpen && (
+        <div
+          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
+          onClick={() => setDisputeOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
+          >
+            <h2 className="font-display font-semibold text-lg text-navy">
+              {t('dispute.modalTitle')}
+            </h2>
+            <p className="text-sm font-body text-navy/60">
+              {t('dispute.modalHint')}
+            </p>
+            <select
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value as DisputeReason)}
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            >
+              {DISPUTE_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {t(`dispute.reason.${r}`)}
+                </option>
+              ))}
+            </select>
+            <textarea
+              value={disputeDetails}
+              onChange={(e) => setDisputeDetails(e.target.value)}
+              rows={3}
+              placeholder={t('dispute.reasonPlaceholder') as string}
+              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
+            />
+            {disputeError && (
+              <p className="text-xs font-mono text-danger">{disputeError}</p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDisputeOpen(false)}
+                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={raiseDispute}
+                disabled={disputeBusy}
+                className="bg-danger text-white font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
+              >
+                {disputeBusy ? '…' : t('dispute.submit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

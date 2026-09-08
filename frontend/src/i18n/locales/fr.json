@@ -18,8 +18,7 @@
     "modalHint": "Décrivez ce qui s'est mal passé. L'autre partie verra la raison et un arbitre pourra consulter le chat.",
     "reasonPlaceholder": "Raison…",
     "submit": "Ouvrir un litige",
-    "openError": "Impossible d'ouvrir le litige",
-    "createdNotice": "Litige ouvert. En attente d'un arbitre."
+    "openError": "Impossible d'ouvrir le litige"
   },
   "admin": {
     "scanQueue": {

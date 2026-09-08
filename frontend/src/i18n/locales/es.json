@@ -18,8 +18,7 @@
     "modalHint": "Describe qué salió mal. La otra parte verá el motivo y un árbitro podrá revisar el chat.",
     "reasonPlaceholder": "Motivo…",
     "submit": "Abrir disputa",
-    "openError": "No se pudo abrir la disputa",
-    "createdNotice": "Disputa abierta. Esperando un árbitro."
+    "openError": "No se pudo abrir la disputa"
   },
   "admin": {
     "scanQueue": {

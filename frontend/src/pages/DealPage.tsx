@@ -3,11 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
-import {
-  DISPUTE_REASONS,
-  openDispute,
-  type DisputeReason,
-} from '../api/admin'
 import { getDeal, type DealDetail } from '../api/deals'
 import { listDealRequests, type VerificationRequest as VerificationRequestT } from '../api/verification'
 import { listParticipants, type Participant } from '../api/participants'
@@ -26,10 +21,10 @@ import { useRouteNotes } from '../hooks/useRouteNotes'
  *
  *  It stopped being a route: `/deals/:id` redirects into the conversation,
  *  because a screen whose only purpose is to be clicked through is a screen.
- *  What was on it is not ceremony though — the boarding pass, the terms, the
- *  verification and the dispute button are the deal — so it moved rather than
- *  went. `embedded` is the difference between the two homes: no back-link (the
- *  vault has one) and no page width of its own (it sits inside a panel).
+ *  What was on it is not ceremony though — the boarding pass, the terms and
+ *  the verification requests are the deal — so it moved rather than went.
+ *  `embedded` is the difference between the two homes: no back-link (the vault
+ *  has one) and no page width of its own (it sits inside a panel).
  *
  *  Called by: `pages/DealVaultPage`, folded into a `<details>` under the header.
  */
@@ -43,34 +38,10 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
   // T_UX.2 pt.3 — RouteNotes for this corridor (empty until deal loads).
   const { notes: routeNotes } = useRouteNotes(deal?.origin, deal?.destination)
   const [error, setError] = useState('')
-  const [disputeOpen, setDisputeOpen] = useState(false)
-  const [disputeReason, setDisputeReason] = useState<DisputeReason>('unpaid')
-  const [disputeDetails, setDisputeDetails] = useState('')
-  const [disputeSubmitting, setDisputeSubmitting] = useState(false)
-  const [disputeError, setDisputeError] = useState('')
-  const [disputeCreated, setDisputeCreated] = useState(false)
   const [verifyRequestFor, setVerifyRequestFor] = useState<'sender' | 'carrier' | null>(null)
   const [pendingRespond, setPendingRespond] = useState<VerificationRequestT | null>(null)
   const [verifySuccess, setVerifySuccess] = useState(false)
   const [participants, setParticipants] = useState<Participant[]>([])
-
-  const handleDispute = async () => {
-    if (!dealId) return
-    setDisputeSubmitting(true)
-    setDisputeError('')
-    try {
-      await openDispute(dealId, disputeReason, disputeDetails.trim() || undefined)
-      setDisputeCreated(true)
-      setDisputeOpen(false)
-      setDisputeReason('unpaid')
-      setDisputeDetails('')
-      await load()
-    } catch {
-      setDisputeError(t('dispute.openError'))
-    } finally {
-      setDisputeSubmitting(false)
-    }
-  }
 
   const [openRequestForMe, setOpenRequestForMe] = useState<VerificationRequestT | null>(null)
   const [carrierPoliteDecline, setCarrierPoliteDecline] = useState<VerificationRequestT | null>(null)
@@ -282,9 +253,14 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
               was a second route to a status the handover card already reaches —
               with the difference that it skipped the photograph and the other
               side's confirmation. What the deal *does* now lives on the stage
-              panel, in one place, in the order it happens. What is left here is
-              what belongs to the card rather than to the step: asking the other
-              side for a document, and opening a dispute. */}
+              panel, in one place, in the order it happens.
+
+              T3.11.27 — the arbiter followed them there. «Спор как этап
+              вклинивается в сделку на любом моменте» (owner, 2026-09-07), and
+              an action needed at any moment must not live behind an accordion
+              whose own label says it holds background. What is left in this row
+              is what belongs to the card rather than to the step: asking the
+              other side for a document. */}
           {isCarrier &&
             ['matched', 'accepted', 'in_transit'].includes(deal.status) && (
               <button
@@ -303,28 +279,8 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
                 {t('verification.askCarrierButton')}
               </button>
             )}
-          {(isCarrier || isSender) &&
-            /* T3.11.17 — a parcel in the post is exactly when a dispute becomes
-               likely, so `posted` is in this list. */
-            ['accepted', 'in_transit', 'posted', 'delivered'].includes(
-              deal.status,
-            ) &&
-            deal.status !== 'disputed' && (
-              <button
-                onClick={() => setDisputeOpen(true)}
-                className="border border-danger/30 text-danger font-body font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:bg-danger/5 transition-colors"
-              >
-                {t('dispute.openButton')}
-              </button>
-            )}
         </div>
       </div>
-
-      {disputeCreated && (
-        <div className="bg-amber/10 border border-amber/40 rounded-card p-4">
-          <p className="text-sm font-body text-navy">{t('dispute.createdNotice')}</p>
-        </div>
-      )}
 
       {verifySuccess && (
         <div className="bg-cyan/10 border border-cyan/40 rounded-card p-4">
@@ -372,65 +328,6 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
             load()
           }}
         />
-      )}
-
-      {disputeOpen && (
-        <div
-          className="fixed inset-0 bg-navy/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
-          onClick={() => setDisputeOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
-          >
-            <h2 className="font-display font-semibold text-lg text-navy">
-              {t('dispute.modalTitle')}
-            </h2>
-            <p className="text-sm font-body text-navy/60">
-              {t('dispute.modalHint')}
-            </p>
-            {/* T3.11.27 — the reason is chosen, not written (owner's decision
-                2026-09-07). Four categories an arbiter can sort a queue by;
-                the sentence goes underneath, where it explains the category
-                rather than replacing it. */}
-            <select
-              value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value as DisputeReason)}
-              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-            >
-              {DISPUTE_REASONS.map((r) => (
-                <option key={r} value={r}>
-                  {t(`dispute.reason.${r}`)}
-                </option>
-              ))}
-            </select>
-            <textarea
-              value={disputeDetails}
-              onChange={(e) => setDisputeDetails(e.target.value)}
-              rows={3}
-              placeholder={t('dispute.reasonPlaceholder') as string}
-              className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-            />
-            {disputeError && (
-              <p className="text-xs font-mono text-danger">{disputeError}</p>
-            )}
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setDisputeOpen(false)}
-                className="text-sm font-body text-navy/60 hover:text-navy px-3 py-2"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleDispute}
-                disabled={disputeSubmitting}
-                className="bg-danger text-white font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
-              >
-                {disputeSubmitting ? '…' : t('dispute.submit')}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )
