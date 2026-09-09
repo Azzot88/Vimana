@@ -310,6 +310,13 @@ export default function ChecklistWizardPage() {
                 <span className="block text-xs font-body text-navy/40 mb-1">
                   {t(`checklist.attr.${attr}`, { defaultValue: attr })}
                 </span>
+                {/* DESIGNGUIDELINES §9b — every question says what it changes.
+                    Without it the form asks a stranger for their pet's
+                    generation and gives no reason, which reads as data
+                    collection rather than as a question with consequences. */}
+                <span className="block text-[11px] font-body text-navy/40 mb-1">
+                  {t(`checklist.attrEffect.${attr}`, { defaultValue: '' })}
+                </span>
                 <input
                   value={raw[attr] ?? ''}
                   onChange={(e) => answer(attr, e.target.value)}

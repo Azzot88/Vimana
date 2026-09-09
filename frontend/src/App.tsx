@@ -51,6 +51,7 @@ const AdminRulesPage = lazy(() => import('./pages/AdminRulesPage'))
 const RulesPage = lazy(() => import('./pages/RulesPage'))
 const RulesIndexPage = lazy(() => import('./pages/RulesIndexPage'))
 const ChecklistWizardPage = lazy(() => import('./pages/ChecklistWizardPage'))
+const RequestsPage = lazy(() => import('./pages/RequestsPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const CarrierPage = lazy(() => import('./pages/CarrierPage'))
@@ -154,6 +155,10 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/trips" element={<TripsPage />} />
+              {/* T3.11.19 — the sender asks for a corridor before the trip
+                  exists. Behind the login unlike the checklist: a request is
+                  addressed to somebody and needs an account to reach. */}
+              <Route path="/requests" element={<RequestsPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />
               {/* T_UX.18 — the deals tab became history: a finished delivery is
                   something you look up, not something you navigate by. `/deals`

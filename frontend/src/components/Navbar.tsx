@@ -54,6 +54,16 @@ export default function Navbar() {
                 {t('nav.trips')}
               </NavLink>
             )}
+            {/* T3.11.19 — the sender's other move, and for a third of this
+                market the better one: the trip they need does not exist yet,
+                so they ask for the corridor instead of scrolling a board.
+                Beside «Рейсы» because it is the same question asked of a
+                different tense. */}
+            {!isCarrierMode && (
+              <NavLink to="/requests" className={linkClass}>
+                {t('nav.requests')}
+              </NavLink>
+            )}
             {/* T3.11.03 — the directory belongs in the signed-in nav as much
                 as on the landing: the question "what do I need to get this
                 through" arrives while somebody is already arranging a

@@ -83,3 +83,24 @@ export interface DealChecklist {
 
 export const getDealChecklist = (dealId: string) =>
   api.get<DealChecklist>(`/api/deals/${dealId}/checklist`)
+
+/** T3.11.06 — «не успеваете», for a screen about a trip rather than about
+ *  documents. Speaks airport codes; the server resolves them to jurisdictions.
+ *
+ *  Silent by construction when it has nothing to say — no departure, an unknown
+ *  airport, an uncovered corridor, or a corridor with time to spare all come
+ *  back as `too_late: 0`. That is the point: a warning surface that guesses is
+ *  one people learn to ignore. */
+export interface LeadWarning {
+  too_late: number
+  worst_days: number | null
+  worst_title: string | null
+  corridor: string[]
+}
+
+export const getLeadWarning = (params: {
+  origin: string
+  destination: string
+  category: string
+  depart_at: string
+}) => api.get<LeadWarning>('/api/checklist/lead-warning', { params })

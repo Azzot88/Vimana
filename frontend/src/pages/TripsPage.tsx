@@ -6,6 +6,7 @@ import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
+import LeadTimeWarning from '../components/LeadTimeWarning'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import NostrBadge from '../components/NostrBadge'
@@ -416,7 +417,24 @@ export default function TripsPage() {
                       />
                     </div>
                   </div>
+                  {/* T3.11.06 — «не успеваете», at the moment a sender is
+                      deciding rather than on a page about documents.
+
+                      On the **opened** card only, and that is a deliberate
+                      narrowing of «в выдаче»: one request per card would be
+                      twenty requests for a line that is empty on nineteen of
+                      them, and a board that fires twenty calls to draw nothing
+                      is a board that loads slowly for everyone to warn nobody.
+                      Opened is also when it matters — that is when a person is
+                      about to commit. */}
+                  <LeadTimeWarning
+                    origin={trip.origin}
+                    destination={trip.destination}
+                    category={cargoCategory}
+                    departAt={trip.depart_at}
+                  />
                   {error && <p className="text-xs font-mono text-amber">{error}</p>}
+
                   <div className="flex gap-2">
                     <button
                       type="submit"

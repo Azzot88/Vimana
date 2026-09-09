@@ -421,3 +421,24 @@ def search_cities(query: str, limit: int = 8) -> list[dict]:
         ],
         key=lambda x: (-x["population"], -x["count"], x["city"]),
     )[:limit]
+
+
+def country_of(iata: str) -> str | None:
+    """T3.11.06 — the jurisdiction behind an IATA code, or `None` for one we do
+    not know.
+
+    The corpus is written about places that legislate; a trip is written about
+    airports. Something has to bridge the two, and it belongs here, beside
+    `city_of`, rather than in the checklist: the airport index is the only thing
+    that knows, and a second mapping kept next to the rules would be a second
+    answer to «в какой стране DXB».
+
+    Returns the ISO-2 code, which is what `Jurisdiction.code` uses for a country.
+    Empty for the airports whose country name never resolved to an ISO code —
+    those are honest gaps in the source data, and guessing at them would attach
+    somebody's parcel to the wrong country's rules.
+    """
+    airport = _by_iata().get((iata or "").strip().upper())
+    if airport is None or not airport.country_iso:
+        return None
+    return airport.country_iso.upper()

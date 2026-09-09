@@ -20,13 +20,15 @@ Endpoints:
 - `GET /api/checklist/cases/{case_id}` — read one back, as it was.
 - `GET /api/deals/{deal_id}/checklist` — the case bound to a deal, with the
   ticks derived from what has actually been filed (`T3.11.09`). Parties only.
+- `GET /api/checklist/lead-warning` — «не успеваете» for a screen about a trip
+  rather than about documents. Public, speaks airport codes.
 """
 from __future__ import annotations
 
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -300,4 +302,81 @@ async def deal_checklist(
         unanswered=snapshot.get("unanswered", {}),
         corridor=snapshot.get("corridor", []),
         open_mandatory=sum(1 for i in items if i.is_mandatory and not i.attached),
+    )
+
+
+class LeadWarningOut(BaseModel):
+    """T3.11.06 — «не успеваете», for a screen that is about a trip and not
+    about documents.
+
+    The wizard is a page somebody goes to. This is the same fact delivered where
+    they already are: the trip form, and the board. It carries a count and the
+    worst offender rather than the whole list — the screen has one line to spend,
+    and «нужен документ, который делается 30 дней» is the sentence that makes
+    somebody click through.
+    """
+
+    #: How many required documents can no longer be started in time.
+    too_late: int
+    #: The longest lead time among them, in days — the one that reads worst and
+    #: is therefore the one worth naming.
+    worst_days: int | None = None
+    #: What it is. Named, because «какой-то документ» is a warning nobody acts on.
+    worst_title: str | None = None
+    #: The jurisdictions consulted, so the warning can say on whose authority.
+    corridor: list[str] = Field(default_factory=list)
+
+
+@router.get("/checklist/lead-warning", response_model=LeadWarningOut)
+async def lead_warning(
+    origin: str = Query(max_length=8),
+    destination: str = Query(max_length=8),
+    category: str = Query(max_length=50),
+    depart_at: date | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Is anything on this corridor already impossible to prepare in time?
+
+    **Speaks airport codes**, because that is what a trip is written in, and
+    resolves them to jurisdictions here (`core.airports.country_of`). Putting the
+    mapping in the caller would make every screen that wants this warning carry
+    its own copy of «в какой стране DXB».
+
+    Silent by construction when it has nothing to say: no departure, an unknown
+    airport, an uncovered corridor and a corridor with time to spare all return
+    `too_late = 0`. A warning surface that guesses is one people learn to ignore,
+    and the whole value of this line is that it is rare and right.
+
+    `31 %` of this market publishes inside two days of the flight, so this is not
+    an edge case — it is the third of listings for which the answer is «нет».
+    """
+    if depart_at is None:
+        return LeadWarningOut(too_late=0)
+
+    from app.core.airports import country_of
+
+    origin_code = country_of(origin)
+    destination_code = country_of(destination)
+    if not origin_code or not destination_code:
+        return LeadWarningOut(too_late=0)
+
+    result = await build_checklist(
+        db,
+        origin=origin_code,
+        destination=destination_code,
+        category=category.strip().lower(),
+        # No questionnaire here: this screen is not asking anybody anything.
+        # Unanswered conditions therefore include their documents (§3.11.6
+        # decides strictly), which is the right bias for a warning — it says
+        # «проверьте», not «у вас всё в порядке».
+        attrs={},
+        depart_at=depart_at,
+    )
+    late = [i for i in result.items if i.too_late and i.is_mandatory]
+    worst = max(late, key=lambda i: i.lead_time_days or 0) if late else None
+    return LeadWarningOut(
+        too_late=len(late),
+        worst_days=worst.lead_time_days if worst else None,
+        worst_title=worst.title if worst else None,
+        corridor=result.corridor,
     )

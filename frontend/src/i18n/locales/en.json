@@ -5,6 +5,7 @@
     "deals": "Deals",
     "profile": "Profile",
     "rules": "Rules",
+    "requests": "Looking for a trip",
     "disputes": "Disputes",
     "users": "Users",
     "notices": "Notices",
@@ -1606,12 +1607,53 @@
       "purpose": "For yourself or for resale",
       "count": "How many"
     },
+    "attrEffect": {
+      "age_years": "Above the threshold an export permit is required",
+      "declared_value": "Duties and the duty-free allowance are calculated from it",
+      "author_known": "Decides whether a cultural-property assessment is needed",
+      "species": "Different species, different veterinary requirements",
+      "breed": "Breed bans live below the country level, in a state or a city",
+      "generation": "Hybrid generations F1–F4 are restricted separately from breed",
+      "purpose": "A personal pet and an import for resale are different regimes",
+      "count": "How many decides whether this counts as a commercial consignment"
+    },
+    "warnNamed_one": "Too late: «{{title}}» takes {{count}} day to prepare",
+    "warnNamed_other": "Too late: «{{title}}» takes {{count}} days to prepare",
+    "warnCount_one": "Too late: {{count}} required document can no longer be prepared before departure",
+    "warnCount_other": "Too late: {{count}} required documents can no longer be prepared before departure",
+    "warnNotBlocking": "This is a warning, not a refusal — you can still publish and agree.",
+    "warnSeeList": "See the list",
+
     "attrHint": {
       "author_known": "yes or no",
       "purpose": "personal or resale",
       "generation": "F1 … F5"
     }
   },
+  "requests": {
+    "title": "Looking for someone flying",
+    "lead": "The trip you need may not exist yet — half are published within days of departure. Say which corridor and when, and we will write when somebody flies it.",
+    "from": "From",
+    "to": "To",
+    "windowFrom": "From date",
+    "windowTo": "Until",
+    "what": "What you are sending",
+    "whatPlaceholder": "Documents, a small box…",
+    "whatHint": "Free text. Weight, category and value are for the carrier — right now the question is whether anybody flies this at all.",
+    "notify": "Write to me when a trip appears",
+    "submit": "Post the request",
+    "failed": "Could not post the request",
+    "mine": "My requests",
+    "mute": "Stop writing to me",
+    "unmute": "Write again",
+    "close": "Close",
+    "reopen": "Reopen",
+    "demand": "Where people are waiting",
+    "demandHint": "How many are waiting for a trip on each corridor. No names — who asked is the senders' business.",
+    "waiting_one": "{{count}} waiting",
+    "waiting_other": "{{count}} waiting"
+  },
+
   "rules": {
     "cancelTimeout": {
       "title": "Cancellation nobody answers",

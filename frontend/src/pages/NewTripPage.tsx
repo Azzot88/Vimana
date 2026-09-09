@@ -38,6 +38,7 @@ import DateTimeField from '../components/DateTimeField'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import WizardSheet from '../components/WizardSheet'
+import LeadTimeWarning from '../components/LeadTimeWarning'
 import { routeNode } from '../lib/format'
 import { usePrefs } from '../hooks/usePrefs'
 
@@ -1248,9 +1249,25 @@ export default function NewTripPage() {
             </span>
           )}
         </div>
+        {/* T3.11.06 — «не успеваете», where the trip is being written rather
+            than on a page about documents. One warning per category the carrier
+            ticked: a corridor is answered per category, and merging them would
+            say «что-то не успевает» about a trip carrying four different
+            things. */}
+        {draft.categories.map((c) => (
+          <div key={c} className="mt-3">
+            <LeadTimeWarning
+              origin={draft.nodes[0]?.code ?? ''}
+              destination={draft.nodes[draft.nodes.length - 1]?.code ?? ''}
+              category={c}
+              departAt={draft.nodes[0]?.departAt ?? ''}
+            />
+          </div>
+        ))}
       </div>
     </details>
   )
+
 
   const stepTitles = [
     t('trips.wizard.step1'),
