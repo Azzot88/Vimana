@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { getLeadWarning, type LeadWarning } from '../api/checklist'
+import { corridorForTrip, type CorridorForTrip } from '../api/checklist'
 
 /** T3.11.06 — the one red line, shown where the decision is being made.
  *
@@ -36,7 +36,7 @@ export default function LeadTimeWarning({
   departAt,
 }: Props) {
   const { t } = useTranslation()
-  const [warning, setWarning] = useState<LeadWarning | null>(null)
+  const [warning, setWarning] = useState<CorridorForTrip | null>(null)
 
   useEffect(() => {
     if (!origin || !destination || !category || !departAt) {
@@ -44,7 +44,7 @@ export default function LeadTimeWarning({
       return
     }
     let cancelled = false
-    getLeadWarning({
+    corridorForTrip({
       origin,
       destination,
       category,

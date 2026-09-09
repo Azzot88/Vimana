@@ -20,8 +20,10 @@ Endpoints:
 - `GET /api/checklist/cases/{case_id}` — read one back, as it was.
 - `GET /api/deals/{deal_id}/checklist` — the case bound to a deal, with the
   ticks derived from what has actually been filed (`T3.11.09`). Parties only.
-- `GET /api/checklist/lead-warning` — «не успеваете» for a screen about a trip
-  rather than about documents. Public, speaks airport codes.
+- `GET /api/checklist/for-trip` — what a corridor asks of one cargo, for a
+  screen about a trip rather than about documents. Public, speaks airport codes,
+  and carries both the list and the one-line summary: two readings of the same
+  computation, so two endpoints would be two places to keep in step.
 """
 from __future__ import annotations
 
@@ -305,78 +307,88 @@ async def deal_checklist(
     )
 
 
-class LeadWarningOut(BaseModel):
-    """T3.11.06 — «не успеваете», for a screen that is about a trip and not
-    about documents.
+class CorridorForTripOut(BaseModel):
+    """T3.11.06 / T3.11.07 — what this corridor asks of this cargo, for a screen
+    that is about a trip.
 
-    The wizard is a page somebody goes to. This is the same fact delivered where
-    they already are: the trip form, and the board. It carries a count and the
-    worst offender rather than the whole list — the screen has one line to spend,
-    and «нужен документ, который делается 30 дней» is the sentence that makes
-    somebody click through.
+    **One endpoint and not two.** The trip form wants the whole list («что
+    вообще требуется, если я беру такой груз»), the board wants one red line
+    («не успеваете»). Those are two readings of the same computation, and two
+    endpoints doing it would be two places to keep in step — the duplication
+    this codebase has been bitten by twice already (`HANDOVER_METHODS`, the
+    payment vocabulary). The summary travels alongside the items; a caller that
+    only needs the line ignores the rest.
     """
 
+    #: The full list, so the carrier can see what they are taking on before they
+    #: publish rather than after somebody asks.
+    items: list[ChecklistItemOut] = Field(default_factory=list)
     #: How many required documents can no longer be started in time.
-    too_late: int
-    #: The longest lead time among them, in days — the one that reads worst and
-    #: is therefore the one worth naming.
+    too_late: int = 0
+    #: The longest lead time among those — the one that reads worst and is
+    #: therefore the one worth naming.
     worst_days: int | None = None
     #: What it is. Named, because «какой-то документ» is a warning nobody acts on.
     worst_title: str | None = None
-    #: The jurisdictions consulted, so the warning can say on whose authority.
+    #: The jurisdictions consulted, so the answer can say on whose authority.
     corridor: list[str] = Field(default_factory=list)
+    #: True when the corridor is covered by published rules at all. `False` with
+    #: an empty list means «мы про этот коридор ничего не написали», which is a
+    #: different statement from «ничего не требуется» and must not be printed as
+    #: the second.
+    covered: bool = False
 
 
-@router.get("/checklist/lead-warning", response_model=LeadWarningOut)
-async def lead_warning(
+@router.get("/checklist/for-trip", response_model=CorridorForTripOut)
+async def corridor_for_trip(
     origin: str = Query(max_length=8),
     destination: str = Query(max_length=8),
     category: str = Query(max_length=50),
     depart_at: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Is anything on this corridor already impossible to prepare in time?
+    """What this corridor asks for, addressed by airport codes.
 
-    **Speaks airport codes**, because that is what a trip is written in, and
-    resolves them to jurisdictions here (`core.airports.country_of`). Putting the
-    mapping in the caller would make every screen that wants this warning carry
-    its own copy of «в какой стране DXB».
+    **Speaks IATA**, because that is what a trip is written in, and resolves to
+    jurisdictions here (`core.airports.country_of`). Putting the mapping in the
+    caller would make every screen that wants this carry its own copy of «в
+    какой стране DXB».
 
-    Silent by construction when it has nothing to say: no departure, an unknown
-    airport, an uncovered corridor and a corridor with time to spare all return
-    `too_late = 0`. A warning surface that guesses is one people learn to ignore,
-    and the whole value of this line is that it is rare and right.
+    Silent by construction when it has nothing to say: an unknown airport or an
+    uncovered corridor comes back empty and `covered = False`. A surface that
+    guesses is one people learn to ignore, and «ничего не требуется» is a claim
+    this platform is not entitled to make about rules it has not written.
 
-    `31 %` of this market publishes inside two days of the flight, so this is not
-    an edge case — it is the third of listings for which the answer is «нет».
+    No questionnaire is asked here — this screen is not asking anybody anything —
+    so undecided conditions include their documents (`§3.11.6` decides strictly).
+    That is the right bias for a carrier weighing a cargo: it says «проверьте»,
+    never «у вас всё в порядке».
     """
-    if depart_at is None:
-        return LeadWarningOut(too_late=0)
-
     from app.core.airports import country_of
 
     origin_code = country_of(origin)
     destination_code = country_of(destination)
     if not origin_code or not destination_code:
-        return LeadWarningOut(too_late=0)
+        return CorridorForTripOut()
 
     result = await build_checklist(
         db,
         origin=origin_code,
         destination=destination_code,
         category=category.strip().lower(),
-        # No questionnaire here: this screen is not asking anybody anything.
-        # Unanswered conditions therefore include their documents (§3.11.6
-        # decides strictly), which is the right bias for a warning — it says
-        # «проверьте», not «у вас всё в порядке».
         attrs={},
         depart_at=depart_at,
     )
     late = [i for i in result.items if i.too_late and i.is_mandatory]
     worst = max(late, key=lambda i: i.lead_time_days or 0) if late else None
-    return LeadWarningOut(
+    return CorridorForTripOut(
+        items=[ChecklistItemOut(**vars(i)) for i in result.items],
         too_late=len(late),
         worst_days=worst.lead_time_days if worst else None,
         worst_title=worst.title if worst else None,
         corridor=result.corridor,
+        # `corridor` is non-empty exactly when at least one jurisdiction in the
+        # chain was found; the items being empty on top of that is «эти правила
+        # ничего не требуют», which is a real answer.
+        covered=bool(result.corridor),
     )

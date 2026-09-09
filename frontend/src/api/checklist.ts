@@ -12,7 +12,7 @@ export interface ChecklistItem {
   issuer: string
   obtained_by: 'sender' | 'carrier' | 'recipient'
   is_mandatory: boolean
-  valid_for_days: number | null
+  valid_for_days: number |}) => api.get<CorridorForTrip>('/api/checklist/for-trip', { params })
   lead_time_days: number | null
   /** Which jurisdiction asks for it. Shown because «кто этого требует» is the
    *  first thing anybody disputes, and a merged list that cannot say loses. */
@@ -84,23 +84,29 @@ export interface DealChecklist {
 export const getDealChecklist = (dealId: string) =>
   api.get<DealChecklist>(`/api/deals/${dealId}/checklist`)
 
-/** T3.11.06 — «не успеваете», for a screen about a trip rather than about
- *  documents. Speaks airport codes; the server resolves them to jurisdictions.
+/** T3.11.06 / T3.11.07 — what a corridor asks of one cargo, addressed by
+ *  airport codes because that is what a trip is written in.
  *
- *  Silent by construction when it has nothing to say — no departure, an unknown
- *  airport, an uncovered corridor, or a corridor with time to spare all come
- *  back as `too_late: 0`. That is the point: a warning surface that guesses is
- *  one people learn to ignore. */
-export interface LeadWarning {
+ *  **One shape for two readings.** The trip form wants the whole list («что
+ *  требуется, если я беру такой груз»); the board wants one red line («не
+ *  успеваете»). Same computation, so the summary travels with the items rather
+ *  than living behind a second endpoint that would need keeping in step.
+ *
+ *  `covered` is the difference between «мы про этот коридор ничего не написали»
+ *  and «ничего не требуется». Printing the second where the first is true would
+ *  be the platform vouching for rules it has never read. */
+export interface CorridorForTrip {
+  items: ChecklistItem[]
   too_late: number
   worst_days: number | null
   worst_title: string | null
   corridor: string[]
+  covered: boolean
 }
 
-export const getLeadWarning = (params: {
+export const corridorForTrip = (params: {
   origin: string
   destination: string
   category: string
-  depart_at: string
-}) => api.get<LeadWarning>('/api/checklist/lead-warning', { params })
+  depart_at?: string
+}) => api.get<CorridorForTrip>('/api/checklist/for-trip', { params })

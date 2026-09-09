@@ -6,6 +6,8 @@ subjects, one module behind them.
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 
 # ── postal services ───────────────────────────────────────────────────────
 
@@ -331,3 +333,62 @@ def test_bitcoin_is_not_listed_twice():
 
     names = [e["name"].casefold() for e in payment_systems("US", "RU")]
     assert "bitcoin" not in names, names
+
+
+# ── T3.11.07 · the picker orders itself by what carriers actually chose ────
+
+
+async def test_postal_services_are_ordered_by_real_use(client, carrier_headers):
+    """Owner's «можно», unblocked once the picker was wired to the form.
+
+    The file's order is a seed — how often the market *names* a service — and a
+    seed only has to answer the cold start. Once real trips carry real choices
+    those outrank it, the same arrangement as `Category.usage_count` beating
+    `sort_order`.
+    """
+    seeded = await client.get("/api/postal-services", params={"country": "US"})
+    assert seeded.status_code == 200, seeded.text
+    names = [e["name"] for e in seeded.json()]
+    if len(names) < 2:
+        import pytest
+
+        pytest.skip("the US slice needs two services for order to mean anything")
+
+    # Pick the one the file puts **last** and have real trips choose it.
+    underdog = names[-1]
+    for _ in range(3):
+        trip = await client.post(
+            "/api/trips",
+            headers=carrier_headers,
+            json={
+                "payment_model": "cash_on_delivery",
+                "legs": [
+                    {
+                        "origin": "DXB",
+                        "destination": "JFK",
+                        "depart_at": (
+                            datetime.now(timezone.utc) + timedelta(days=5)
+                        ).isoformat(),
+                    }
+                ],
+                "handover_destination": {
+                    "methods": ["local_post"],
+                    "postal_services": [underdog],
+                },
+            },
+        )
+        assert trip.status_code == 201, trip.text
+
+    reordered = await client.get("/api/postal-services", params={"country": "US"})
+    assert reordered.json()[0]["name"] == underdog
+
+    # Nothing was hidden: a picker that dropped an unused service could not
+    # describe the one pick-up point down somebody's road.
+    assert {e["name"] for e in reordered.json()} == set(names)
+
+
+async def test_a_country_nobody_flies_to_keeps_the_seeded_order(client):
+    """No trips, no counts, no change — a cold start reads exactly as before."""
+    first = await client.get("/api/postal-services", params={"country": "PL"})
+    second = await client.get("/api/postal-services", params={"country": "PL"})
+    assert [e["name"] for e in first.json()] == [e["name"] for e in second.json()]

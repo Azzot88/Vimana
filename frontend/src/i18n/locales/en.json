@@ -1567,6 +1567,12 @@
       "superseded": "superseded"
     }
   },
+  "corridor": {
+    "summary_one": "{{corridor}} · {{category}}: {{count}} required document",
+    "summary_other": "{{corridor}} · {{category}}: {{count}} required documents",
+    "notBlocking": "This does not stop you publishing — the platform records that you were told, it does not rule for the authority."
+  },
+
   "checklist": {
     "title": "What you need to collect",
     "lead": "We assemble the documents your corridor asks for from published rules, and work out what already has to be started. No account needed.",

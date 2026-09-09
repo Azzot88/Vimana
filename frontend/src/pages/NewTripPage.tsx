@@ -38,7 +38,7 @@ import DateTimeField from '../components/DateTimeField'
 import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import WizardSheet from '../components/WizardSheet'
-import LeadTimeWarning from '../components/LeadTimeWarning'
+import CorridorRequirements from '../components/CorridorRequirements'
 import { routeNode } from '../lib/format'
 import { usePrefs } from '../hooks/usePrefs'
 
@@ -1249,14 +1249,16 @@ export default function NewTripPage() {
             </span>
           )}
         </div>
-        {/* T3.11.06 — «не успеваете», where the trip is being written rather
-            than on a page about documents. One warning per category the carrier
-            ticked: a corridor is answered per category, and merging them would
-            say «что-то не успевает» about a trip carrying four different
-            things. */}
+        {/* T3.11.07 — what the corridor asks of each cargo the carrier ticked.
+            The whole corpus was written for this moment: somebody agreeing to
+            carry animals is agreeing to something a border has opinions about,
+            and the honest place to say so is the screen where they tick it.
+            One panel per category, because a corridor is answered per category
+            and merging them would say «что-то требуется» about a trip carrying
+            four different things. */}
         {draft.categories.map((c) => (
           <div key={c} className="mt-3">
-            <LeadTimeWarning
+            <CorridorRequirements
               origin={draft.nodes[0]?.code ?? ''}
               destination={draft.nodes[draft.nodes.length - 1]?.code ?? ''}
               category={c}
@@ -1267,6 +1269,7 @@ export default function NewTripPage() {
       </div>
     </details>
   )
+
 
 
   const stepTitles = [
