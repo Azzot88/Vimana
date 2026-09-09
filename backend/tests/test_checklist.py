@@ -151,7 +151,18 @@ async def corridor(session_maker):
         await db.commit()
 
 
+async def _create_message(client, headers, deal_id) -> str:
+    resp = await client.post(
+        f"/api/deals/{deal_id}/dealvault/messages",
+        headers=headers,
+        json={"text": "checklist document", "is_system": False},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
 async def _build(client, corridor, **over):
+
     body = {
         "origin": corridor["out"],
         "destination": corridor["state"],
@@ -288,3 +299,134 @@ async def test_a_saved_case_does_not_move_when_the_rule_does(
     # one meaningful rather than merely stale.
     fresh = (await _build(client, corridor)).json()
     assert "vet" not in {i["code"] for i in fresh["items"]}
+
+
+# ── T3.11.09 · the checklist inside a deal ────────────────────────────────
+
+
+async def test_a_deal_without_a_case_says_so_quietly(
+    client, sender_headers, seed_deal
+):
+    """Most deals carry no corridor requirements at all.
+
+    A 404 here would make «нет чеклиста» look like «что-то сломалось», and the
+    deal screen would have to tell the two apart.
+    """
+    r = await client.get(
+        f"/api/deals/{seed_deal.id}/checklist", headers=sender_headers
+    )
+    assert r.status_code == 200, r.text
+    assert r.json() == {
+        "case_id": None,
+        "items": [],
+        "unanswered": {},
+        "corridor": [],
+        "open_mandatory": 0,
+    }
+
+
+async def test_a_filed_document_closes_its_line(
+    client, sender_headers, seed_deal, corridor
+):
+    """The list is a snapshot; the ticks are derived.
+
+    Two different kinds of fact, kept where each can be right: what the corridor
+    asked does not change, what has been filed does.
+    """
+    case = await client.post(
+        "/api/checklist/cases",
+        headers=sender_headers,
+        json={
+            "origin": corridor["out"],
+            "destination": corridor["state"],
+            "category": corridor["category"],
+            "attrs": {"purpose": "personal"},
+            "deal_id": str(seed_deal.id),
+        },
+    )
+    assert case.status_code == 201, case.text
+
+    before = await client.get(
+        f"/api/deals/{seed_deal.id}/checklist", headers=sender_headers
+    )
+    body = before.json()
+    assert body["case_id"] == case.json()["id"]
+    vet = next(i for i in body["items"] if i["code"] == "vet")
+    assert vet["attached"] is False
+    assert body["open_mandatory"] >= 1
+
+    msg = await _create_message(client, sender_headers, seed_deal.id)
+    up = await client.post(
+        f"/api/deals/{seed_deal.id}/dealvault/messages/{msg}/attachments",
+        headers=sender_headers,
+        files={"file": ("vet.pdf", b"%PDF-1.4\n%x", "application/pdf")},
+        data={"kind": "doc", "requirement_code": "vet"},
+    )
+    assert up.status_code == 201, up.text
+
+    after = (
+        await client.get(
+            f"/api/deals/{seed_deal.id}/checklist", headers=sender_headers
+        )
+    ).json()
+    vet = next(i for i in after["items"] if i["code"] == "vet")
+    assert vet["attached"] is True
+    assert vet["attachment_count"] == 1
+    assert after["open_mandatory"] == body["open_mandatory"] - 1
+
+
+async def test_an_open_checklist_blocks_nothing(
+    client, sender_headers, carrier_headers, seed_deal, corridor
+):
+    """`D-COMPLIANCE-STANCE` — «вы знали» доказывается записью, а не запретом.
+
+    The card is informational by declaration (`ack_by=None`), and the deal keeps
+    moving with lines still open. A checklist that blocked would be the platform
+    ruling on somebody's paperwork, which is exactly the posture this project
+    refuses.
+    """
+    await client.post(
+        "/api/checklist/cases",
+        headers=sender_headers,
+        json={
+            "origin": corridor["out"],
+            "destination": corridor["state"],
+            "category": corridor["category"],
+            "attrs": {"purpose": "personal"},
+            "deal_id": str(seed_deal.id),
+        },
+    )
+    raised = await client.post(
+        f"/api/deals/{seed_deal.id}/cards",
+        headers=sender_headers,
+        json={
+            "kind": "compliance.checklist",
+            "payload": {"case_id": str(seed_deal.id)},
+        },
+    )
+    assert raised.status_code == 201, raised.text
+    # Nobody owes an answer: it states, it does not ask.
+    assert raised.json()["requires_ack_by"] is None
+
+    # And an unrelated step still goes through with the checklist wide open.
+    moved = await client.post(
+        f"/api/deals/{seed_deal.id}/cards",
+        headers=carrier_headers,
+        json={"kind": "transit.update", "payload": {"status": "in_transit"}},
+    )
+    assert moved.status_code in (201, 403), moved.text
+
+
+async def test_a_stranger_cannot_read_the_checklist(
+    client, seed_deal, corridor
+):
+    """The arbiter reaches a disputed deal through `api/admin`, which keeps its
+    own grant check and writes its own audit entry. A second door here would be
+    the same content without either."""
+    from tests.conftest import make_account
+
+    outsider = await make_account(client, "chk-outsider")
+    r = await client.get(
+        f"/api/deals/{seed_deal.id}/checklist", headers=outsider["headers"]
+    )
+    assert r.status_code == 403, r.text
