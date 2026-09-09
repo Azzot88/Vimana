@@ -1,8 +1,8 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum as SAEnum, Float, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum as SAEnum, Float, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -508,3 +508,69 @@ class ChatMessage(Base):
         nonce, ct = encrypt(value)
         self.text_nonce = nonce
         self.text_ciphertext = ct
+
+
+class SenderRequest(Base):
+    """T3.11.19 — «кто летит в ближайшие дни ЛА — Москва?», as a row.
+
+    **366 posts in the market dump take this shape**, and they are not a failure
+    to use the board. At a five-day median horizon the sender is rational: at the
+    moment they look, the trip they need **does not exist yet**. Scrolling a
+    listing answers a question about the present; a request answers one about
+    next week.
+
+    Deliberately **not** an `Order`. An order is half of a deal — it carries a
+    declared value, a recipient, a category and a trip it is matched to, and
+    every one of those is a decision the sender has not made yet. Filing a
+    request as an order would mean inventing four answers so the row would save,
+    and then a matching engine reading them as though somebody had given them.
+
+    `notify` is what makes it a subscription rather than a classified ad: with it
+    on, a trip published into this corridor reaches the person who asked. That is
+    a `marketplace`-class notification and switchable (`T3.32`) — a corridor
+    somebody stopped caring about has to be silenceable without leaving.
+    """
+
+    __tablename__ = "sender_requests"
+    __table_args__ = (
+        # The two reads: «my requests», and «who is waiting for this corridor»
+        # when a trip is published. The second is the hot one — it runs on every
+        # publication — so it leads with the corridor and carries the window.
+        Index("ix_sender_requests_mine", "sender_id", "created_at"),
+        Index(
+            "ix_sender_requests_corridor",
+            "origin",
+            "destination",
+            "window_to",
+            "is_open",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    origin: Mapped[str] = mapped_column(String(100))
+    destination: Mapped[str] = mapped_column(String(100))
+    # A window, not a date. «В ближайшие дни» is the actual request, and a single
+    # date would force a precision the sender does not have — then miss a trip
+    # leaving the day before.
+    window_from: Mapped[date] = mapped_column(Date)
+    window_to: Mapped[date] = mapped_column(Date)
+    # Free text, and the only description there is. Category and weight are
+    # deliberately absent: the sender is asking whether anybody flies at all,
+    # and a form demanding a category before that is answered is a form nobody
+    # fills in.
+    what: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # Off means «I am asking, do not write to me» — a real answer, and the
+    # difference between a request and a subscription.
+    notify: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+    # Closed by the sender, or by the window running out. Kept rather than
+    # deleted: what people asked for and did not get is the most useful thing
+    # this table knows.
+    is_open: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

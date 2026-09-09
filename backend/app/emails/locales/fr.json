@@ -89,6 +89,19 @@
     },
     "note": "Vous pouvez désactiver les notifications de transaction dans votre profil."
   },
+  "corridor_trip": {
+    "subject": "Vimana · Un vol sur le corridor que vous suiviez",
+    "preheader": "Quelqu'un vole là où vous cherchiez",
+    "heading": "Il y a un vol",
+    "body": [
+      "Vous aviez posé une question sur ce corridor — un vol vient d'être publié et tombe dans vos dates.",
+      "Nous n'avons pas vérifié le transporteur à votre place : lisez le profil, les avis et les conditions avant de vous engager."
+    ],
+    "facts_route": "Itinéraire",
+    "cta": "Ouvrir le vol",
+    "note": "Les messages sur les vols de vos corridors se désactivent dans le profil."
+  },
+
   "trip_rescheduled": {
     "subject": "Vimana · Le transporteur a déplacé le vol",
     "preheader": "La date de départ de votre transaction a changé",

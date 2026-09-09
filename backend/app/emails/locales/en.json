@@ -89,6 +89,19 @@
     },
     "note": "You can turn deal notifications off in your profile."
   },
+  "corridor_trip": {
+    "subject": "Vimana · A trip on the corridor you asked about",
+    "preheader": "Somebody is flying where you were looking",
+    "heading": "There is a trip",
+    "body": [
+      "You asked about this corridor — a trip has been published and it falls inside your dates.",
+      "We have not vetted the carrier for you: read the profile, the reviews and the terms before you agree anything."
+    ],
+    "facts_route": "Route",
+    "cta": "Open the trip",
+    "note": "Letters about trips on your corridors can be switched off in your profile."
+  },
+
   "trip_rescheduled": {
     "subject": "Vimana · The carrier moved the flight",
     "preheader": "The departure date on your deal has changed",

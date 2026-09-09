@@ -206,6 +206,16 @@ async def create_trip(
         # Broker unreachable in dev — the trip still exists in Postgres.
         pass
 
+    # T3.11.19 — the people who asked for this corridor before it existed.
+    # Dispatched after the commit, like the publish above: a letter sent inside
+    # the transaction is one that can arrive about a trip that never did.
+    from app.tasks.notifications import notify_corridor_subscribers
+
+    try:
+        notify_corridor_subscribers.delay(str(trip.id))
+    except Exception:
+        pass
+
     return trip
 
 

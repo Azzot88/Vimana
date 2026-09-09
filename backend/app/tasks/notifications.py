@@ -816,3 +816,72 @@ def notify_trip_rescheduled(trip_id: str, was: str, now: str) -> None:
                     _notify_user(
                         person, "trip_rescheduled", route=route, was=was, now=now
                     )
+
+
+@celery_app.task(name="app.tasks.notifications.notify_corridor_subscribers")
+def notify_corridor_subscribers(trip_id: str) -> None:
+    """T3.11.19 — a trip published into a corridor somebody is waiting for.
+
+    **This is the feature, not a nicety.** 366 posts in the market dump are
+    «кто летит в ближайшие дни ЛА — Москва?», and at a five-day median horizon
+    that is the rational move: at the moment the sender looks, the trip they need
+    does not exist. The subscription is therefore worth more than the search, and
+    a competitor already advertises the same automation in the same channel — so
+    this is minimum parity, not an advantage.
+
+    Matched on the corridor **and the window**: a trip leaving after somebody's
+    last useful day is not their trip, and a notification about it teaches people
+    to ignore the next one. The request's own switch (`notify`) is checked before
+    the account's class switch, because «я спрашиваю, не пишите мне» is a
+    different answer from «выключил маркетплейсовые письма».
+
+    Dispatched from `api/trips` after publication commits — a notification sent
+    inside the transaction is one that can arrive about a trip that never
+    existed.
+
+    Called by: `api.trips.create_trip`.
+    """
+    from sqlalchemy import select
+
+    from app.models.marketplace import SenderRequest, Trip
+    from app.models.user import User
+
+    with SyncSessionLocal() as db:
+        trip = db.get(Trip, trip_id)
+        if not trip or trip.depart_at is None:
+            return
+        departs = trip.depart_at.date()
+
+        waiting = (
+            db.execute(
+                select(SenderRequest).where(
+                    SenderRequest.origin == trip.origin,
+                    SenderRequest.destination == trip.destination,
+                    SenderRequest.is_open.is_(True),
+                    SenderRequest.notify.is_(True),
+                    SenderRequest.window_from <= departs,
+                    SenderRequest.window_to >= departs,
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        seen: set[str] = set()
+        for request in waiting:
+            # One letter per person per trip, even if they filed the same
+            # corridor twice: the second one is a duplicate of their own
+            # question, not a second piece of news.
+            key = str(request.sender_id)
+            if key in seen or key == str(trip.carrier_id):
+                continue
+            seen.add(key)
+            person = db.get(User, key)
+            if person:
+                _notify_user(
+                    person,
+                    "corridor_trip",
+                    origin=trip.origin,
+                    destination=trip.destination,
+                    trip_id=str(trip.id),
+                )

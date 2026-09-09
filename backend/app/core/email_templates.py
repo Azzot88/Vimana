@@ -81,6 +81,10 @@ _LETTERS: dict[str, dict[str, Any]] = {
     # written into a chat is how this event exists on the market today — a line
     # nobody can act on and nothing records.
     "trip_rescheduled": {"facts": ["route", "was", "now"]},
+    # T3.11.19 — a trip appeared in a corridor this person asked about before it
+    # existed. The route is a fact rather than prose: it is the whole content of
+    # the letter, and a sentence would bury the one line they are scanning for.
+    "corridor_trip": {"cta": True, "facts": ["route"]},
 }
 
 _env = Environment(
@@ -174,6 +178,7 @@ def sample_context(kind: str) -> dict[str, Any]:
             "was": "2026-09-12 23:40 UTC",
             "now": "2026-09-15 08:05 UTC",
         },
+        "corridor_trip": {"route": "LAX → SVO"},
     }
     return samples[kind]
 

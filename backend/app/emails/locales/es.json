@@ -89,6 +89,19 @@
     },
     "note": "Puedes desactivar las notificaciones de acuerdos en tu perfil."
   },
+  "corridor_trip": {
+    "subject": "Vimana · Hay un vuelo en tu corredor",
+    "preheader": "Alguien vuela donde estabas buscando",
+    "heading": "Hay un vuelo",
+    "body": [
+      "Preguntaste por este corredor: se ha publicado un vuelo y entra en tus fechas.",
+      "No hemos verificado al transportista por ti: mira el perfil, las reseñas y las condiciones antes de acordar nada."
+    ],
+    "facts_route": "Ruta",
+    "cta": "Abrir el vuelo",
+    "note": "Los correos sobre vuelos en tus corredores se desactivan en el perfil."
+  },
+
   "trip_rescheduled": {
     "subject": "Vimana · El transportista movió el vuelo",
     "preheader": "Cambió la fecha de salida de tu acuerdo",

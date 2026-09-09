@@ -88,6 +88,13 @@ EVENT_CLASSES: tuple[EventClass, ...] = (
     # our table layout.
     EventClass("deal", kinds=("deal_status", "trip_rescheduled")),
     EventClass("deadline", kinds=("deadline_reminder",)),
+    # T3.11.19 — «кто летит в ближайшие дни ЛА — Москва?» is 366 posts in the
+    # dump. The sender does not scroll a board, they shout into a corridor and
+    # wait, and at a five-day median horizon that is rational: **at the moment
+    # they look, the trip they need does not exist yet.** So the subscription is
+    # worth more than the search, and it is switchable — a corridor somebody
+    # stopped caring about must be silenceable without leaving the platform.
+    EventClass("marketplace", kinds=("corridor_trip",)),
     # No producer yet. Declared so the taxonomy is whole and so the day one
     # appears is a one-word change here rather than a migration.
     EventClass("vault", kinds=(), emitted=False),

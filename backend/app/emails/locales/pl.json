@@ -89,6 +89,19 @@
     },
     "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
   },
+  "corridor_trip": {
+    "subject": "Vimana · Pojawił się lot na Twoim korytarzu",
+    "preheader": "Ktoś leci tam, gdzie szukałeś",
+    "heading": "Jest lot",
+    "body": [
+      "Pytałeś o ten korytarz — lot został opublikowany i mieści się w Twoich datach.",
+      "Nie sprawdziliśmy przewoźnika za Ciebie: przejrzyj profil, opinie i warunki, zanim się umówisz."
+    ],
+    "facts_route": "Trasa",
+    "cta": "Otwórz lot",
+    "note": "Listy o lotach na Twoich korytarzach można wyłączyć w profilu."
+  },
+
   "trip_rescheduled": {
     "subject": "Vimana · Przewoźnik przełożył lot",
     "preheader": "Zmieniła się data wylotu w Twojej transakcji",
