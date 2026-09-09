@@ -394,3 +394,60 @@ class RuleQuestion(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class ComplianceCase(Base):
+    """T3.11.06 — one person's checklist, frozen at the moment they asked.
+
+    **`user_id` is nullable on purpose.** The wizard runs before registration:
+    the corpus is free information, and a sign-up wall in front of free
+    information is a sign-up form pretending to be a service. A case gains an
+    owner if and when somebody logs in and keeps it.
+
+    **`checklist` is a snapshot, not a query.** Publishing a new version of a
+    rule must not rewrite the list under somebody who is already standing in a
+    queue with the old one — the same principle as `carriage_rules` copied into
+    a trip (`T_UX.15`) and terms frozen at handover (`MASTERPLAN §4.1`). What a
+    changed rule produces is a notice, in the shape of `terms.amended`, not a
+    silent edit.
+
+    `attrs` is kept beside it because the snapshot alone cannot be re-derived:
+    the same corridor with a different `purpose` is a different list, and an
+    arbiter reading this a year later needs to see what was answered, not only
+    what was concluded.
+    """
+
+    __tablename__ = "compliance_cases"
+    __table_args__ = (
+        # The two ways this is looked up: «my cases» and «the case behind this
+        # deal». Both are equality on a nullable FK, and neither is a scan.
+        Index("ix_compliance_cases_user", "user_id", "created_at"),
+        Index("ix_compliance_cases_deal", "deal_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    origin: Mapped[str] = mapped_column(String(16))
+    destination: Mapped[str] = mapped_column(String(16))
+    # Jurisdiction codes the route passes through. A list rather than a column
+    # per hop: on the founding corridor there is always at least one, and there
+    # is no ceiling that would not be arbitrary.
+    transit: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    category_key: Mapped[str] = mapped_column(String(50))
+    attrs: Mapped[dict] = mapped_column(JSON, default=dict)
+    checklist: Mapped[dict] = mapped_column(JSON, default=dict)
+    # The date the countdown was computed against. Stored because it is an input
+    # to the snapshot: the same list against a different departure is a different
+    # set of red lines.
+    depart_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    trip_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("trips.id"), nullable=True
+    )
+    deal_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("deals.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

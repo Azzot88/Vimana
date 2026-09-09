@@ -41,7 +41,8 @@ from app.models.platform_params import (  # noqa: F401,E402
     GLOBAL_SCOPE, ParamValueType, PlatformParameter,
 )
 from app.models.rules import (  # noqa: F401,E402
-    DocumentRequirement, Jurisdiction, JurisdictionKind, ObtainedBy,
-    RuleDirection, RuleSection, RuleSet, RuleSource, RuleStatus, RuleStatusEvent,
+    ComplianceCase, DocumentRequirement, Jurisdiction, JurisdictionKind,
+    ObtainedBy, RuleDirection, RuleSection, RuleSet, RuleSource, RuleStatus,
+    RuleStatusEvent,
 )
 from app.models.role_grant import RoleGrant, RoleGrantEvent  # noqa: F401,E402
