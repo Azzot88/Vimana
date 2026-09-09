@@ -12,7 +12,7 @@ export interface ChecklistItem {
   issuer: string
   obtained_by: 'sender' | 'carrier' | 'recipient'
   is_mandatory: boolean
-  valid_for_days: number |}) => api.get<CorridorForTrip>('/api/checklist/for-trip', { params })
+  valid_for_days: number | null
   lead_time_days: number | null
   /** Which jurisdiction asks for it. Shown because «кто этого требует» is the
    *  first thing anybody disputes, and a merged list that cannot say loses. */
