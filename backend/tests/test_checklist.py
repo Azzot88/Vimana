@@ -163,6 +163,12 @@ async def corridor(session_maker):
         await db.commit()
 
 
+#: A PDF small enough to type and large enough to pass content validation
+#: (`core.file_validation` refuses anything under its floor). Same bytes as
+#: `test_file_validation.PDF_MIN`.
+_PDF_MIN = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
+
+
 async def _create_message(client, headers, deal_id) -> str:
     resp = await client.post(
         f"/api/deals/{deal_id}/dealvault/messages",
@@ -371,7 +377,9 @@ async def test_a_filed_document_closes_its_line(
     up = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages/{msg}/attachments",
         headers=sender_headers,
-        files={"file": ("vet.pdf", b"%PDF-1.4\n%x", "application/pdf")},
+        # `PDF_MIN` from `test_file_validation`: content validation has a floor,
+        # and `%PDF-1.4` alone is under it.
+        files={"file": ("vet.pdf", _PDF_MIN, "application/pdf")},
         data={"kind": "doc", "requirement_code": "vet"},
     )
     assert up.status_code == 201, up.text
@@ -397,7 +405,7 @@ async def test_an_open_checklist_blocks_nothing(
     ruling on somebody's paperwork, which is exactly the posture this project
     refuses.
     """
-    await client.post(
+    case = await client.post(
         "/api/checklist/cases",
         headers=sender_headers,
         json={
@@ -408,12 +416,13 @@ async def test_an_open_checklist_blocks_nothing(
             "deal_id": str(seed_deal.id),
         },
     )
+    assert case.status_code == 201, case.text
     raised = await client.post(
         f"/api/deals/{seed_deal.id}/cards",
         headers=sender_headers,
         json={
             "kind": "compliance.checklist",
-            "payload": {"case_id": str(seed_deal.id)},
+            "payload": {"case_id": case.json()["id"]},
         },
     )
     assert raised.status_code == 201, raised.text
@@ -424,9 +433,10 @@ async def test_an_open_checklist_blocks_nothing(
     moved = await client.post(
         f"/api/deals/{seed_deal.id}/cards",
         headers=carrier_headers,
-        json={"kind": "transit.update", "payload": {"status": "in_transit"}},
+        json={"kind": "transit.update", "payload": {"stage": "departed"}},
     )
-    assert moved.status_code in (201, 403), moved.text
+    assert moved.status_code == 201, moved.text
+
 
 
 async def test_a_stranger_cannot_read_the_checklist(
@@ -435,10 +445,16 @@ async def test_a_stranger_cannot_read_the_checklist(
     """The arbiter reaches a disputed deal through `api/admin`, which keeps its
     own grant check and writes its own audit entry. A second door here would be
     the same content without either."""
-    from tests.conftest import make_account
+    from tests.conftest import SEED_PASSWORD, make_account, unique_email
 
-    outsider = await make_account(client, "chk-outsider")
-    r = await client.get(
-        f"/api/deals/{seed_deal.id}/checklist", headers=outsider["headers"]
+    email = unique_email("chk-outsider")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Out"}
     )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    r = await client.get(f"/api/deals/{seed_deal.id}/checklist", headers=hdr)
     assert r.status_code == 403, r.text
+
