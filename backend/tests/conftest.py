@@ -1622,6 +1622,26 @@ async def _ensure_trip_chain(engine) -> None:
                 "WHERE payment_model = 'off_platform'"
             )
         )
+        # …and everything older than that. `vimana_test` is never reset
+        # (`ENVIRONMENT §8`), so it holds rows from **every** vocabulary this
+        # field has had: `on_delivery`/`escrow`/`prepaid` before `0064`,
+        # `transfer_on_delivery` after it. The two UPDATEs above are the
+        # migration's own mapping and only know the two words `0084` replaced;
+        # adding the CHECK on top of the older rows is what failed, and it failed
+        # in the session fixture, so all 2 356 tests errored at setup.
+        #
+        # NULLed rather than mapped, and only here: on a migrated database these
+        # values cannot exist, so this is not a rule about the product. In a test
+        # database they are debris from vocabularies that no longer exist, and
+        # NULL is what «did not say» looks like — inventing `cash_on_delivery`
+        # for them would seed fixtures with an answer nobody gave.
+        await conn.execute(
+            text(
+                "UPDATE trips SET payment_model = NULL "
+                "WHERE payment_model IS NOT NULL AND payment_model NOT IN "
+                "('cash_on_delivery','emoney_on_delivery','platform_wallet')"
+            )
+        )
         await conn.execute(
             text(
                 "ALTER TABLE trips ADD CONSTRAINT ck_trips_payment_model CHECK ("
