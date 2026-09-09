@@ -948,3 +948,55 @@ async def test_the_reschedule_letter_names_the_route_and_both_dates(client):
         assert letter.subject.strip()
         assert "DXB" in letter.text
         assert "2026-09-15 08:05 UTC" in letter.text
+
+
+# ── T3.11.17 ч.2 / T3.11.18 · buying goods to order ───────────────────────
+
+
+def _buyout_trip(**over):
+    body = {
+        "payment_model": "cash_on_delivery",
+        "legs": [_leg("DXB", "JFK", 5)],
+        "services": ["purchase_on_request"],
+        "buyout_limit": 500.0,
+        "buyout_paid_by": "carrier_credit",
+    }
+    body.update(over)
+    return body
+
+
+async def test_the_buyout_offer_needs_a_ceiling_and_a_payer(client, carrier_headers):
+    """T3.11.18 — «выкуплю товар» is not offerable on its own.
+
+    The scheme is quoted verbatim in the market dump: a toothbrush, then an
+    irrigator, then silence. What is at risk is the carrier's own money, so a
+    form that takes the offer without a ceiling and without an answer to «кто
+    платит за товар» reproduces it with a logo on.
+    """
+    for missing in ("buyout_limit", "buyout_paid_by"):
+        body = _buyout_trip()
+        body.pop(missing)
+        r = await client.post("/api/trips", headers=carrier_headers, json=body)
+        assert r.status_code == 422, missing
+
+
+async def test_buyout_terms_without_the_service_are_refused(client, carrier_headers):
+    """A ceiling on a trip that buys nothing answers no question, and would show
+    a sender a limit for a service they cannot ask for."""
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_buyout_trip(services=None),
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_the_offer_and_its_terms_survive_the_round_trip(
+    client, carrier_headers
+):
+    r = await client.post(
+        "/api/trips", headers=carrier_headers, json=_buyout_trip()
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["buyout_limit"] == 500.0
+    assert r.json()["buyout_paid_by"] == "carrier_credit"

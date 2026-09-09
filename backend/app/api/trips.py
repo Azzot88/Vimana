@@ -131,6 +131,10 @@ def _apply_terms(trip: Trip, body: TripCreate, carriage_fallback: str | None) ->
     trip.services = _services_with_derived(body)
     trip.payment_model = body.payment_model
     trip.payment_systems = body.payment_systems
+    # T3.11.18 — the ceiling and who pays for the goods. Written together with
+    # the service they belong to; `TripCreate` refuses one without the other.
+    trip.buyout_limit = body.buyout_limit
+    trip.buyout_paid_by = body.buyout_paid_by
     # T_UX.15 — the carrier's standing rules are **copied** into the trip, not
     # referenced. Edited later they must not rewrite what a sender read when
     # they chose this trip. `None` means "use my template"; an explicit empty
@@ -523,6 +527,8 @@ async def list_trips(
                     services=t.services,
                     payment_model=t.payment_model,
                     payment_systems=t.payment_systems,
+                    buyout_limit=t.buyout_limit,
+                    buyout_paid_by=t.buyout_paid_by,
                     carriage_rules=t.carriage_rules,
                     status=t.status.value if hasattr(t.status, "value") else str(t.status),
                     created_at=t.created_at,

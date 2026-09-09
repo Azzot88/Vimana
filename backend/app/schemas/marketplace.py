@@ -219,6 +219,12 @@ class TripCreate(BaseModel):
     # name — and the validator below refuses it elsewhere rather than storing an
     # answer to a question nobody asked.
     payment_systems: list[str] | None = Field(default=None, max_length=8)
+    # T3.11.18 — the two answers `purchase_on_request` cannot be offered
+    # without. Optional on their own, mandatory beside the service: see
+    # `_buyout_needs_its_terms` below.
+    buyout_limit: float | None = Field(default=None, gt=0)
+    buyout_paid_by: Literal["sender_prepaid", "carrier_credit"] | None = None
+
 
     # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
@@ -293,7 +299,36 @@ class TripCreate(BaseModel):
         return list(dict.fromkeys(cleaned)) or None
 
     @model_validator(mode="after")
+    def _buyout_needs_its_terms(self):
+        """T3.11.18 — «выкуплю товар» is not offerable on its own.
+
+        The scheme is documented verbatim in the market dump: a toothbrush, then
+        an irrigator, then silence. What is at risk is the **carrier's** money —
+        two thousand dollars of bought goods against a fifty-dollar carriage
+        fee — so a form that takes the offer without a ceiling and without an
+        answer to «кто платит за товар» reproduces that scheme with a logo on it.
+
+        Refused rather than defaulted. A limit the platform picked would be the
+        platform deciding how much of somebody else's money is at stake, and a
+        payer we assumed would be the answer nobody gave to the question the
+        fraud turns on.
+        """
+        offers = "purchase_on_request" in (self.services or [])
+        if offers and (self.buyout_limit is None or self.buyout_paid_by is None):
+            raise ValueError(
+                "purchase_on_request needs buyout_limit and buyout_paid_by"
+            )
+        if not offers and (
+            self.buyout_limit is not None or self.buyout_paid_by is not None
+        ):
+            raise ValueError(
+                "buyout terms only go with the purchase_on_request service"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _systems_belong_to_emoney(self):
+
         """T3.11.07 — a system named beside cash is an answer to no question.
 
         Same shape as the postal levels in `T3.11.22`: a lower level that cannot
@@ -343,6 +378,10 @@ class TripOut(BaseModel):
     services: list[str] | None = None
     payment_model: str | None = None
     payment_systems: list[str] | None = None
+    # T3.11.18 — shown on the card so a sender sees the ceiling before they ask,
+    # not after the carrier has already laid the money out.
+    buyout_limit: float | None = None
+    buyout_paid_by: str | None = None
     carriage_rules: str | None = None
     status: str
     # T3.11.16 — when the listing stops being one: the departure of its last

@@ -103,6 +103,15 @@ class Trip(Base):
             name="ck_trips_size_hint",
         ),
         CheckConstraint(
+            "buyout_paid_by IS NULL OR "
+            "buyout_paid_by IN ('sender_prepaid','carrier_credit')",
+            name="ck_trips_buyout_paid_by",
+        ),
+        CheckConstraint(
+            "buyout_limit IS NULL OR buyout_limit > 0",
+            name="ck_trips_buyout_limit",
+        ),
+        CheckConstraint(
             "payment_model IS NULL OR "
             "payment_model IN ('cash_on_delivery','emoney_on_delivery',"
             "'platform_wallet')",
@@ -202,6 +211,12 @@ class Trip(Base):
     # we could ship, and a carrier naming one we had not heard of would
     # otherwise be told they are wrong.
     payment_systems: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # T3.11.18 — the two answers `purchase_on_request` cannot be offered
+    # without. Nullable because most trips do not offer the service at all;
+    # required **together with it** by `TripCreate`, which is where the pairing
+    # is enforced rather than by a constraint that cannot see the services list.
+    buyout_limit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    buyout_paid_by: Mapped[str | None] = mapped_column(String(24), nullable=True)
     # T_UX.15 — a copy of the carrier's standing rules, taken at publish time.
     # A copy on purpose: rules edited later must not rewrite what a sender read
     # when they chose this trip.
@@ -263,6 +278,25 @@ TRIP_SERVICES = (
     "door_delivery",
     "photo_report",
 )
+
+# T3.11.18 — buying goods to order, and the two answers that make it safe to
+# offer at all (owner's decision 2026-09-08).
+#
+# **The fraud is documented verbatim in the market dump:** «Сначала просит
+# зубную щётку выкупить, а потом ирригатор! По итогу оплачиваешь щётку,
+# доставку, а на следующий день…». What is at risk here is the **carrier's**
+# money — $2 000 of bought goods, not the $50 carriage fee — and 42.6 %
+# «без предоплаты» is not generosity, it is a negotiating position taken by
+# people who have been asked for money up front.
+#
+# So `purchase_on_request` in `TRIP_SERVICES` cannot stand alone. A carrier who
+# ticks it must also say **how much** they are willing to lay out and **who pays
+# for the goods**, because a form that offers the service without those two
+# fields reproduces the scheme above with a logo on it.
+#
+# Until Фаза 5 there is no money on the platform, so this is a **declared limit
+# and a record**, not a guarantee. `§9.1`: no screen calls it protection.
+BUYOUT_PAID_BY = ("sender_prepaid", "carrier_credit")
 
 # T3.11.07 — how the carrier expects to be paid. **Three, and answering is
 # obligatory** (owner's decision 2026-09-08, replacing the two optional models

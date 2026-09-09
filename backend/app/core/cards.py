@@ -73,6 +73,18 @@ class CardKind(str, enum.Enum):
     escrow_released = "escrow.released"
     escrow_refunded = "escrow.refunded"
 
+    # Group 3a — buying to order (T3.11.17 part 2)
+    #
+    # «Ссылка, что именно берём, сколько стоит, сколько штук, до какой суммы» —
+    # an object with parameters, not a conversation. The owner asked for a
+    # separate buyout thread so the chat does not become a wall; the card
+    # mechanism already is one — a folded line that opens on click — and adding
+    # a second way to show structure in a chat when the first exists is a bad
+    # trade.
+    buyout_requested = "buyout.requested"
+    buyout_agreed = "buyout.agreed"
+    buyout_purchased = "buyout.purchased"
+
     # Group 5 — exceptions (T3.39)
     issue_reported = "issue.reported"
     cancel_requested = "cancel.requested"
@@ -221,6 +233,26 @@ CATALOGUE: dict[CardKind, CardSpec] = {
            on_accept_emit=CardKind.delivery_confirmed,
            implemented=True),
         _s(CardKind.delivery_confirmed, "custody", implemented=True),
+
+        # ── group 3a · buying to order (T3.11.17 part 2) ───────────────────
+        #
+        # The sender asks, the carrier agrees, the carrier reports the purchase.
+        # Three cards and not one, because the money leaves the carrier's pocket
+        # between the second and the third: an object that jumped from «asked» to
+        # «bought» could not answer when the carrier became exposed.
+        _s(CardKind.buyout_requested, "custody",
+           creator_roles=frozenset({CardAckRole.sender}),
+           ack_by=CardAckRole.carrier,
+           on_accept_emit=CardKind.buyout_agreed,
+           implemented=True),
+        _s(CardKind.buyout_agreed, "custody", implemented=True),
+        # Acked by the sender: the receipt is evidence, and evidence nobody
+        # looked at is a claim. No status change — the parcel has not moved, only
+        # the carrier's money has.
+        _s(CardKind.buyout_purchased, "custody",
+           creator_roles=frozenset({CardAckRole.carrier}),
+           ack_by=CardAckRole.sender,
+           implemented=True),
 
         # ── group 4 · settlement ───────────────────────────────────────────
         _s(CardKind.payment_method_agreed, "settlement", creator_roles=PARTIES,

@@ -145,7 +145,54 @@ class ComplianceChecklist(BaseModel):
 
 
 
+class BuyoutRequested(BaseModel):
+    """T3.11.17 part 2 — «выкупи и привези», as an object with parameters.
+
+    A link, what exactly, what it costs, how many, and up to what total. All
+    five, because the fraud in the market dump is precisely the missing fifth:
+    «сначала просит зубную щётку выкупить, а потом ирригатор» — each item
+    plausible, no ceiling, and the carrier discovers the total afterwards.
+
+    `max_total` is what the carrier answers to, not `unit_price × count`: the
+    price on a page moves between the request and the shop, and a ceiling that
+    silently recomputed itself would not be a ceiling.
+    """
+
+    url: str = Field(max_length=500)
+    what: str = Field(max_length=200)
+    unit_price: float = Field(gt=0)
+    count: int = Field(default=1, ge=1, le=100)
+    max_total: float = Field(gt=0)
+    currency: str = Field(default="USD", min_length=3, max_length=4)
+
+    @model_validator(mode="after")
+    def _ceiling_covers_the_order(self):
+        """A ceiling below the order is not a ceiling, it is a typo.
+
+        Refused rather than raised to fit: quietly widening somebody's exposure
+        to make their own numbers agree is the opposite of what this field does.
+        """
+        if self.max_total < self.unit_price * self.count:
+            raise ValueError("max_total is below unit_price × count")
+        return self
+
+
+class BuyoutPurchased(BaseModel):
+    """What was actually bought, once the carrier's money has left.
+
+    `total` rather than a repeat of the request: shops substitute, prices move,
+    and the number that matters from here on is what was paid. The receipt is an
+    attachment on this card — evidence through the normal hashed path (`T3.8`),
+    not a figure typed into a chat.
+    """
+
+    total: float = Field(gt=0)
+    currency: str = Field(default="USD", min_length=3, max_length=4)
+    note: str | None = Field(default=None, max_length=300)
+
+
 class IssueReported(BaseModel):
+
     category: Literal["delay", "damage", "unreachable", "mismatch"]
 
 
@@ -171,6 +218,8 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.delivery_declared: DeliveryDeclared,
     CardKind.payment_method_agreed: PaymentMethodAgreed,
     CardKind.payment_declared: PaymentDeclared,
+    CardKind.buyout_requested: BuyoutRequested,
+    CardKind.buyout_purchased: BuyoutPurchased,
     CardKind.compliance_checklist: ComplianceChecklist,
     CardKind.issue_reported: IssueReported,
     CardKind.cancel_requested: CancelRequested,

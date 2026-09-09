@@ -308,7 +308,35 @@ async def create_card(
     # on delivery the sender is not the one settling. Defaults to the sender —
     # that is the field's own default and the shape of every deal written before
     # the section existed.
+    # T3.11.18 — a buyout may only be asked of a carrier who offered it, and
+    # never above the ceiling they named. Owner's rule 2026-09-08, and the whole
+    # point of the two fields on the trip: the risk here is the **carrier's**
+    # money, and a request that could exceed their own stated limit would put
+    # the platform's logo on the scheme the market dump describes.
+    #
+    # Read from the trip rather than the agreement: this is the carrier's
+    # standing offer, not something the two of them negotiated, and a sender who
+    # talked the ceiling up in chat has not moved it.
+    if kind is CardKind.buyout_requested:
+        trip = (
+            await db.execute(select(Trip).where(Trip.id == deal.trip_id))
+        ).scalar_one_or_none()
+        offers = "purchase_on_request" in ((trip.services if trip else None) or [])
+        if not offers:
+            raise HTTPException(
+                status_code=409,
+                detail="This carrier does not buy goods to order",
+            )
+        ceiling = trip.buyout_limit if trip else None
+        asked = float(body.payload.get("max_total") or 0)
+        if ceiling is not None and asked > ceiling:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Above this carrier's buyout limit ({ceiling})",
+            )
+
     if kind is CardKind.payment_declared:
+
         # T3.11.27 — «Деньги отдаются после получения груза: это и есть порядок,
         # который закрывает сделку» (owner, 2026-09-07).
         #

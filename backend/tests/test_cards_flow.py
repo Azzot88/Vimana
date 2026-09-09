@@ -789,3 +789,165 @@ async def test_deal_detail_carries_what_the_board_form_answered(
     # A suggestion only: `price_total` is still what the two of them answer.
     assert body["trip_price_per_kg"] == 25.0
     assert "order_deadline" in body
+
+
+# ── T3.11.17 ч.2 · buying goods to order ──────────────────────────────────
+
+
+@pytest_asyncio.fixture
+async def buyout_deal(session_maker, seed_carrier, seed_sender):
+    """A deal on a trip that actually offers to buy goods to order.
+
+    Its own fixture rather than a flag on `deal`: the ceiling is the thing under
+    test here, and a trip that offers the service is a different trip.
+    """
+    from app.models.deal import Deal, DealStatus
+    from app.models.marketplace import Order, OrderStatus, Trip, TripStatus
+
+    async with session_maker() as db:
+        trip = Trip(
+            carrier_id=seed_carrier.id,
+            origin="DXB",
+            destination="JFK",
+            depart_at=datetime.now(timezone.utc) + timedelta(days=5),
+            capacity=8.0,
+            allowed_categories=["document"],
+            status=TripStatus.open,
+            price_per_kg=25.0,
+            currency="USD",
+            services=["purchase_on_request"],
+            buyout_limit=500.0,
+            buyout_paid_by="carrier_credit",
+        )
+        db.add(trip)
+        await db.flush()
+        order = Order(
+            sender_id=seed_sender.id,
+            recipient_contact="+10000000000",
+            origin=trip.origin,
+            destination=trip.destination,
+            category="document",
+            declared_value=1200.0,
+            currency="USD",
+            status=OrderStatus.matched,
+            trip_id=trip.id,
+        )
+        db.add(order)
+        await db.flush()
+        d = Deal(
+            order_id=order.id,
+            trip_id=trip.id,
+            sender_id=seed_sender.id,
+            carrier_id=seed_carrier.id,
+            status=DealStatus.accepted,
+        )
+        db.add(d)
+        await db.commit()
+        await db.refresh(d)
+        return d
+
+
+_ORDER = {
+    "url": "https://shop.example/irrigator",
+    "what": "Irrigator",
+    "unit_price": 120.0,
+    "count": 2,
+    "max_total": 260.0,
+}
+
+
+async def test_a_buyout_is_an_object_not_a_conversation(
+    client, sender_headers, carrier_headers, buyout_deal
+):
+    """«Ссылка, что именно берём, сколько стоит, сколько штук, до какой суммы».
+
+    Five parameters, and the fifth is the one the fraud in the market dump turns
+    on: each item plausible, no ceiling, and the carrier learns the total after
+    their money is gone.
+    """
+    asked = await _card(
+        client, sender_headers, buyout_deal.id, "buyout.requested", _ORDER
+    )
+    assert asked.status_code == 201, asked.text
+    assert asked.json()["requires_ack_by"] == "carrier"
+    assert asked.json()["card_payload"]["max_total"] == 260.0
+
+    agreed = await _ack(
+        client, carrier_headers, buyout_deal.id, asked.json()["id"]
+    )
+    assert agreed.status_code == 200, agreed.text
+
+    listing = await client.get(
+        f"/api/deals/{buyout_deal.id}/dealvault", headers=sender_headers
+    )
+    assert "buyout.agreed" in [m["card_kind"] for m in listing.json()["items"]]
+
+
+async def test_a_buyout_cannot_be_asked_of_a_carrier_who_does_not_offer_it(
+    client, sender_headers, deal
+):
+    """The plain `deal` fixture's trip lists no services at all."""
+    r = await _card(client, sender_headers, deal.id, "buyout.requested", _ORDER)
+    assert r.status_code == 409, r.text
+
+
+async def test_a_buyout_above_the_carriers_ceiling_is_refused(
+    client, sender_headers, buyout_deal
+):
+    """The limit is the carrier's own, and a sender who talked it up in chat has
+    not moved it: it is a standing offer, not something the two negotiated."""
+    r = await _card(
+        client, sender_headers, buyout_deal.id, "buyout.requested",
+        {**_ORDER, "unit_price": 600.0, "count": 1, "max_total": 600.0},
+    )
+    assert r.status_code == 409, r.text
+
+
+async def test_a_ceiling_below_the_order_is_refused(
+    client, sender_headers, buyout_deal
+):
+    """A ceiling under `unit_price × count` is a typo, not a ceiling.
+
+    Refused rather than raised to fit: quietly widening somebody's exposure so
+    their own numbers agree is the opposite of what the field is for.
+    """
+    r = await _card(
+        client, sender_headers, buyout_deal.id, "buyout.requested",
+        {**_ORDER, "max_total": 100.0},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_only_the_sender_asks_and_only_the_carrier_reports(
+    client, sender_headers, carrier_headers, buyout_deal
+):
+    """The money leaves the carrier's pocket, so they are the one who says it
+    did — and the sender acknowledges, because a receipt nobody looked at is a
+    claim rather than evidence."""
+    wrong_way = await _card(
+        client, carrier_headers, buyout_deal.id, "buyout.requested", _ORDER
+    )
+    assert wrong_way.status_code == 403, wrong_way.text
+
+    bought = await _card(
+        client, carrier_headers, buyout_deal.id, "buyout.purchased",
+        {"total": 240.0, "currency": "USD"},
+    )
+    assert bought.status_code == 201, bought.text
+    assert bought.json()["requires_ack_by"] == "sender"
+
+
+async def test_the_purchase_moves_no_status(
+    client, sender_headers, carrier_headers, buyout_deal
+):
+    """Nothing has been carried. Only the carrier's money has moved, and a deal
+    that jumped a status here would say the parcel was on its way."""
+    bought = await _card(
+        client, carrier_headers, buyout_deal.id, "buyout.purchased",
+        {"total": 240.0, "currency": "USD"},
+    )
+    await _ack(client, sender_headers, buyout_deal.id, bought.json()["id"])
+    detail = await client.get(
+        f"/api/deals/{buyout_deal.id}", headers=sender_headers
+    )
+    assert detail.json()["status"] == "accepted"

@@ -1658,6 +1658,41 @@ async def _ensure_trip_chain(engine) -> None:
                 "('cash_on_delivery','emoney_on_delivery','platform_wallet'))"
             )
         )
+        # 0087 — the buyout ceiling and who pays for the goods (`T3.11.18`).
+        # `trips` already exists, so `create_all` adds neither the columns nor
+        # the constraints; both are written here in the same order the migration
+        # uses.
+        await conn.execute(
+            text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS buyout_limit FLOAT")
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD COLUMN IF NOT EXISTS "
+                "buyout_paid_by VARCHAR(24)"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE trips DROP CONSTRAINT IF EXISTS ck_trips_buyout_paid_by"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD CONSTRAINT ck_trips_buyout_paid_by CHECK ("
+                "buyout_paid_by IS NULL OR buyout_paid_by IN "
+                "('sender_prepaid','carrier_credit'))"
+            )
+        )
+        await conn.execute(
+            text("ALTER TABLE trips DROP CONSTRAINT IF EXISTS ck_trips_buyout_limit")
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD CONSTRAINT ck_trips_buyout_limit CHECK ("
+                "buyout_limit IS NULL OR buyout_limit > 0)"
+            )
+        )
+
 
         # 0068 — `USDT` and `USDC` are four characters. A test database created
         # before it kept VARCHAR(3), which does not refuse the value: it raises
