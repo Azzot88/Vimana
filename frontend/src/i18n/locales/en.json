@@ -683,8 +683,9 @@
     },
     "paymentHint": "How you expect to be paid. Shown on the card; the amount is optional.",
     "paymentModel": {
-      "on_platform": "On the platform",
-      "off_platform": "Outside the platform"
+      "cash_on_delivery": "Cash on delivery",
+      "emoney_on_delivery": "E-money on delivery",
+      "platform_wallet": "From the platform wallet"
     },
     "servicesHint": "Optional. Each one is searchable, so senders looking for it find you.",
     "services": {
@@ -706,7 +707,8 @@
       "legOutOfOrder": "Flight {{n}} departs before the one before it",
       "arrivalBeforeDeparture": "Flight {{n}}: it arrives before it departs.",
       "pastDate": "Date must be in the future",
-      "capacity": "Capacity must be at least 0.5 kg"
+      "capacity": "Capacity must be at least 0.5 kg",
+      "paymentModel": "Choose how you are paid — it is on the «Terms and payment» step"
     },
     "pricePerKg": "Price per kg",
     "minDealPrice": "Minimum deal",
@@ -1520,7 +1522,6 @@
       "open_on_handover": "Open on handover",
       "photo_required": "Photo required",
       "fragile": "Fragile",
-      "temperature_note": "Temperature",
       "parcel_count": "Parcels",
       "stage": "Stage",
       "eta": "ETA",

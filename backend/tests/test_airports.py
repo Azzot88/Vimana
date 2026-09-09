@@ -183,7 +183,7 @@ async def test_popular_counts_both_ends_of_a_flight(client, carrier_headers):
     created = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json={"legs": [{"origin": "DXB", "destination": "JFK", "depart_at": depart}]},
+        json={"payment_model": "cash_on_delivery", "legs": [{"origin": "DXB", "destination": "JFK", "depart_at": depart}]},
     )
     assert created.status_code == 201, created.text
 
@@ -204,6 +204,7 @@ async def test_popular_drops_codes_that_are_not_airports(client, carrier_headers
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {"origin": "ZZQ", "destination": "ZZW", "depart_at": depart}
             ]

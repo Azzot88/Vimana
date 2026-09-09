@@ -67,7 +67,31 @@ async def match_deal(
     if not category_key or len(category_key) > 50:
         raise HTTPException(status_code=422, detail="Invalid category")
 
-    # Atomic UPSERT — prevents race between concurrent matches with same new category
+    # T3.11.07 — **the order may only ask for what the trip published** (owner's
+    # rule 2026-09-08): «перевозчик выставляет свои возможности, отправитель
+    # выбирает из того что может сделать перевозчик».
+    #
+    # Until now this path took any category at all and, worse, *created* it —
+    # the UPSERT below was written for a form where the sender invented their
+    # own words. So a sender could attach a deal for animals to a carrier who
+    # never said they take animals, and the carrier found out when the parcel
+    # arrived with a cat in it.
+    #
+    # A stated list binds; silence does not. `allowed_categories` is optional on
+    # purpose — the express path publishes a trip with a route and a date and
+    # nothing else — and reading an empty list as «nothing allowed» would make
+    # every such trip unbookable. So: named categories are the whole offer;
+    # naming none is not an offer of none, it is not having narrowed it.
+    allowed = trip.allowed_categories or []
+    if allowed and category_key not in allowed:
+        raise HTTPException(
+            status_code=409,
+            detail="This trip does not carry that category",
+        )
+
+    # Counted, not invented. The UPSERT stays because the count drives the
+    # picker's order, but `is_default=False` rows can no longer be born here:
+    # a category the carrier could not have chosen is one nobody can filter on.
     stmt = pg_insert(Category).values(
         name_key=category_key, is_default=False, usage_count=1
     )

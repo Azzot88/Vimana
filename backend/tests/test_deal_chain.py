@@ -537,6 +537,7 @@ async def test_deal_lifecycle_produces_a_valid_chain(
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "MTC",

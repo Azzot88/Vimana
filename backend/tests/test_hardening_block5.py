@@ -8,6 +8,7 @@ async def _publish_trip(client, carrier_headers, tag: str) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": f"P-{tag}",

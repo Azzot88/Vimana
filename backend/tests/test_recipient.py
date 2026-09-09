@@ -30,6 +30,7 @@ async def _deal(client):
         "/api/trips",
         headers=c_hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "RCP",

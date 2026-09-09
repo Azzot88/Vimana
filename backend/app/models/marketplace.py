@@ -104,7 +104,8 @@ class Trip(Base):
         ),
         CheckConstraint(
             "payment_model IS NULL OR "
-            "payment_model IN ('on_platform','off_platform')",
+            "payment_model IN ('cash_on_delivery','emoney_on_delivery',"
+            "'platform_wallet')",
             name="ck_trips_payment_model",
         ),
     )
@@ -263,32 +264,45 @@ TRIP_SERVICES = (
     "photo_report",
 )
 
-# T3.11.07 — how the carrier expects to be paid (vocabulary set by the owner
-# 2026-09-06). A concrete sum appears in 0.1 % of posts while the settlement
-# model appears in 61.7 % ("без предоплаты" 42.6, "оплата при получении" 19.1),
-# so this — not the number — is the field that carries the market's actual
-# answer. NULL means the carrier did not say.
+# T3.11.07 — how the carrier expects to be paid. **Three, and answering is
+# obligatory** (owner's decision 2026-09-08, replacing the two optional models
+# of 2026-09-06).
 #
-# Replaces `on_delivery / escrow / prepaid`. That earlier list mixed two
-# questions: *when* money moves and *through what*. The market answers both, and
-# separately — "оплата при получении" says when, "переводом" says through what.
-PAYMENT_MODELS = ("on_platform", "off_platform")
+# The three separate *when* and *where the money lives*, which is the pair that
+# actually differs for the two people:
+#   `cash_on_delivery`   — наличными при получении
+#   `emoney_on_delivery` — электронными деньгами при получении
+#   `platform_wallet`    — с кошелька на платформе
+#
+# The previous revision collapsed the first two into `off_platform` on the
+# grounds that «cash or transfer?» is the same question as «which system?».
+# That was right about the words and wrong about the people: cash is settled
+# hand to hand at the door and e-money is settled by two phones, and a sender
+# who cannot carry notes needs to know which one before they agree, not after.
+# `payment_systems` keeps saying *which* service, and now only makes sense
+# beside `emoney_on_delivery` — cash has no system to name.
+#
+# **Obligatory, and still changeable.** The trip states the carrier's model; the
+# deal's agreement carries a `payment` section both sides confirm, so the two of
+# them may settle differently by agreeing to. Obligatory here means the carrier
+# cannot publish without answering — 61.7 % of this market states the model
+# anyway, and the sender who has to ask is the one who does not book.
+#
+# Existing rows are mapped, never guessed at: `on_platform → platform_wallet`,
+# and `off_platform` splits by whether the carrier named any system — a named
+# system *is* the answer «электронными», an empty list is cash. Rows that said
+# nothing stay NULL: the column is nullable on purpose, because a trip published
+# before the question existed did not answer it, and writing an answer in would
+# be the platform speaking for its carriers.
+PAYMENT_MODELS = ("cash_on_delivery", "emoney_on_delivery", "platform_wallet")
 
-# T3.11.07 — which system, when the money moves outside the platform.
-#
-# The vocabulary went `on_delivery / escrow / prepaid`, then
-# `on_platform / cash_on_delivery / transfer_on_delivery`, and is now two
-# (owner's correction 2026-09-06). The reason the middle version was wrong is
-# worth keeping: cash is not a peer of "transfer", it is **one of the systems**
-# people settle in outside the platform, alongside a bank app, a remittance
-# service or a stablecoin. Listing it as a model made the question "cash or
-# transfer?" — which is the same question as "which system?", asked twice and
-# answered inconsistently.
-#
-# So there are two models, and `payment_systems` says which systems the carrier
-# accepts when the answer is `off_platform`. The catalogue lives in
-# `core/payment_systems.py`; free text stays allowed, because what people settle
-# through is local and outlives any list we ship.
+#: The model that needs `payment_systems` beside it, and the only one.
+EMONEY_MODEL = "emoney_on_delivery"
+
+# T3.11.07 — which system, when the money moves as e-money on delivery.
+# The catalogue lives in `core/payment_systems.py`; free text stays allowed,
+# because what people settle through is local and outlives any list we ship.
+
 
 
 class TripLeg(Base):

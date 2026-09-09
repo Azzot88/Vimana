@@ -172,6 +172,7 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
         "/api/trips",
         headers=c_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "UBX",

@@ -630,10 +630,6 @@
       "discardDraft": "Usuń"
     },
     "paymentHint": "Jak się rozliczasz. Widoczne na karcie; kwota jest opcjonalna.",
-    "paymentModel": {
-      "on_platform": "Na platformie",
-      "off_platform": "Poza platformą"
-    },
     "servicesHint": "Opcjonalne. Po każdej można wyszukiwać — znajdą Cię ci, którzy jej szukają.",
     "services": {
       "domestic_shipping": "Wyślę pocztą po kraju",
@@ -1409,7 +1405,6 @@
       "open_on_handover": "Otworzyć przy przekazaniu",
       "photo_required": "Wymagane zdjęcie",
       "fragile": "Delikatne",
-      "temperature_note": "Temperatura",
       "parcel_count": "Paczek",
       "stage": "Etap",
       "eta": "ETA",

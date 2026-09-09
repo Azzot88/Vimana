@@ -629,10 +629,6 @@
       "discardDraft": "Descartar"
     },
     "paymentHint": "Cómo cobras. Se ve en la ficha; el importe es opcional.",
-    "paymentModel": {
-      "on_platform": "En la plataforma",
-      "off_platform": "Fuera de la plataforma"
-    },
     "servicesHint": "Opcional. Cada uno se puede buscar: quien lo necesita te encuentra.",
     "services": {
       "domestic_shipping": "Lo reenvío por correo dentro del país",
@@ -1408,7 +1404,6 @@
       "open_on_handover": "Abrir al entregar",
       "photo_required": "Foto obligatoria",
       "fragile": "Frágil",
-      "temperature_note": "Temperatura",
       "parcel_count": "Bultos",
       "stage": "Etapa",
       "eta": "ETA",

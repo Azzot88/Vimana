@@ -5,11 +5,12 @@ from datetime import datetime, timedelta, timezone
 from tests.conftest import make_account
 
 
-async def _make_trip(client, carrier_headers) -> str:
+async def _make_trip(client, carrier_headers, categories=("document",)) -> str:
     resp = await client.post(
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "RCE",
@@ -18,7 +19,7 @@ async def _make_trip(client, carrier_headers) -> str:
                 }
             ],
             "capacity": 2.0,
-            "allowed_categories": ["document"],
+            "allowed_categories": list(categories),
         },
     )
     assert resp.status_code == 201
@@ -44,7 +45,13 @@ async def _match(client, sender_headers, trip_id, category):
 
 async def test_concurrent_new_category_no_duplicate(client, carrier_headers, sender_headers):
     custom = f"race-{uuidlib.uuid4().hex[:8]}"
-    trips = await asyncio.gather(*[_make_trip(client, carrier_headers) for _ in range(3)])
+    # T3.11.07 — the carrier states the category; the sender may only pick it.
+    trips = await asyncio.gather(
+        *[
+            _make_trip(client, carrier_headers, categories=(custom,))
+            for _ in range(3)
+        ]
+    )
     results = await asyncio.gather(*[_match(client, sender_headers, t, custom) for t in trips])
     assert all(r.status_code == 201 for r in results), [r.text for r in results]
 

@@ -406,7 +406,14 @@ export default function TripsPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.category')}</label>
-                      <CategorySelect value={cargoCategory} onChange={setCargoCategory} />
+                      {/* T3.11.07 — only what this trip carries. The carrier
+                          states the capability, the sender picks from it; the
+                          server refuses anything else with a 409. */}
+                      <CategorySelect
+                        value={cargoCategory}
+                        onChange={setCargoCategory}
+                        only={trip.allowed_categories}
+                      />
                     </div>
                   </div>
                   {error && <p className="text-xs font-mono text-amber">{error}</p>}

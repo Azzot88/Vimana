@@ -2,11 +2,15 @@ import uuid as uuidlib
 from datetime import datetime, timedelta, timezone
 
 
-async def _create_trip(client, carrier_headers) -> str:
+async def _create_trip(client, carrier_headers, categories=("document",)) -> str:
+    """T3.11.07 — the trip states what it carries, and the order may ask for
+    nothing else (owner's rule 2026-09-08). So a test about a custom category
+    publishes it here, on the carrier's side, where capabilities are declared."""
     resp = await client.post(
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "MTC",
@@ -15,11 +19,12 @@ async def _create_trip(client, carrier_headers) -> str:
                 }
             ],
             "capacity": 2.0,
-            "allowed_categories": ["document"],
+            "allowed_categories": list(categories),
         },
     )
     assert resp.status_code == 201
     return resp.json()["id"]
+
 
 
 async def test_list_defaults_includes_animal(client):
@@ -46,8 +51,8 @@ async def test_search_by_prefix(client):
 
 
 async def test_new_category_created_on_match(client, carrier_headers, sender_headers):
-    trip_id = await _create_trip(client, carrier_headers)
     custom = f"custom-{uuidlib.uuid4().hex[:8]}"
+    trip_id = await _create_trip(client, carrier_headers, categories=(custom,))
     match = await client.post(
         "/api/deals/match",
         headers=sender_headers,
@@ -70,11 +75,10 @@ async def test_new_category_created_on_match(client, carrier_headers, sender_hea
 
 
 async def test_usage_count_increments_on_reuse(client, carrier_headers, sender_headers):
-    trip_id = await _create_trip(client, carrier_headers)
     shared = f"shared-{uuidlib.uuid4().hex[:8]}"
 
     for _ in range(2):
-        trip_id = await _create_trip(client, carrier_headers)
+        trip_id = await _create_trip(client, carrier_headers, categories=(shared,))
         r = await client.post(
             "/api/deals/match",
             headers=sender_headers,

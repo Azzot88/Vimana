@@ -11,6 +11,7 @@ async def _make_open_trip(client, carrier_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "INQ",

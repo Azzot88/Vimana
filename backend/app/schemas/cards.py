@@ -43,7 +43,6 @@ class HandoverConditions(BaseModel):
     open_on_handover: bool = False
     photo_required: bool = True
     fragile: bool = False
-    temperature_note: str | None = Field(default=None, max_length=200)
 
 
 class MeetingPoint(BaseModel):

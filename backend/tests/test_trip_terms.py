@@ -14,6 +14,7 @@ def _payload(**overrides):
     body = {
         # T3.11.15 — the route is a chain on the wire. A one-leg chain is the
         # ordinary case and stays as short to write as the old flat trio.
+        "payment_model": "cash_on_delivery",
         "legs": [
             {
                 "origin": "DXB",

@@ -1,4 +1,8 @@
-import { useId, useCallback, useEffect, useRef, useState } from 'react'
+        // T3.11.07 — obligatory since 2026-09-08. `null` cannot leave this form
+        // any more; the publish guard below refuses before it gets here.
+        payment_model: draft.paymentModel || null,
+        // Only meaningful beside e-money: cash has no system to name, and the
+        // server refuses a system sent with anything else.import { useId, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
@@ -6,6 +10,7 @@ import {
   createTrip,
   updateTrip,
   listTrips,
+  EMONEY_MODEL,
   EXCLUSIONS,
   PAYMENT_MODELS,
   TRIP_SERVICES,
@@ -857,6 +862,29 @@ export default function NewTripPage() {
     return null
   }
 
+  /** T3.11.07 — what publishing needs on top of what step 1 needs.
+   *
+   *  The settlement model became obligatory on 2026-09-08 and lives on step 3,
+   *  which is skippable. Kept out of `validate` on purpose: that one gates
+   *  *moving on*, and refusing step 2 over an answer that lives on step 3 would
+   *  be a form blocking somebody for not having done a thing it has not offered
+   *  them yet. So the express path survives — route and date are still the whole
+   *  of a publishable trip — and publishing costs one tap on one of three chips.
+   *
+   *  Not defaulted for them. Pre-selecting «наличными» would be the platform
+   *  answering a money question on a carrier's behalf, and a carrier publishing
+   *  from step 1 would never see what had been answered for them.
+   *
+   *  Called by: `handleSubmit`. */
+  const validateForPublish = (): string | null => {
+    const problem = validate()
+    if (problem) return problem
+    if (!draft.paymentModel) {
+      return t('trips.newTripValidation.paymentModel') as string
+    }
+    return null
+  }
+
   const [preflightNotes, setPreflightNotes] = useState<RouteNote[]>([])
   const [ackedPreflight, setAckedPreflight] = useState(false)
   const preflightRef = useRef<HTMLDivElement>(null)
@@ -913,9 +941,13 @@ export default function NewTripPage() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     setError('')
-    const validationError = validate()
+    const validationError = validateForPublish()
     if (validationError) {
       setError(validationError)
+      // The answer that is missing is almost always the settlement model, and
+      // it is on a screen the carrier may never have opened. Taking them there
+      // beats a message about a chip they cannot see.
+      if (!draft.paymentModel) goToStep(3)
       return
     }
     // T3.11.07 — the "over 15 kg is unusual for hand luggage" confirmation is
@@ -1002,11 +1034,15 @@ export default function NewTripPage() {
         // differently.
         excluded: draft.excluded.length > 0 ? draft.excluded : null,
         services: draft.services.length > 0 ? draft.services : null,
+        // T3.11.07 — obligatory since 2026-09-08. The publish guard refuses
+        // before this runs, so `null` cannot leave the form; kept as a fallback
+        // rather than a cast, because a `!` here would turn a guard somebody
+        // later loosens into a 422 nobody can read.
         payment_model: draft.paymentModel || null,
-        // Only meaningful off the platform; sending it alongside `on_platform`
-        // would store an answer to a question that was not asked.
+        // Only meaningful beside e-money: cash has no system to name and the
+        // wallet is the system, so the server refuses one sent with either.
         payment_systems:
-          draft.paymentModel === 'off_platform'
+          draft.paymentModel === EMONEY_MODEL
             ? splitChips(draft.paymentSystems)
             : null,
         // T_UX.15 — sent explicitly so an emptied field means "this trip has no
@@ -2031,11 +2067,10 @@ export default function NewTripPage() {
                   key={model}
                   type="button"
                   aria-pressed={draft.paymentModel === model}
-                  onClick={() =>
-                    patch({
-                      paymentModel: draft.paymentModel === model ? '' : model,
-                    })
-                  }
+                  /* Obligatory since 2026-09-08, so a chip cannot be un-picked:
+                     tapping the chosen one again would leave the trip with no
+                     answer, and «I changed my mind» here means picking another. */
+                  onClick={() => patch({ paymentModel: model })}
                   className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
                     draft.paymentModel === model
                       ? 'border-cyan bg-cyan/10 text-navy'
@@ -2050,7 +2085,7 @@ export default function NewTripPage() {
             {/* Only asked when it applies. A transfer needs to say through
                 what; the other two models do not, and a field that is always
                 on screen teaches people to skip the whole block. */}
-            {draft.paymentModel === 'off_platform' && (
+            {draft.paymentModel === EMONEY_MODEL && (
               <label className="block">
                 <span className="block text-[11px] font-body text-navy/40 mb-1">
                   {t('trips.paymentSystems')}

@@ -26,7 +26,7 @@ def _leg(origin: str, destination: str, days: int) -> dict:
 
 
 def _payload(**overrides):
-    body = {"legs": [_leg("DXB", "JFK", 5)], "capacity": 6.0}
+    body = {"payment_model": "cash_on_delivery", "legs": [_leg("DXB", "JFK", 5)], "capacity": 6.0}
     body.update(overrides)
     return body
 
@@ -147,7 +147,7 @@ async def test_route_alone_publishes_a_trip(client, carrier_headers):
     carrier must state to become findable.
     """
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json={"legs": [_leg("DXB", "JFK", 0)]}
+        "/api/trips", headers=carrier_headers, json={"payment_model": "cash_on_delivery", "legs": [_leg("DXB", "JFK", 0)]}
     )
     assert r.status_code == 201, r.text
     body = r.json()
@@ -159,7 +159,7 @@ async def test_unstated_weight_stays_unstated(client, carrier_headers):
     """Null is a different answer from a number, and the listing keeps them
     apart rather than printing a zero nobody typed."""
     created = await client.post(
-        "/api/trips", headers=carrier_headers, json={"legs": [_leg("SVO", "IST", 3)]}
+        "/api/trips", headers=carrier_headers, json={"payment_model": "cash_on_delivery", "legs": [_leg("SVO", "IST", 3)]}
     )
     trip_id = created.json()["id"]
     listing = await client.get("/api/trips", headers=carrier_headers)
@@ -327,27 +327,43 @@ async def test_unknown_service_is_refused(client, carrier_headers):
     assert r.status_code == 422
 
 
-async def test_payment_model_is_stored_and_silence_stays_silence(
-    client, carrier_headers
-):
-    """The settlement model is stated by 61.7 % of this market and a price by
-    0.1 %, so this is the field that carries the real answer. Saying nothing is
-    still not the same as "on delivery", however common that answer is."""
-    said = await client.post(
-        "/api/trips",
-        headers=carrier_headers,
-        json=_payload(payment_model="off_platform"),
-    )
-    assert said.json()["payment_model"] == "off_platform"
+async def test_the_settlement_model_must_be_answered(client, carrier_headers):
+    """T3.11.07 — obligatory since the owner's decision 2026-09-08.
 
-    silent = await client.post("/api/trips", headers=carrier_headers, json=_payload())
-    assert silent.json()["payment_model"] is None
+    The model is stated by 61.7 % of this market anyway, and the sender who has
+    to ask about it is the sender who does not book. Three chips is one tap, so
+    this does not re-impose the toll `0060` removed when it made weight optional
+    for the carrier flying tonight.
+    """
+    body = _payload()
+    body.pop("payment_model")
+    r = await client.post("/api/trips", headers=carrier_headers, json=body)
+    assert r.status_code == 422, r.text
+
+
+async def test_each_settlement_model_is_stored_as_given(client, carrier_headers):
+    """Three answers, and each survives the round trip.
+
+    They separate *when* the money moves from *where it lives* — the pair that
+    actually differs for the two people: cash is settled hand to hand at the
+    door, e-money by two phones, the wallet by neither.
+    """
+    for model in ("cash_on_delivery", "emoney_on_delivery", "platform_wallet"):
+        r = await client.post(
+            "/api/trips", headers=carrier_headers, json=_payload(payment_model=model)
+        )
+        assert r.status_code == 201, r.text
+        assert r.json()["payment_model"] == model
 
 
 async def test_unknown_payment_model_is_refused(client, carrier_headers):
-    """`escrow` and `prepaid` were the vocabulary until 0064 and are not it any
-    more — a client still sending them is refused rather than quietly stored."""
-    for model in ("barter", "escrow", "cash_on_delivery", "transfer_on_delivery"):
+    """Every earlier vocabulary is refused rather than quietly stored.
+
+    `escrow`/`prepaid` were the list until `0064`, `on_platform`/`off_platform`
+    until `0084`. A client still sending one of them is out of date, and storing
+    it would put a word in the carrier's mouth that no screen can print.
+    """
+    for model in ("barter", "escrow", "prepaid", "on_platform", "off_platform"):
         r = await client.post(
             "/api/trips", headers=carrier_headers, json=_payload(payment_model=model)
         )
@@ -362,7 +378,7 @@ async def test_transfer_systems_become_a_clean_list(client, carrier_headers):
         "/api/trips",
         headers=carrier_headers,
         json=_payload(
-            payment_model="off_platform",
+            payment_model="emoney_on_delivery",
             payment_systems=["  Revolut ", "Wise", "", "Wise", "   "],
         ),
     )
@@ -370,11 +386,31 @@ async def test_transfer_systems_become_a_clean_list(client, carrier_headers):
     assert r.json()["payment_systems"] == ["Revolut", "Wise"]
 
 
+async def test_a_system_named_beside_cash_is_refused(client, carrier_headers):
+    """T3.11.07 — the dependent level of `T3.11.22`, applied to money.
+
+    Cash has no system to name, so a system named beside it answers no question.
+    Refused rather than dropped: silently discarding what somebody typed is how
+    a form teaches people it does not read them.
+    """
+    r = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(payment_model="cash_on_delivery", payment_systems=["Revolut"]),
+    )
+    assert r.status_code == 422, r.text
+
+
 async def test_only_blank_systems_are_the_same_as_none(client, carrier_headers):
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(payment_systems=["  ", ""])
+        "/api/trips",
+        headers=carrier_headers,
+        json=_payload(
+            payment_model="emoney_on_delivery", payment_systems=["  ", ""]
+        ),
     )
     assert r.json()["payment_systems"] is None
+
 
 
 async def test_unknown_exclusion_is_refused(client, carrier_headers):

@@ -6,9 +6,25 @@ interface Props {
   value: string
   onChange: (nameKey: string) => void
   placeholder?: string
+  /** T3.11.07 — the categories this trip actually carries (owner's rule
+   *  2026-09-08: «в заявке появляется только то что есть в опубликованном
+   *  рейсе»). Given a list, the field stops being a search over the whole
+   *  catalogue and becomes a pick from what the carrier offered — no free text,
+   *  because a category the carrier never named is a parcel they never agreed
+   *  to take, and the server refuses it with a 409.
+   *
+   *  An empty list or none at all keeps the search: `allowed_categories` is
+   *  optional on a trip so that a route and a date can publish one, and reading
+   *  silence as «carries nothing» would make every express listing unbookable. */
+  only?: string[]
 }
 
-export default function CategorySelect({ value, onChange, placeholder }: Props) {
+export default function CategorySelect({
+  value,
+  onChange,
+  placeholder,
+  only,
+}: Props) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(value)
   const [results, setResults] = useState<Category[]>([])
@@ -66,6 +82,31 @@ export default function CategorySelect({ value, onChange, placeholder }: Props) 
 
   const exactMatch = results.some((r) => r.name_key === query.trim().toLowerCase())
   const canAddNew = query.trim().length > 0 && !exactMatch
+
+  // Chips rather than a dropdown: the list is short by construction — it is one
+  // carrier's offer, not a catalogue — and a select that holds three items is a
+  // click spent hiding two of them.
+  if (only && only.length > 0) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {only.map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={value === key}
+            onClick={() => onChange(key)}
+            className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+              value === key
+                ? 'border-cyan bg-cyan/10 text-navy'
+                : 'border-navy/20 text-navy/50 hover:border-navy/40'
+            }`}
+          >
+            {label(key)}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div ref={wrapperRef} className="relative">

@@ -85,6 +85,7 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED,
         "rewriting a stranger's listing",
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "DXB",
@@ -502,6 +503,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "IDR",
@@ -798,6 +800,7 @@ async def stranger_deal(client, stranger, carrier_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "OWN",
@@ -911,6 +914,7 @@ async def disputed_deal(client, carrier_headers, sender_headers) -> dict:
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "ARB",

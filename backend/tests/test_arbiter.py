@@ -52,6 +52,7 @@ async def _make_active_deal(client, carrier_headers, sender_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "DIS",

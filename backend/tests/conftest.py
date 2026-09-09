@@ -1589,6 +1589,47 @@ async def _ensure_trip_chain(engine) -> None:
         await conn.execute(
             text("ALTER TABLE trips ALTER COLUMN payment_model TYPE VARCHAR(24)")
         )
+        # 0084 — three settlement models replace two. The CHECK is **not**
+        # created by `create_all` on a table that already exists, so a test
+        # database still carries the old vocabulary and would refuse every new
+        # value with a constraint error from inside an unrelated test. Dropped
+        # and rebuilt here for the same reason the migration does it in that
+        # order: the old constraint names the old words and would refuse the
+        # UPDATEs below.
+        await conn.execute(
+            text(
+                "ALTER TABLE trips DROP CONSTRAINT IF EXISTS "
+                "ck_trips_payment_model"
+            )
+        )
+        await conn.execute(
+            text(
+                "UPDATE trips SET payment_model = 'platform_wallet' "
+                "WHERE payment_model = 'on_platform'"
+            )
+        )
+        await conn.execute(
+            text(
+                "UPDATE trips SET payment_model = 'emoney_on_delivery' "
+                "WHERE payment_model = 'off_platform' "
+                "  AND payment_systems IS NOT NULL "
+                "  AND payment_systems::text NOT IN ('[]', 'null')"
+            )
+        )
+        await conn.execute(
+            text(
+                "UPDATE trips SET payment_model = 'cash_on_delivery' "
+                "WHERE payment_model = 'off_platform'"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE trips ADD CONSTRAINT ck_trips_payment_model CHECK ("
+                "payment_model IS NULL OR payment_model IN "
+                "('cash_on_delivery','emoney_on_delivery','platform_wallet'))"
+            )
+        )
+
         # 0068 — `USDT` and `USDC` are four characters. A test database created
         # before it kept VARCHAR(3), which does not refuse the value: it raises
         # a truncation error from inside whichever test happened to publish one.

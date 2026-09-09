@@ -68,13 +68,30 @@ export const TRIP_SERVICES = [
 ] as const
 export type TripService = (typeof TRIP_SERVICES)[number]
 
-/** T3.11.07 — the settlement model. Stated by 61.7 % of this market; a concrete
- *  price by 0.1 %. Null is "did not say", not "on delivery". */
-/** Two, not three. Cash is not a peer of "transfer" — it is one of the systems
- *  people settle in outside the platform, so it lives in `payment_systems` and
- *  the model says only whether the money touches the platform. */
-export const PAYMENT_MODELS = ['on_platform', 'off_platform'] as const
+/** T3.11.07 — the settlement model, and answering it is obligatory (owner's
+ *  decision 2026-09-08).
+ *
+ *  Three, because they separate *when* the money moves from *where it lives* —
+ *  the pair that actually differs for the two people: cash is settled hand to
+ *  hand at the door, e-money by two phones, the wallet by neither. The previous
+ *  two (`on_platform` / `off_platform`) folded the first two together on the
+ *  grounds that «cash or transfer?» is the same question as «which system?» —
+ *  right about the words, wrong about the people.
+ *
+ *  Obligatory on the trip, not final in the deal: the agreement carries a
+ *  `payment` section both sides confirm, so the two of them may settle
+ *  differently by agreeing to. */
+export const PAYMENT_MODELS = [
+  'cash_on_delivery',
+  'emoney_on_delivery',
+  'platform_wallet',
+] as const
 export type PaymentModel = (typeof PAYMENT_MODELS)[number]
+
+/** The one model that needs `payment_systems` beside it. Cash has no system to
+ *  name, and the wallet is the system. */
+export const EMONEY_MODEL: PaymentModel = 'emoney_on_delivery'
+
 
 export interface Trip {
   id: string

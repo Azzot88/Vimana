@@ -629,10 +629,6 @@
       "discardDraft": "Supprimer"
     },
     "paymentHint": "Comment vous êtes payé. Affiché sur la fiche ; le montant est facultatif.",
-    "paymentModel": {
-      "on_platform": "Sur la plateforme",
-      "off_platform": "Hors plateforme"
-    },
     "servicesHint": "Facultatif. Chacun est cherchable : ceux qui en ont besoin vous trouvent.",
     "services": {
       "domestic_shipping": "Je réexpédie par la poste dans le pays",
@@ -1408,7 +1404,6 @@
       "open_on_handover": "Ouvrir à la remise",
       "photo_required": "Photo obligatoire",
       "fragile": "Fragile",
-      "temperature_note": "Température",
       "parcel_count": "Colis",
       "stage": "Étape",
       "eta": "ETA",

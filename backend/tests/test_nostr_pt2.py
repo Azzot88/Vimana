@@ -32,6 +32,7 @@ async def _make_trip(client, hdr) -> str:
         "/api/trips",
         headers=hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "P2X",

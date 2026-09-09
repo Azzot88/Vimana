@@ -67,7 +67,6 @@ export const CARD_FORMS: CardFormSpec[] = [
       { name: 'open_on_handover', type: 'bool' },
       { name: 'photo_required', type: 'bool', default: true },
       { name: 'fragile', type: 'bool' },
-      { name: 'temperature_note', type: 'text' },
     ],
   },
   { kind: 'pickup.proposed', roles: ['sender', 'carrier'], fields: MEETING_FIELDS },

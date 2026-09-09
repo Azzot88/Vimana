@@ -97,6 +97,7 @@ async def test_build_event_produces_valid_nip01_signature(client, session_maker)
         "/api/trips",
         headers=hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "NEO",
@@ -149,6 +150,7 @@ async def test_nostr_event_endpoint_503_when_disabled(client):
         "/api/trips",
         headers=hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "DIS",
@@ -173,6 +175,7 @@ async def test_nostr_event_endpoint_returns_event_when_enabled(client):
             "/api/trips",
             headers=hdr,
             json={
+                "payment_model": "cash_on_delivery",
                 "legs": [
                     {
                         "origin": "ONO",
@@ -214,6 +217,7 @@ async def test_publish_task_skips_a_carrier_who_owns_their_key(
         "/api/trips",
         headers=hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "SLF",
@@ -247,6 +251,7 @@ async def test_trip_out_exposes_nostr_fields(client):
         "/api/trips",
         headers=hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "OUT",

@@ -77,6 +77,7 @@ async def test_delete_user_cascade_removes_related_rows(client, session_maker):
         "/api/trips",
         headers=v_hdr,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "DEL",

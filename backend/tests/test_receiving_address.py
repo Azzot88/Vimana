@@ -138,6 +138,7 @@ async def test_share_address_in_inquiry_chat(
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "ADR",

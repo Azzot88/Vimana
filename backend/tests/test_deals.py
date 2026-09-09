@@ -7,6 +7,7 @@ async def _create_open_trip(client, carrier_headers) -> str:
         "/api/trips",
         headers=carrier_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "MTC",
@@ -226,3 +227,97 @@ async def test_list_deals_route_is_all_or_nothing(client, sender_headers):
     assert resp.status_code == 200, resp.text
     for row in resp.json()["items"]:
         assert (row["origin"] is None) == (row["destination"] is None), row
+
+
+# ── T3.11.07 · the order asks only for what the trip published ────────────
+
+
+async def test_order_cannot_ask_for_a_category_the_trip_does_not_carry(
+    client, carrier_headers, sender_headers
+):
+    """Owner's rule 2026-09-08: «перевозчик выставляет свои возможности,
+    отправитель выбирает из того что может сделать перевозчик».
+
+    Until this check existed the match path took any category at all and created
+    it, so a deal for animals could be attached to a carrier who never said they
+    take animals — and the carrier found out when the parcel arrived with a cat
+    in it.
+    """
+    trip = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "payment_model": "cash_on_delivery",
+            "legs": [
+                {
+                    "origin": "AAA",
+                    "destination": "BBB",
+                    "depart_at": (
+                        datetime.now(timezone.utc) + timedelta(days=3)
+                    ).isoformat(),
+                }
+            ],
+            "allowed_categories": ["document"],
+        },
+    )
+    assert trip.status_code == 201, trip.text
+
+    r = await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={
+            "trip_id": trip.json()["id"],
+            "order": {
+                "recipient_contact": "+10000000001",
+                "origin": "AAA",
+                "destination": "BBB",
+                "category": "animals",
+                "declared_value": 100.0,
+            },
+        },
+    )
+    assert r.status_code == 409, r.text
+
+
+async def test_a_trip_that_named_no_categories_still_takes_a_deal(
+    client, carrier_headers, sender_headers
+):
+    """Silence is not an offer of nothing.
+
+    `allowed_categories` is optional so that a route and a date publish a trip —
+    31 % of this market publishes within two days of the flight. Reading an empty
+    list as «carries nothing» would make every express listing unbookable.
+    """
+    trip = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "payment_model": "cash_on_delivery",
+            "legs": [
+                {
+                    "origin": "CCC",
+                    "destination": "DDD",
+                    "depart_at": (
+                        datetime.now(timezone.utc) + timedelta(days=3)
+                    ).isoformat(),
+                }
+            ],
+        },
+    )
+    assert trip.status_code == 201, trip.text
+
+    r = await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={
+            "trip_id": trip.json()["id"],
+            "order": {
+                "recipient_contact": "+10000000002",
+                "origin": "CCC",
+                "destination": "DDD",
+                "category": "document",
+                "declared_value": 100.0,
+            },
+        },
+    )
+    assert r.status_code == 201, r.text

@@ -38,6 +38,7 @@ async def _open_dispute(client, session_maker):
         "/api/trips",
         headers=c_headers,
         json={
+            "payment_model": "cash_on_delivery",
             "legs": [
                 {
                     "origin": "GRT",

@@ -14,7 +14,7 @@ from pydantic import (
 
 from app.core.currencies import CURRENCIES
 from app.core.trip_legs import MAX_LEGS
-from app.models.marketplace import EXCLUSIONS, TRIP_SERVICES
+from app.models.marketplace import EMONEY_MODEL, EXCLUSIONS, TRIP_SERVICES
 # T3.11.22 — imported, not re-typed. This list used to be written out here as
 # well as in `schemas/cards.py`: two literal copies obliged to agree forever and
 # connected by nothing. The old comment justified the copy by avoiding a
@@ -201,17 +201,25 @@ class TripCreate(BaseModel):
     # carrier said nothing, which is what 94 % of this market does; an empty
     # list would claim they considered the question and had no exclusions.
     excluded: list[str] | None = Field(default=None, max_length=len(EXCLUSIONS))
-    # T3.11.07 — what the carrier does around the flight, and how they expect to
-    # be paid. Both nullable: the settlement model is stated by 61.7 % of this
-    # market and a price by 0.1 %, so the model is the field that matters — but
-    # silence still has to stay distinguishable from the commonest answer.
+    # T3.11.07 — what the carrier does around the flight. Nullable: silence has
+    # to stay distinguishable from «I considered it and offer none».
     services: list[str] | None = Field(default=None, max_length=len(TRIP_SERVICES))
-    payment_model: Literal["on_platform", "off_platform"] | None = None
+    # T3.11.07 — **obligatory** (owner's decision 2026-09-08). The settlement
+    # model is stated by 61.7 % of this market anyway, and the sender who has to
+    # ask about it is the sender who does not book. It is still not final: the
+    # deal's agreement carries a `payment` section both sides confirm, so the two
+    # of them may settle differently by agreeing to.
+    payment_model: Literal[
+        "cash_on_delivery", "emoney_on_delivery", "platform_wallet"
+    ]
     # Free text turned into chips by the form, not a closed list: what people
     # transfer through is local and changes faster than a vocabulary we could
     # ship, and a carrier naming one we had not heard of would be told they are
-    # wrong.
+    # wrong. Only meaningful beside `emoney_on_delivery` — cash has no system to
+    # name — and the validator below refuses it elsewhere rather than storing an
+    # answer to a question nobody asked.
     payment_systems: list[str] | None = Field(default=None, max_length=8)
+
     # T_UX.15 — omitted means "use my standing rules"; an explicit empty string
     # means "this trip has none", and the two must stay distinguishable.
     carriage_rules: str | None = Field(default=None, max_length=4000)
@@ -283,6 +291,22 @@ class TripCreate(BaseModel):
             if len(system) > 40:
                 raise ValueError("a payment system name is at most 40 characters")
         return list(dict.fromkeys(cleaned)) or None
+
+    @model_validator(mode="after")
+    def _systems_belong_to_emoney(self):
+        """T3.11.07 — a system named beside cash is an answer to no question.
+
+        Same shape as the postal levels in `T3.11.22`: a lower level that cannot
+        be answered before the one above it must not be able to contradict it.
+        Refused rather than dropped — silently discarding what somebody typed is
+        how a form teaches people that it does not read them.
+        """
+        if self.payment_systems and self.payment_model != EMONEY_MODEL:
+            raise ValueError(
+                "payment_systems only goes with emoney_on_delivery"
+            )
+        return self
+
 
 
 class TripOut(BaseModel):
