@@ -119,6 +119,28 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED, "taking the editing window on a stranger's deal"
     ),
     # ---- DealVault -----------------------------------------------------
+    ("GET", "/api/deals/{deal_id}/checklist"): Case(
+        DENIED,
+        "T3.11.09 — the corridor checklist is the deal's content. The arbiter "
+        "reaches a disputed deal through `api/admin`, which keeps its own grant "
+        "check and writes its own audit entry; a second door here would be the "
+        "same content without either",
+    ),
+    # T3.11.06 — a saved case carries a corridor, a category and a list of
+    # public documents. Nothing about a person, and the wizard that writes it
+    # runs before registration, so there is no account to check an anonymous
+    # case against. Readable by whoever holds the id, like the directory itself.
+    ("GET", "/api/checklist/cases/{case_id}"): Case(
+        PUBLIC, "a checklist snapshot names documents, never people"
+    ),
+    # T3.11.19 — 404 rather than 403 on somebody else's request: whether it
+    # exists is not a fact this endpoint is entitled to confirm.
+    ("PATCH", "/api/requests/{request_id}"): Case(
+        DENIED,
+        "closing or silencing a stranger's corridor request",
+        json={"is_open": False},
+    ),
+
     ("GET", "/api/deals/{deal_id}/dealvault"): Case(
         DENIED, "the vault is the deal's private content"
     ),
@@ -649,6 +671,15 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "note_id": str(note_id),
         "notice_id": str(notice_id),
         "credential_id": str(credential_id),
+        # T3.11.06 / T3.11.19 — random on purpose, and enough for what these
+        # rows assert. The checklist case is `PUBLIC`, so an id that resolves to
+        # nothing gives the 404 that `PUBLIC` accepts; the request row refuses
+        # on ownership before it looks anything up, and a real row belonging to
+        # the seed carrier would prove the same thing while making this fixture
+        # the thing under test.
+        "case_id": str(uuidlib.uuid4()),
+        "request_id": str(uuidlib.uuid4()),
+
         "user_id": str(seed_carrier.id),
         "npub": npub,
         # T3.40 — a real parameter name: the row asserts that a stranger is

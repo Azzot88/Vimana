@@ -165,7 +165,11 @@ def test_classes_with_nothing_to_send_are_not_shown():
     from app.core.notification_prefs import visible_classes
 
     shown = {cls.key for cls in visible_classes()}
-    assert shown == {"deal", "deadline", "security"}
+    # T3.11.19 — `marketplace` joined when it gained a producer (`corridor_trip`).
+    # The set is spelled out rather than derived from `EVENT_CLASSES`, which is
+    # the point: a class declared and never emitted must not silently appear as
+    # a switch, so adding one here is a deliberate act.
+    assert shown == {"deal", "deadline", "marketplace", "security"}
 
 
 def test_security_is_the_locked_class():
@@ -262,7 +266,7 @@ async def test_me_answers_with_the_matrix_filled_in(client):
     resp = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     prefs = resp.json()["notification_prefs"]
 
-    assert set(prefs) == {"deal", "deadline", "security"}
+    assert set(prefs) == {"deal", "deadline", "marketplace", "security"}
     assert set(prefs["deal"]) == {"email", "telegram", "whatsapp"}
     assert prefs["deal"]["email"] is True
     assert resp.json()["notification_locked"] == ["security"]
