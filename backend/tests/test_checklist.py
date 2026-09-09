@@ -17,7 +17,7 @@ make the list usable rather than merely correct:
 from __future__ import annotations
 
 import uuid as uuidlib
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest_asyncio
 from sqlalchemy import delete
@@ -163,7 +163,55 @@ async def corridor(session_maker):
         await db.commit()
 
 
+@pytest_asyncio.fixture
+async def fresh_deal(client, carrier_headers, sender_headers):
+    """A deal of this test's own, published through the API.
+
+    **Not `seed_deal`.** `vimana_test` is never reset (`ENVIRONMENT §8`), and
+    these tests bind compliance cases and file documents against the deal they
+    are given: on the second run the shared one already carries yesterday's case
+    and yesterday's attachment, and «нет чеклиста» stops being true of it
+    forever. A fresh deal per test is the only version of this that keeps
+    meaning what it says.
+    """
+    trip = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "payment_model": "cash_on_delivery",
+            "legs": [
+                {
+                    "origin": "CHK",
+                    "destination": "LST",
+                    "depart_at": (
+                        datetime.now(timezone.utc) + timedelta(days=5)
+                    ).isoformat(),
+                }
+            ],
+            "allowed_categories": ["document"],
+        },
+    )
+    assert trip.status_code == 201, trip.text
+    match = await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={
+            "trip_id": trip.json()["id"],
+            "order": {
+                "recipient_contact": "+10000000077",
+                "origin": "CHK",
+                "destination": "LST",
+                "category": "document",
+                "declared_value": 100.0,
+            },
+        },
+    )
+    assert match.status_code == 201, match.text
+    return match.json()["id"]
+
+
 #: A PDF small enough to type and large enough to pass content validation
+
 #: (`core.file_validation` refuses anything under its floor). Same bytes as
 #: `test_file_validation.PDF_MIN`.
 _PDF_MIN = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
@@ -323,7 +371,7 @@ async def test_a_saved_case_does_not_move_when_the_rule_does(
 
 
 async def test_a_deal_without_a_case_says_so_quietly(
-    client, sender_headers, seed_deal
+    client, sender_headers, fresh_deal
 ):
     """Most deals carry no corridor requirements at all.
 
@@ -331,7 +379,7 @@ async def test_a_deal_without_a_case_says_so_quietly(
     deal screen would have to tell the two apart.
     """
     r = await client.get(
-        f"/api/deals/{seed_deal.id}/checklist", headers=sender_headers
+        f"/api/deals/{fresh_deal}/checklist", headers=sender_headers
     )
     assert r.status_code == 200, r.text
     assert r.json() == {
@@ -344,7 +392,7 @@ async def test_a_deal_without_a_case_says_so_quietly(
 
 
 async def test_a_filed_document_closes_its_line(
-    client, sender_headers, seed_deal, corridor
+    client, sender_headers, fresh_deal, corridor
 ):
     """The list is a snapshot; the ticks are derived.
 
@@ -359,13 +407,13 @@ async def test_a_filed_document_closes_its_line(
             "destination": corridor["state"],
             "category": corridor["category"],
             "attrs": {"purpose": "personal"},
-            "deal_id": str(seed_deal.id),
+            "deal_id": str(fresh_deal),
         },
     )
     assert case.status_code == 201, case.text
 
     before = await client.get(
-        f"/api/deals/{seed_deal.id}/checklist", headers=sender_headers
+        f"/api/deals/{fresh_deal}/checklist", headers=sender_headers
     )
     body = before.json()
     assert body["case_id"] == case.json()["id"]
@@ -373,9 +421,9 @@ async def test_a_filed_document_closes_its_line(
     assert vet["attached"] is False
     assert body["open_mandatory"] >= 1
 
-    msg = await _create_message(client, sender_headers, seed_deal.id)
+    msg = await _create_message(client, sender_headers, fresh_deal)
     up = await client.post(
-        f"/api/deals/{seed_deal.id}/dealvault/messages/{msg}/attachments",
+        f"/api/deals/{fresh_deal}/dealvault/messages/{msg}/attachments",
         headers=sender_headers,
         # `PDF_MIN` from `test_file_validation`: content validation has a floor,
         # and `%PDF-1.4` alone is under it.
@@ -386,7 +434,7 @@ async def test_a_filed_document_closes_its_line(
 
     after = (
         await client.get(
-            f"/api/deals/{seed_deal.id}/checklist", headers=sender_headers
+            f"/api/deals/{fresh_deal}/checklist", headers=sender_headers
         )
     ).json()
     vet = next(i for i in after["items"] if i["code"] == "vet")
@@ -396,7 +444,7 @@ async def test_a_filed_document_closes_its_line(
 
 
 async def test_an_open_checklist_blocks_nothing(
-    client, sender_headers, carrier_headers, seed_deal, corridor
+    client, sender_headers, carrier_headers, fresh_deal, corridor
 ):
     """`D-COMPLIANCE-STANCE` — «вы знали» доказывается записью, а не запретом.
 
@@ -413,12 +461,12 @@ async def test_an_open_checklist_blocks_nothing(
             "destination": corridor["state"],
             "category": corridor["category"],
             "attrs": {"purpose": "personal"},
-            "deal_id": str(seed_deal.id),
+            "deal_id": str(fresh_deal),
         },
     )
     assert case.status_code == 201, case.text
     raised = await client.post(
-        f"/api/deals/{seed_deal.id}/cards",
+        f"/api/deals/{fresh_deal}/cards",
         headers=sender_headers,
         json={
             "kind": "compliance.checklist",
@@ -431,7 +479,7 @@ async def test_an_open_checklist_blocks_nothing(
 
     # And an unrelated step still goes through with the checklist wide open.
     moved = await client.post(
-        f"/api/deals/{seed_deal.id}/cards",
+        f"/api/deals/{fresh_deal}/cards",
         headers=carrier_headers,
         json={"kind": "transit.update", "payload": {"stage": "departed"}},
     )
@@ -440,7 +488,7 @@ async def test_an_open_checklist_blocks_nothing(
 
 
 async def test_a_stranger_cannot_read_the_checklist(
-    client, seed_deal, corridor
+    client, fresh_deal, corridor
 ):
     """The arbiter reaches a disputed deal through `api/admin`, which keeps its
     own grant check and writes its own audit entry. A second door here would be
@@ -455,6 +503,6 @@ async def test_a_stranger_cannot_read_the_checklist(
         "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
     )
     hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    r = await client.get(f"/api/deals/{seed_deal.id}/checklist", headers=hdr)
+    r = await client.get(f"/api/deals/{fresh_deal}/checklist", headers=hdr)
     assert r.status_code == 403, r.text
 
