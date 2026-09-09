@@ -1,8 +1,4 @@
-        // T3.11.07 — obligatory since 2026-09-08. `null` cannot leave this form
-        // any more; the publish guard below refuses before it gets here.
-        payment_model: draft.paymentModel || null,
-        // Only meaningful beside e-money: cash has no system to name, and the
-        // server refuses a system sent with anything else.import { useId, useCallback, useEffect, useRef, useState } from 'react'
+import { useId, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
