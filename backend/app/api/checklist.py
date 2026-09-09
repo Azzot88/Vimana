@@ -18,6 +18,8 @@ Endpoints:
 - `POST /api/checklist/cases` — freeze the snapshot. Public; binds to the
   current account when there is one.
 - `GET /api/checklist/cases/{case_id}` — read one back, as it was.
+- `GET /api/deals/{deal_id}/checklist` — the case bound to a deal, with the
+  ticks derived from what has actually been filed (`T3.11.09`). Parties only.
 """
 from __future__ import annotations
 
@@ -29,7 +31,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user_optional
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.checklist import build_checklist
 from app.core.database import get_db
 from app.models.rules import ComplianceCase
@@ -192,4 +194,110 @@ async def read_case(case_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
         depart_at=case.depart_at,
         trip_id=case.trip_id,
         deal_id=case.deal_id,
+    )
+
+
+class DealChecklistItemOut(ChecklistItemOut):
+    """A checklist line as it stands **in this deal**."""
+
+    #: True when some attachment on this deal carries this requirement's code.
+    #: Derived, never stored: see `Attachment.requirement_code`.
+    attached: bool = False
+    #: How many documents were filed against it. More than one is normal — a
+    #: certificate plus its translation — and a screen that showed only «done»
+    #: would hide the second.
+    attachment_count: int = 0
+
+
+class DealChecklistOut(BaseModel):
+    case_id: uuid.UUID | None
+    items: list[DealChecklistItemOut]
+    unanswered: dict[str, list[str]]
+    corridor: list[str]
+    #: How many mandatory lines are still open. The number the deal screen shows
+    #: and the arbiter reads; it never blocks anything (`D-COMPLIANCE-STANCE`).
+    open_mandatory: int
+
+
+@router.get("/deals/{deal_id}/checklist", response_model=DealChecklistOut)
+async def deal_checklist(
+    deal_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.09 — the checklist attached to this deal, with what is closed.
+
+    **The list is the snapshot, the ticks are derived.** `ComplianceCase.checklist`
+    is frozen at the moment the person answered the questionnaire; whether a line
+    is closed is computed here by looking for an attachment carrying its code.
+    Two different kinds of fact, kept in the two places that can be right about
+    them: what was asked does not change, what has been filed does.
+
+    **Nothing here blocks.** `D-COMPLIANCE-STANCE`: an open line is visible to
+    both sides and to the arbiter, and that is the whole mechanism — «вы знали»
+    is proved by the record, not by a refusal.
+
+    Called by: the deal screen and the arbiter's view of it.
+    """
+    from app.models.deal import Attachment, Deal, DealVaultMessage
+
+    deal = (
+        await db.execute(select(Deal).where(Deal.id == deal_id))
+    ).scalar_one_or_none()
+    if deal is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    if current_user.id not in (deal.sender_id, deal.carrier_id, deal.recipient_id):
+        # The arbiter reaches a disputed deal through `api/admin`, which keeps
+        # its own grant check and its own audit entry. Widening this endpoint to
+        # cover them would be a second, unaudited door to the same content.
+        raise HTTPException(status_code=403, detail="Not a party to this deal")
+
+    case = (
+        await db.execute(
+            select(ComplianceCase)
+            .where(ComplianceCase.deal_id == deal_id)
+            .order_by(ComplianceCase.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if case is None:
+        # Not an error: most deals carry no corridor requirements at all, and a
+        # 404 would make «нет чеклиста» look like «что-то сломалось».
+        return DealChecklistOut(
+            case_id=None, items=[], unanswered={}, corridor=[], open_mandatory=0
+        )
+
+    codes = (
+        (
+            await db.execute(
+                select(Attachment.requirement_code)
+                .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
+                .where(
+                    DealVaultMessage.deal_id == deal_id,
+                    Attachment.requirement_code.is_not(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    filed: dict[str, int] = {}
+    for code in codes:
+        filed[code] = filed.get(code, 0) + 1
+
+    snapshot = case.checklist or {}
+    items = [
+        DealChecklistItemOut(
+            **item,
+            attached=item["code"] in filed,
+            attachment_count=filed.get(item["code"], 0),
+        )
+        for item in snapshot.get("items", [])
+    ]
+    return DealChecklistOut(
+        case_id=case.id,
+        items=items,
+        unanswered=snapshot.get("unanswered", {}),
+        corridor=snapshot.get("corridor", []),
+        open_mandatory=sum(1 for i in items if i.is_mandatory and not i.attached),
     )

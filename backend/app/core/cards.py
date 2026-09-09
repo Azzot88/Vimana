@@ -41,6 +41,15 @@ class CardKind(str, enum.Enum):
     dropoff_confirmed = "dropoff.confirmed"
     address_shared = "address.shared"
     route_note = "route.note"
+    # T3.11.09 — the corridor checklist, anchored in the deal.
+    #
+    # Its own kind rather than `route.note` reused, which is what the task text
+    # said. `route.note` is a badge — one word about a corridor — and an arbiter
+    # reads these labels: filing a list of customs documents under «заметка о
+    # маршруте» would mislabel the evidence at the moment it matters. The
+    # instruction «новая сущность не заводится» is honoured: no table, no second
+    # mechanism, one more member of a catalogue built to grow.
+    compliance_checklist = "compliance.checklist"
 
     # Group 3 — custody (T3.37)
     handoff_declared = "handoff.declared"
@@ -169,6 +178,13 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         _s(CardKind.dropoff_confirmed, "logistics", implemented=True),
         _s(CardKind.address_shared, "logistics", implemented=True),
         _s(CardKind.route_note, "logistics"),
+        # T3.11.09 — informational, and that is the decision, not an omission.
+        # `D-COMPLIANCE-STANCE`: an unclosed item is visible to both sides and to
+        # the arbiter, and that is enough — «вы знали» is proved by the record,
+        # not by a refusal. `ack_by=None` is what «не блокирует сделку» looks
+        # like in the catalogue.
+        _s(CardKind.compliance_checklist, "logistics", creator_roles=PARTIES,
+           implemented=True),
 
         # ── group 3 · custody ──────────────────────────────────────────────
         # The sender declares the handover and the carrier confirms taking it:

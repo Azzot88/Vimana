@@ -7,6 +7,7 @@ even where the card obviously has something to say.
 """
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import Literal, get_args
 
@@ -126,6 +127,24 @@ class PaymentDeclared(BaseModel):
     method: Literal["cash", "platform", "escrow"] = "cash"
 
 
+class ComplianceChecklist(BaseModel):
+    """T3.11.09 — the corridor checklist, anchored in the deal.
+
+    Only the case id travels. The list itself lives in `ComplianceCase.checklist`
+    as a snapshot, and copying it into a card payload would make a second copy
+    that can disagree with the first — the card would keep saying what the
+    corridor asked in March while the case knows what it was told.
+
+    What is closed is not stored here either: an item is closed when an
+    attachment on this deal carries its `requirement_code`. Derived rather than
+    written, because a card is never edited and ticks kept in a payload would
+    need a new card per document.
+    """
+
+    case_id: uuid.UUID
+
+
+
 class IssueReported(BaseModel):
     category: Literal["delay", "damage", "unreachable", "mismatch"]
 
@@ -152,6 +171,7 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.delivery_declared: DeliveryDeclared,
     CardKind.payment_method_agreed: PaymentMethodAgreed,
     CardKind.payment_declared: PaymentDeclared,
+    CardKind.compliance_checklist: ComplianceChecklist,
     CardKind.issue_reported: IssueReported,
     CardKind.cancel_requested: CancelRequested,
 }

@@ -250,6 +250,15 @@ async def _ensure_connection_tier(engine) -> None:
                 "user_file_id UUID REFERENCES user_files(id)"
             )
         )
+        # 0086 — which checklist line a document closes (`T3.11.09`).
+        # `attachments` already exists, so `create_all` never adds this.
+        await conn.execute(
+            text(
+                "ALTER TABLE attachments ADD COLUMN IF NOT EXISTS "
+                "requirement_code VARCHAR(64)"
+            )
+        )
+
         await conn.execute(
             text(
                 "ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'file_reattached'"

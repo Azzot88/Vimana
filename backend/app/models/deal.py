@@ -513,6 +513,21 @@ class Attachment(Base):
     scanned_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # T3.11.09 — which line of the corridor checklist these bytes close.
+    #
+    # On the attachment rather than in the card's payload, because a card is
+    # never edited (`CardState.superseded` is how a correction looks) and a
+    # checklist whose ticks lived in the payload would need a new card per
+    # document — a wall of cards for one parcel. Here the state is **derived**:
+    # an item is closed when an attachment on this deal carries its code, so
+    # there is one source of truth and nothing to keep in step.
+    #
+    # Free text, not a foreign key: the code comes from a `DocumentRequirement`
+    # in a snapshot that may since have been superseded, and a constraint
+    # pointing at a live row would break the moment a rule was republished.
+    requirement_code: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

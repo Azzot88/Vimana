@@ -340,6 +340,10 @@ async def upload_attachment(
     request: Request,
     file: UploadFile,
     kind: str = Form(...),
+    # T3.11.09 — which line of the corridor checklist this closes, when it
+    # closes one. Optional: most attachments are photographs of a handover and
+    # answer to no requirement at all.
+    requirement_code: str | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -460,6 +464,7 @@ async def upload_attachment(
         # it never means "safe" (owner's decision 2026-08-02).
         scan_status=scan_status,
         scanned_at=datetime.now(timezone.utc) if scan_status != "pending" else None,
+        requirement_code=(requirement_code or "").strip()[:64] or None,
     )
     db.add(attachment)
     # T3.7 — chain the file in the same transaction as its row. `file_hash`
