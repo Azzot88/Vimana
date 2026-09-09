@@ -50,6 +50,7 @@ const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage'))
 const AdminRulesPage = lazy(() => import('./pages/AdminRulesPage'))
 const RulesPage = lazy(() => import('./pages/RulesPage'))
 const RulesIndexPage = lazy(() => import('./pages/RulesIndexPage'))
+const ChecklistWizardPage = lazy(() => import('./pages/ChecklistWizardPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const CarrierPage = lazy(() => import('./pages/CarrierPage'))
@@ -116,6 +117,10 @@ export default function App() {
               SPA catch-all and render "page not found" for the one address a
               person would guess. */}
           <Route path="/rules" element={<RulesIndexPage />} />
+          {/* T3.11.06 — the checklist wizard, public for the same reason the
+              directory is: free information behind a sign-up wall is a sign-up
+              form pretending to be a service (`MASTERPLAN §4.1`). */}
+          <Route path="/checklist" element={<ChecklistWizardPage />} />
           <Route
             path="/rules/:category/:direction/:country"
             element={<RulesPage />}

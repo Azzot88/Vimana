@@ -1566,6 +1566,52 @@
       "superseded": "superseded"
     }
   },
+  "checklist": {
+    "title": "What you need to collect",
+    "lead": "We assemble the documents your corridor asks for from published rules, and work out what already has to be started. No account needed.",
+    "category": "What you are sending",
+    "from": "From",
+    "to": "To",
+    "departAt": "Departure date",
+    "departHint": "Optional. Without it you get the list but no deadlines.",
+    "build": "Build the list",
+    "rebuild": "Rebuild with answers",
+    "questions": "Questions the rules ask",
+    "questionsHint": "These come from the corridor's own rules. Until one is answered the document stays in the list — safer than dropping it silently.",
+    "result_one": "{{count}} document",
+    "result_other": "{{count}} documents",
+    "empty": "The published rules ask for no documents on this corridor.",
+    "noCorpus": "No rule corpus has been published yet.",
+    "mandatory": "required",
+    "optional": "depends",
+    "undecided": "answer needed — it depends",
+    "leadTime_one": "takes {{count}} day",
+    "leadTime_other": "takes {{count}} days",
+    "validFor_one": "valid {{count}} day",
+    "validFor_other": "valid {{count}} days",
+    "startBy": "start by {{date}}",
+    "tooLate": "too late: this had to be started by {{date}}",
+    "keep": "Save the list",
+    "saved": "Saved. Reference:",
+    "disclaimer": "This is an extract from published requirements, not a ruling. The authority decides, not the platform.",
+    "buildFailed": "Could not build the list",
+    "saveFailed": "Could not save the list",
+    "attr": {
+      "age_years": "Age of the item, years",
+      "declared_value": "Declared value",
+      "author_known": "Author known",
+      "species": "Species",
+      "breed": "Breed",
+      "generation": "Hybrid generation",
+      "purpose": "For yourself or for resale",
+      "count": "How many"
+    },
+    "attrHint": {
+      "author_known": "yes or no",
+      "purpose": "personal or resale",
+      "generation": "F1 … F5"
+    }
+  },
   "rules": {
     "cancelTimeout": {
       "title": "Cancellation nobody answers",
