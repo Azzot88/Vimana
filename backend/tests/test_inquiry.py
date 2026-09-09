@@ -2,8 +2,38 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import text as sa_text
 from tests.conftest import make_account
+
+
+@pytest_asyncio.fixture
+async def fresh_pair(client):
+    """A carrier and a sender who have never spoken to anybody.
+
+    **Not the seed pair.** A chat is keyed by the two people and created once,
+    so the seed pair's chat was made on the very first run this database ever
+    had and is now the oldest of 385. `GET /api/inquiries` answers with the
+    hundred newest, so their own chat sits outside the window — and a test that
+    opens a conversation and then cannot find it in the list is failing on
+    accumulated state (`ENVIRONMENT §8`), not on the behaviour it names.
+
+    A fresh pair has exactly one chat, which is the condition these tests are
+    actually about: «one row per pair, the same from both sides».
+
+    Called by: the T3.11.23 chat tests below.
+    """
+    from tests.conftest import SEED_PASSWORD, _login, unique_email
+
+    made = {}
+    for role in ("carrier", "sender"):
+        email = unique_email(f"chat-{role}")
+        await make_account(
+            {"email": email, "password": SEED_PASSWORD, "display_name": role.title()}
+        )
+        token = await _login(client, email)
+        made[role] = {"Authorization": f"Bearer {token}"}
+    return made
 
 
 async def _make_open_trip(client, carrier_headers) -> str:
@@ -180,14 +210,17 @@ async def test_inquiry_linked_to_deal_after_match(client, carrier_headers):
     assert thread["deal_id"] == deal_id
 
 
-async def test_carrier_sees_inquiries_addressed_to_them(
-    client, carrier_headers, sender_headers
-):
-    trip_id = await _make_open_trip(client, carrier_headers)
-    inq = await client.post(f"/api/trips/{trip_id}/inquiry", headers=sender_headers)
-    resp = await client.get("/api/inquiries", headers=carrier_headers)
+async def test_carrier_sees_inquiries_addressed_to_them(client, fresh_pair):
+    """On a fresh pair: the list answers with the hundred newest chats, and the
+    seed pair's is the oldest of 385 in a database that is never reset."""
+    trip_id = await _make_open_trip(client, fresh_pair["carrier"])
+    inq = await client.post(
+        f"/api/trips/{trip_id}/inquiry", headers=fresh_pair["sender"]
+    )
+    resp = await client.get("/api/inquiries", headers=fresh_pair["carrier"])
     assert resp.status_code == 200
     assert any(i["id"] == inq.json()["id"] for i in resp.json())
+
 
 
 # ── T3.11.23 · one chat per person ─────────────────────────────────────────
@@ -217,20 +250,25 @@ async def test_two_trips_with_one_carrier_share_a_chat(
     assert b.json()["trip_id"] == second
 
 
-async def test_a_chat_is_the_same_from_both_sides(
-    client, sender_headers, carrier_headers
-):
+async def test_a_chat_is_the_same_from_both_sides(client, fresh_pair):
     """`(A, B)` and `(B, A)` are one row. The pair is stored ordered and the
     unique index makes «one per person» a fact of the database rather than a
-    habit of the code."""
-    trip = await _make_open_trip(client, carrier_headers)
-    opened = await client.post(f"/api/trips/{trip}/inquiry", headers=sender_headers)
+    habit of the code.
+
+    On a fresh pair, because the listing is capped at the hundred newest and the
+    seed pair's chat is the oldest one this database has.
+    """
+    trip = await _make_open_trip(client, fresh_pair["carrier"])
+    opened = await client.post(
+        f"/api/trips/{trip}/inquiry", headers=fresh_pair["sender"]
+    )
     chat_id = opened.json()["id"]
 
-    for headers in (sender_headers, carrier_headers):
+    for headers in (fresh_pair["sender"], fresh_pair["carrier"]):
         listing = await client.get("/api/inquiries", headers=headers)
         assert listing.status_code == 200, listing.text
         assert chat_id in {c["id"] for c in listing.json()}
+
 
 
 async def test_messages_from_both_trips_are_in_one_thread(client, carrier_headers):
