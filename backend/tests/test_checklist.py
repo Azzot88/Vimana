@@ -22,6 +22,7 @@ from datetime import date, timedelta
 import pytest_asyncio
 from sqlalchemy import delete
 
+from app.models.marketplace import Category
 from app.models.rules import (
     DocumentRequirement,
     Jurisdiction,
@@ -46,8 +47,14 @@ async def corridor(session_maker):
     category = f"chk-{tag.lower()}"
 
     async with session_maker() as db:
+        # `RuleSet.category_key` is a foreign key into the category registry the
+        # trips already use (`T1.17`) — deliberately, so a rule can attach to a
+        # trip whose category is already chosen. A corpus for a category nobody
+        # has registered is therefore not a thing, and the fixture registers it.
         db.add_all(
             [
+                Category(name_key=category, is_default=False),
+                Category(name_key=f"{category}-draft", is_default=False),
                 Jurisdiction(
                     code=country, kind=JurisdictionKind.country,
                     parent_code=None, name="In",
@@ -147,6 +154,11 @@ async def corridor(session_maker):
         await db.execute(delete(RuleSet).where(RuleSet.id.in_([rs.id for rs in (federal, local, leaving, draft)])))
         await db.execute(
             delete(Jurisdiction).where(Jurisdiction.code.in_([state, country, out]))
+        )
+        await db.execute(
+            delete(Category).where(
+                Category.name_key.in_([category, f"{category}-draft"])
+            )
         )
         await db.commit()
 
