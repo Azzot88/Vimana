@@ -951,3 +951,68 @@ async def test_the_purchase_moves_no_status(
         f"/api/deals/{buyout_deal.id}", headers=sender_headers
     )
     assert detail.json()["status"] == "accepted"
+
+
+# ── T3.11.27 · both sides can declare the handover ────────────────────────
+
+
+async def test_the_carrier_can_declare_that_they_took_it(
+    client, sender_headers, carrier_headers, deal
+):
+    """Owner, 2026-09-12: «перевозчик должен подтверждать что получил посылку».
+
+    Whoever is holding the parcel declares; the other confirms. Its own kind
+    rather than one shared by both roles, because an arbiter reads these labels
+    and «отдал» and «взял» are different claims about who was standing there.
+    """
+    declared = await _card(client, carrier_headers, deal.id, "handoff.received")
+    assert declared.status_code == 201, declared.text
+    assert declared.json()["requires_ack_by"] == "sender"
+
+    msg_id = declared.json()["id"]
+    await _attach_photo(client, carrier_headers, deal.id, msg_id, "handoff_photo")
+    r = await _ack(client, sender_headers, deal.id, msg_id)
+    assert r.status_code == 200, r.text
+
+    detail = await client.get(f"/api/deals/{deal.id}", headers=sender_headers)
+    assert detail.json()["status"] == "in_transit"
+
+
+async def test_the_sender_does_not_declare_receipt(client, sender_headers, deal):
+    """The parcel is not in their hands, and a claim about somebody else's
+    hands is the one thing this record must never carry."""
+    r = await _card(client, sender_headers, deal.id, "handoff.received")
+    assert r.status_code == 403, r.text
+
+
+async def test_closing_by_the_pair_seals_the_vault(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """T3.7 — sealing follows the close, wherever the close happens.
+
+    It used to live inside `deals.confirm_deal` alone, so a deal closed by the
+    settlement pair stayed open for appends forever. Nobody noticed because the
+    only close anybody had walked was the endpoint that also sealed
+    (found 2026-09-12).
+    """
+    import uuid as uuidlib
+
+    from app.models.deal import Deal
+
+    await _deliver(session_maker, deal.id)
+    declared = await _card(
+        client, sender_headers, deal.id, "payment.declared",
+        {"amount": 120, "currency": "USD", "method": "cash"},
+    )
+    await _ack(client, carrier_headers, deal.id, declared.json()["id"])
+
+    async with session_maker() as db:
+        row = await db.get(Deal, uuidlib.UUID(str(deal.id)))
+        assert row.status.value == "closed"
+        assert row.sealed_at is not None
+
+    # And the vault refuses new content, which is what sealing is for.
+    blocked = await _card(
+        client, sender_headers, deal.id, "issue.reported", {"category": "delay"}
+    )
+    assert blocked.status_code == 409, blocked.text
