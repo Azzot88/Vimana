@@ -176,11 +176,15 @@ def sign_vault_message(
     pre_signed_sig: str | None = None,
     pre_signed_ts: int | None = None,
 ) -> None:
-    """Sign a vault message. Strict for self-custody (requires pre-signed).
+    """Sign a vault message.
 
     - System records (author=None) → leave unsigned.
     - `pre_signed_sig` given → verify + attach (needs `pre_signed_ts`).
-    - Self-custody without pre_signed → 422.
+    - Self-custody **typing a message** without pre_signed → 422: those are the
+      person's own words, and making them provably theirs is what self-custody
+      is for.
+    - Self-custody **raising a card** → left unsigned, like a deal event. See
+      the comment below: a card is a button, not a sentence.
     - Custodial → server signs.
     """
     if author is None:
@@ -198,6 +202,33 @@ def sign_vault_message(
         )
         return
     if author.key_self_custody:
+        # T3.11.27 — **a card is a button, not a sentence.**
+        #
+        # Strictness here was written when a vault message was only ever a
+        # person's own words: those are the thing self-custody exists to make
+        # provably theirs, so a missing client signature is a refusal. T3.34
+        # then made buttons produce vault messages too — «Передал перевозчику»,
+        # «Отправлено почтой», «Оплата произведена» are all `DealVaultMessage`
+        # rows — and the rule was never revisited. The result was that a
+        # self-custody account could not raise a single card: the whole deal
+        # protocol answered 422 unless the person happened to have a NIP-07
+        # extension in that browser. Found by walking the flow end to end
+        # (owner, 2026-09-12).
+        #
+        # `sign_deal_event` already settled the principle for exactly this case
+        # and wrote it down: deal events are triggered by button clicks, a
+        # NIP-07 round-trip per click harms UX, attribution stays via the actor
+        # id, and the signature is a bonus for custodial users. A card is the
+        # same kind of act — it is *the same click*, recorded in two tables.
+        #
+        # So the line is drawn by **what is being signed**, not by which table
+        # it lands in: a typed message stays strict, a structured card is
+        # lenient. A client that can sign still may — `pre_signed_sig` above is
+        # checked first and unchanged — and the card remains attributable by
+        # `sender_id` and covered by the hash chain through the `message_added`
+        # entry and its `content_hash`.
+        if msg.card_kind is not None:
+            return
         raise HTTPException(
             status_code=422,
             detail="Self-custody account requires client-signed nostr_sig",

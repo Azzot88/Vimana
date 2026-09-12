@@ -402,3 +402,79 @@ def test_whitelist_survives_an_unconfigured_anchor(session_maker, tmp_path, monk
     result = refresh_allowed_pubkeys()
     assert file_path.exists()
     assert "count" in result
+
+
+# ── T3.11.27 · a card is a button, not a sentence ─────────────────────────
+
+
+def _self_custody(maker):
+    """An account holding its own key, as `declare-self-custody` leaves it:
+    the flag set and our copy of the nsec gone."""
+    from app.models.user import User
+    from tests.conftest import unique_email
+
+    with maker() as db:
+        user = User(
+            email=unique_email("selfcustody"),
+            display_name="Owns The Key",
+            key_self_custody=True,
+            nsec_encrypted=None,
+            nsec_nonce=None,
+            nostr_pubkey="f" * 64,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+
+
+def test_a_self_custody_account_can_raise_a_card(sync_sessions):
+    """The defect this file exists for, found by walking the flow end to end.
+
+    Every button in a deal produces a `DealVaultMessage`, so the strict rule
+    written for typed messages made the whole protocol answer 422 to anybody
+    holding their own key without a NIP-07 extension in that browser —
+    «Передал перевозчику», «Отправлено почтой», «Оплата произведена», all of it.
+    """
+    import uuid as uuidlib
+
+    from app.core.signing import sign_vault_message
+    from app.models.deal import CardState, DealVaultMessage
+
+    user = _self_custody(sync_sessions)
+    card = DealVaultMessage(
+        deal_id=uuidlib.uuid4(),
+        sender_id=user.id,
+        is_system=True,
+        card_kind="handoff.declared",
+        card_payload={},
+        card_state=CardState.pending,
+    )
+    sign_vault_message(card, user)
+    # Unsigned, like a deal event, and that is the decision: attribution stays
+    # on `sender_id` and the hash chain still covers the row.
+    assert card.nostr_sig is None
+
+
+def test_a_self_custody_account_still_must_sign_its_own_words(sync_sessions):
+    """The strict half, unchanged. A typed message is the thing self-custody
+    exists to make provably theirs, and a server signature on it would be the
+    platform speaking in somebody's name."""
+    import uuid as uuidlib
+
+    import pytest
+    from fastapi import HTTPException
+
+    from app.core.signing import sign_vault_message
+    from app.models.deal import DealVaultMessage
+
+    user = _self_custody(sync_sessions)
+    msg = DealVaultMessage(
+        deal_id=uuidlib.uuid4(),
+        sender_id=user.id,
+        text="Здравствуйте, возьмёте 2 кг?",
+        is_system=False,
+    )
+    with pytest.raises(HTTPException) as refused:
+        sign_vault_message(msg, user)
+    assert refused.value.status_code == 422
