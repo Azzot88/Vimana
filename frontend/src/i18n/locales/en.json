@@ -392,8 +392,8 @@
     "confirmDelete": "Delete address \"{{label}}\"?",
     "pickerTitle": "Which address to share?",
     "addAndReturn": "Add an address and come back",
-    "returnHint": "Add an address, then return to the conversation.",
-    "backToChat": "Back to the chat"
+    "returnHint": "Add what you need, then come back — you will land where you left.",
+    "backToChat": "Go back"
   },
   "mode": {
     "switchToSend": "Switch to Send",
@@ -780,6 +780,8 @@
     "handoverDestination": "Handing over at",
     "meetingPlace": "Which meeting place",
     "noMeetingPlaces": "No meeting places yet — add them in your profile.",
+    "noMeetingPlacesAdd": "No meeting places yet. Add one and come back →",
+    "noAddressesAdd": "No addresses yet. Add one and come back →",
     "handoverAddress": "Which address",
     "noAddresses": "No addresses yet — add them in your profile.",
     "pickNothing": "— not chosen —",

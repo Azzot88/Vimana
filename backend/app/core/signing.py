@@ -180,11 +180,13 @@ def sign_vault_message(
 
     - System records (author=None) → leave unsigned.
     - `pre_signed_sig` given → verify + attach (needs `pre_signed_ts`).
-    - Self-custody **typing a message** without pre_signed → 422: those are the
+    - Self-custody **typing words** without pre_signed → 422: those are the
       person's own words, and making them provably theirs is what self-custody
       is for.
-    - Self-custody **raising a card** → left unsigned, like a deal event. See
-      the comment below: a card is a button, not a sentence.
+    - Self-custody **raising a card, or hanging a photo on an empty message** →
+      left unsigned, like a deal event. See the comment below: a card is a
+      button rather than a sentence, and a signature over an empty string
+      proves nothing that `sender_id` does not.
     - Custodial → server signs.
     """
     if author is None:
@@ -227,7 +229,21 @@ def sign_vault_message(
         # checked first and unchanged — and the card remains attributable by
         # `sender_id` and covered by the hash chain through the `message_added`
         # entry and its `content_hash`.
-        if msg.card_kind is not None:
+        # The same line, drawn once more by the same principle: **a signature
+        # over nothing proves nothing.**
+        #
+        # A photograph is uploaded as an empty-text message that exists only to
+        # hang the attachment on (`sendPhotoMessage`). `_content_vault_message`
+        # signs `msg.text or ""`, so what a client would be asked to sign here
+        # is the empty string — which says only «this account authored a row»,
+        # which `sender_id` already says. Demanding it bought no evidence and
+        # cost the whole photo path: «Не удалось загрузить файл», every time,
+        # for anybody holding their own key (owner, 2026-09-12).
+        #
+        # The bytes themselves are not left unguarded by this: an attachment is
+        # hashed and chained on its own (`file_added`, `T3.7`/`T3.8`), and that
+        # entry is what an arbiter reads.
+        if msg.card_kind is not None or not (msg.text or "").strip():
             return
         raise HTTPException(
             status_code=422,

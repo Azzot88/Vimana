@@ -806,7 +806,22 @@ export default function NewTripPage() {
     [],
   )
 
+  /* T_UX.16 — out to the lists and back again.
+   *
+   * Both pickers above sit in a half-filled wizard, and both can be empty. The
+   * draft is written to `localStorage` on every keystroke and the step lives in
+   * the URL, so the return lands exactly where the person left — but the way
+   * out has to be offered rather than known, which is the whole lesson of the
+   * address dead end this repeats. */
+  const goAddMeetingPlace = () =>
+    navigate(
+      `/profile/rules?return_to=${encodeURIComponent(
+        window.location.pathname + window.location.search,
+      )}`,
+    )
+
   const validate = (): string | null => {
+
     // T3.11.07 — checked as flights, because that is what the API stores and
     // what the rules are about ("a city cannot fly to itself", "the second
     // departure is after the first"). The carrier typed stops; the legs are
@@ -1941,10 +1956,23 @@ export default function NewTripPage() {
                           ))}
                         </select>
                       ) : (
-                        <p className="text-[11px] font-body text-navy/40">
-                          {t('trips.noMeetingPlaces')}
-                        </p>
+                        /* T_UX.16, applied where it was missed. An empty list
+                           used to be a dead end here: the form said «у вас нет
+                           мест встречи» and offered nothing to do about it, so
+                           the carrier had to know that meeting places live in
+                           «Мои правила», leave the half-filled wizard, find
+                           them, and come back to a form they hoped was still
+                           there. The draft survives (it is written on every
+                           keystroke) but nobody should have to bet on that. */
+                        <button
+                          type="button"
+                          onClick={goAddMeetingPlace}
+                          className="text-[11px] font-body text-cyan hover:underline"
+                        >
+                          {t('trips.noMeetingPlacesAdd')}
+                        </button>
                       )}
+
                     </label>
                   )}
 
@@ -1974,10 +2002,18 @@ export default function NewTripPage() {
                           ))}
                         </select>
                       ) : (
-                        <p className="text-[11px] font-body text-navy/40">
-                          {t('trips.noAddresses')}
-                        </p>
+                        /* Same dead end, same way out. Addresses and meeting
+                           places both live in «Мои правила», and both were
+                           reachable only by somebody who already knew that. */
+                        <button
+                          type="button"
+                          onClick={goAddMeetingPlace}
+                          className="text-[11px] font-body text-cyan hover:underline"
+                        >
+                          {t('trips.noAddressesAdd')}
+                        </button>
                       )}
+
                     </label>
                   )}
 

@@ -37,10 +37,11 @@ export default function ProfileRulesPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  // T_UX.16 — somebody sent here from a chat to add a missing address gets a
-  // way back to that exact conversation. The banner moved with the addresses:
-  // it is the address form it belongs to, not the profile page it used to
-  // share with it.
+  // T_UX.16 — somebody sent here mid-task gets a way back to the exact place
+  // they left. It began as «back to the chat» because a chat was the only
+  // caller; the trip form now sends people here too when their meeting places
+  // or addresses are empty (2026-09-12), so the copy names no destination and
+  // the link simply returns.
   const returnTo = searchParams.get('return_to')
 
   // T3.11.27 — owner's rule 2026-09-07: «Таймаут односторонней отмены
