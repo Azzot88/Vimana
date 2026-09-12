@@ -117,8 +117,17 @@ export default function DealVaultPage() {
       setMessages((prev) =>
         signature(prev) === signature(data.items) ? prev : data.items,
       )
-    } catch {
-      setError(t('chat.loadFailed'))
+      setError('')
+    } catch (err: unknown) {
+      /* The server's own words when it has any. «Не удалось загрузить
+         сообщения» was every cause collapsed into one sentence — a network
+         blip, a sealed vault and «вы не участник этой сделки» read identically,
+         and the last of those is the one somebody can actually act on. A
+         recipient seeing this had no way to learn which it was, and neither did
+         we (owner, 2026-09-12). */
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('chat.loadFailed'))
     } finally {
       setLoading(false)
     }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { raiseCard } from '../api/terms'
+import { uploadAttachment } from '../api/dealvault'
 import {
   buildPayload,
   formsForRole,
@@ -44,6 +45,9 @@ export default function CardActions({
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  /* The evidence for the declaration being made, held until the card exists to
+     hang it on. */
+  const [file, setFile] = useState<File | null>(null)
 
   /* Ordered by the stage, not by the catalogue: `only` lists the kinds in the
      order they are meant to happen, and a row of buttons in protocol order
@@ -64,17 +68,49 @@ export default function CardActions({
     setValues(initial)
     setNote('')
     setError('')
+    setFile(null)
     setOpen(spec)
   }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!open) return
+    /* T3.11.27 — «фото должно отправляться вместе со статусом» (owner, walking
+       the flow 2026-09-12).
+    
+       The photograph is not an attachment to the conversation, it is the
+       **evidence for this declaration**: `handoff.declared` carries
+       `requires_attachment` and the server refuses to let the other side
+       confirm a declaration with no photo (422). Uploading it as a separate
+       chat message therefore left the card permanently unconfirmable — the
+       carrier saw «ждём фото» beside a photo that was right there, three lines
+       up, hanging off a different row. That is the chain behind «после передачи
+       не в пути» and «статус не сменился ни у кого».
+    
+       So the two happen in one act: raise the card, attach to **it**. Refused
+       before either half runs when the picture is missing, rather than leaving
+       a declaration nobody can answer. */
+    if (open.needsPhoto && !file) {
+      setError(t('cards.photoNeeded') as string)
+      return
+    }
     setBusy(true)
     setError('')
     try {
-      await raiseCard(dealId, open.kind, buildPayload(open, values), note || undefined)
+      const card = await raiseCard(
+        dealId,
+        open.kind,
+        buildPayload(open, values),
+        note || undefined,
+      )
+      if (open.needsPhoto && file) {
+        // Same request cycle, from the person's point of view: if this throws,
+        // the card exists without its evidence and the error says so — which is
+        // recoverable from the card itself, where the upload also lives.
+        await uploadAttachment(dealId, card.id, file, open.needsPhoto)
+      }
       setOpen(null)
+      setFile(null)
       onDone()
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response
@@ -84,6 +120,7 @@ export default function CardActions({
       setBusy(false)
     }
   }
+
 
   const field = (f: CardField) => {
     const label = t(`cards.field.${f.name}`, f.name)
@@ -181,8 +218,26 @@ export default function CardActions({
       )}
 
       {open.needsPhoto && (
-        <p className="mt-2 text-xs font-body text-amber">{t('cards.photoAfter')}</p>
+        <label className="mt-2 block">
+          {/* The photograph is part of the declaration, so it is asked for
+              **here**, inside the form that makes it — not afterwards, in the
+              chat, where it used to land on a row of its own and leave the card
+              waiting for evidence it already had. */}
+          <span className="block text-xs font-body text-navy/40 mb-1">
+            {t(`chat.kind.${open.needsPhoto}`)}
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-xs font-body"
+          />
+          <span className="block text-[11px] font-body text-navy/40 mt-1">
+            {t('cards.photoWithIt')}
+          </span>
+        </label>
       )}
+
       {error && <p className="mt-2 text-xs font-body text-danger">{error}</p>}
 
       <div className="mt-3 flex gap-2">

@@ -1491,6 +1491,8 @@
     "awaitingOther": "Awaiting the other side",
     "photoRequired": "Attach the photo — it cannot be confirmed without it",
     "photoAfter": "You will attach the photo after sending",
+    "photoWithIt": "The photo goes with the card — the other side cannot confirm the handover without it.",
+    "photoNeeded": "Attach the photo — the handover cannot be confirmed without one",
     "awaitingPhoto": "Waiting for the photo",
     "answerFailed": "Could not send the answer",
     "raiseFailed": "Could not raise the card",

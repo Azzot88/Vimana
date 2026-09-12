@@ -37,11 +37,20 @@ export interface DealStage {
    *  Filtered again by role inside `CardActions` — a stage says *when*, a role
    *  says *who*. */
   kinds: string[]
-  /** The photograph this stage is about, if it is about one. Preselected rather
-   *  than chosen from a dropdown: at a handover the picture is of the handover,
-   *  and asking which kind it is at the moment somebody is holding a parcel and
-   *  a phone is a question with one answer. */
+  /** The photograph this stage is about, **when no card carries it**.
+   *
+   *  T3.11.27 (owner, 2026-09-12): «фото должно отправляться вместе со
+   *  статусом». Every custody card already declares `requires_attachment`, and
+   *  the server refuses to let the other side confirm a declaration with no
+   *  evidence — so a photo uploaded here, as its own chat row, left the card
+   *  permanently unconfirmable while the picture sat three lines above it. That
+   *  path is gone: the handover, the pre-seal and the receipt photographs are
+   *  asked for inside the form that raises their card.
+   *
+   *  What remains is the one picture that belongs to no card: «вот что я
+   *  отправляю» at the terms stage, taken while the deal can still be refused. */
   photo?: AttachmentKind
+
   /** Roles that may attach that photo. The others see the stage without an
    *  upload button rather than an upload that is refused. */
   photoBy?: DealRole[]
@@ -68,8 +77,6 @@ export const DEAL_STAGES: DealStage[] = [
     key: 'handover',
     statuses: ['accepted'],
     kinds: ['pickup.proposed', 'handoff.declared'],
-    photo: 'handoff_photo',
-    photoBy: ['sender'],
   },
   {
     key: 'transit',
@@ -80,17 +87,11 @@ export const DEAL_STAGES: DealStage[] = [
       'posted.declared',
       'delivery.declared',
     ],
-    // T3.11.17 — the parcel photographed before it was sealed. The carrier is
-    // the one at the post office, so it is theirs to attach.
-    photo: 'pre_seal_photo',
-    photoBy: ['carrier'],
   },
   {
     key: 'delivery',
     statuses: ['posted', 'delivered'],
     kinds: [],
-    photo: 'receipt_photo',
-    photoBy: ['carrier', 'recipient'],
   },
   {
     key: 'payment',

@@ -1,4 +1,5 @@
 import api from './client'
+import type { VaultMessage } from './dealvault'
 
 export interface NormalizedTerms {
   direction: string | null
@@ -101,8 +102,12 @@ export async function raiseCard(
   kind: string,
   payload: Record<string, unknown> = {},
   text?: string,
-) {
-  const { data } = await api.post(`/api/deals/${dealId}/cards`, { kind, payload, text })
+): Promise<VaultMessage> {
+  const { data } = await api.post<VaultMessage>(`/api/deals/${dealId}/cards`, {
+    kind,
+    payload,
+    text,
+  })
   return data
 }
 
