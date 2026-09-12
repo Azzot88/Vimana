@@ -12,7 +12,7 @@ import {
   type DealStageKey,
 } from '../lib/dealStages'
 import type { Terms } from '../api/terms'
-import type { DealRole } from '../lib/cardForms'
+import { formsForRole, type DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
 import TermsProposeForm from './TermsProposeForm'
 
@@ -161,9 +161,21 @@ export default function DealStages({
      Defaults to the sender: that is the field's own default and the shape of
      every deal agreed before the section existed. */
   const payer = terms?.payload?.payer ?? 'sender'
+  /* Narrowed twice, and both narrowings matter. By the agreement, because only
+     the named payer may declare money; and by role, because most cards belong
+     to one side — `handoff.declared` is the sender's, `transit.update` the
+     carrier's. `CardActions` filters by role again internally; doing it here as
+     well is what lets the panel tell «нечего нажимать» apart from «сейчас не
+     твой ход», which are different things to say and were both drawn as an
+     empty space. */
   const stageKinds = (current?.kinds ?? []).filter(
     (kind) => kind !== 'payment.declared' || myRole === payer,
   )
+  const mineNow = myRole
+    ? stageKinds.filter((kind) =>
+        formsForRole(myRole).some((form) => form.kind === kind),
+      )
+    : []
 
   return (
     <div className="space-y-4">
@@ -249,11 +261,33 @@ export default function DealStages({
           </div>
         )}
 
-        {stageKinds.length > 0 && (
+        {/* T3.11.27 — «Передал перевозчику (где)» (owner, walking the flow
+            2026-09-12). The answer was «nowhere, for you»: `handoff.declared`
+            is the sender's card, so a carrier at that stage saw an empty panel
+            and went looking for a button that is not theirs to press.
+
+            A blank is not an answer. Naming whose turn it is costs one line and
+            replaces the hunt — and it is true of every stage, not only this
+            one: a deal is two people acting in turn, and the half of the time
+            it is not your turn is exactly when the screen used to say nothing.
+
+            Drawn only when the stage *has* actions and none of them are this
+            role's: at a stage nobody acts on (`closed`, `delivery`) silence is
+            correct, and «ждём вторую сторону» there would be a lie. */}
+        {myRole &&
+          !TERMINAL_STATUSES.includes(status) &&
+          (current?.kinds.length ?? 0) > 0 &&
+          mineNow.length === 0 && (
+            <p className="text-xs font-body text-navy/45">
+              {t('stages.theirTurn')}
+            </p>
+          )}
+
+        {mineNow.length > 0 && (
           <CardActions
             dealId={dealId}
             myRole={myRole}
-            only={stageKinds}
+            only={mineNow}
             onDone={onDone}
           />
         )}

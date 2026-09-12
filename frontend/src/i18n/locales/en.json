@@ -841,6 +841,7 @@
     "more": "more",
     "stillTravelling": "Still in the post — you may close it, the carrier has done their part",
     "unpaidHint": "Handed over but not settled? Invite an arbiter — they see the conversation and where the deal stands.",
+    "theirTurn": "It is the other side's turn — you will be notified, and this screen updates itself.",
     "hint": {
       "terms": "Agree the price and how the parcel changes hands. Nothing starts until the terms are fixed.",
       "handover": "The terms are fixed. Agree where and when, then mark the handover with a photo.",
