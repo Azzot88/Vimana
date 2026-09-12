@@ -49,17 +49,16 @@ async def list_postal_services(
     changes, because a picker that dropped an unused service would be a picker
     that cannot describe the one pick-up point down somebody's road.
     """
-    entries = [DirectoryEntry(**e) for e in directories.postal_services(country)]
-    if country is None or not entries:
-        return entries
+    raw = directories.postal_services(country)
+    if country is None or not raw:
+        return [DirectoryEntry(**e) for e in raw]
 
     used = await _postal_usage(db, country)
-    if not used:
-        return entries
-    # Stable sort on the negated count: equal counts — and everything unused —
-    # keep the file's order, which is the seed. `sorted` is stable, so this is
-    # «usage first, seed within», expressed once rather than as two passes.
-    return sorted(entries, key=lambda e: -used.get(e.name.casefold(), 0))
+    # The rule itself lives in `core.directories.order_by_usage`, named and
+    # tested on its own: an ordering written inline in a handler is an ordering
+    # whose test has to publish trips to observe it, and that test then depends
+    # on a database nobody resets.
+    return [DirectoryEntry(**e) for e in directories.order_by_usage(raw, used)]
 
 
 async def _postal_usage(db: AsyncSession, country: str) -> dict[str, int]:

@@ -6,8 +6,6 @@ subjects, one module behind them.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
 
 # ── postal services ───────────────────────────────────────────────────────
 
@@ -334,57 +332,84 @@ def test_bitcoin_is_not_listed_twice():
     names = [e["name"].casefold() for e in payment_systems("US", "RU")]
     assert "bitcoin" not in names, names
 
-
 # ── T3.11.07 · the picker orders itself by what carriers actually chose ────
 
 
-async def test_postal_services_are_ordered_by_real_use(client, carrier_headers):
-    """Owner's «можно», unblocked once the picker was wired to the form.
+def test_real_use_outranks_the_seeded_order():
+    """The rule itself, on a list this test owns.
 
-    The file's order is a seed — how often the market *names* a service — and a
-    seed only has to answer the cold start. Once real trips carry real choices
-    those outrank it, the same arrangement as `Category.usage_count` beating
-    `sort_order`.
+    Written against `order_by_usage` rather than against the endpoint on
+    purpose. Observing the order through `/api/postal-services` means publishing
+    trips, and the counts those trips add **survive the run**: `vimana_test` is
+    never reset (`ENVIRONMENT §8`), so the second run reads an order that the
+    first one changed, and the test ends up asserting against its own history.
+    My first version did exactly that and passed once.
     """
-    seeded = await client.get("/api/postal-services", params={"country": "US"})
-    assert seeded.status_code == 200, seeded.text
-    names = [e["name"] for e in seeded.json()]
-    if len(names) < 2:
-        import pytest
+    from app.core.directories import order_by_usage
 
-        pytest.skip("the US slice needs two services for order to mean anything")
+    seeded = [
+        {"code": "a", "name": "Alpha"},
+        {"code": "b", "name": "Beta"},
+        {"code": "c", "name": "Gamma"},
+    ]
+    ordered = order_by_usage(seeded, {"gamma": 3, "alpha": 1})
+    assert [e["name"] for e in ordered] == ["Gamma", "Alpha", "Beta"]
 
-    # Pick the one the file puts **last** and have real trips choose it.
-    underdog = names[-1]
-    for _ in range(3):
-        trip = await client.post(
-            "/api/trips",
-            headers=carrier_headers,
-            json={
-                "payment_model": "cash_on_delivery",
-                "legs": [
-                    {
-                        "origin": "DXB",
-                        "destination": "JFK",
-                        "depart_at": (
-                            datetime.now(timezone.utc) + timedelta(days=5)
-                        ).isoformat(),
-                    }
-                ],
-                "handover_destination": {
-                    "methods": ["local_post"],
-                    "postal_services": [underdog],
-                },
-            },
-        )
-        assert trip.status_code == 201, trip.text
 
-    reordered = await client.get("/api/postal-services", params={"country": "US"})
-    assert reordered.json()[0]["name"] == underdog
+def test_the_seed_is_the_tiebreaker():
+    """Equal counts — and everything unused, which is everything at zero — keep
+    the file's order. That is what makes a country nobody has flown to read
+    exactly as it did before this rule existed."""
+    from app.core.directories import order_by_usage
 
-    # Nothing was hidden: a picker that dropped an unused service could not
-    # describe the one pick-up point down somebody's road.
-    assert {e["name"] for e in reordered.json()} == set(names)
+    seeded = [
+        {"code": "a", "name": "Alpha"},
+        {"code": "b", "name": "Beta"},
+        {"code": "c", "name": "Gamma"},
+    ]
+    assert [e["name"] for e in order_by_usage(seeded, {})] == [
+        "Alpha",
+        "Beta",
+        "Gamma",
+    ]
+    assert [e["name"] for e in order_by_usage(seeded, {"beta": 2, "gamma": 2})] == [
+        "Beta",
+        "Gamma",
+        "Alpha",
+    ]
+
+
+def test_ordering_hides_nothing():
+    """A picker that dropped an unused service could not name the single
+    pick-up point down somebody's road, and this catalogue has no external
+    source to be right about that."""
+    from app.core.directories import order_by_usage
+
+    seeded = [{"code": str(i), "name": f"S{i}"} for i in range(5)]
+    ordered = order_by_usage(seeded, {"s3": 9})
+    assert len(ordered) == 5
+    assert {e["name"] for e in ordered} == {e["name"] for e in seeded}
+
+
+def test_names_are_matched_case_folded():
+    """Names are free text, so «FedEx» on one trip and «fedex» on another are
+    one company. Folding case merges those; it deliberately does not try to
+    merge «CDEK» and «СДЭК», which no rule without a dictionary can do."""
+    from app.core.directories import order_by_usage
+
+    seeded = [{"code": "a", "name": "Alpha"}, {"code": "f", "name": "FedEx"}]
+    ordered = order_by_usage(seeded, {"fedex": 4})
+    assert ordered[0]["name"] == "FedEx"
+
+
+async def test_the_endpoint_still_answers_the_whole_catalogue(client):
+    """The integration half, and the only assertion about it that is true on a
+    database nobody resets: ordering changes the order and nothing else."""
+    plain = await client.get("/api/postal-services", params={"country": "US"})
+    assert plain.status_code == 200, plain.text
+    again = await client.get("/api/postal-services", params={"country": "US"})
+    assert {e["name"] for e in plain.json()} == {e["name"] for e in again.json()}
+    assert [e["name"] for e in plain.json()] == [e["name"] for e in again.json()]
 
 
 async def test_a_country_nobody_flies_to_keeps_the_seeded_order(client):

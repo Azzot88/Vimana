@@ -83,7 +83,35 @@ def _country_slice(path: str, country_iso: str | None) -> list[Entry]:
     return list(_load(path)["countries"].get(country_iso.upper(), []))
 
 
+def order_by_usage(entries: list[Entry], used: dict[str, int]) -> list[Entry]:
+    """T3.11.07 — real choices first, the file's order within.
+
+    The order in the data file is a **seed**, and a seed only has to answer the
+    cold start: it was set by how often the market *names* each service, which
+    is a fact about posts rather than about this platform's trips. Once carriers
+    here have chosen, their choices outrank it — the same arrangement as
+    `Category.usage_count` beating `sort_order`.
+
+    `sorted` is stable, so equal counts — and everything unused, which is
+    everything at zero — keep the order they came in. That is «usage first, seed
+    within» expressed once instead of as two passes, and it is why a country
+    nobody has flown to reads exactly as it did before this rule existed.
+
+    Nothing is dropped and nothing is added. A picker that hid an unused service
+    could not name the single pick-up point down somebody's road, and this
+    catalogue has no external source to be right about that (`T3.11.22`).
+
+    `used` is keyed case-folded: names are free text, and «CDEK» and «СДЭК» are
+    one company in two alphabets — folding case merges the first pair and leaves
+    the second alone, which is the most a rule with no dictionary can honestly do.
+
+    Called by: `api.directories.list_postal_services`, and its own test.
+    """
+    return sorted(entries, key=lambda e: -used.get(e["name"].casefold(), 0))
+
+
 def postal_services(country_iso: str | None) -> list[Entry]:
+
     """Who can carry a parcel onward inside `country_iso`.
 
     The country is the **destination** of the trip: onward shipping happens
