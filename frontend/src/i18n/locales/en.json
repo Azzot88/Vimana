@@ -839,7 +839,6 @@
     "closed": "Closed",
     "cancelled": "Cancelled",
     "more": "more",
-    "stillTravelling": "Still in the post — you may close it, the carrier has done their part",
     "unpaidHint": "Handed over but not settled? Invite an arbiter — they see the conversation and where the deal stands.",
     "theirTurn": "It is the other side's turn — you will be notified, and this screen updates itself.",
     "hint": {
@@ -881,7 +880,6 @@
     "shipmentNo": "Shipment number",
     "dealId": "Deal ID",
     "accept": "Accept the deal",
-    "closeDeal": "Close the deal",
     "status": {
       "draft": "Draft",
       "matched": "Matched",
@@ -1505,6 +1503,7 @@
       "dropoff_proposed": "Move the delivery",
       "dropoff_confirmed": "Delivery moved",
       "handoff_declared": "Handed to the carrier",
+      "handoff_received": "Received the parcel",
       "handoff_confirmed": "Handover confirmed",
       "transit_update": "Transit update",
       "posted_declared": "Posted by mail",

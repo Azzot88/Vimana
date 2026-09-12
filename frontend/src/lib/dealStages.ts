@@ -76,7 +76,7 @@ export const DEAL_STAGES: DealStage[] = [
   {
     key: 'handover',
     statuses: ['accepted'],
-    kinds: ['pickup.proposed', 'handoff.declared'],
+    kinds: ['pickup.proposed', 'handoff.declared', 'handoff.received'],
   },
   {
     key: 'transit',

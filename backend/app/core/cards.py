@@ -53,6 +53,15 @@ class CardKind(str, enum.Enum):
 
     # Group 3 — custody (T3.37)
     handoff_declared = "handoff.declared"
+    # T3.11.27 — the same moment, asserted from the other side (owner,
+    # 2026-09-12: «перевозчик должен подтверждать что получил посылку»).
+    #
+    # Its own kind rather than widening `handoff.declared` to both roles,
+    # because an arbiter reads these labels and the two are different
+    # statements: «отправитель говорит, что отдал» and «перевозчик говорит, что
+    # взял» differ in who was holding the parcel when the claim was made. Same
+    # evidence, same status, same confirmation — opposite authors.
+    handoff_received = "handoff.received"
     handoff_confirmed = "handoff.confirmed"
     transit_update = "transit.update"
     # T3.11.17 — the onward postal leg. 44.9 % of carriers post the parcel on
@@ -204,6 +213,16 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         _s(CardKind.handoff_declared, "custody",
            creator_roles=frozenset({CardAckRole.sender}),
            ack_by=CardAckRole.carrier,
+           requires_attachment=AttachmentKind.handoff_photo,
+           on_accept_status=DealStatus.in_transit,
+           on_accept_emit=CardKind.handoff_confirmed,
+           implemented=True),
+        # The carrier's half. Declared by whoever is holding the parcel, confirmed
+        # by the other: either way the deal moves on two people saying so, which
+        # is the rule the whole custody group is built on.
+        _s(CardKind.handoff_received, "custody",
+           creator_roles=frozenset({CardAckRole.carrier}),
+           ack_by=CardAckRole.sender,
            requires_attachment=AttachmentKind.handoff_photo,
            on_accept_status=DealStatus.in_transit,
            on_accept_emit=CardKind.handoff_confirmed,

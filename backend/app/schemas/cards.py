@@ -213,6 +213,7 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.pickup_proposed: MeetingPoint,
     CardKind.dropoff_proposed: MeetingPoint,
     CardKind.handoff_declared: HandoffDeclared,
+    CardKind.handoff_received: HandoffDeclared,
     CardKind.transit_update: TransitUpdate,
     CardKind.posted_declared: PostedDeclared,
     CardKind.delivery_declared: DeliveryDeclared,

@@ -83,6 +83,17 @@ export const CARD_FORMS: CardFormSpec[] = [
     hasText: true,
   },
   {
+    /* T3.11.27 — the same moment from the other side (owner, 2026-09-12).
+       Whoever is holding the parcel declares; the other confirms. Two kinds
+       rather than one shared by both roles, because an arbiter reads the
+       labels and «отдал» and «взял» are different claims about who was there. */
+    kind: 'handoff.received',
+    roles: ['carrier'],
+    fields: [{ name: 'parcel_count', type: 'number' }],
+    needsPhoto: 'handoff_photo',
+    hasText: true,
+  },
+  {
     kind: 'transit.update',
     roles: ['carrier'],
     fields: [

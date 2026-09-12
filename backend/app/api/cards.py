@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,8 +31,10 @@ from app.core.database import get_db
 from app.core.deal_chain import append_deal_event, content_hash_of
 from app.core.params import resolve_all
 from app.core.signing import sign_vault_message
+from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.models.deal import (
-    CardAckRole, CardState, Deal, DealEventType, DealStatus, DealVaultMessage,
+    Attachment, CardAckRole, CardState, Deal, DealEventType, DealStatus,
+    DealVaultMessage,
 )
 from app.models.marketplace import Trip
 from app.models.user import User
@@ -276,7 +278,10 @@ async def create_card(
             status_code=403, detail="Your role does not raise this card"
         )
 
-    if kind is CardKind.handoff_declared:
+    # T3.35 — the fixation window closes when the flight leaves, whichever side
+    # declares the handover: the rule is about the parcel and the clock, not
+    # about who reached for the button.
+    if kind in (CardKind.handoff_declared, CardKind.handoff_received):
         await _guard_departure(db, deal, current_user)
 
     # T3.11.27 — a cancellation is a thing you do *before* the parcel moves.
@@ -502,7 +507,68 @@ async def _amend_meeting_point(
     )
 
 
+async def seal_closed_deal(db: AsyncSession, deal: Deal, actor: User) -> None:
+    """T3.7 — a closed deal's vault stops taking new content.
+
+    **Moved here from `deals.confirm_deal` (2026-09-12).** Sealing used to live
+    inside that one endpoint, so the deal could close by the settlement pair —
+    `payment.declared` accepted, status `confirmed` then `closed` — and the
+    record would stay open for appends forever. Nobody noticed because the only
+    close anybody had walked was the endpoint that also sealed. Closing is the
+    event; sealing follows the close, wherever the close happens.
+
+    The closing card goes in **first**, before the counts are taken: emitted
+    after them it would be a message the seal's own tally does not include, and
+    a record that miscounts itself by one is worse than one that simply stops.
+    The seal event is appended before `sealed_at` is set, so the guard does not
+    refuse its own seal.
+
+    Idempotent by the `sealed_at` check: a second call is a no-op rather than a
+    second tally, because two seals on one vault is two answers to «что в нём
+    было».
+
+    Called by: `apply_acceptance`, on the settlement pair that closes a deal.
+    """
+    if deal.sealed_at is not None:
+        return
+
+    await record_card(db, deal, CardKind.deal_sealed, actor)
+
+    message_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(DealVaultMessage)
+            .where(DealVaultMessage.deal_id == deal.id)
+        )
+    ).scalar_one()
+    file_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Attachment)
+            .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
+            .where(DealVaultMessage.deal_id == deal.id)
+        )
+    ).scalar_one()
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.sealed,
+        actor_id=actor.id,
+        payload={"message_count": message_count, "file_count": file_count},
+        author=actor,
+    )
+    deal.sealed_at = datetime.now(timezone.utc)
+
+    # T2.4 — the trust edge belongs to the close, not to the endpoint that used
+    # to own it. Two people who completed a deal have dealt with each other
+    # whichever button finished it.
+    await add_dealt_with(db, deal)
+    await refresh_trust_counts(db, deal.sender_id)
+    await refresh_trust_counts(db, deal.carrier_id)
+
+
 async def apply_acceptance(
+
     db: AsyncSession, deal: Deal, card: DealVaultMessage, actor: User
 ) -> None:
     """What accepting a card changes, per its declaration.
@@ -576,6 +642,10 @@ async def apply_acceptance(
                 payload={"card_kind": card.card_kind, "message_id": str(card.id)},
                 author=actor,
             )
+            # T3.7 — and the vault stops taking content. This used to happen
+            # only inside `deals.confirm_deal`, so a deal closed by the pair
+            # stayed open for appends forever (found 2026-09-12).
+            await seal_closed_deal(db, deal, actor)
 
 
 async def record_card(

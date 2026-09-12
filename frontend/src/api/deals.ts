@@ -98,8 +98,12 @@ export const addEvent = (dealId: string, event_type: string, note?: string) =>
     payload: note ? { note } : null,
   })
 
-export const confirmDeal = (dealId: string) =>
-  api.post<Deal>(`/api/deals/${dealId}/confirm`)
+/** T3.11.27 — **withdrawn 2026-09-12.** `POST /api/deals/{id}/confirm` closed a
+ *  deal in one press, past «Сколько денег получено» and past anybody confirming
+ *  receipt — and that is how a real run ended, with the two buttons that should
+ *  have closed it nowhere to be seen because their stage had passed. Closing now
+ *  goes through the settlement pair, always. The endpoint stays on the server for
+ *  the moment; nothing in the product calls it. */
 
 export interface DealListParams {
   /** T3.11.23 — only the deals nested in this chat, closed ones included. */

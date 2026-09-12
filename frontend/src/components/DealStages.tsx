@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { confirmDeal, type DealDetail, type DealStatus } from '../api/deals'
+import type { DealDetail, DealStatus } from '../api/deals'
 import { DISPUTE_REASONS, openDispute, type DisputeReason } from '../api/admin'
 import { sendPhotoMessage, type VaultMessage } from '../api/dealvault'
 import {
@@ -105,19 +105,6 @@ export default function DealStages({
     } finally {
       setBusy(false)
       if (fileRef.current) fileRef.current.value = ''
-    }
-  }
-
-  const confirm = async () => {
-    setBusy(true)
-    setError('')
-    try {
-      await confirmDeal(dealId)
-      onDone()
-    } catch {
-      setError(t('deals.actionFailed'))
-    } finally {
-      setBusy(false)
     }
   }
 
@@ -292,33 +279,21 @@ export default function DealStages({
           />
         )}
 
-        {/* T3.11.17 / T3.11.27 — the one-press close, and **only** for a parcel
-            in the post. The owner's answer 2026-09-07: after «Отправлено по
-            почте» the sender may close straight away — the carrier has done
-            everything that depends on them, and holding the deal open for
-            somebody else's postal schedule punishes them for the post office's
-            pace.
+        {/* T3.11.27 — the one-press close is gone (owner, 2026-09-12).
+            `POST /confirm` let the sender end a deal without «Сколько денег
+            получено» and without anybody confirming receipt, and that is
+            exactly how it ended: «сделка закрылась», with the two buttons that
+            should have closed it nowhere to be seen, because the stage they
+            live on had already passed.
 
-            It used to show on `delivered` too, which handed the sender a second
-            route to closure past the pair the owner asked for: «"получил" и
-            "рассчитался"… вторая сторона подтверждает такой же кнопкой, и
-            сделка закрывается». A parcel handed over in person closes through
-            that pair, so this button is not offered there. */}
-        {status === 'posted' && myRole === 'sender' && (
-          <div className="space-y-1">
-            <button
-              type="button"
-              onClick={confirm}
-              disabled={busy}
-              className="bg-success text-white font-display font-medium text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:opacity-90 disabled:opacity-50"
-            >
-              {t('deals.closeDeal')}
-            </button>
-            <p className="text-xs font-body text-navy/45">
-              {t('stages.stillTravelling')}
-            </p>
-          </div>
-        )}
+            It was added for the postal leg on the honest argument that the
+            carrier has done their part and should not wait on a post office.
+            That argument survives — but it is answered by the settlement pair,
+            not by skipping it: the sender raises «Оплата произведена» while the
+            parcel is still travelling, the carrier confirms, and the deal
+            closes on two people saying so. One button closing a deal past the
+            money was the same second route to a status that was taken off the
+            boarding pass for the same reason. */}
 
         {canAttach && (
           <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-body text-cyan hover:underline">
