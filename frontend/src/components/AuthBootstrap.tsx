@@ -19,7 +19,20 @@ const INACTIVITY_MS = Number(
   (import.meta as unknown as { env?: { VITE_INACTIVITY_MS?: string } }).env
     ?.VITE_INACTIVITY_MS ?? 30 * 60 * 1000,
 )
-const WARN_BEFORE_MS = 2 * 60 * 1000
+/** When the «вы ещё здесь?» panel appears: at 25 minutes of inactivity, five
+ *  before the 30-minute logout (owner's request 2026-09-12).
+ *
+ *  It used to be «two minutes before», which on the default half-hour meant the
+ *  same 28-minute mark — but expressed as a distance from the end it moved with
+ *  any change to `INACTIVITY_MS`, and a shorter setting could put the warning a
+ *  minute into the session. Stated as a moment rather than as a gap, it means
+ *  what it says.
+ *
+ *  Clamped below so a short `VITE_INACTIVITY_MS` cannot make the warning arrive
+ *  after the logout it is warning about: at that point it would be an apology,
+ *  not a warning. */
+const WARN_AT_MS = 25 * 60 * 1000
+const WARN_BEFORE_MS = Math.max(INACTIVITY_MS - WARN_AT_MS, 30 * 1000)
 const CHECK_INTERVAL_MS = 30 * 1000
 const ACTIVITY_DEBOUNCE_MS = 10 * 1000
 

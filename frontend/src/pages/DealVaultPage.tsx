@@ -28,6 +28,15 @@ import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
 import { usePrefs } from '../hooks/usePrefs'
 
+/** How often the deal screen asks whether the other side has moved.
+ *
+ *  Ten seconds: fast enough that «подтвердил» lands while the other person is
+ *  still looking at the screen, slow enough that two people watching one deal
+ *  cost twelve requests a minute between them. Nobody is typing at anybody
+ *  here — that is what the chat is for — so sub-second freshness would be
+ *  paying a socket's complexity for an illusion of liveness. */
+const POLL_MS = 10 * 1000
+
 /** T_UX.7 pt.3 — keys, not labels. The labels themselves were Russian literals
  *  and doubled as the `alt` text on every attachment, so five locales got a
  *  Russian image description read aloud by their screen reader. */
@@ -78,6 +87,10 @@ export default function DealVaultPage() {
   }>({ e2e: null, senderId: null, carrierId: null })
   const [decrypted, setDecrypted] = useState<Record<string, string>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
+  /* Bumped by the poll. The status and the agreement hang off it as well as off
+     `messages.length`, because acknowledging a card changes its state **in
+     place**: the list is the same length and the deal has still moved. */
+  const [tick, setTick] = useState(0)
 
   // T3.35 — a card that awaits the other side must not offer this user a
   // button the server will refuse anyway.
@@ -88,11 +101,22 @@ export default function DealVaultPage() {
         ? 'carrier'
         : null
 
+  /* What the list looks like right now, for deciding whether anything actually
+     moved. Replacing the array with an equal one would re-run every effect that
+     depends on it — including the scroll-to-bottom — so a person reading their
+     own history would be yanked to the end every few seconds. */
+  const signature = (items: VaultMessage[]) =>
+    items
+      .map((m) => `${m.id}:${m.card_state ?? ''}:${m.attachments.length}`)
+      .join('|')
+
   const load = async () => {
     if (!dealId) return
     try {
       const { data } = await listMessages(dealId, { limit: 100 })
-      setMessages(data.items)
+      setMessages((prev) =>
+        signature(prev) === signature(data.items) ? prev : data.items,
+      )
     } catch {
       setError(t('chat.loadFailed'))
     } finally {
@@ -101,6 +125,41 @@ export default function DealVaultPage() {
   }
 
   useEffect(() => { load() }, [dealId])
+
+  /* T3.11.27 — the other side moves too (owner's request 2026-09-12).
+   *
+   * A deal is two people acting in turn, and until now the screen only learned
+   * anything when **this** person did something: the carrier confirmed a
+   * handover and the sender sat looking at «ждём подтверждения» until they
+   * thought to reload. A ladder that is only right after F5 is a ladder nobody
+   * trusts.
+   *
+   * Polling rather than a socket, deliberately. The whole exchange is a handful
+   * of acts over days, not a stream; a socket would be a second transport to
+   * authenticate, keep alive, reconnect and reason about behind nginx — real
+   * complexity bought for a screen that needs to be a few seconds fresh. When
+   * the flow genuinely needs sub-second (it does not: nobody is typing at each
+   * other here, that is the chat), this becomes the thing to replace.
+   *
+   * Paused while the tab is hidden. A backgrounded deal screen polling all
+   * afternoon spends somebody's battery and our rate limit to answer a question
+   * nobody is asking; `visibilitychange` also fires on return, so coming back
+   * to the tab refreshes immediately rather than waiting out the interval.
+   */
+  useEffect(() => {
+    if (!dealId) return
+    const beat = () => {
+      if (document.visibilityState !== 'visible') return
+      load()
+      setTick((n) => n + 1)
+    }
+    const timer = window.setInterval(beat, POLL_MS)
+    document.addEventListener('visibilitychange', beat)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', beat)
+    }
+  }, [dealId])
 
   /* T3.11.17 — refetched with the messages, not once on mount: accepting a card
      moves the deal to the next stage, and a ladder that only updated on reload
@@ -120,19 +179,34 @@ export default function DealVaultPage() {
            worked out here: a screen with its own opinion about where a deal
            stands is a second answer to a question that must have one. */
         setDealStatus(data.status)
-        setParties({
-          e2e:
-            data.sender_npub && data.carrier_npub
-              ? { senderNpub: data.sender_npub, carrierNpub: data.carrier_npub }
-              : null,
-          senderId: data.sender_id,
-          carrierId: data.carrier_id,
-        })
+        /* Replaced only when it actually differs. The poll runs this every ten
+           seconds, and a fresh object each time changes `parties` by identity —
+           which re-runs the decryption effect that depends on it, on every
+           message, forever. The parties of a deal do not change; the object
+           holding them should not either. */
+        setParties((prev) =>
+          prev.senderId === data.sender_id &&
+          prev.carrierId === data.carrier_id &&
+          prev.e2e?.senderNpub === (data.sender_npub ?? undefined) &&
+          prev.e2e?.carrierNpub === (data.carrier_npub ?? undefined)
+            ? prev
+            : {
+                e2e:
+                  data.sender_npub && data.carrier_npub
+                    ? {
+                        senderNpub: data.sender_npub,
+                        carrierNpub: data.carrier_npub,
+                      }
+                    : null,
+                senderId: data.sender_id,
+                carrierId: data.carrier_id,
+              },
+        )
       })
       .catch(() => {
         // deal-detail fetch is best-effort — plaintext send path still works.
       })
-  }, [dealId, messages.length])
+  }, [dealId, messages.length, tick])
 
   /* T3.11.27 — the agreement, alongside the deal. Refetched with the messages
      for the same reason the status is: confirming the card is a message, and a
@@ -153,7 +227,7 @@ export default function DealVaultPage() {
         setCardOpen(data?.card_kind !== 'terms.agreed')
       })
       .catch(() => setTerms(null))
-  }, [dealId, messages.length])
+  }, [dealId, messages.length, tick])
 
   // Try to decrypt e2e messages using own read_package + author's npub.
   // Failures (custodial user, missing extension, corrupt blob) leave the
