@@ -7,6 +7,8 @@ import {
   type TargetRole,
   type VerificationRequest,
 } from '../api/verification'
+import CountryCodeSelect from './CountryCodeSelect'
+import type { CountryCode } from 'libphonenumber-js/min'
 
 const DOC_TYPES = ['passport', 'driver_license', 'national_id', 'other']
 
@@ -134,26 +136,45 @@ export default function VerificationRespondModal({
                   </option>
                 ))}
               </select>
-              <input
-                type="text"
-                value={docCountry}
-                onChange={(e) => setDocCountry(e.target.value.toUpperCase().slice(0, 2))}
-                placeholder="AE"
-                maxLength={2}
-                className="border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
+              {/* T2.1 — the country the document was issued in, picked rather
+                  than typed. It was a two-character text box with «AE» for a
+                  placeholder, which asks a stranger to recall ISO codes from
+                  memory — and this codebase already owns a country picker. */}
+              <CountryCodeSelect
+                value={docCountry as CountryCode | ''}
+                onChange={(iso) => setDocCountry(iso)}
               />
             </div>
-            <label className="inline-flex cursor-pointer border border-cyan/40 text-cyan rounded-field px-4 py-2 text-sm font-display font-medium hover:bg-cyan/10 transition-colors">
-              {busy ? '…' : `📎 ${t('verification.chooseFile')}`}
+            {/* **Choosing the file is what sends it**, and nothing used to say
+                so: the country field had no submit beside it, so a person typed
+                their two letters and waited for something to happen (owner,
+                walking the flow 2026-09-12). The button now names the act, and
+                it is disabled until the country is there — with the reason
+                written underneath rather than appearing as an error after the
+                fact. */}
+            <label
+              className={`inline-flex cursor-pointer border rounded-field px-4 py-2 text-sm font-display font-medium transition-colors ${
+                docCountry
+                  ? 'border-cyan/40 text-cyan hover:bg-cyan/10'
+                  : 'border-navy/15 text-navy/30 cursor-not-allowed'
+              }`}
+            >
+              {busy ? '…' : `📎 ${t('verification.chooseAndSend')}`}
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,application/pdf"
                 onChange={upload}
                 className="hidden"
-                disabled={busy}
+                disabled={busy || !docCountry}
               />
             </label>
+            {!docCountry && (
+              <p className="text-[11px] font-body text-navy/40">
+                {t('verification.pickCountryFirst')}
+              </p>
+            )}
+
             <p className="text-[10px] font-mono text-navy/30">
               🔒 {t('verification.privacyHint')}
             </p>

@@ -472,6 +472,8 @@
     "docTypeLabel": "Document type",
     "docCountryLabel": "Country of issue (2-letter code)",
     "chooseFile": "Choose file",
+    "chooseAndSend": "Choose the document and send",
+    "pickCountryFirst": "Choose the issuing country first — the document is sent as soon as you pick the file.",
     "uploadError": "Upload failed.",
     "pickCountry": "Enter a 2-letter country code first.",
     "privacyHint": "Document is encrypted with your Nostr key. Only you can decrypt it; platform stores metadata only.",
