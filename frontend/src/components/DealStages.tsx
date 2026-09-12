@@ -155,7 +155,28 @@ export default function DealStages({
      well is what lets the panel tell «нечего нажимать» apart from «сейчас не
      твой ход», which are different things to say and were both drawn as an
      empty space. */
-  const stageKinds = (current?.kinds ?? []).filter(
+  /* T3.11.27 (owner, walking the flow 2026-09-12): «Нет кнопки Сколько денег
+     получено и подтверждения получения. Но сделка закрылась.»
+
+     Here is why there was no button. `delivery` and `payment` deliberately
+     **share** their statuses — on this market the cash changes hands at the
+     door, so the two stages overlap and `dealStages` says in as many words that
+     «the screen shows both rather than pretending one waits for the other». The
+     screen did not: `stageOf` returns one key and `find` stops at the first
+     match, which is `delivery`, whose `kinds` are empty. So at `posted` and
+     `delivered` the panel offered nothing at all, and the only way a deal could
+     end was the one-press close — which is exactly the pair of symptoms the
+     owner reported together.
+
+     Every stage standing on this status is live, not just the first one. */
+  const liveKinds = Array.from(
+    new Set(
+      DEAL_STAGES.filter(
+        (s) => s.key === currentKey || s.statuses.includes(status),
+      ).flatMap((s) => s.kinds),
+    ),
+  )
+  const stageKinds = liveKinds.filter(
     (kind) => kind !== 'payment.declared' || myRole === payer,
   )
   const mineNow = myRole
@@ -263,7 +284,7 @@ export default function DealStages({
             correct, and «ждём вторую сторону» there would be a lie. */}
         {myRole &&
           !TERMINAL_STATUSES.includes(status) &&
-          (current?.kinds.length ?? 0) > 0 &&
+          liveKinds.length > 0 &&
           mineNow.length === 0 && (
             <p className="text-xs font-body text-navy/45">
               {t('stages.theirTurn')}

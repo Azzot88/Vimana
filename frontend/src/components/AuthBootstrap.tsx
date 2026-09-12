@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/auth'
  *   pt.1: rehydrate auth from localStorage on app boot (before rendering
  *         routes so ProtectedRoute never sees a transient `token && !user`
  *         state).
- *   pt.2: inactivity timer — 30 min default, warning modal 2 min before,
+ *   pt.2: inactivity timer — 30 min default, warning modal at 25 min,
  *         auto-logout with `?reason=inactivity` banner on LoginPage.
  *
  * Option-A logout (frontend-only): clears localStorage token; backend JWT

@@ -62,6 +62,28 @@ export interface VaultMessage {
   created_at: string
 }
 
+/** T3.11.27 — what the list looks like right now, for deciding whether anything
+ *  actually moved.
+ *
+ *  The deal screen polls every ten seconds (`DealVaultPage`), and replacing the
+ *  message array with an equal one re-runs every effect that depends on it —
+ *  including the scroll-to-bottom, which would yank somebody reading their own
+ *  history back to the end every few seconds. So a poll that found nothing keeps
+ *  the array it already has.
+ *
+ *  Three things per message, and each is here for a reason: the **id** catches a
+ *  new message, the **card state** catches the other side answering a card that
+ *  is already on screen (the whole point of polling — «ждём подтверждения» that
+ *  never changes by itself), and the **attachment count** catches a photograph
+ *  arriving on a message that is otherwise untouched.
+ *
+ *  Called by: `pages/DealVaultPage`.
+ */
+export const messagesSignature = (items: VaultMessage[]): string =>
+  items
+    .map((m) => `${m.id}:${m.card_state ?? ''}:${m.attachments.length}`)
+    .join('|')
+
 export interface E2EParties {
   senderNpub: string
   carrierNpub: string

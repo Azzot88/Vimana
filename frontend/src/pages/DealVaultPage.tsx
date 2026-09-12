@@ -5,6 +5,7 @@ import {
   attachExistingFile,
   createMessage,
   listMessages,
+  messagesSignature,
   shareAddressInVault,
   type AttachmentKind,
   type E2EParties,
@@ -101,21 +102,12 @@ export default function DealVaultPage() {
         ? 'carrier'
         : null
 
-  /* What the list looks like right now, for deciding whether anything actually
-     moved. Replacing the array with an equal one would re-run every effect that
-     depends on it — including the scroll-to-bottom — so a person reading their
-     own history would be yanked to the end every few seconds. */
-  const signature = (items: VaultMessage[]) =>
-    items
-      .map((m) => `${m.id}:${m.card_state ?? ''}:${m.attachments.length}`)
-      .join('|')
-
   const load = async () => {
     if (!dealId) return
     try {
       const { data } = await listMessages(dealId, { limit: 100 })
       setMessages((prev) =>
-        signature(prev) === signature(data.items) ? prev : data.items,
+        messagesSignature(prev) === messagesSignature(data.items) ? prev : data.items,
       )
       setError('')
     } catch (err: unknown) {
