@@ -34,7 +34,7 @@ vi.mock('../api/terms', async () => {
   return { ...actual, raiseCard: vi.fn() }
 })
 
-import { ackCard, uploadAttachment } from '../api/dealvault'
+import { ackCard, messagesSignature, uploadAttachment } from '../api/dealvault'
 import { raiseCard } from '../api/terms'
 
 const msg = (over: Partial<VaultMessage> = {}): VaultMessage => ({
@@ -415,15 +415,205 @@ describe('DealStages', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('keeps the shortcut for a parcel still in the post', () => {
+  it('has no shortcut on the postal leg either, since 2026-09-12', () => {
+    /* It was kept there on the honest argument that a carrier who has posted
+       the parcel should not wait on a post office. What it actually did was end
+       deals past «Оплата произведена» and past anybody confirming receipt — the
+       run the owner walked closed exactly that way. The postal leg now closes
+       through the same pair as every other deal. */
     renderWithProviders(panel({ status: 'posted' }))
     expect(
-      screen.getByText(/close the deal|Закрыть сделку/i),
-    ).toBeInTheDocument()
+      screen.queryByText(/close the deal|Закрыть сделку/i),
+    ).not.toBeInTheDocument()
   })
 
   it('says nothing is left to do on a cancelled deal', () => {
     renderWithProviders(panel({ status: 'cancelled' }))
     expect(screen.queryByText(/^more$|^ещё$/i)).not.toBeInTheDocument()
+  })
+})
+
+// ── T3.11.27 · the photo travels with the card ────────────────────────────
+
+describe('CardActions with evidence', () => {
+  it('attaches the photo to the card it just raised', async () => {
+    /* The defect this replaces: the photograph went up as its own chat
+       message, so the card never got the evidence its spec requires and the
+       other side could never confirm it. «После передачи не в пути» was that,
+       all the way down. */
+    vi.mocked(raiseCard).mockResolvedValue({ id: 'new-card' } as never)
+    renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
+    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+
+    const file = new File(['x'], 'handoff.png', { type: 'image/png' })
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
+
+    await waitFor(() =>
+      expect(uploadAttachment).toHaveBeenCalledWith(
+        'd1',
+        'new-card',
+        file,
+        'handoff_photo',
+      ),
+    )
+  })
+
+  it('refuses to raise a declaration with no evidence', async () => {
+    /* Refused before either half runs. Raising it and failing the upload would
+       leave a declaration nobody can answer — which is the state this whole
+       change exists to stop producing. */
+    vi.mocked(raiseCard).mockResolvedValue({ id: 'never' } as never)
+    renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
+    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/attach the photo|Приложите фото/i),
+      ).toBeInTheDocument(),
+    )
+    expect(raiseCard).not.toHaveBeenCalled()
+  })
+
+  it('gives the carrier their own way to say they took it', () => {
+    /* Owner, 2026-09-12. Whoever holds the parcel declares; the other confirms.
+       Two kinds rather than one shared, because «отдал» and «взял» are
+       different claims about who was standing there. */
+    const kinds = formsForRole('carrier').map((f) => f.kind)
+    expect(kinds).toContain('handoff.received')
+    expect(kinds).not.toContain('handoff.declared')
+  })
+})
+
+// ── T3.11.27 · whose turn it is, and the stage nobody could act on ────────
+
+describe('DealStages · the late stages', () => {
+  const panel = (over: { status?: DealStatus; myRole?: DealRole } = {}) => (
+    <DealStages
+      dealId="d1"
+      status={over.status ?? 'delivered'}
+      myRole={over.myRole ?? 'sender'}
+      terms={null}
+      deal={null}
+      onDone={() => {}}
+      onMessage={() => {}}
+    />
+  )
+
+  it('offers the money card once the parcel has arrived', () => {
+    /* The bug behind «Нет кнопки Сколько денег получено… Но сделка закрылась»:
+       `delivery` and `payment` share their statuses on purpose, and the panel
+       read only the first of them — whose kinds are empty. Nothing to press at
+       `delivered`, so the only way out was the one-press close. */
+    renderWithProviders(panel({ status: 'delivered', myRole: 'sender' }))
+    expect(
+      screen.getByText(/payment made|Оплата произведена/i),
+    ).toBeInTheDocument()
+  })
+
+  it('offers it on the postal leg too', () => {
+    renderWithProviders(panel({ status: 'posted', myRole: 'sender' }))
+    expect(
+      screen.getByText(/payment made|Оплата произведена/i),
+    ).toBeInTheDocument()
+  })
+
+  it('does not offer it to the side that owes nothing', () => {
+    // `payer` defaults to the sender, and the server answers the carrier 403.
+    renderWithProviders(panel({ status: 'delivered', myRole: 'carrier' }))
+    expect(
+      screen.queryByText(/payment made|Оплата произведена/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('says whose turn it is instead of drawing a blank', () => {
+    /* Two different silences used to look identical: «нечего нажимать» and
+       «сейчас не твой ход». The second one is now a sentence. */
+    renderWithProviders(panel({ status: 'delivered', myRole: 'carrier' }))
+    expect(
+      screen.getByText(/other side's turn|ход второй стороны/i),
+    ).toBeInTheDocument()
+  })
+
+  it('says nothing of the kind when this role does have a step', () => {
+    renderWithProviders(panel({ status: 'accepted', myRole: 'sender' }))
+    expect(
+      screen.queryByText(/other side's turn|ход второй стороны/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/handed to the carrier|Передал перевозчику/i),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps quiet at a stage where nobody acts', () => {
+    // At `closed` the silence is correct, and «ждём вторую сторону» would be a
+    // lie rather than a hint.
+    renderWithProviders(panel({ status: 'closed', myRole: 'sender' }))
+    expect(
+      screen.queryByText(/other side's turn|ход второй стороны/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('gives the carrier their side of the handover', () => {
+    renderWithProviders(panel({ status: 'accepted', myRole: 'carrier' }))
+    expect(
+      screen.getByText(/received the parcel|Получил посылку/i),
+    ).toBeInTheDocument()
+  })
+})
+
+// ── T3.11.27 · the screen notices the other side ──────────────────────────
+
+describe('messagesSignature', () => {
+  /* The deal screen polls every ten seconds. What it compares decides whether
+     the poll is useful at all — and every one of these three cases was a real
+     symptom: «статус не сменился ни у кого», «карточка так и висит в ожидании»,
+     «фото загрузилось, но у второго не появилось». */
+  const m = (over: Partial<VaultMessage>): VaultMessage => msg(over)
+
+  it('is unchanged when nothing happened, so the list is kept', () => {
+    // Kept, not replaced: an equal array re-runs every effect that depends on
+    // it, and one of those scrolls somebody's history to the bottom.
+    const a = [m({ id: '1' }), m({ id: '2' })]
+    const b = [m({ id: '1' }), m({ id: '2' })]
+    expect(messagesSignature(a)).toBe(messagesSignature(b))
+  })
+
+  it('changes when the other side answers a card already on screen', () => {
+    const pending = [m({ id: '1', card_state: 'pending' })]
+    const answered = [m({ id: '1', card_state: 'accepted' })]
+    expect(messagesSignature(pending)).not.toBe(messagesSignature(answered))
+  })
+
+  it('changes when a photo lands on a message that is otherwise untouched', () => {
+    const bare = [m({ id: '1' })]
+    const withPhoto = [
+      m({
+        id: '1',
+        attachments: [
+          {
+            id: 'a1',
+            message_id: '1',
+            r2_key: 'k',
+            file_hash: 'h',
+            ipfs_cid: null,
+            kind: 'handoff_photo',
+            url: null,
+            created_at: '2026-09-12T00:00:00Z',
+          },
+        ],
+      }),
+    ]
+    expect(messagesSignature(bare)).not.toBe(messagesSignature(withPhoto))
+  })
+
+  it('changes when a message arrives', () => {
+    expect(messagesSignature([m({ id: '1' })])).not.toBe(
+      messagesSignature([m({ id: '1' }), m({ id: '2' })]),
+    )
   })
 })

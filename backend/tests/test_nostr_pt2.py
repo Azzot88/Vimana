@@ -410,6 +410,8 @@ def test_whitelist_survives_an_unconfigured_anchor(session_maker, tmp_path, monk
 def _self_custody(maker):
     """An account holding its own key, as `declare-self-custody` leaves it:
     the flag set and our copy of the nsec gone."""
+    import uuid as uuidlib
+
     from app.models.user import User
     from tests.conftest import unique_email
 
@@ -420,7 +422,13 @@ def _self_custody(maker):
             key_self_custody=True,
             nsec_encrypted=None,
             nsec_nonce=None,
-            nostr_pubkey="f" * 64,
+            # Randomised. A hardcoded one collided with itself on the second
+            # test in this file — `uq_users_nostr_pubkey` — and, far worse,
+            # «f» × 64 is what `test_recipient` uses to mean «ключ, которого ни
+            # у кого нет». One constant in one helper made that key exist, in a
+            # database that is never reset, and broke an unrelated file
+            # permanently (2026-09-12).
+            nostr_pubkey=uuidlib.uuid4().hex + uuidlib.uuid4().hex,
         )
         db.add(user)
         db.commit()
@@ -478,3 +486,83 @@ def test_a_self_custody_account_still_must_sign_its_own_words(sync_sessions):
     with pytest.raises(HTTPException) as refused:
         sign_vault_message(msg, user)
     assert refused.value.status_code == 422
+
+
+def test_a_photo_hangs_on_an_empty_message_and_needs_no_signature(sync_sessions):
+    """The second face of the same defect, and the reason «Не удалось загрузить
+    файл» met anybody holding their own key.
+
+    A photograph is uploaded as an empty-text message that exists only to carry
+    the attachment. `_content_vault_message` signs `msg.text or ""`, so the
+    thing a client would have been asked to sign is the empty string — which
+    says «this account authored a row», which `sender_id` already says.
+    """
+    import uuid as uuidlib
+
+    from app.core.signing import sign_vault_message
+    from app.models.deal import DealVaultMessage
+
+    user = _self_custody(sync_sessions)
+    hanger = DealVaultMessage(
+        deal_id=uuidlib.uuid4(), sender_id=user.id, text="", is_system=False
+    )
+    sign_vault_message(hanger, user)
+    assert hanger.nostr_sig is None
+
+
+def test_whitespace_is_not_words(sync_sessions):
+    """«   » is an empty message with a typo in it, not a sentence somebody
+    wanted signed. Treating it as words would refuse a photo upload because of
+    a stray space."""
+    import uuid as uuidlib
+
+    from app.core.signing import sign_vault_message
+    from app.models.deal import DealVaultMessage
+
+    user = _self_custody(sync_sessions)
+    msg = DealVaultMessage(
+        deal_id=uuidlib.uuid4(), sender_id=user.id, text="   ", is_system=False
+    )
+    sign_vault_message(msg, user)
+    assert msg.nostr_sig is None
+
+
+def test_a_custodial_account_is_still_signed_for(sync_sessions):
+    """The leniency is about self-custody only. An account whose key we hold
+    gets a signature on everything, and that has not moved: the bonus is the
+    whole reason custodial records verify at all."""
+    import uuid as uuidlib
+
+    from app.core.signing import sign_vault_message
+    from app.models.deal import CardState, DealVaultMessage
+    from app.models.user import User
+    from tests.conftest import unique_email
+
+    from app.core.keypair import encrypt_nsec, generate_keypair
+
+    nsec_hex, npub_hex = generate_keypair()
+    nonce, blob = encrypt_nsec(nsec_hex)
+    with sync_sessions() as db:
+        user = User(
+            email=unique_email("custodial-card"),
+            display_name="We Hold It",
+            key_self_custody=False,
+            nostr_pubkey=npub_hex,
+            nsec_encrypted=blob,
+            nsec_nonce=nonce,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    card = DealVaultMessage(
+        deal_id=uuidlib.uuid4(),
+        sender_id=user.id,
+        is_system=True,
+        card_kind="handoff.declared",
+        card_payload={},
+        card_state=CardState.pending,
+    )
+    sign_vault_message(card, user)
+    assert card.nostr_sig is not None
+    assert card.nostr_event_id is not None

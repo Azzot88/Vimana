@@ -326,6 +326,36 @@ async def _ensure_connection_tier(engine) -> None:
                 "ON users (handle)"
             )
         )
+        # T3.11.27 (2026-09-12) — undo one hardcoded constant that escaped.
+        #
+        # A helper in `test_nostr_pt2` created a self-custody account with
+        # `nostr_pubkey = "f" * 64`, which is the exact key `test_recipient`
+        # uses to mean «ключ, которого ни у кого нет». `vimana_test` is never
+        # reset (`ENVIRONMENT §8`), so that row made the key **exist** and broke
+        # an unrelated file permanently: an unknown npub started resolving to a
+        # real account and the recipient attached with 201 instead of 404.
+        #
+        # Deleted here rather than by hand on the server, because a manual fix
+        # is a fix that works once: the next person to restore a database
+        # snapshot would meet the same failure with no trace of why. The
+        # references go first — a recipient attached during the broken run left
+        # a participant row and a `deals.recipient_id` pointing at it.
+        await conn.execute(
+            text(
+                "UPDATE deals SET recipient_id = NULL WHERE recipient_id IN "
+                "(SELECT id FROM users WHERE nostr_pubkey = repeat('f', 64))"
+            )
+        )
+        await conn.execute(
+            text(
+                "DELETE FROM deal_participants WHERE user_id IN "
+                "(SELECT id FROM users WHERE nostr_pubkey = repeat('f', 64))"
+            )
+        )
+        await conn.execute(
+            text("DELETE FROM users WHERE nostr_pubkey = repeat('f', 64)")
+        )
+
 
 
 async def _ensure_role_column(engine) -> None:
