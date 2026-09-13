@@ -380,6 +380,7 @@ describe('DealStages', () => {
       myRole={over.myRole ?? 'sender'}
       terms={null}
       deal={null}
+      messages={[]}
       onDone={() => {}}
       onMessage={() => {}}
     />
@@ -499,6 +500,7 @@ describe('DealStages · the late stages', () => {
       myRole={over.myRole ?? 'sender'}
       terms={null}
       deal={null}
+      messages={[]}
       onDone={() => {}}
       onMessage={() => {}}
     />
@@ -615,5 +617,152 @@ describe('messagesSignature', () => {
     expect(messagesSignature([m({ id: '1' })])).not.toBe(
       messagesSignature([m({ id: '1' }), m({ id: '2' })]),
     )
+  })
+})
+
+// ── T3.11.27 · the evidence, and the button that has been pressed ─────────
+
+describe('DealCard · what it shows', () => {
+  it('leaves out a field nobody filled', () => {
+    // An empty label reads as a field somebody failed to answer, not as one
+    // they were never asked.
+    renderWithProviders(
+      <DealCard
+        msg={msg({
+          card_kind: 'handoff.declared',
+          card_state: 'pending',
+          requires_ack_by: 'carrier',
+          card_payload: { parcel_count: 2, postal_service: '   ' },
+          attachments: [
+            {
+              id: 'a1',
+              message_id: 'm1',
+              r2_key: 'k',
+              file_hash: 'abcdef0123456789ff',
+              ipfs_cid: null,
+              kind: 'handoff_photo',
+              url: 'https://example.test/p.png',
+              created_at: '2026-09-12T00:00:00Z',
+            },
+          ],
+        })}
+        dealId="d1"
+        myRole="carrier"
+        mine={false}
+        onChanged={() => {}}
+      />,
+    )
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/postal service|Служба доставки/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('carries the photo, its kind and its hash — the chat draws none of them now', () => {
+    const onPreview = vi.fn()
+    renderWithProviders(
+      <DealCard
+        msg={msg({
+          card_kind: 'handoff.declared',
+          card_state: 'pending',
+          requires_ack_by: 'carrier',
+          card_payload: { parcel_count: 1 },
+          attachments: [
+            {
+              id: 'a1',
+              message_id: 'm1',
+              r2_key: 'k',
+              file_hash: 'abcdef0123456789ff',
+              ipfs_cid: null,
+              kind: 'handoff_photo',
+              url: 'https://example.test/p.png',
+              created_at: '2026-09-12T00:00:00Z',
+            },
+          ],
+        })}
+        dealId="d1"
+        myRole="carrier"
+        mine={false}
+        onChanged={() => {}}
+        onPreview={onPreview}
+      />,
+    )
+    expect(screen.getByText(/sha256:abcdef0123456789/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /full screen|весь экран/i }))
+    expect(onPreview).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://example.test/p.png' }),
+    )
+  })
+})
+
+describe('DealStages · a card already raised', () => {
+  const panel = (over: {
+    status?: DealStatus
+    myRole?: DealRole
+    messages?: VaultMessage[]
+  }) => (
+    <DealStages
+      dealId="d1"
+      status={over.status ?? 'accepted'}
+      myRole={over.myRole ?? 'sender'}
+      terms={null}
+      deal={null}
+      messages={over.messages ?? []}
+      onDone={() => {}}
+      onMessage={() => {}}
+    />
+  )
+
+  it('takes the button away the moment the declaration is standing', () => {
+    /* «После того как нажата кнопка Передал перевозчику она должна пропадать
+       сразу» (owner, 2026-09-12). It used to hang around until the status moved
+       — which happens only when the other side confirms — so the same handover
+       could be declared twice, and the chain would hold two contradictory
+       accounts of one act. */
+    renderWithProviders(
+      panel({
+        messages: [
+          msg({
+            card_kind: 'handoff.declared',
+            card_state: 'pending',
+            requires_ack_by: 'carrier',
+          }),
+        ],
+      }),
+    )
+    expect(
+      screen.queryByText(/handed to the carrier|Передал перевозчику/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/other side's turn|ход второй стороны/i),
+    ).toBeInTheDocument()
+  })
+
+  it('gives it back when the other side refuses', () => {
+    // The rollback of one step, and it needs no state of its own: the poll
+    // brings the refusal, and the button returns with it.
+    renderWithProviders(
+      panel({
+        messages: [
+          msg({ card_kind: 'handoff.declared', card_state: 'declined' }),
+        ],
+      }),
+    )
+    expect(
+      screen.getByText(/handed to the carrier|Передал перевозчику/i),
+    ).toBeInTheDocument()
+  })
+
+  it('ignores a standing card that belongs to the other side', () => {
+    // A pending `transit.update` is the carrier's business; it must not remove
+    // the sender's own handover button.
+    renderWithProviders(
+      panel({
+        messages: [msg({ card_kind: 'transit.update', card_state: 'pending' })],
+      }),
+    )
+    expect(
+      screen.getByText(/handed to the carrier|Передал перевозчику/i),
+    ).toBeInTheDocument()
   })
 })

@@ -28,6 +28,10 @@ interface Props {
    *  version of the agreement already filled in; ignored once there is an
    *  agreement to edit, which is the sharper source. */
   deal: DealDetail | null
+  /** T3.11.27 — what has already been said in this deal. Read for one thing
+   *  only: a card of some kind is standing unanswered, so the button that
+   *  raises that kind is not offered again. */
+  messages: VaultMessage[]
   onDone: () => void
   onMessage: (msg: VaultMessage) => void
 }
@@ -66,6 +70,7 @@ export default function DealStages({
   myRole,
   terms,
   deal,
+  messages,
   onDone,
   onMessage,
 }: Props) {
@@ -179,9 +184,32 @@ export default function DealStages({
   const stageKinds = liveKinds.filter(
     (kind) => kind !== 'payment.declared' || myRole === payer,
   )
+  /* T3.11.27 (owner, 2026-09-12): «После того как нажата кнопка Передал
+     перевозчику она должна пропадать сразу… Она должна появляться только если
+     Перевозчик не подтвердил получение, тогда откатывается назад на один шаг.»
+
+     The button was drawn from the deal's **status**, and the status does not
+     move until the other side confirms — so after declaring a handover the
+     sender kept looking at «Передал перевозчику» and could declare it again,
+     and again. The stage is the right source for *when* an action is possible;
+     it cannot know that this particular one has already been taken.
+
+     A standing card is what says so. Raising a second one while the first is
+     unanswered would put two contradictory declarations of the same act in the
+     chain, which is precisely the record an arbiter cannot read. Declined and
+     superseded cards are not pending, so a refusal brings the button straight
+     back — that is the «откат на один шаг», and it needs no state of its own:
+     the poll brings the refusal and the button reappears with it. */
+  const pendingKinds = new Set(
+    messages
+      .filter((m) => m.card_state === 'pending' && m.card_kind)
+      .map((m) => m.card_kind as string),
+  )
   const mineNow = myRole
-    ? stageKinds.filter((kind) =>
-        formsForRole(myRole).some((form) => form.kind === kind),
+    ? stageKinds.filter(
+        (kind) =>
+          !pendingKinds.has(kind) &&
+          formsForRole(myRole).some((form) => form.kind === kind),
       )
     : []
 

@@ -592,6 +592,7 @@
     "submit": "Soumettre la demande",
     "submitting": "Envoi...",
     "requestError": "Impossible de créer la demande",
+    "categoryRequired": "Choisissez une catégorie — le transporteur ne prend que ce qu'il a indiqué",
     "newTrip": "Nouveau vol",
     "departureDate": "Date de départ",
     "capacityKg": "Capacité (kg)",
