@@ -28,15 +28,7 @@ import ImageLightbox from '../components/ImageLightbox'
 import MonoText from '../components/MonoText'
 import ShareAddressModal from '../components/ShareAddressModal'
 import { usePrefs } from '../hooks/usePrefs'
-
-/** How often the deal screen asks whether the other side has moved.
- *
- *  Ten seconds: fast enough that «подтвердил» lands while the other person is
- *  still looking at the screen, slow enough that two people watching one deal
- *  cost twelve requests a minute between them. Nobody is typing at anybody
- *  here — that is what the chat is for — so sub-second freshness would be
- *  paying a socket's complexity for an illusion of liveness. */
-const POLL_MS = 10 * 1000
+import { useLiveBeat } from '../hooks/useLiveBeat'
 
 /** T_UX.7 pt.3 — keys, not labels. The labels themselves were Russian literals
  *  and doubled as the `alt` text on every attachment, so five locales got a
@@ -127,40 +119,15 @@ export default function DealVaultPage() {
 
   useEffect(() => { load() }, [dealId])
 
-  /* T3.11.27 — the other side moves too (owner's request 2026-09-12).
-   *
-   * A deal is two people acting in turn, and until now the screen only learned
-   * anything when **this** person did something: the carrier confirmed a
-   * handover and the sender sat looking at «ждём подтверждения» until they
-   * thought to reload. A ladder that is only right after F5 is a ladder nobody
-   * trusts.
-   *
-   * Polling rather than a socket, deliberately. The whole exchange is a handful
-   * of acts over days, not a stream; a socket would be a second transport to
-   * authenticate, keep alive, reconnect and reason about behind nginx — real
-   * complexity bought for a screen that needs to be a few seconds fresh. When
-   * the flow genuinely needs sub-second (it does not: nobody is typing at each
-   * other here, that is the chat), this becomes the thing to replace.
-   *
-   * Paused while the tab is hidden. A backgrounded deal screen polling all
-   * afternoon spends somebody's battery and our rate limit to answer a question
-   * nobody is asking; `visibilitychange` also fires on return, so coming back
-   * to the tab refreshes immediately rather than waiting out the interval.
-   */
-  useEffect(() => {
-    if (!dealId) return
-    const beat = () => {
-      if (document.visibilityState !== 'visible') return
-      load()
-      setTick((n) => n + 1)
-    }
-    const timer = window.setInterval(beat, POLL_MS)
-    document.addEventListener('visibilitychange', beat)
-    return () => {
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', beat)
-    }
-  }, [dealId])
+  /* T3.11.27 — the other side moves too (owner's request 2026-09-12). The beat
+     itself, and the reasoning behind it, live in `useLiveBeat`; what belongs
+     here is only what this screen refetches on it. `tick` is bumped alongside
+     the messages because acknowledging a card changes its state **in place** —
+     the list is the same length and the deal has still moved. */
+  useLiveBeat(() => {
+    load()
+    setTick((n) => n + 1)
+  }, Boolean(dealId))
 
   /* T3.11.17 — refetched with the messages, not once on mount: accepting a card
      moves the deal to the next stage, and a ladder that only updated on reload
