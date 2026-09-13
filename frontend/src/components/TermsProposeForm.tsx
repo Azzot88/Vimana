@@ -481,7 +481,12 @@ export default function TermsProposeForm({
         )}
       </div>
 
-      {error && <p className="mt-2 text-xs font-body text-danger">{error}</p>}
+      {/* One message, where the press happened. The refusal comes back from
+          `send`, which runs from the preview — printing it here as well put the
+          same sentence twice on one screen, once behind a modal covering it. */}
+      {error && !review && (
+        <p className="mt-2 text-xs font-body text-danger">{error}</p>
+      )}
       <button
         type="submit"
         disabled={busy}
