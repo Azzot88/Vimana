@@ -8,6 +8,7 @@ status moves only through a card.
 from __future__ import annotations
 
 import base64
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -1016,3 +1017,131 @@ async def test_closing_by_the_pair_seals_the_vault(
         client, sender_headers, deal.id, "issue.reported", {"category": "delay"}
     )
     assert blocked.status_code == 409, blocked.text
+
+
+# ── T3.11.27 · the declaration and its evidence are one act ───────────────
+
+
+async def _card_with_files(client, headers, deal_id, kind, files, payload=None):
+    """`POST /cards/with-files` — multipart, several photographs, one card."""
+    return await client.post(
+        f"/api/deals/{deal_id}/cards/with-files",
+        headers=headers,
+        files=[("files", (f"p{i}.png", body, "image/png")) for i, body in enumerate(files)],
+        data={"kind": kind, "payload": json.dumps(payload or {})},
+    )
+
+
+async def test_a_declaration_arrives_with_its_photographs(
+    client, sender_headers, carrier_headers, deal
+):
+    """Owner, 2026-09-12: «Без фото карточка в чат добавляться не должна.»
+
+    Raised and confirmable in one step: the card comes back already carrying its
+    evidence, so the other side can answer it the moment they see it. Before
+    this, the two halves were two requests and the second could fail.
+    """
+    r = await _card_with_files(
+        client, sender_headers, deal.id, "handoff.declared",
+        [_ONE_PIXEL_PNG, _ONE_PIXEL_PNG],
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    # Two files, one hash: identical bytes are one file in the safe (T3.11.25),
+    # and the card still shows both attachments.
+    assert len(body["attachments"]) == 2
+    assert body["requires_ack_by"] == "carrier"
+
+    ack = await _ack(client, carrier_headers, deal.id, body["id"])
+    assert ack.status_code == 200, ack.text
+
+
+async def test_a_refused_file_leaves_no_card_behind(
+    client, sender_headers, session_maker, deal
+):
+    """The whole reason this endpoint exists.
+
+    The vault is append-only: a card written before its photograph was accepted
+    can never be confirmed (the server refuses the ack without evidence) and can
+    never be taken back. So a refusal must happen **before** anything is written
+    — not after, which is what two requests could only ever do.
+    """
+    from sqlalchemy import func, select
+
+    from app.models.deal import DealVaultMessage
+
+    async with session_maker() as db:
+        before = (
+            await db.execute(
+                select(func.count())
+                .select_from(DealVaultMessage)
+                .where(DealVaultMessage.deal_id == deal.id)
+            )
+        ).scalar_one()
+
+    r = await client.post(
+        f"/api/deals/{deal.id}/cards/with-files",
+        headers=sender_headers,
+        # A text file wearing an image's name. `validate_upload` opens the bytes
+        # rather than trusting the declared type, which is what makes this a 422
+        # and not a stored photograph of nothing.
+        files=[("files", ("notes.png", b"this is not an image at all", "image/png"))],
+        data={"kind": "handoff.declared", "payload": "{}"},
+    )
+    assert r.status_code == 422, r.text
+
+    async with session_maker() as db:
+        after = (
+            await db.execute(
+                select(func.count())
+                .select_from(DealVaultMessage)
+                .where(DealVaultMessage.deal_id == deal.id)
+            )
+        ).scalar_one()
+    assert after == before, "a refused photograph must leave no card in the vault"
+
+
+async def test_the_wrong_kind_of_file_says_what_would_work(
+    client, sender_headers, deal
+):
+    """«Файл не подошёл» was the whole message somebody got. The refusal now
+    names what this card takes, because the person holding the file cannot guess
+    what their phone called it."""
+    r = await client.post(
+        f"/api/deals/{deal.id}/cards/with-files",
+        headers=sender_headers,
+        files=[("files", ("scan.pdf", b"%PDF-1.4 fake", "application/pdf"))],
+        data={"kind": "handoff.declared", "payload": "{}"},
+    )
+    assert r.status_code == 415, r.text
+    assert "image/jpeg" in r.json()["detail"]
+
+
+async def test_a_card_that_needs_no_photo_is_not_raised_here(
+    client, sender_headers, deal
+):
+    """This endpoint is for declarations that stand on evidence. A pickup
+    proposal takes none, and accepting files for it would file a photograph
+    under a card nobody will ever look at."""
+    r = await _card_with_files(
+        client, sender_headers, deal.id, "pickup.proposed",
+        [_ONE_PIXEL_PNG], {"method": "in_person", "city": "Dubai"},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_files_are_refused_from_outside_the_deal(client, deal):
+    """Party first, bytes second: an outsider must not be able to make the
+    server decode their images, let alone store them in this deal."""
+    email = unique_email("cards-files-out")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Out"}
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    hdr = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    r = await _card_with_files(
+        client, hdr, deal.id, "handoff.declared", [_ONE_PIXEL_PNG],
+    )
+    assert r.status_code in (403, 404), r.text

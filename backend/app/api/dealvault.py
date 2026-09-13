@@ -2,6 +2,7 @@ import hashlib
 import io
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
@@ -68,6 +69,218 @@ MIME_TO_EXT: dict[str, str] = {
     "image/heif": ".heif",
     "application/pdf": ".pdf",
 }
+
+
+@dataclass(frozen=True)
+class StoredUpload:
+    """T3.11.27 — an accepted file, before anything in the vault refers to it.
+
+    The point of the type is the order it enforces. A card that declares
+    `requires_attachment` cannot be confirmed by anybody until its evidence
+    arrives, and the vault is append-only — so a card raised before its
+    photograph was accepted is a row that can never be completed and never be
+    removed. That is what the owner met on 2026-09-12: «карточка в чате
+    появляется без фото».
+
+    So the bytes are checked and stored **first** and this is what comes back;
+    only then is the card written. A refusal here costs a message on a form that
+    is still open, which is the cheap failure.
+    """
+
+    user_file: UserFile
+    r2_key: str
+    file_hash: str
+    size_bytes: int
+    mime: str
+    kind: AttachmentKind
+    scan_status: str
+
+
+async def store_upload(
+    *,
+    deal_id: uuid.UUID,
+    file: UploadFile,
+    kind: str,
+    owner: User,
+    db: AsyncSession,
+    declared_length: str | None = None,
+) -> StoredUpload:
+    """Validate one uploaded file and put it in the owner's safe.
+
+    Everything `upload_attachment` used to do inline, up to and not including
+    the `Attachment` row: kind, size, declared MIME, signature and full image
+    decode, then deduplication by hash against the uploader's own files.
+
+    Called by: `upload_attachment`, `api.cards.create_card_with_files`.
+    """
+    try:
+        attachment_kind = AttachmentKind(kind)
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid kind: {kind}")
+
+    # Early rejection via Content-Length before reading bytes
+    if declared_length and int(declared_length) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
+        )
+
+    content_type = (file.content_type or "").lower()
+    allowed = ALLOWED_MIME_BY_KIND.get(attachment_kind, set())
+    if content_type not in allowed:
+        # T3.11.27 — say what would work. «MIME 'application/octet-stream' not
+        # allowed» is true and useless to somebody holding a photograph their
+        # phone described badly, and this text reaches the screen now that the
+        # form shows the server's own words.
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"This file is a {content_type or 'file of unknown type'}; "
+                f"'{kind}' takes: {', '.join(sorted(allowed))}"
+            ),
+        )
+
+    # Streaming SHA-256 + size limit while reading chunks
+    hasher = hashlib.sha256()
+    total = 0
+    buffer = io.BytesIO()
+    while True:
+        chunk = await file.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
+            )
+        hasher.update(chunk)
+        buffer.write(chunk)
+
+    file_hash = hasher.hexdigest()
+
+    # T3.8 — validate the bytes against the declared type BEFORE the R2 write:
+    # signature whitelist + full image decode. Metadata only in the log.
+    # Decode runs in the threadpool (T_PERF.1) — see `api/avatar.py` for why.
+    try:
+        scan_status = await run_in_threadpool(
+            validate_upload, buffer.getvalue(), content_type
+        )
+    except FileValidationError as exc:
+        logger.warning(
+            "upload rejected: deal=%s user=%s kind=%s declared=%s size=%d reason=%s",
+            deal_id, owner.id, kind, content_type, total, exc.reason,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"File content failed validation: {exc.reason}",
+        )
+
+    # T3.11.25 — the file lands in the uploader's own safe at the same moment it
+    # lands in the deal. One row per (owner, hash): sending the same passport
+    # twice is one document, and `created_at` is «впервые предоставлен», which
+    # must have exactly one answer.
+    #
+    # **Looked up before the upload, not after.** Identical bytes have an
+    # identical hash, so an object for them is already in storage — writing a
+    # second copy costs a PUT and leaves two keys for one file, and then the
+    # attachment and the safe entry point at different objects with the same
+    # content. Found on 2026-09-07 by the re-attachment test, which compared the
+    # two keys and got two answers.
+    safe_file = (
+        await db.execute(
+            select(UserFile).where(
+                UserFile.owner_id == owner.id,
+                UserFile.file_hash == file_hash,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if safe_file is not None:
+        r2_key = safe_file.r2_key
+    else:
+        # Extension from MIME (whitelisted), never from a user-supplied filename.
+        ext = MIME_TO_EXT.get(content_type, "")
+        r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
+        # Blocking PUT — off the event loop (T_PERF.1). Attachments here are the
+        # largest files the product accepts, so this is the worst place to hold
+        # it.
+        await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
+        safe_file = UserFile(
+            owner_id=owner.id,
+            r2_key=r2_key,
+            file_hash=file_hash,
+            kind=attachment_kind,
+            mime=content_type,
+            size_bytes=total,
+            scan_status=scan_status,
+        )
+        db.add(safe_file)
+        await db.flush()
+
+    return StoredUpload(
+        user_file=safe_file,
+        r2_key=r2_key,
+        file_hash=file_hash,
+        size_bytes=total,
+        mime=content_type,
+        kind=attachment_kind,
+        scan_status=scan_status,
+    )
+
+
+async def attach_stored(
+    *,
+    stored: StoredUpload,
+    deal_id: uuid.UUID,
+    message_id: uuid.UUID,
+    actor: User,
+    db: AsyncSession,
+    requirement_code: str | None = None,
+) -> Attachment:
+    """Hang an accepted file on a message and chain it (T3.7).
+
+    Called by: `upload_attachment`, `api.cards.create_card_with_files`.
+    """
+    attachment = Attachment(
+        message_id=message_id,
+        user_file_id=stored.user_file.id,
+        r2_key=stored.r2_key,
+        file_hash=stored.file_hash,
+        kind=stored.kind,
+        # T3.8 — what we know about these bytes, recorded with them. `pending`
+        # means the scanner was unreachable or absent and the file is queued;
+        # it never means "safe" (owner's decision 2026-08-02).
+        scan_status=stored.scan_status,
+        scanned_at=(
+            datetime.now(timezone.utc) if stored.scan_status != "pending" else None
+        ),
+        requirement_code=(requirement_code or "").strip()[:64] or None,
+    )
+    db.add(attachment)
+    # T3.7 — chain the file in the same transaction as its row. `file_hash`
+    # was already streamed above; the chain entry pins it so a swapped or
+    # deleted attachment row is detectable (`verify_content`).
+    await db.flush()
+    try:
+        await append_deal_event(
+            db,
+            deal_id=deal_id,
+            event_type=DealEventType.file_added,
+            actor_id=actor.id,
+            payload={
+                "attachment_id": str(attachment.id),
+                "message_id": str(message_id),
+                "file_hash": stored.file_hash,
+                "kind": stored.kind.value,
+                "size_bytes": stored.size_bytes,
+                "mime": stored.mime,
+            },
+            author=actor,
+        )
+    except SealedError:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
+    return attachment
 
 
 async def _get_deal_as_participant(
@@ -354,141 +567,25 @@ async def upload_attachment(
     if not msg or msg.deal_id != deal_id:
         raise HTTPException(status_code=404, detail="Message not found in this deal")
 
-    try:
-        attachment_kind = AttachmentKind(kind)
-    except ValueError:
-        raise HTTPException(status_code=422, detail=f"Invalid kind: {kind}")
-
-    # Early rejection via Content-Length before reading bytes
-    declared_length = request.headers.get("content-length")
-    if declared_length and int(declared_length) > MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
-        )
-
-    content_type = (file.content_type or "").lower()
-    allowed = ALLOWED_MIME_BY_KIND.get(attachment_kind, set())
-    if content_type not in allowed:
-        raise HTTPException(
-            status_code=415,
-            detail=f"MIME '{content_type}' not allowed for kind '{kind}'",
-        )
-
-    # Streaming SHA-256 + size limit while reading chunks
-    hasher = hashlib.sha256()
-    total = 0
-    buffer = io.BytesIO()
-    while True:
-        chunk = await file.read(CHUNK_SIZE)
-        if not chunk:
-            break
-        total += len(chunk)
-        if total > MAX_UPLOAD_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
-            )
-        hasher.update(chunk)
-        buffer.write(chunk)
-
-    file_hash = hasher.hexdigest()
-
-    # T3.8 — validate the bytes against the declared type BEFORE the R2 write:
-    # signature whitelist + full image decode. Metadata only in the log.
-    # Decode runs in the threadpool (T_PERF.1) — see `api/avatar.py` for why.
-    try:
-        scan_status = await run_in_threadpool(
-            validate_upload, buffer.getvalue(), content_type
-        )
-    except FileValidationError as exc:
-        logger.warning(
-            "upload rejected: deal=%s user=%s kind=%s declared=%s size=%d reason=%s",
-            deal_id, current_user.id, kind, content_type, total, exc.reason,
-        )
-        raise HTTPException(
-            status_code=422,
-            detail=f"File content failed validation: {exc.reason}",
-        )
-
-    # T3.11.25 — the file lands in the uploader's own safe at the same moment it
-    # lands in the deal. One row per (owner, hash): sending the same passport
-    # twice is one document, and `created_at` is «впервые предоставлен», which
-    # must have exactly one answer.
-    #
-    # **Looked up before the upload, not after.** Identical bytes have an
-    # identical hash, so an object for them is already in storage — writing a
-    # second copy costs a PUT and leaves two keys for one file, and then the
-    # attachment and the safe entry point at different objects with the same
-    # content. Found on 2026-09-07 by the re-attachment test, which compared the
-    # two keys and got two answers.
-    safe_file = (
-        await db.execute(
-            select(UserFile).where(
-                UserFile.owner_id == current_user.id,
-                UserFile.file_hash == file_hash,
-            )
-        )
-    ).scalar_one_or_none()
-
-    if safe_file is not None:
-        r2_key = safe_file.r2_key
-    else:
-        # Extension from MIME (whitelisted), never from a user-supplied filename.
-        ext = MIME_TO_EXT.get(content_type, "")
-        r2_key = f"deals/{deal_id}/attachments/{uuid.uuid4().hex}{ext}"
-        # Blocking PUT — off the event loop (T_PERF.1). Attachments here are the
-        # largest files the product accepts, so this is the worst place to hold
-        # it.
-        await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
-        safe_file = UserFile(
-            owner_id=current_user.id,
-            r2_key=r2_key,
-            file_hash=file_hash,
-            kind=attachment_kind,
-            mime=content_type,
-            size_bytes=total,
-            scan_status=scan_status,
-        )
-        db.add(safe_file)
-        await db.flush()
-
-    attachment = Attachment(
-        message_id=message_id,
-        user_file_id=safe_file.id,
-        r2_key=r2_key,
-        file_hash=file_hash,
-        kind=attachment_kind,
-        # T3.8 — what we know about these bytes, recorded with them. `pending`
-        # means the scanner was unreachable or absent and the file is queued;
-        # it never means "safe" (owner's decision 2026-08-02).
-        scan_status=scan_status,
-        scanned_at=datetime.now(timezone.utc) if scan_status != "pending" else None,
-        requirement_code=(requirement_code or "").strip()[:64] or None,
+    # T3.11.27 — the work itself now lives in `store_upload` / `attach_stored`,
+    # because raising a card with its photograph has to do exactly this and in
+    # exactly this order: accept the bytes first, write to the vault second.
+    stored = await store_upload(
+        deal_id=deal_id,
+        file=file,
+        kind=kind,
+        owner=current_user,
+        db=db,
+        declared_length=request.headers.get("content-length"),
     )
-    db.add(attachment)
-    # T3.7 — chain the file in the same transaction as its row. `file_hash`
-    # was already streamed above; the chain entry pins it so a swapped or
-    # deleted attachment row is detectable (`verify_content`).
-    await db.flush()
-    try:
-        await append_deal_event(
-            db,
-            deal_id=deal_id,
-            event_type=DealEventType.file_added,
-            actor_id=current_user.id,
-            payload={
-                "attachment_id": str(attachment.id),
-                "message_id": str(message_id),
-                "file_hash": file_hash,
-                "kind": attachment_kind.value,
-                "size_bytes": total,
-                "mime": content_type,
-            },
-            author=current_user,
-        )
-    except SealedError:
-        raise HTTPException(status_code=409, detail="Deal vault is sealed")
+    attachment = await attach_stored(
+        stored=stored,
+        deal_id=deal_id,
+        message_id=message_id,
+        actor=current_user,
+        db=db,
+        requirement_code=requirement_code,
+    )
     await db.commit()
     await db.refresh(attachment)
 

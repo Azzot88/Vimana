@@ -91,9 +91,19 @@ export const CARD_FORMS: CardFormSpec[] = [
     fields: MEETING_FIELDS,
   },
   {
+    /* T3.11.27 (owner, 2026-09-12): «Количество мест сколько передано надо
+       убрать. Основное это фотография.»
+
+       A number somebody types about their own parcel proves nothing an arbiter
+       can use, and it asked for an answer at the one moment both people are
+       standing in a doorway with one hand free. The photographs are the record:
+       they show how many things there are, what they look like, and what is
+       inside once the parcel is opened. The server still accepts the field for
+       the cards that already carry it — history is not rewritten — it is simply
+       no longer asked for. */
     kind: 'handoff.declared',
     roles: ['sender'],
-    fields: [{ name: 'parcel_count', type: 'number' }],
+    fields: [],
     needsPhoto: 'handoff_photo',
     hasText: true,
   },
@@ -104,7 +114,7 @@ export const CARD_FORMS: CardFormSpec[] = [
        labels and «отдал» and «взял» are different claims about who was there. */
     kind: 'handoff.received',
     roles: ['carrier'],
-    fields: [{ name: 'parcel_count', type: 'number' }],
+    fields: [],
     needsPhoto: 'handoff_photo',
     hasText: true,
   },

@@ -8,10 +8,18 @@ them drift.
 """
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -253,13 +261,22 @@ async def _guard_departure(db: AsyncSession, deal: Deal, actor: User) -> None:
     )
 
 
-@router.post("/{deal_id}/cards", response_model=MessageOut, status_code=201)
-async def create_card(
+async def _raise_card(
     deal_id: uuid.UUID,
     body: CardCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
+    current_user: User,
+    db: AsyncSession,
+) -> DealVaultMessage:
+    """Every rule a card has to pass, and the row it becomes. **Does not commit.**
+
+    T3.11.27 — split out of `create_card` so that raising a card *with its
+    photograph* is one transaction rather than two requests. The caller decides
+    when to commit; what must never happen is a committed card whose evidence
+    was refused afterwards, because the vault is append-only and such a card can
+    be neither confirmed nor withdrawn.
+
+    Called by: `create_card`, `create_card_with_files`.
+    """
     deal = await _deal_as_party(deal_id, current_user, db)
     creator = role_of(deal, current_user.id)
 
@@ -401,18 +418,135 @@ async def create_card(
         },
         author=current_user,
     )
-    await db.commit()
+    return msg
 
+
+async def _card_out(db: AsyncSession, msg_id: uuid.UUID) -> MessageOut:
     loaded = (
         await db.execute(
             select(DealVaultMessage)
-            .where(DealVaultMessage.id == msg.id)
+            .where(DealVaultMessage.id == msg_id)
             .options(selectinload(DealVaultMessage.attachments))
         )
     ).scalar_one()
     from app.api.dealvault import _build_message_out
 
     return _build_message_out(loaded)
+
+
+@router.post("/{deal_id}/cards", response_model=MessageOut, status_code=201)
+async def create_card(
+    deal_id: uuid.UUID,
+    body: CardCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Raise a card that needs no evidence.
+
+    A card whose spec declares `requires_attachment` may still be raised here —
+    the sender then attaches to it afterwards, which is how a declaration
+    missing its photo gets completed. New declarations should use
+    `/cards/with-files`, which refuses the whole act if the photograph is not
+    accepted.
+    """
+    msg = await _raise_card(deal_id, body, current_user, db)
+    await db.commit()
+    return await _card_out(db, msg.id)
+
+
+@router.post(
+    "/{deal_id}/cards/with-files", response_model=MessageOut, status_code=201
+)
+async def create_card_with_files(
+    deal_id: uuid.UUID,
+    request: Request,
+    files: list[UploadFile],
+    kind: str = Form(...),
+    payload: str = Form("{}"),
+    text: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.11.27 — a declaration and its evidence, as one act (owner, 2026-09-12).
+
+    «Фотография не прикладывается, а карточка в чате появляется без фото, это
+    надо убрать. Без фото карточка в чат добавляться не должна.»
+
+    Two requests could not give that. The client raised the card, then uploaded
+    — and when the upload was refused (wrong type, too large, bytes that do not
+    decode) the card was already committed to an append-only chain: a
+    declaration nobody could confirm, because the server refuses an ack until
+    the evidence is there, and nobody could withdraw either.
+
+    So the order is inverted and the transaction is one. Every file is validated
+    and stored **first**; only then is the card written; one commit covers the
+    card, the attachments and both kinds of chain entry. A refusal costs the
+    person a message on a form that is still open and their photographs still
+    chosen.
+
+    Several files, because a parcel has sides: «нужна возможность добавить
+    несколько фото» — one photograph of a closed box proves the box existed.
+    """
+    from app.api.dealvault import attach_stored, store_upload
+
+    if not files:
+        raise HTTPException(status_code=422, detail="Attach at least one file")
+
+    try:
+        raw = json.loads(payload or "{}")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="payload is not valid JSON")
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=422, detail="payload must be an object")
+
+    try:
+        card_kind = CardKind(kind)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Unknown card type")
+    spec = CATALOGUE[card_kind]
+    attachment_kind = spec.requires_attachment
+    if attachment_kind is None:
+        raise HTTPException(
+            status_code=422,
+            detail="This card takes no attachments — raise it without files",
+        )
+
+    # Party and seal are checked before a byte is read: an outsider must not be
+    # able to make us decode their images, and a sealed vault cannot take them.
+    deal = await _deal_as_party(deal_id, current_user, db)
+    if deal.sealed_at is not None:
+        raise HTTPException(status_code=409, detail="Deal vault is sealed")
+
+    # The whole point of this endpoint, in three lines: accept the evidence,
+    # then write the declaration.
+    stored = [
+        await store_upload(
+            deal_id=deal_id,
+            file=f,
+            kind=attachment_kind.value,
+            owner=current_user,
+            db=db,
+            # Content-Length covers the whole multipart body rather than one
+            # part, so it is only an early «obviously too big» filter; each file
+            # is still counted byte by byte while it is read.
+            declared_length=request.headers.get("content-length"),
+        )
+        for f in files
+    ]
+
+    msg = await _raise_card(
+        deal_id, CardCreate(kind=kind, payload=raw, text=text), current_user, db
+    )
+    for item in stored:
+        await attach_stored(
+            stored=item,
+            deal_id=deal_id,
+            message_id=msg.id,
+            actor=current_user,
+            db=db,
+        )
+    await db.commit()
+    return await _card_out(db, msg.id)
 
 
 #: T3.11.27 — which end of the route a meeting-point card is about, and which

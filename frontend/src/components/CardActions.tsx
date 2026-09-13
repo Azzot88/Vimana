@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { raiseCard } from '../api/terms'
-import { uploadAttachment } from '../api/dealvault'
+import { raiseCard, raiseCardWithFiles } from '../api/terms'
 import {
   buildPayload,
   formsForRole,
@@ -45,9 +44,11 @@ export default function CardActions({
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  /* The evidence for the declaration being made, held until the card exists to
-     hang it on. */
-  const [file, setFile] = useState<File | null>(null)
+  /* The evidence for the declaration being made. Several, because a parcel has
+     sides and a closed box proves only that a box existed (owner, 2026-09-12);
+     and held here until the whole act goes at once, because the server writes
+     nothing until every one of them is accepted. */
+  const [files, setFiles] = useState<File[]>([])
 
   /* Ordered by the stage, not by the catalogue: `only` lists the kinds in the
      order they are meant to happen, and a row of buttons in protocol order
@@ -68,49 +69,51 @@ export default function CardActions({
     setValues(initial)
     setNote('')
     setError('')
-    setFile(null)
+    setFiles([])
     setOpen(spec)
   }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!open) return
-    /* T3.11.27 — «фото должно отправляться вместе со статусом» (owner, walking
-       the flow 2026-09-12).
-    
-       The photograph is not an attachment to the conversation, it is the
-       **evidence for this declaration**: `handoff.declared` carries
+    /* T3.11.27 — the declaration and its evidence are one act (owner, walking
+       the flow 2026-09-12, twice).
+
+       First round: «фото должно отправляться вместе со статусом». The
+       photograph is not an attachment to the conversation, it is the
+       **evidence for this declaration** — `handoff.declared` carries
        `requires_attachment` and the server refuses to let the other side
-       confirm a declaration with no photo (422). Uploading it as a separate
-       chat message therefore left the card permanently unconfirmable — the
-       carrier saw «ждём фото» beside a photo that was right there, three lines
-       up, hanging off a different row. That is the chain behind «после передачи
-       не в пути» and «статус не сменился ни у кого».
-    
-       So the two happen in one act: raise the card, attach to **it**. Refused
-       before either half runs when the picture is missing, rather than leaving
-       a declaration nobody can answer. */
-    if (open.needsPhoto && !file) {
+       confirm a declaration with no photo. Uploading it as a separate chat
+       message left the card permanently unconfirmable, with the picture three
+       lines above it.
+
+       Second round: «без фото карточка в чат добавляться не должна». Raising
+       the card and then uploading was still two requests, so a refused upload —
+       wrong type, too large, bytes that do not decode — left exactly the card
+       this was meant to prevent, in a chain that cannot take it back. One
+       request now: the server validates every file first and writes nothing
+       until they are all accepted. */
+    if (open.needsPhoto && files.length === 0) {
       setError(t('cards.photoNeeded') as string)
       return
     }
     setBusy(true)
     setError('')
     try {
-      const card = await raiseCard(
-        dealId,
-        open.kind,
-        buildPayload(open, values),
-        note || undefined,
-      )
-      if (open.needsPhoto && file) {
-        // Same request cycle, from the person's point of view: if this throws,
-        // the card exists without its evidence and the error says so — which is
-        // recoverable from the card itself, where the upload also lives.
-        await uploadAttachment(dealId, card.id, file, open.needsPhoto)
+      const payload = buildPayload(open, values)
+      if (open.needsPhoto) {
+        await raiseCardWithFiles(
+          dealId,
+          open.kind,
+          files,
+          payload,
+          note || undefined,
+        )
+      } else {
+        await raiseCard(dealId, open.kind, payload, note || undefined)
       }
       setOpen(null)
-      setFile(null)
+      setFiles([])
       onDone()
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response
@@ -218,24 +221,44 @@ export default function CardActions({
       )}
 
       {open.needsPhoto && (
-        <label className="mt-2 block">
+        <div className="mt-2">
           {/* The photograph is part of the declaration, so it is asked for
               **here**, inside the form that makes it — not afterwards, in the
               chat, where it used to land on a row of its own and leave the card
-              waiting for evidence it already had. */}
-          <span className="block text-xs font-body text-navy/40 mb-1">
-            {t(`chat.kind.${open.needsPhoto}`)}
-          </span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="text-xs font-body"
-          />
+              waiting for evidence it already had.
+
+              T3.11.27 (owner, 2026-09-12): «Основное это фотография… надо
+              открыть посылку и снять содержимое… нужна возможность добавить
+              несколько фото.» The instruction sits above the input because it
+              is about what to photograph, not about which file to pick, and it
+              is the one thing on this form that an arbiter will later wish
+              somebody had read. */}
+          <p className="text-xs font-body text-navy/60 mb-1">
+            {t(`cards.shoot.${open.kind.replace('.', '_')}`, {
+              defaultValue: t('cards.shoot.default') as string,
+            })}
+          </p>
+          <label className="block">
+            <span className="block text-xs font-body text-navy/40 mb-1">
+              {t(`chat.kind.${open.needsPhoto}`)}
+            </span>
+            <input
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+              className="text-xs font-body"
+            />
+          </label>
+          {files.length > 0 && (
+            <p className="mt-1 text-[11px] font-body text-navy/40">
+              {t('terms.photosChosen', { count: files.length })}
+            </p>
+          )}
           <span className="block text-[11px] font-body text-navy/40 mt-1">
             {t('cards.photoWithIt')}
           </span>
-        </label>
+        </div>
       )}
 
       {error && <p className="mt-2 text-xs font-body text-danger">{error}</p>}
