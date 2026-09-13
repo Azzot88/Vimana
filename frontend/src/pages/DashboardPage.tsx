@@ -2,9 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { listDeals, type Deal } from '../api/deals'
-import { cancelTrip, listTrips, tripAskCounts, type Trip } from '../api/trips'
+import {
+  cancelTrip,
+  departureState,
+  listTrips,
+  tripAskCounts,
+  type Trip,
+} from '../api/trips'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
+import DepartureChip from '../components/DepartureChip'
 import MonoText from '../components/MonoText'
 import StatusBadge from '../components/StatusBadge'
 import { routeChain } from '../lib/format'
@@ -99,7 +106,25 @@ export default function DashboardPage() {
     ? 'bg-gradient-to-r from-cyan/40 via-cyan/20 to-transparent'
     : 'bg-gradient-to-r from-amber/40 via-amber/20 to-transparent'
 
-  const liveTrips = trips.filter((tr) => tr.status === 'open' || tr.status === 'matched')
+  /* T3.11.27 (owner, 2026-09-12): «Рейсы должны уходить в архив, если прошла
+     дата вылета.»
+
+     The board has hidden flown trips server-side since T3.11.16, but the
+     carrier's own panel filtered on `status` alone — and nothing moves that
+     status when a plane leaves, on purpose: «nobody cancelled the trip and it
+     did not fail, it simply happened». So «Мои рейсы» kept last week's flights
+     at the top, at full weight, next to the one that is actually leaving
+     tomorrow.
+
+     Not deleted and not hidden: they are the carrier's own history and the
+     thing people scroll back to. They move below, under their own heading,
+     drawn quieter. Cancelled and withdrawn trips stay out of both lists — that
+     is a different question from «did it fly». */
+  const published = trips.filter(
+    (tr) => tr.status === 'open' || tr.status === 'matched',
+  )
+  const liveTrips = published.filter((tr) => departureState(tr) !== 'flown')
+  const flownTrips = published.filter((tr) => departureState(tr) === 'flown')
   const carrying = deals.filter(
     (d) => d.carrier_id === user?.id && ACTIVE.includes(d.status),
   )
@@ -205,6 +230,7 @@ export default function DashboardPage() {
                         <MonoText className="text-xs text-navy/50">
                           {prefs.dateTime(trip.depart_at)}
                         </MonoText>
+                        <DepartureChip trip={trip} />
                         <span className="text-xs font-mono text-navy/40 ml-auto">
                           {trip.status}
                         </span>
@@ -259,6 +285,36 @@ export default function DashboardPage() {
               </div>
             )}
           </section>
+
+          {/* T3.11.27 — the archive. One line per trip and nothing to press:
+              what a carrier wants from a flight that has left is confirmation
+              that it happened and where it went, and the deals it produced live
+              on their own rows below. */}
+          {flownTrips.length > 0 && (
+            <section>
+              <h2 className="font-display font-semibold text-sm text-navy/45 mb-2">
+                {t('trips.archiveTitle')}
+              </h2>
+              <div className="bg-white rounded-card border border-navy/10 divide-y divide-navy/5">
+                {flownTrips.map((trip) => (
+                  <div
+                    key={trip.id}
+                    className="px-4 py-2.5 flex flex-wrap items-center gap-3"
+                  >
+                    <MonoText className="text-xs text-navy/50">
+                      {routeChain(trip)}
+                    </MonoText>
+                    <MonoText className="text-xs text-navy/30">
+                      {prefs.dateTime(trip.depart_at)}
+                    </MonoText>
+                    <span className="ml-auto">
+                      <DepartureChip trip={trip} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {carrying.length > 0 && (
             <section>

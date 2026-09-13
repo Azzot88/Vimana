@@ -594,6 +594,14 @@
     "submitting": "Wysyłanie...",
     "requestError": "Nie udało się utworzyć zamówienia",
     "categoryRequired": "Wybierz kategorię — przewoźnik bierze tylko to, co wymienił",
+    "archiveTitle": "Loty, które odleciały",
+    "departure": {
+      "imminent": "Mniej niż doba do wylotu",
+      "soon_one": "{{count}} dzień do wylotu",
+      "soon_few": "{{count}} dni do wylotu",
+      "soon_many": "{{count}} dni do wylotu",
+      "flown": "Odleciał"
+    },
     "newTrip": "Nowy lot",
     "departureDate": "Data wylotu",
     "capacityKg": "Pojemność (kg)",

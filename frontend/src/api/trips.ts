@@ -145,6 +145,57 @@ export interface Trip {
   nostr_published_at?: string | null
 }
 
+/** T3.11.27 — how close a trip is to leaving (owner, 2026-09-12): «нужен
+ *  указатель если рейс очень скоро и осталось мало времени… трое суток светло
+ *  зелёным и оранжевым за сутки», and «рейсы должны уходить в архив, если прошла
+ *  дата вылета».
+ *
+ *  One function for both, because they are the same question asked at four
+ *  distances, and two of them already existed in two places with two answers:
+ *  the board hides a flown trip server-side (`expires_at`), while the carrier's
+ *  own panel kept showing it as live.
+ *
+ *  `flown` is decided by `expires_at` — the **last** leg's departure, the same
+ *  column the board filters on, so a two-leg trip is not archived while its
+ *  second flight is still ahead. The countdown is decided by `depart_at`, the
+ *  first departure: that is the deadline a sender is actually racing.
+ *
+ *  A trip with no dates at all is `later`, never `flown`. Hiding rows we cannot
+ *  date would be guessing, and the server made the same choice for the same
+ *  reason.
+ */
+export type DepartureState = 'flown' | 'imminent' | 'soon' | 'later'
+
+const HOUR = 60 * 60 * 1000
+
+export function departureState(
+  trip: Pick<Trip, 'depart_at' | 'expires_at'>,
+  now: number = Date.now(),
+): DepartureState {
+  const last = trip.expires_at ?? trip.depart_at
+  if (last && new Date(last).getTime() < now) return 'flown'
+  if (!trip.depart_at) return 'later'
+  const left = new Date(trip.depart_at).getTime() - now
+  if (left < 24 * HOUR) return 'imminent'
+  if (left < 72 * HOUR) return 'soon'
+  return 'later'
+}
+
+/** Whole days left before the first departure. Rounded to the nearest, not up:
+ *  25 hours is «день», and calling it two days tells somebody they have a day
+ *  more than they have — on the one chip whose whole job is the opposite. Never
+ *  below one, because zero days is what `imminent` says in words. Only
+ *  meaningful for `soon`. */
+export function daysToDeparture(
+  trip: Pick<Trip, 'depart_at'>,
+  now: number = Date.now(),
+): number {
+  return Math.max(
+    1,
+    Math.round((new Date(trip.depart_at).getTime() - now) / (24 * HOUR)),
+  )
+}
+
 export interface CreateTripPayload {
   /** T3.11.15 — the route goes on the wire as a chain and only as a chain. A
    *  single-leg array is the ordinary case; the flat origin/destination/date
