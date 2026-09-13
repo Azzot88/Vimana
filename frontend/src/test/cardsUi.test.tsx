@@ -4,9 +4,11 @@ import TermsCard from '../components/TermsCard'
 import DealCard from '../components/DealCard'
 import CardActions from '../components/CardActions'
 import DealStages from '../components/DealStages'
+import MeetingNote, { meetingOf } from '../components/MeetingNote'
 import type { VaultMessage } from '../api/dealvault'
 import type { DealStatus } from '../api/deals'
 import type { DealRole } from '../lib/cardForms'
+import type { Terms } from '../api/terms'
 import { buildPayload, formsForRole, specForKind } from '../lib/cardForms'
 import { renderWithProviders } from './render'
 
@@ -31,11 +33,11 @@ vi.mock('../api/dealvault', async () => {
 })
 vi.mock('../api/terms', async () => {
   const actual = await vi.importActual<typeof import('../api/terms')>('../api/terms')
-  return { ...actual, raiseCard: vi.fn() }
+  return { ...actual, raiseCard: vi.fn(), raiseCardWithFiles: vi.fn() }
 })
 
 import { ackCard, messagesSignature, uploadAttachment } from '../api/dealvault'
-import { raiseCard } from '../api/terms'
+import { raiseCard, raiseCardWithFiles } from '../api/terms'
 
 const msg = (over: Partial<VaultMessage> = {}): VaultMessage => ({
   id: 'm1',
@@ -52,6 +54,7 @@ beforeEach(() => {
   vi.mocked(ackCard).mockReset().mockResolvedValue(msg())
   vi.mocked(uploadAttachment).mockReset().mockResolvedValue({ data: {} } as never)
   vi.mocked(raiseCard).mockReset().mockResolvedValue({} as never)
+  vi.mocked(raiseCardWithFiles).mockReset().mockResolvedValue({} as never)
 })
 
 // ── the contract ──────────────────────────────────────────────────────────
@@ -436,37 +439,68 @@ describe('DealStages', () => {
 // ── T3.11.27 · the photo travels with the card ────────────────────────────
 
 describe('CardActions with evidence', () => {
-  it('attaches the photo to the card it just raised', async () => {
-    /* The defect this replaces: the photograph went up as its own chat
-       message, so the card never got the evidence its spec requires and the
-       other side could never confirm it. «После передачи не в пути» was that,
-       all the way down. */
-    vi.mocked(raiseCard).mockResolvedValue({ id: 'new-card' } as never)
+  it('sends the declaration and its photographs as one request', async () => {
+    /* Two defects, one rule. The photograph used to go up as its own chat
+       message, so the card never got the evidence its spec requires; then it
+       went up as a second request, so a refused upload left a card nobody could
+       confirm in a chain that cannot take it back. «Без фото карточка в чат
+       добавляться не должна» (owner, 2026-09-12) — so it is one request, and
+       the server writes nothing until every file is accepted. */
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
     fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
 
-    const file = new File(['x'], 'handoff.png', { type: 'image/png' })
+    const front = new File(['x'], 'front.png', { type: 'image/png' })
+    const inside = new File(['y'], 'inside.png', { type: 'image/png' })
     const input = document.querySelector(
       'input[type="file"]',
     ) as HTMLInputElement
-    fireEvent.change(input, { target: { files: [file] } })
+    fireEvent.change(input, { target: { files: [front, inside] } })
     fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
 
     await waitFor(() =>
-      expect(uploadAttachment).toHaveBeenCalledWith(
+      expect(raiseCardWithFiles).toHaveBeenCalledWith(
         'd1',
-        'new-card',
-        file,
-        'handoff_photo',
+        'handoff.declared',
+        [front, inside],
+        {},
+        undefined,
       ),
     )
+    // Never the plain endpoint for a card that stands on evidence.
+    expect(raiseCard).not.toHaveBeenCalled()
+  })
+
+  it('takes several photographs, because one side of a box proves nothing', () => {
+    renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
+    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement
+    expect(input.multiple).toBe(true)
+  })
+
+  it('says what to photograph, not just that a photo is needed', () => {
+    // «Надо открыть посылку и снять содержимое» (owner, 2026-09-12). The one
+    // line on this form an arbiter will later wish somebody had read.
+    renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
+    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    expect(
+      screen.getByText(/open the parcel|Откройте посылку/i),
+    ).toBeInTheDocument()
+  })
+
+  it('no longer asks how many parcels there are', () => {
+    // «Количество мест сколько передано надо убрать. Основное это фотография.»
+    // A number somebody types about their own parcel proves nothing an arbiter
+    // can use, and it asked for it in a doorway with one hand free.
+    renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
+    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
 
   it('refuses to raise a declaration with no evidence', async () => {
-    /* Refused before either half runs. Raising it and failing the upload would
-       leave a declaration nobody can answer — which is the state this whole
-       change exists to stop producing. */
-    vi.mocked(raiseCard).mockResolvedValue({ id: 'never' } as never)
+    /* Refused before anything is sent. The server would refuse it too — this is
+       the same rule stated where it costs nothing. */
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
     fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
     fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
@@ -477,6 +511,7 @@ describe('CardActions with evidence', () => {
       ).toBeInTheDocument(),
     )
     expect(raiseCard).not.toHaveBeenCalled()
+    expect(raiseCardWithFiles).not.toHaveBeenCalled()
   })
 
   it('gives the carrier their own way to say they took it', () => {
@@ -812,5 +847,129 @@ describe('the ladder after the flight lands', () => {
       ]),
     )
     expect(screen.getByRole('heading', { name: /in transit|В пути/i })).toBeInTheDocument()
+  })
+})
+
+// ── T3.11.27 · where you meet, and what to do there ───────────────────────
+
+describe('MeetingNote', () => {
+  const NOW = Date.parse('2026-09-13T12:00:00Z')
+  const at = (hours: number) => new Date(NOW + hours * 3600_000).toISOString()
+
+  const terms = (over: Record<string, unknown> = {}): Terms =>
+    ({
+      id: 't1',
+      deal_id: 'd1',
+      card_kind: 'terms.agreed',
+      card_state: 'accepted',
+      requires_ack_by: null,
+      supersedes_id: null,
+      payload: {
+        handover_place: 'Dubai Mall, by the fountain',
+        handover_method: 'in_person',
+        ...over,
+      },
+      description: null,
+      created_at: '2026-09-13T10:00:00Z',
+    }) as Terms
+
+  it('reads the arrangement out of the agreement', () => {
+    expect(meetingOf(terms(), [], 'handover')).toEqual({
+      place: 'Dubai Mall, by the fountain',
+      method: 'in_person',
+      at: undefined,
+    })
+  })
+
+  it('lets an accepted meeting card move it', () => {
+    // The card is how a meeting is moved (T3.11.27), so it outranks the version
+    // of the agreement that was written before anybody moved anything.
+    const moved = meetingOf(
+      terms(),
+      [
+        msg({
+          card_kind: 'pickup.proposed',
+          card_state: 'accepted',
+          card_payload: { method: 'in_person', city: 'Marina', at: at(2) },
+        }),
+      ],
+      'handover',
+    )
+    expect(moved.place).toBe('Marina')
+    expect(moved.at).toBe(at(2))
+  })
+
+  it('ignores a proposal nobody has answered', () => {
+    /* A pending card is one side's request. Printing it as «где вы
+       встречаетесь» would tell two people they agreed on something one of them
+       has not read. */
+    const still = meetingOf(
+      terms(),
+      [
+        msg({
+          card_kind: 'pickup.proposed',
+          card_state: 'pending',
+          card_payload: { method: 'courier', city: 'Marina' },
+        }),
+      ],
+      'handover',
+    )
+    expect(still.place).toBe('Dubai Mall, by the fountain')
+  })
+
+  it('says how long is left, not only when it is', () => {
+    // «Указатель сколько часов до неё осталось» (owner, 2026-09-12). A date
+    // agreed three days ago reads as an arrangement; «через 2 часа» reads as
+    // something to leave for now.
+    renderWithProviders(
+      <MeetingNote
+        terms={terms({ handover_at: at(2) })}
+        messages={[]}
+        stage="handover"
+        myRole="sender"
+        now={NOW}
+      />,
+    )
+    expect(screen.getByText(/in 2 hours|через 2 часа/i)).toBeInTheDocument()
+  })
+
+  it('gives the carrier the checks, and the sender none of them', () => {
+    /* The sender does not weigh their own parcel or compare it with their own
+       description. The same lines for both would make this a wall of advice,
+       and a wall of advice is read by nobody. */
+    const { unmount } = renderWithProviders(
+      <MeetingNote
+        terms={terms()}
+        messages={[]}
+        stage="handover"
+        myRole="carrier"
+        now={NOW}
+      />,
+    )
+    expect(screen.getByText(/weigh the parcel|Взвесьте посылку/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/compare the contents|Сверьте содержимое/i),
+    ).toBeInTheDocument()
+    unmount()
+
+    renderWithProviders(
+      <MeetingNote
+        terms={terms()}
+        messages={[]}
+        stage="handover"
+        myRole="sender"
+        now={NOW}
+      />,
+    )
+    expect(
+      screen.queryByText(/weigh the parcel|Взвесьте посылку/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('draws nothing when there is no arrangement to describe', () => {
+    const { container } = renderWithProviders(
+      <MeetingNote terms={null} messages={[]} stage="handover" myRole="sender" />,
+    )
+    expect(container).toBeEmptyDOMElement()
   })
 })

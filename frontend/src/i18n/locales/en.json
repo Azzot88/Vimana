@@ -839,6 +839,23 @@
       "payer": "Who pays"
     }
   },
+  "meeting": {
+    "title": {
+      "handover": "Where and when you meet",
+      "delivery": "Where and when the parcel is handed over"
+    },
+    "noTime": "The time is not set yet — agree it in «Move the meeting».",
+    "hours_one": "in {{count}} hour",
+    "hours_other": "in {{count}} hours",
+    "minutes_one": "in {{count}} minute",
+    "minutes_other": "in {{count}} minutes",
+    "passed": "the time has passed",
+    "memo": {
+      "weigh": "Weigh the parcel — the weight in the agreement is what the price was set on, and the excess is yours to carry.",
+      "compare": "Compare the contents with the description in the agreement. A mismatch is easier to settle here than at customs.",
+      "photo": "Photograph the open parcel and its contents, and attach the photos to «Received the parcel»."
+    }
+  },
   "stages": {
     "terms": "Terms",
     "handover": "Handover",
@@ -1502,6 +1519,13 @@
     "photoRequired": "Attach the photo — it cannot be confirmed without it",
     "photoAfter": "You will attach the photo after sending",
     "photoWithIt": "The photo goes with the card — the other side cannot confirm the handover without it.",
+    "shoot": {
+      "default": "Photograph what you are declaring — the photo is the record, and it goes with the card.",
+      "handoff_declared": "Open the parcel and photograph the contents, then the packed parcel. Several photos are better than one.",
+      "handoff_received": "Open the parcel and photograph the contents in front of the sender, then the packed parcel. Several photos are better than one.",
+      "posted_declared": "Photograph the parcel open, before you seal it — this is the last moment the contents can be seen.",
+      "delivery_declared": "Photograph the parcel at the moment it changes hands."
+    },
     "photoNeeded": "Attach the photo — the handover cannot be confirmed without one",
     "awaitingPhoto": "Waiting for the photo",
     "answerFailed": "Could not send the answer",

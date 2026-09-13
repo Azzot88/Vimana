@@ -75,9 +75,17 @@ export const DEAL_STAGES: DealStage[] = [
     kinds: [],
   },
   {
+    /* T3.11.27 (owner, 2026-09-12): «кнопки Передал перевозчику и Перенести
+       встречу надо поменять местами.»
+
+       The declaration is the step; moving the meeting is what you do when the
+       step cannot happen today. The order of this list is the order the buttons
+       are drawn, so the first one should be the one almost everybody presses —
+       «перенести» stood first only because the meeting is arranged first, which
+       is a fact about the timeline, not about the screen. */
     key: 'handover',
     statuses: ['accepted'],
-    kinds: ['pickup.proposed', 'handoff.declared', 'handoff.received'],
+    kinds: ['handoff.declared', 'handoff.received', 'pickup.proposed'],
   },
   {
     key: 'transit',

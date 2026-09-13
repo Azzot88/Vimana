@@ -115,6 +115,38 @@ export async function raiseCard(
   return data
 }
 
+/** T3.11.27 — a declaration and the photographs that prove it, in one request.
+ *
+ *  «Без фото карточка в чат добавляться не должна» (owner, 2026-09-12). Two
+ *  requests could not promise that: the card was committed first, and a refused
+ *  upload then left a declaration in an append-only chain that nobody could
+ *  confirm and nobody could take back. The server validates every file before
+ *  it writes anything, and one transaction covers both.
+ *
+ *  The kind of attachment is not passed: the card's own spec declares what
+ *  evidence it requires, and a client naming a different one could only be
+ *  wrong.
+ */
+export async function raiseCardWithFiles(
+  dealId: string,
+  kind: string,
+  files: File[],
+  payload: Record<string, unknown> = {},
+  text?: string,
+): Promise<VaultMessage> {
+  const form = new FormData()
+  form.append('kind', kind)
+  form.append('payload', JSON.stringify(payload))
+  if (text) form.append('text', text)
+  for (const file of files) form.append('files', file)
+  const { data } = await api.post<VaultMessage>(
+    `/api/deals/${dealId}/cards/with-files`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
+}
+
 /** T3.11.27 — «я сейчас правлю», for the next two minutes.
  *
  *  Taken before the change and released by it. While it is open the other side

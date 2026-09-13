@@ -14,6 +14,7 @@ import {
 import type { Terms } from '../api/terms'
 import { formsForRole, type DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
+import MeetingNote from './MeetingNote'
 import TermsProposeForm from './TermsProposeForm'
 
 interface Props {
@@ -281,6 +282,22 @@ export default function DealStages({
               </button>
             )}
           </div>
+        )}
+
+        {/* T3.11.27 — «После того как договорились об условиях, должно
+            появляться описание где вы встречаетесь и восколько» (owner,
+            2026-09-12). Drawn above the buttons, because it is what the buttons
+            are about; at the far end it describes the delivery instead, which
+            is the same arrangement read from the other side of the flight. */}
+        {(currentKey === 'handover' ||
+          currentKey === 'arrived' ||
+          currentKey === 'delivery') && (
+          <MeetingNote
+            terms={terms}
+            messages={messages}
+            stage={currentKey === 'handover' ? 'handover' : 'delivery'}
+            myRole={myRole}
+          />
         )}
 
         {/* T3.11.27 — «Передал перевозчику (где)» (owner, walking the flow
