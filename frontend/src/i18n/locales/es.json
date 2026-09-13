@@ -593,6 +593,13 @@
     "submitting": "Enviando...",
     "requestError": "No se pudo crear la solicitud",
     "categoryRequired": "Elige una categoría — el transportista solo lleva lo que indicó",
+    "archiveTitle": "Vuelos ya salidos",
+    "departure": {
+      "imminent": "Menos de un día para salir",
+      "soon_one": "Queda {{count}} día",
+      "soon_other": "Quedan {{count}} días",
+      "flown": "Salió"
+    },
     "newTrip": "Nuevo vuelo",
     "departureDate": "Fecha de salida",
     "capacityKg": "Capacidad (kg)",

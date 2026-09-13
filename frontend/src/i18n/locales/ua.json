@@ -600,6 +600,14 @@
     "submitting": "Відправка...",
     "requestError": "Не вдалося створити заявку",
     "categoryRequired": "Оберіть категорію — перевізник бере лише те, що назвав",
+    "archiveTitle": "Рейси, що вилетіли",
+    "departure": {
+      "imminent": "Менше доби до вильоту",
+      "soon_one": "{{count}} день до вильоту",
+      "soon_few": "{{count}} дні до вильоту",
+      "soon_many": "{{count}} днів до вильоту",
+      "flown": "Вилетів"
+    },
     "newTrip": "Новий рейс",
     "departureDate": "Дата вильоту",
     "capacityKg": "Вантажопідйомність (кг)",

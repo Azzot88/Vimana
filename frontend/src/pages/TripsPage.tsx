@@ -6,6 +6,7 @@ import { listTrips, type Trip } from '../api/trips'
 import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
 import CategorySelect from '../components/CategorySelect'
+import DepartureChip from '../components/DepartureChip'
 import LeadTimeWarning from '../components/LeadTimeWarning'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
@@ -294,6 +295,9 @@ export default function TripsPage() {
                       ))}
                     </span>
                     <MonoText className="text-xs">{prefs.dateTime(trip.depart_at)}</MonoText>
+                    {/* T3.11.27 — beside the date, not instead of it: the date
+                        is the fact, the chip is what it means today. */}
+                    <DepartureChip trip={trip} />
                     {/* T3.11.07 — the landing at the end of the route, when the
                         carrier stated one. It is the time the sender actually
                         plans around: departure says when the parcel has to be

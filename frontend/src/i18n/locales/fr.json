@@ -593,6 +593,13 @@
     "submitting": "Envoi...",
     "requestError": "Impossible de créer la demande",
     "categoryRequired": "Choisissez une catégorie — le transporteur ne prend que ce qu'il a indiqué",
+    "archiveTitle": "Vols déjà partis",
+    "departure": {
+      "imminent": "Moins d'un jour avant le départ",
+      "soon_one": "{{count}} jour avant le départ",
+      "soon_other": "{{count}} jours avant le départ",
+      "flown": "Parti"
+    },
     "newTrip": "Nouveau vol",
     "departureDate": "Date de départ",
     "capacityKg": "Capacité (kg)",

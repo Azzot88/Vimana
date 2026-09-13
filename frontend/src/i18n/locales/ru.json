@@ -650,6 +650,14 @@
     "submitting": "Отправка...",
     "requestError": "Не удалось создать заявку",
     "categoryRequired": "Выберите категорию — перевозчик берёт только то, что назвал",
+    "archiveTitle": "Вылетевшие рейсы",
+    "departure": {
+      "imminent": "Меньше суток до вылета",
+      "soon_one": "{{count}} день до вылета",
+      "soon_few": "{{count}} дня до вылета",
+      "soon_many": "{{count}} дней до вылета",
+      "flown": "Вылетел"
+    },
     "newTrip": "Новый рейс",
     "departureDate": "Дата и время вылета",
     "capacityKg": "Вместимость (кг)",
