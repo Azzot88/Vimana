@@ -53,20 +53,22 @@ describe('CategorySelect', () => {
   })
 
   it('keeps the other chips after one is chosen', async () => {
-    /* The defect this pins: the list is fetched with the search query, and the
-       query follows the chosen value — so picking «Документы» searched for
+    /* The defect this pins: the list was fetched with the search query, and the
+       query follows the chosen value — so a picked «Документы» searched for
        «document» and the remaining six categories disappeared behind the one
-       already picked. */
-    const { rerender } = renderWithProviders(
-      <CategorySelect value="" onChange={() => {}} catalogue />,
+       already chosen.
+
+       Asserted on the request rather than by re-rendering with a new value:
+       `rerender` replaces the whole tree, providers included, so the component
+       would be mounted afresh and the list would be empty for reasons that have
+       nothing to do with the bug. A component already holding a choice is the
+       same state, reached honestly. */
+    renderWithProviders(
+      <CategorySelect value="document" onChange={() => {}} catalogue />,
     )
     await waitFor(() => expect(screen.getByText(/Animal|Животн/i)).toBeInTheDocument())
-
-    rerender(<CategorySelect value="document" onChange={() => {}} catalogue />)
-    await waitFor(() =>
-      expect(listCategories).toHaveBeenCalledWith(''),
-    )
-    expect(screen.getByText(/Animal|Животн/i)).toBeInTheDocument()
+    expect(listCategories).toHaveBeenCalledWith('')
+    expect(listCategories).not.toHaveBeenCalledWith('document')
   })
 
   it('narrows to what this trip carries when the trip said so', async () => {
