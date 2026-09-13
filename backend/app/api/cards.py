@@ -266,6 +266,8 @@ async def _raise_card(
     body: CardCreate,
     current_user: User,
     db: AsyncSession,
+    *,
+    has_files: bool = False,
 ) -> DealVaultMessage:
     """Every rule a card has to pass, and the row it becomes. **Does not commit.**
 
@@ -386,6 +388,28 @@ async def _raise_card(
                 detail=f"The agreement says the {payer} pays",
             )
 
+    # T3.11.27 (owner, 2026-09-13) — **the last check before anything is
+    # written, and the point of the whole endpoint split.**
+    #
+    # A declaration that stands on evidence cannot exist without it: the server
+    # refuses to let the other side confirm one, and the vault is append-only,
+    # so such a card can be neither answered nor withdrawn. Three photoless
+    # «Отправлено по почте» cards in one chat is what that looks like.
+    #
+    # Checked here rather than at the top of the endpoint so every *semantic*
+    # refusal keeps its own answer: a carrier declaring the sender's handover
+    # still gets 403, a handover after departure still gets 409. «You sent this
+    # the wrong way» is the least interesting thing that can be wrong with a
+    # request, so it is the last thing said.
+    if spec.requires_attachment is not None and not has_files:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "This declaration is raised together with its photo — "
+                "use /cards/with-files"
+            ),
+        )
+
     payload = _validate_payload(spec, body.payload)
 
     msg = DealVaultMessage(
@@ -443,11 +467,16 @@ async def create_card(
 ):
     """Raise a card that needs no evidence.
 
-    A card whose spec declares `requires_attachment` may still be raised here —
-    the sender then attaches to it afterwards, which is how a declaration
-    missing its photo gets completed. New declarations should use
-    `/cards/with-files`, which refuses the whole act if the photograph is not
-    accepted.
+    T3.11.27 (owner, 2026-09-13, after three photoless «Отправлено по почте»
+    cards appeared in one chat): **a declaration that stands on evidence cannot
+    be raised here at all.**
+
+    It was a client convention before — `CardActions` sent such cards to
+    `/cards/with-files` — and a convention is not a rule. An older bundle in
+    somebody's browser, a retry from a stale tab, anything at all speaking this
+    API, still produced the row this whole change exists to prevent: a
+    declaration nobody can confirm, in a chain that cannot take it back. The
+    refusal lives inside `_raise_card`, where it cannot be bypassed.
     """
     msg = await _raise_card(deal_id, body, current_user, db)
     await db.commit()
@@ -535,7 +564,11 @@ async def create_card_with_files(
     ]
 
     msg = await _raise_card(
-        deal_id, CardCreate(kind=kind, payload=raw, text=text), current_user, db
+        deal_id,
+        CardCreate(kind=kind, payload=raw, text=text),
+        current_user,
+        db,
+        has_files=True,
     )
     for item in stored:
         await attach_stored(
