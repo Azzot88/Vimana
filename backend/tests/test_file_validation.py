@@ -138,7 +138,16 @@ async def _message_id(client, headers, deal_id) -> str:
     return resp.json()["id"]
 
 
-async def test_exe_renamed_to_jpg_rejected_422(client, sender_headers, seed_deal):
+async def test_exe_renamed_to_jpg_is_refused(client, sender_headers, seed_deal):
+    """T3.11.27 — still refused, one step earlier than before.
+
+    The declared type used to decide which checks ran, so an executable calling
+    itself `image/jpeg` reached the content validator and died there with 422.
+    Now the bytes are sniffed first and name nothing we accept, so it never gets
+    that far: 415, «this file is not a picture». Same protection, and the
+    refusal is now the honest one — the problem with this upload was never that
+    it failed validation, it is that it is not an image.
+    """
     msg_id = await _message_id(client, sender_headers, seed_deal.id)
     resp = await client.post(
         f"/api/deals/{seed_deal.id}/dealvault/messages/{msg_id}/attachments",
@@ -146,8 +155,8 @@ async def test_exe_renamed_to_jpg_rejected_422(client, sender_headers, seed_deal
         files={"file": ("photo.jpg", MZ_EXE, "image/jpeg")},
         data={"kind": "handoff_photo"},
     )
-    assert resp.status_code == 422
-    assert "validation" in resp.json()["detail"]
+    assert resp.status_code == 415, resp.text
+    assert "not a picture" in resp.json()["detail"]
 
 
 async def test_corrupt_png_rejected_422(client, sender_headers, seed_deal):

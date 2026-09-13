@@ -166,6 +166,15 @@ MATRIX: dict[tuple[str, str], Case] = {
         files={"file": ("probe.txt", b"probe", "text/plain")},
         data={"kind": "doc"},
     ),
+    ("POST", "/api/deals/{deal_id}/cards/with-files"): Case(
+        DENIED,
+        # T3.11.27 — the same reason as the attachment row above, and the order
+        # matters more here: this endpoint decodes images and writes to the
+        # chain, so a stranger must be turned away before either happens.
+        "a declaration in a stranger's deal, evidence and all",
+        files={"files": ("probe.png", b"probe", "image/png")},
+        data={"kind": "handoff.declared", "payload": "{}"},
+    ),
     ("POST", "/api/deals/{deal_id}/dealvault/messages/{message_id}/decrypt-for-me"): Case(
         DENIED, "server-mediated decrypt is the most valuable thing to steal"
     ),
