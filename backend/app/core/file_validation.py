@@ -56,6 +56,31 @@ _HEIF_BRANDS = {
 #: Types Pillow decodes natively — these get the full decode check.
 _PILLOW_DECODABLE = {"image/jpeg", "image/png", "image/webp"}
 
+#: T3.11.27 — what Pillow is allowed to *call* a file the browser declared.
+#:
+#: The check exists to catch a lie: bytes that open as something other than what
+#: the upload claims. It was comparing Pillow's format name to the MIME subtype
+#: directly, which refuses one real and very common case — **MPO**.
+#:
+#: An MPO file is JPEG. It is the container phones with two cameras write (and
+#: most that write a depth map): a normal JPEG, followed by one or more further
+#: JPEG frames in the same file. Every reader that does not know the extension
+#: shows the first frame and is right to; the browser calls it `image/jpeg`
+#: because that is what it is. Pillow reports `MPO` because it can also reach the
+#: second frame.
+#:
+#: So the refusal was telling people holding an ordinary photograph that their
+#: photograph was not one — «File content failed validation: decoded format
+#: 'mpo'» (owner, walking the handover on 2026-09-13). Found by a real phone,
+#: not by a test, which is exactly the kind of file no fixture contains.
+#:
+#: The mapping stays a whitelist rather than becoming a family check: the point
+#: of this function is that an unexpected format is an error, and every entry
+#: here has to be a container we can name and explain.
+_DECODED_AS: dict[str, set[str]] = {
+    "jpeg": {"jpeg", "mpo"},
+}
+
 
 class FileValidationError(ValueError):
     """Content does not match the declared type. `reason` is log-safe (никогда
@@ -266,7 +291,7 @@ def validate_upload(data: bytes, declared_mime: str) -> str:
 
         fmt = (img.format or "").lower()
         expected = declared_mime.removeprefix("image/")
-        if fmt != expected:
+        if fmt not in _DECODED_AS.get(expected, {expected}):
             raise FileValidationError(
                 f"decoded format '{fmt}' does not match declared {declared_mime}"
             )

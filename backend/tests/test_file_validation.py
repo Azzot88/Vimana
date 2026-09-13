@@ -330,3 +330,60 @@ def test_validate_upload_scans_before_it_inspects(monkeypatch):
     # it is part of the contract, not an implementation detail.
     assert fv.validate_upload(b"x" * 32, "application/pdf") == fv.SCAN_CLEAN
     assert called[0] == "scanned"
+
+
+
+# ─────────────────────────────────────────────────────────────
+# T3.11.27 — a JPEG that Pillow calls something else
+# ─────────────────────────────────────────────────────────────
+
+
+def test_an_mpo_is_accepted_as_the_jpeg_it_is(monkeypatch):
+    """Owner, walking the handover 2026-09-13: «File content failed validation:
+    decoded format 'mpo' does not match declared image/jpeg».
+
+    It **is** a jpeg. MPO is the container phones with two cameras — and most
+    that record depth — write: a normal JPEG, then further frames in the same
+    file. The browser calls it `image/jpeg` because that is what it is; Pillow
+    says `MPO` because it can also reach the second frame. Refusing it told
+    people holding an ordinary photograph that their photograph was not one, and
+    on such a phone it was the only possible outcome.
+
+    Pillow is steered rather than fed a real MPO on purpose. An MPO is only
+    recognised by an APP2 `MPF` index — concatenating two JPEGs produces a file
+    Pillow reads as a plain JPEG, so a hand-built one would pass this test while
+    testing nothing. What is under test is the decision: *this decoded format is
+    acceptable for that declared type*.
+    """
+    from PIL import Image
+
+    class _Mpo:
+        format = "MPO"
+
+        def verify(self):
+            pass
+
+        def load(self):
+            pass
+
+    monkeypatch.setattr(Image, "open", lambda *a, **kw: _Mpo())
+    assert validate_upload(JPEG_REAL, "image/jpeg") in ("clean", "pending")
+
+
+def test_an_unexpected_format_is_still_refused(monkeypatch):
+    """And nothing else rides in with it: a format nobody named is an error,
+    which is the property that makes the whitelist safe to widen."""
+    from PIL import Image
+
+    class _Odd:
+        format = "TIFF"
+
+        def verify(self):
+            pass
+
+        def load(self):
+            pass
+
+    monkeypatch.setattr(Image, "open", lambda *a, **kw: _Odd())
+    with pytest.raises(FileValidationError):
+        validate_upload(JPEG_REAL, "image/jpeg")
