@@ -592,6 +592,7 @@
     "submit": "Enviar solicitud",
     "submitting": "Enviando...",
     "requestError": "No se pudo crear la solicitud",
+    "categoryRequired": "Elige una categoría — el transportista solo lleva lo que indicó",
     "newTrip": "Nuevo vuelo",
     "departureDate": "Fecha de salida",
     "capacityKg": "Capacidad (kg)",

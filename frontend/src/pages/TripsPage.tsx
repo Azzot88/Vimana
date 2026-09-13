@@ -55,7 +55,12 @@ export default function TripsPage() {
   const [orderTripId, setOrderTripId] = useState<string | null>(null)
   const [chatTrip, setChatTrip] = useState<{ id: string; carrierName: string } | null>(null)
   const [cargoDesc, setCargoDesc] = useState('')
-  const [cargoCategory, setCargoCategory] = useState('other')
+  /* T3.11.27 — no preselection (owner, 2026-09-12). It defaulted to «другое»,
+     which is how the press could fail with nothing wrong on screen: on a trip
+     that does not carry «другое» no chip was lit, the value went anyway, and
+     the server answered 409 about a category the sender had never chosen. An
+     unanswered question now looks unanswered. */
+  const [cargoCategory, setCargoCategory] = useState('')
   const [declaredValue, setDeclaredValue] = useState('')
   const [recipientContact, setRecipientContact] = useState('')
   const [orderLoading, setOrderLoading] = useState(false)
@@ -118,10 +123,23 @@ export default function TripsPage() {
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!orderTripId) return
-    setOrderLoading(true)
-    setError('')
     const trip = trips.find((t) => t.id === orderTripId)
     if (!trip) return
+    /* T3.11.27 (owner, 2026-09-12): «Если не выбрать категорию заявка не
+       создаётся и появляется ошибка — надо указать что не так.»
+
+       The category is not a text input, so `required` cannot carry it: the
+       browser has nothing to point at. Without this, the press did nothing
+       visible — the server answered 422, the catch wrote «не удалось создать
+       заявку», and the one field that needed touching was three rows up with
+       no mark on it. Named before anything is sent, so the answer arrives
+       instantly and says what to do rather than what failed. */
+    if (!cargoCategory.trim()) {
+      setError(t('trips.categoryRequired'))
+      return
+    }
+    setOrderLoading(true)
+    setError('')
     try {
       const { data: deal } = await matchDeal({
         trip_id: orderTripId,
@@ -142,8 +160,13 @@ export default function TripsPage() {
          instead would have left the conversation somewhere they have to go
          looking for — and it was already unclear where. */
       navigate(`/deals/${deal.id}/vault`)
-    } catch {
-      setError(t('trips.requestError'))
+    } catch (err: unknown) {
+      /* The server's own words when it has any: «этот перевозчик не берёт такую
+         категорию» is something a sender can act on, «не удалось создать
+         заявку» is not. */
+      const detail = (err as { response?: { data?: { detail?: unknown } } })
+        ?.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('trips.requestError'))
     } finally {
       setOrderLoading(false)
     }
@@ -360,7 +383,11 @@ export default function TripsPage() {
                       {t('inquiry.chatButton')}
                     </button>
                     <button
-                      onClick={() => setOrderTripId(trip.id)}
+                      onClick={() => {
+                        setOrderTripId(trip.id)
+                        setCargoCategory('')
+                        setError('')
+                      }}
                       className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity"
                     >
                       {t('trips.sendPackage')}
@@ -414,6 +441,9 @@ export default function TripsPage() {
                         value={cargoCategory}
                         onChange={setCargoCategory}
                         only={trip.allowed_categories}
+                        /* …and the whole catalogue when the trip named
+                           nothing: a sender picks, never invents. */
+                        catalogue
                       />
                     </div>
                   </div>

@@ -253,7 +253,20 @@ export default function DealVaultPage() {
   }
 
   const renderMessage = (msg: VaultMessage) => {
-    const att = msg.attachments[0]
+    /* T3.11.27 (owner, 2026-09-12): «Фото передачи дублирует фотографию в чате.
+       Надо оставить фото в карточке и убрать ту, что появляется в чате.»
+
+       There was never a second message — there was one message drawn twice.
+       Since the photograph started travelling **with** the card, the evidence
+       hangs on the card's own row, and this function was still rendering every
+       attachment as a chat photo on the way past. So the same picture appeared
+       once under a «Фото передачи · система» label and once inside «Передал
+       перевозчику», and the loose copy read as a separate, unexplained act.
+
+       A card owns its evidence: the label, the thumbnail and the hash line
+       belong inside it. What stays here is the timestamp, which belongs to the
+       row either way. */
+    const att = msg.card_kind ? undefined : msg.attachments[0]
     return (
       <div key={msg.id} className="space-y-1">
         <div className="flex items-center gap-2">
@@ -262,7 +275,10 @@ export default function DealVaultPage() {
               {t(KIND_KEY[att.kind]) ?? att.kind}
             </span>
           )}
-          {msg.is_system && (
+          {/* Not on a card. Cards are stored as system rows, but «система» over
+              «Передал перевозчику» tells the reader the platform said it, when
+              in fact a person pressed a button and put their name to it. */}
+          {msg.is_system && !msg.card_kind && (
             <span className="text-xs font-mono text-cyan bg-cyan/5 px-1.5 py-0.5 rounded">
               {t('admin.systemMessage')}
             </span>
@@ -301,6 +317,7 @@ export default function DealVaultPage() {
                 myRole={dealRole}
                 mine={msg.sender_id === user?.id}
                 onChanged={load}
+                onPreview={setPreview}
               />
             )
           }
@@ -444,6 +461,7 @@ export default function DealVaultPage() {
                  what the sender typed on the board; passing it down is what
                  stops the first stage asking for it a second time. */
               deal={deal}
+              messages={messages}
               onDone={load}
               onMessage={(msg) => setMessages((prev) => [...prev, msg])}
             />

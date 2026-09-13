@@ -17,6 +17,20 @@ interface Props {
    *  optional on a trip so that a route and a date can publish one, and reading
    *  silence as «carries nothing» would make every express listing unbookable. */
   only?: string[]
+  /** T3.11.27 (owner, 2026-09-12): «должно быть больше категорий, все
+   *  категории».
+   *
+   *  A request is a pick, never an invention. With no `only` the field used to
+   *  fall back to the carrier's own tool — a search box over the catalogue with
+   *  «+ Use "…"» under it — which on the sender's side asks somebody to guess
+   *  words at an empty input and lets them invent a category the carrier never
+   *  agreed to carry. Set here, the whole active catalogue is drawn as chips
+   *  instead: the same shape as a narrowed trip, just wider.
+   *
+   *  The carrier's side keeps the search and the custom entry. That is where a
+   *  new word legitimately enters the vocabulary — somebody states what they
+   *  are actually willing to carry. */
+  catalogue?: boolean
 }
 
 export default function CategorySelect({
@@ -24,6 +38,7 @@ export default function CategorySelect({
   onChange,
   placeholder,
   only,
+  catalogue,
 }: Props) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(value)
@@ -83,13 +98,19 @@ export default function CategorySelect({
   const exactMatch = results.some((r) => r.name_key === query.trim().toLowerCase())
   const canAddNew = query.trim().length > 0 && !exactMatch
 
-  // Chips rather than a dropdown: the list is short by construction — it is one
-  // carrier's offer, not a catalogue — and a select that holds three items is a
-  // click spent hiding two of them.
-  if (only && only.length > 0) {
+  /* Chips rather than a dropdown, whether the list is one carrier's offer or
+     the whole catalogue: both are short enough to read at a glance, and a
+     select that holds seven items is a click spent hiding six of them. */
+  const chips =
+    only && only.length > 0
+      ? only
+      : catalogue
+        ? results.map((r) => r.name_key)
+        : null
+  if (chips) {
     return (
       <div className="flex flex-wrap gap-2">
-        {only.map((key) => (
+        {chips.map((key) => (
           <button
             key={key}
             type="button"

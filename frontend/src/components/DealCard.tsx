@@ -18,9 +18,12 @@ interface Props {
   myRole: DealRole | null
   mine: boolean
   onChanged: () => void
+  /** Open a photograph full-screen. The lightbox belongs to the page — one
+   *  overlay for a screen, not one per card. */
+  onPreview?: (image: { url: string; alt: string }) => void
 }
 
-export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props) {
+export default function DealCard({ msg, dealId, myRole, mine, onChanged, onPreview }: Props) {
   const { t } = useTranslation()
   const { dateTime } = usePrefs()
   const [busy, setBusy] = useState(false)
@@ -98,10 +101,19 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
         )}
       </div>
 
+      {/* T3.11.27 (owner, 2026-09-12): «нужна дополнительная информация из полей
+          что не оставлены пустыми. Заголовки пустых полей не показываем.»
+
+          An empty string is not an answer, and a label with nothing beside it
+          reads as a field somebody failed to fill rather than one they were
+          never asked about. `buildPayload` already drops empty optionals on the
+          way out, but a card can be raised by anything that speaks the API, and
+          what is stored is not this component's to assume. */}
       {Object.entries(payload).map(([key, value]) =>
         value === null ||
         value === undefined ||
         typeof value === 'object' ||
+        (typeof value === 'string' && !value.trim()) ||
         key === 'expires_at' ? null : (
           <div key={key} className="flex justify-between gap-4 py-0.5">
             <span className="text-xs font-body text-navy/50">
@@ -122,18 +134,38 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged }: Props
         </p>
       )}
 
+      {/* T3.11.27 — the evidence lives here and nowhere else (owner,
+          2026-09-12). The chat used to draw the same photograph a second time
+          on its way past the message; it no longer does, so what the card shows
+          is all there is — which means it also has to carry the two things the
+          loose copy carried: the kind of photograph this is, and the hash that
+          puts it in the chain. */}
       {msg.attachments.length > 0 && (
-        <div className="mt-2 flex gap-2 flex-wrap">
-          {msg.attachments.map((a) =>
-            a.url ? (
-              <img
-                key={a.id}
-                src={a.url}
-                alt={a.kind}
-                className="h-16 w-16 object-cover rounded-lg border border-navy/10"
-              />
-            ) : null,
-          )}
+        <div className="mt-2 space-y-1">
+          <div className="flex gap-2 flex-wrap">
+            {msg.attachments.map((a) =>
+              a.url ? (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onPreview?.({ url: a.url!, alt: t(`chat.kind.${a.kind}`, a.kind) })}
+                  className="rounded-lg overflow-hidden border border-navy/10 hover:border-cyan/40 transition-colors cursor-zoom-in"
+                  aria-label={t('chat.openFullscreen') as string}
+                >
+                  <img
+                    src={a.url}
+                    alt={t(`chat.kind.${a.kind}`, a.kind)}
+                    className="h-16 w-16 object-cover block"
+                  />
+                </button>
+              ) : null,
+            )}
+          </div>
+          {msg.attachments.map((a) => (
+            <MonoText key={a.id} className="text-[10px] text-navy/25 block">
+              {t(`chat.kind.${a.kind}`, a.kind)} · sha256:{a.file_hash.slice(0, 16)}…
+            </MonoText>
+          ))}
         </div>
       )}
 

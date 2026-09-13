@@ -648,6 +648,7 @@
     "submit": "Submit request",
     "submitting": "Submitting...",
     "requestError": "Failed to create request",
+    "categoryRequired": "Pick a category — the carrier only takes what they listed",
     "newTrip": "New trip",
     "departureDate": "Departure date",
     "capacityKg": "Capacity (kg)",

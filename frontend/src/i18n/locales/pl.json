@@ -593,6 +593,7 @@
     "submit": "Wyślij zamówienie",
     "submitting": "Wysyłanie...",
     "requestError": "Nie udało się utworzyć zamówienia",
+    "categoryRequired": "Wybierz kategorię — przewoźnik bierze tylko to, co wymienił",
     "newTrip": "Nowy lot",
     "departureDate": "Data wylotu",
     "capacityKg": "Pojemność (kg)",
