@@ -54,7 +54,19 @@ _HEIF_BRANDS = {
 }
 
 #: Types Pillow decodes natively — these get the full decode check.
-_PILLOW_DECODABLE = {"image/jpeg", "image/png", "image/webp"}
+#:
+#: T3.11.27 — GIF, BMP and TIFF join it, because Pillow reads all three and a
+#: format that is only signature-checked is a format we have not really looked
+#: at. HEIC and AVIF stay out: Pillow has no codec for either without an extra
+#: wheel, and their container is checked by brand above.
+_PILLOW_DECODABLE = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/bmp",
+    "image/tiff",
+}
 
 #: T3.11.27 — what Pillow is allowed to *call* a file the browser declared.
 #:
@@ -100,9 +112,62 @@ def _signature_matches(data: bytes, declared_mime: str) -> bool:
         return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
     if declared_mime in ("image/heic", "image/heif"):
         return data[4:8] == b"ftyp" and data[8:12] in _HEIF_BRANDS
+    # T3.11.27 — «надо сделать так, чтобы загружались любые не инфицированные
+    # jpeg файлы и вообще файлы картинок» (owner, 2026-09-13). The four formats
+    # below are the rest of what a camera, a screenshot tool or a chat app
+    # actually produces. Signatures, not extensions: the rule of this module is
+    # unchanged, the vocabulary is simply no longer narrower than the world.
+    if declared_mime == "image/gif":
+        return data[:6] in (b"GIF87a", b"GIF89a")
+    if declared_mime == "image/bmp":
+        return data[:2] == b"BM"
+    if declared_mime == "image/tiff":
+        return data[:4] in (b"II*\x00", b"MM\x00*")
+    if declared_mime == "image/avif":
+        # Same ISO BMFF box as HEIC, a different brand: AVIF is AV1 in the
+        # container HEIC uses for HEVC. Refused until today for no better
+        # reason than that nobody had written this line.
+        return data[4:8] == b"ftyp" and data[8:12] in (b"avif", b"avis")
     if declared_mime == "application/pdf":
         return data[:5] == b"%PDF-"
     return False
+
+
+#: T3.11.27 — every picture format this product accepts, in sniffing order.
+#:
+#: Ordered so that the cheap unambiguous signatures come first and the two ISO
+#: BMFF families (HEIC, AVIF) come last, where a brand check separates them.
+IMAGE_MIMES = (
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/bmp",
+    "image/tiff",
+    "image/heic",
+    "image/avif",
+)
+
+
+def sniff_image(data: bytes) -> str | None:
+    """What these bytes actually are, or None if they are not a picture.
+
+    T3.11.27 — the answer to «файл не подошёл» (owner, 2026-09-13). What a
+    browser puts in `Content-Type` is a guess from the file extension and an OS
+    table: phones hand over `application/octet-stream` for their own photographs
+    routinely, and the upload was refused on the strength of that guess while
+    the bytes in the request were a perfectly ordinary JPEG.
+
+    So the declaration stops deciding anything. The content names itself, the
+    name is checked against what this kind of attachment accepts, and it is the
+    sniffed type — not the claimed one — that gets stored and served back.
+
+    Called by: `api.dealvault.store_upload`.
+    """
+    for mime in IMAGE_MIMES:
+        if _signature_matches(data, mime):
+            return mime
+    return None
 
 
 #: Signature sniffing order for `validate_document` (declared MIME unknown or

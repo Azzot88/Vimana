@@ -469,7 +469,9 @@ export default function TermsProposeForm({
           <input
             type="file"
             multiple
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            /* T3.11.27 — every picture: what is acceptable is decided by the
+               bytes, server-side, not by a list of five types here. */
+            accept="image/*"
             onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
             className="text-xs font-body"
           />

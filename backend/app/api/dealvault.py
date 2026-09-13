@@ -24,7 +24,13 @@ from app.core.rate_limit import limiter
 import base64
 
 from app.core.deal_chain import SealedError, append_deal_event, content_hash_of
-from app.core.file_validation import FileValidationError, validate_upload
+from app.core.file_validation import (
+    IMAGE_MIMES,
+    FileValidationError,
+    sniff_image,
+    sniff_mime,
+    validate_upload,
+)
 from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, presign_ttl_for_kind, upload_file
@@ -44,7 +50,15 @@ router = APIRouter()
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 CHUNK_SIZE = 64 * 1024  # 64 KB
 
-_PHOTO_MIME = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
+# T3.11.27 (owner, 2026-09-13): «любые не инфицированные jpeg файлы и вообще
+# файлы картинок. Может даже webp».
+#
+# Everything `sniff_image` can name, and the list is now the same object rather
+# than a second copy of it — two lists of picture formats obliged to agree
+# forever is the duplication this module already learned about once, with the
+# handover methods. `image/heif` stays alongside because the enum has carried it
+# since T3.7 and old rows are labelled with it.
+_PHOTO_MIME = set(IMAGE_MIMES) | {"image/heif"}
 _DOC_MIME = _PHOTO_MIME | {"application/pdf"}
 
 ALLOWED_MIME_BY_KIND: dict[AttachmentKind, set[str]] = {
@@ -65,8 +79,12 @@ MIME_TO_EXT: dict[str, str] = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
+    "image/gif": ".gif",
+    "image/bmp": ".bmp",
+    "image/tiff": ".tiff",
     "image/heic": ".heic",
     "image/heif": ".heif",
+    "image/avif": ".avif",
     "application/pdf": ".pdf",
 }
 
@@ -125,21 +143,6 @@ async def store_upload(
             detail=f"File too large. Max {MAX_UPLOAD_SIZE // 1024 // 1024} MB",
         )
 
-    content_type = (file.content_type or "").lower()
-    allowed = ALLOWED_MIME_BY_KIND.get(attachment_kind, set())
-    if content_type not in allowed:
-        # T3.11.27 — say what would work. «MIME 'application/octet-stream' not
-        # allowed» is true and useless to somebody holding a photograph their
-        # phone described badly, and this text reaches the screen now that the
-        # form shows the server's own words.
-        raise HTTPException(
-            status_code=415,
-            detail=(
-                f"This file is a {content_type or 'file of unknown type'}; "
-                f"'{kind}' takes: {', '.join(sorted(allowed))}"
-            ),
-        )
-
     # Streaming SHA-256 + size limit while reading chunks
     hasher = hashlib.sha256()
     total = 0
@@ -159,12 +162,45 @@ async def store_upload(
 
     file_hash = hasher.hexdigest()
 
+    # T3.11.27 — **the content names itself** (owner, 2026-09-13: «надо сделать
+    # так, чтобы загружались любые не инфицированные jpeg файлы и вообще файлы
+    # картинок»).
+    #
+    # The kind check used to run against `file.content_type`, which is the
+    # browser's guess from a file extension and an OS table. Phones hand over
+    # `application/octet-stream` for their own photographs routinely, and the
+    # upload was refused on the strength of that guess while the bytes in the
+    # request were an ordinary JPEG. Worse, the refusal happened *before* the
+    # bytes were read, so nothing could correct it.
+    #
+    # Sniffed first, then checked, then stored under the type it really is.
+    # This is strictly safer than trusting the header — a renamed executable
+    # sniffs as nothing at all — and it is why the read moved above this block.
+    # `sniff_mime` is the fallback because it knows the one non-picture we
+    # accept: a receipt or a contract genuinely arrives as a PDF.
+    raw = buffer.getvalue()
+    content_type = sniff_image(raw) or sniff_mime(raw) or ""
+    allowed = ALLOWED_MIME_BY_KIND.get(attachment_kind, set())
+    if content_type not in allowed:
+        # Say what this actually is and what would work. «MIME
+        # 'application/octet-stream' not allowed» was true and useless to
+        # somebody holding a photograph.
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                "This file is not a picture"
+                if not content_type
+                else f"This file is a {content_type}; "
+                f"'{kind}' takes: {', '.join(sorted(allowed))}"
+            ),
+        )
+
     # T3.8 — validate the bytes against the declared type BEFORE the R2 write:
     # signature whitelist + full image decode. Metadata only in the log.
     # Decode runs in the threadpool (T_PERF.1) — see `api/avatar.py` for why.
     try:
         scan_status = await run_in_threadpool(
-            validate_upload, buffer.getvalue(), content_type
+            validate_upload, raw, content_type
         )
     except FileValidationError as exc:
         logger.warning(
@@ -205,7 +241,7 @@ async def store_upload(
         # Blocking PUT — off the event loop (T_PERF.1). Attachments here are the
         # largest files the product accepts, so this is the worst place to hold
         # it.
-        await run_in_threadpool(upload_file, buffer.getvalue(), r2_key, content_type)
+        await run_in_threadpool(upload_file, raw, r2_key, content_type)
         safe_file = UserFile(
             owner_id=owner.id,
             r2_key=r2_key,

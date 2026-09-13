@@ -245,7 +245,11 @@ export default function CardActions({
             <input
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              /* T3.11.27 — every picture (owner, 2026-09-13). A narrow list here
+                 hid files the server accepts and, worse, made a phone offering
+                 `application/octet-stream` look unpickable. What is really
+                 acceptable is decided by the bytes, server-side. */
+              accept="image/*"
               onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
               className="text-xs font-body"
             />

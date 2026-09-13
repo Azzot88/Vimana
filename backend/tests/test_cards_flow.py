@@ -92,15 +92,22 @@ _ONE_PIXEL_PNG = base64.b64decode(
 )
 
 
-async def _attach_photo(client, headers, deal_id, msg_id, kind):
-    """One pixel is enough: the rule under test is "is there evidence", not
-    "is the photograph any good"."""
-    png = _ONE_PIXEL_PNG
+async def _card_with_files(client, headers, deal_id, kind, files=None, payload=None):
+    """T3.11.27 — how a declaration that stands on evidence is raised.
+
+    The plain `/cards` endpoint refuses these outright now, so every custody
+    test below speaks this protocol: one request carrying the card and its
+    photographs, and nothing written unless all of them are accepted.
+    """
+    blobs = files if files is not None else [_ONE_PIXEL_PNG]
     return await client.post(
-        f"/api/deals/{deal_id}/dealvault/messages/{msg_id}/attachments",
+        f"/api/deals/{deal_id}/cards/with-files",
         headers=headers,
-        files={"file": ("proof.png", png, "image/png")},
-        data={"kind": kind},
+        files=[
+            ("files", (f"p{i}.png", body, "image/png"))
+            for i, body in enumerate(blobs)
+        ],
+        data={"kind": kind, "payload": json.dumps(payload or {})},
     )
 
 
@@ -163,14 +170,20 @@ async def test_only_the_sender_declares_handoff(client, carrier_headers, deal):
     assert r.status_code == 403, r.text
 
 
-async def test_handoff_without_photo_cannot_be_confirmed(
-    client, sender_headers, carrier_headers, deal
+async def test_a_declaration_cannot_be_raised_without_its_evidence(
+    client, sender_headers, deal
 ):
-    """A declaration without its evidence is a claim."""
-    declared = await _card(client, sender_headers, deal.id, "handoff.declared")
-    assert declared.status_code == 201
-    r = await _ack(client, carrier_headers, deal.id, declared.json()["id"])
+    """T3.11.27 (owner, 2026-09-13) — the rule moved from the client to the
+    server.
+
+    It used to be possible: raise the card, attach afterwards. A failed upload
+    then left a declaration nobody could confirm in a chain that cannot take it
+    back — three photoless «Отправлено по почте» cards in one chat. The refusal
+    now lives where no client can route around it.
+    """
+    r = await _card(client, sender_headers, deal.id, "handoff.declared")
     assert r.status_code == 422, r.text
+    assert "with-files" in str(r.json()["detail"])
 
 
 async def test_confirmed_handoff_moves_the_deal_and_fixes_the_terms(
@@ -178,12 +191,11 @@ async def test_confirmed_handoff_moves_the_deal_and_fixes_the_terms(
 ):
     """The moment the cargo changes hands is the moment the numbers stop
     moving (MASTERPLAN §4.1)."""
-    declared = await _card(client, sender_headers, deal.id, "handoff.declared")
-    msg_id = declared.json()["id"]
-    up = await _attach_photo(
-        client, sender_headers, deal.id, msg_id, "handoff_photo"
+    declared = await _card_with_files(
+        client, sender_headers, deal.id, "handoff.declared"
     )
-    assert up.status_code in (200, 201), up.text
+    assert declared.status_code == 201, declared.text
+    msg_id = declared.json()["id"]
 
     r = await _ack(client, carrier_headers, deal.id, msg_id)
     assert r.status_code == 200, r.text
@@ -249,8 +261,9 @@ async def test_delivery_is_confirmed_by_the_sender_when_there_is_no_recipient(
     client, carrier_headers, sender_headers, deal
 ):
     """A deal with no separate recipient is one where the sender is both ends."""
-    declared = await _card(
-        client, carrier_headers, deal.id, "delivery.declared", {"method": "in_person"}
+    declared = await _card_with_files(
+        client, carrier_headers, deal.id, "delivery.declared",
+        payload={"method": "in_person"},
     )
     assert declared.status_code == 201, declared.text
     assert declared.json()["requires_ack_by"] == "sender"
@@ -671,24 +684,17 @@ async def test_posting_declares_its_own_leg_not_a_delivery(
     card moves the deal to `posted` — not `delivered`, which would be the
     platform asserting something neither party said.
     """
-    declared = await _card(
+    declared = await _card_with_files(
         client,
         carrier_headers,
         deal.id,
         "posted.declared",
-        {"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
+        payload={"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
     )
     assert declared.status_code == 201, declared.text
     msg_id = declared.json()["id"]
-
-    # The evidence is required: a declaration without it is a claim.
-    early = await _ack(client, sender_headers, deal.id, msg_id)
-    assert early.status_code == 422, early.text
-
-    photo = await _attach_photo(
-        client, carrier_headers, deal.id, msg_id, "pre_seal_photo"
-    )
-    assert photo.status_code == 201, photo.text
+    # The evidence came with it — that is now the only way this card exists.
+    assert declared.json()["attachments"], declared.text
 
     acked = await _ack(client, sender_headers, deal.id, msg_id)
     assert acked.status_code == 200, acked.text
@@ -715,15 +721,17 @@ async def test_the_chain_says_which_leg_the_parcel_was_on(
 
     from app.models.deal import DealEvent, DealEventType
 
-    declared = await _card(
+    declared = await _card_with_files(
         client,
         carrier_headers,
         deal.id,
         "posted.declared",
-        {"postal_service": "USPS", "tracking_number": "US9400100000000000000000"},
+        payload={
+            "postal_service": "USPS",
+            "tracking_number": "US9400100000000000000000",
+        },
     )
     msg_id = declared.json()["id"]
-    await _attach_photo(client, carrier_headers, deal.id, msg_id, "pre_seal_photo")
     await _ack(client, sender_headers, deal.id, msg_id)
 
     async with session_maker() as db:
@@ -754,18 +762,20 @@ async def test_posting_needs_the_tracking_code_and_the_company(
         {"tracking_number": "RU1"},
         {"postal_service": "", "tracking_number": "RU1"},
     ):
-        r = await _card(client, carrier_headers, deal.id, "posted.declared", payload)
+        r = await _card_with_files(
+            client, carrier_headers, deal.id, "posted.declared", payload=payload
+        )
         assert r.status_code == 422, f"{payload} was accepted"
 
 
 async def test_only_the_carrier_declares_the_posting(client, sender_headers, deal):
     """The sender is not the one at the post office."""
-    r = await _card(
+    r = await _card_with_files(
         client,
         sender_headers,
         deal.id,
         "posted.declared",
-        {"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
+        payload={"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
     )
     assert r.status_code == 403, r.text
 
@@ -966,12 +976,13 @@ async def test_the_carrier_can_declare_that_they_took_it(
     rather than one shared by both roles, because an arbiter reads these labels
     and «отдал» and «взял» are different claims about who was standing there.
     """
-    declared = await _card(client, carrier_headers, deal.id, "handoff.received")
+    declared = await _card_with_files(
+        client, carrier_headers, deal.id, "handoff.received"
+    )
     assert declared.status_code == 201, declared.text
     assert declared.json()["requires_ack_by"] == "sender"
 
     msg_id = declared.json()["id"]
-    await _attach_photo(client, carrier_headers, deal.id, msg_id, "handoff_photo")
     r = await _ack(client, sender_headers, deal.id, msg_id)
     assert r.status_code == 200, r.text
 
@@ -1020,16 +1031,6 @@ async def test_closing_by_the_pair_seals_the_vault(
 
 
 # ── T3.11.27 · the declaration and its evidence are one act ───────────────
-
-
-async def _card_with_files(client, headers, deal_id, kind, files, payload=None):
-    """`POST /cards/with-files` — multipart, several photographs, one card."""
-    return await client.post(
-        f"/api/deals/{deal_id}/cards/with-files",
-        headers=headers,
-        files=[("files", (f"p{i}.png", body, "image/png")) for i, body in enumerate(files)],
-        data={"kind": kind, "payload": json.dumps(payload or {})},
-    )
 
 
 async def test_a_declaration_arrives_with_its_photographs(
@@ -1082,13 +1083,13 @@ async def test_a_refused_file_leaves_no_card_behind(
     r = await client.post(
         f"/api/deals/{deal.id}/cards/with-files",
         headers=sender_headers,
-        # A text file wearing an image's name. `validate_upload` opens the bytes
-        # rather than trusting the declared type, which is what makes this a 422
-        # and not a stored photograph of nothing.
+        # A text file wearing an image's name. The declared type decides nothing
+        # (T3.11.27): the bytes are sniffed, they are not a picture, and the
+        # upload dies before the card is written.
         files=[("files", ("notes.png", b"this is not an image at all", "image/png"))],
         data={"kind": "handoff.declared", "payload": "{}"},
     )
-    assert r.status_code == 422, r.text
+    assert r.status_code in (415, 422), r.text
 
     async with session_maker() as db:
         after = (
@@ -1145,3 +1146,45 @@ async def test_files_are_refused_from_outside_the_deal(client, deal):
         client, hdr, deal.id, "handoff.declared", [_ONE_PIXEL_PNG],
     )
     assert r.status_code in (403, 404), r.text
+
+
+async def test_a_photograph_is_taken_at_its_word_about_nothing(
+    client, sender_headers, deal
+):
+    """T3.11.27 (owner, 2026-09-13): «чтобы загружались любые не инфицированные
+    jpeg файлы и вообще файлы картинок».
+
+    A browser's `Content-Type` is a guess from a file extension and an OS table,
+    and phones hand over `application/octet-stream` for their own photographs
+    routinely. The upload used to be refused on the strength of that guess while
+    the bytes in the request were an ordinary picture — and refused *before* the
+    bytes were read, so nothing could correct it. The content names itself now.
+    """
+    r = await client.post(
+        f"/api/deals/{deal.id}/cards/with-files",
+        headers=sender_headers,
+        files=[("files", ("IMG_0042", _ONE_PIXEL_PNG, "application/octet-stream"))],
+        data={"kind": "handoff.declared", "payload": "{}"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["attachments"][0]["kind"] == "handoff_photo"
+
+
+async def test_a_webp_is_a_picture_too(client, sender_headers, deal):
+    """«Может даже webp» — it was already accepted, and now so are GIF, BMP,
+    TIFF and AVIF: everything `sniff_image` can name. The narrow list was not a
+    policy, it was the four formats somebody happened to write down."""
+    import io as _io
+
+    from PIL import Image as _Image
+
+    buf = _io.BytesIO()
+    _Image.new("RGB", (2, 2), (10, 20, 30)).save(buf, "WEBP")
+    r = await client.post(
+        f"/api/deals/{deal.id}/cards/with-files",
+        headers=sender_headers,
+        # Declared wrongly on purpose: what it *is* decides.
+        files=[("files", ("photo.jpg", buf.getvalue(), "image/jpeg"))],
+        data={"kind": "handoff.declared", "payload": "{}"},
+    )
+    assert r.status_code == 201, r.text
