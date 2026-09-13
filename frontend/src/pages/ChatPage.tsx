@@ -12,6 +12,7 @@ import {
 import { listDeals, type Deal } from '../api/deals'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
+import { useLiveBeat } from '../hooks/useLiveBeat'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ShareAddressModal from '../components/ShareAddressModal'
 import DealSummaryCard from '../components/DealSummaryCard'
@@ -81,6 +82,54 @@ export default function ChatPage() {
       cancelled = true
     }
   }, [chatId, t])
+
+  /* T3.11.27 — the same beat as the deal screen (owner, 2026-09-12).
+   *
+   * This screen loaded once and never again: the other person's reply simply did
+   * not arrive until somebody reloaded, and neither did the status of a deal
+   * nested in the conversation — which is how «сделка закрылась» first reached
+   * one side and not the other.
+   *
+   * Deliberately **not** the whole `load`: that one sets `loading`, which would
+   * blank a conversation somebody is reading every ten seconds. The lists are
+   * replaced only when they differ, so an unchanged poll touches no state at all
+   * — and the scroll-to-bottom below, which follows `messages.length`, stays put
+   * instead of yanking a person out of their own history.
+   *
+   * A failed beat says nothing. The screen already has its content; an error
+   * strip over working text would report the network, not the conversation.
+   */
+  const refresh = useCallback(async () => {
+    try {
+      const [page, dealPage] = await Promise.all([
+        listInquiryMessages(chatId, { limit: 100 }),
+        listDeals({ chat_id: chatId, limit: 50 }),
+      ])
+      setMessages((prev) =>
+        prev.length === page.data.items.length &&
+        prev.every((m, i) => m.id === page.data.items[i].id)
+          ? prev
+          : page.data.items,
+      )
+      /* Status, not just identity: a deal moving from «в пути» to «закрыта» is
+         exactly the change this screen exists to show, and its id does not
+         change when it happens. */
+      setDeals((prev) =>
+        prev.length === dealPage.data.items.length &&
+        prev.every(
+          (d, i) =>
+            d.id === dealPage.data.items[i].id &&
+            d.status === dealPage.data.items[i].status,
+        )
+          ? prev
+          : dealPage.data.items,
+      )
+    } catch {
+      /* silence is the correct report here — see above */
+    }
+  }, [chatId])
+
+  useLiveBeat(refresh, Boolean(chatId))
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
