@@ -64,7 +64,12 @@ export default function CategorySelect({
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
-        const { data } = await listCategories(query)
+        /* T3.11.27 — in catalogue mode the list is the catalogue and must not
+           move. `query` follows the chosen value, so searching with it would
+           narrow the chips to the one already picked the moment somebody picks
+           it — the other six would vanish behind their own selection. The
+           search box is the only caller that wants a filtered list. */
+        const { data } = await listCategories(catalogue ? '' : query)
         if (!cancelled) setResults(data)
       } catch {
         if (!cancelled) setResults([])
@@ -74,7 +79,7 @@ export default function CategorySelect({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [query])
+  }, [query, catalogue])
 
   const label = (key: string): string => {
     const translated = t(`categories.${key}`, { defaultValue: '' })

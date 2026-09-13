@@ -539,7 +539,7 @@
       "payment_receipt": "Payment receipt",
       "identity_doc": "Identity document",
       "pre_seal_photo": "Photo before sealing",
-      "cargo_photo": "Photo of the item"
+      "cargo_photo": "Photo of the shipment"
     },
     "shareAddress": {
       "button": "Share my address",
