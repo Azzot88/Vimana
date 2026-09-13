@@ -7,9 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.currencies import CURRENCIES
-from app.schemas.cards import HandoverMethod
-
-PaymentMethod = Literal["cash", "platform", "escrow"]
+from app.schemas.cards import HandoverMethod, PaymentMethod
 
 
 class TermsIn(BaseModel):
@@ -29,7 +27,7 @@ class TermsIn(BaseModel):
     currency: str = Field(default="USD", min_length=3, max_length=4)
     dimensions_cm: list[float] | None = None
     deadline: datetime | None = None
-    payment_method: PaymentMethod = "cash"
+    payment_method: PaymentMethod = "cash_on_delivery"
     description: str | None = None
     # Set when countering: the proposal this one replaces.
     supersedes_id: uuid.UUID | None = None

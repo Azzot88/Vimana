@@ -309,6 +309,24 @@ async def confirm_deal(
     return deal
 
 
+def _methods_of(side: dict | None) -> list[str]:
+    """The handover methods stated for one end of a trip, or an empty list.
+
+    T3.11.27. Written defensively on purpose: the column is JSON, it has held
+    three shapes across T3.11.15 and T3.11.07, and a trip published before the
+    field existed has `NULL`. A `TypeError` here would take the whole deal
+    screen down over a field that is decoration on it — and «this carrier named
+    no methods» is a real, common answer that the form already knows how to
+    draw.
+    """
+    if not isinstance(side, dict):
+        return []
+    methods = side.get("methods")
+    if not isinstance(methods, list):
+        return []
+    return [m for m in methods if isinstance(m, str)]
+
+
 @router.get("/{deal_id}", response_model=DealDetailOut)
 async def get_deal(
     deal_id: uuid.UUID,
@@ -354,6 +372,15 @@ async def get_deal(
         # in instead of asking for them a second time.
         order_deadline=order.deadline if order else None,
         trip_price_per_kg=trip.price_per_kg if trip else None,
+        # T3.11.27 — what the carrier said they do at each end, so the agreement
+        # form offers those and not the whole vocabulary. `handover_*` is JSON
+        # written by `api.trips`; anything else in that column is read as
+        # «nothing stated», which is the same answer as an absent trip.
+        trip_handover_methods=_methods_of(trip.handover_origin if trip else None),
+        trip_delivery_methods=_methods_of(
+            trip.handover_destination if trip else None
+        ),
+        trip_payment_model=trip.payment_model if trip else None,
     )
 
 

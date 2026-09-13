@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { proposeTerms, takeEditHold, type TermsPayload } from '../api/terms'
-import { HANDOVER_METHODS } from '../lib/cardForms'
+import { uploadAttachment } from '../api/dealvault'
+import { HANDOVER_METHODS, PAYMENT_METHODS } from '../lib/cardForms'
 import type { DealDetail } from '../api/deals'
 import type { DealRole } from '../lib/cardForms'
 
@@ -84,9 +85,30 @@ export default function TermsProposeForm({
   const [deliveryPlace, setDeliveryPlace] = useState(str(p.delivery_place))
   const [payer, setPayer] = useState<'sender' | 'recipient'>(p.payer ?? 'sender')
   const [locked, setLocked] = useState<string[]>(p.locked ?? [])
-  const [description, setDescription] = useState('')
+  /* T3.11.27 (owner, 2026-09-12): «Способ оплаты… должен быть внутри формы
+     Предложить условия». It was a chip of its own beside the form — a second
+     act, raising a second card, about the same agreement. Opened on the trip's
+     published model, because that is the carrier's own answer to this exact
+     question and retyping it is how the two records start to differ. */
+  const [paymentMethod, setPaymentMethod] = useState(
+    p.payment_method ?? fromBoard?.trip_payment_model ?? '',
+  )
+  /* T3.11.27 — «возможность загрузки нескольких фото товара… Прикрепить фото
+     отправления». Several, because one photograph of a parcel is a photograph
+     of one side of it, and the stage upload that used to live next to this form
+     took exactly one and filed it as a separate chat row. They hang on the
+     proposal itself now, so the carrier reads the terms and sees the thing. */
+  const [photos, setPhotos] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  /* T3.11.27 — «После выбора условий должно показываться окно предпросмотра
+     перед отправкой в чат… модальное окно с кнопками Предложить условия
+     перевозчику и Вернуться к редактированию».
+     The form is long and half of it is optional, so «Отправить» was a press
+     into the dark: the proposal reached the other side before its author had
+     ever seen it as a whole. The preview is the same card the carrier will
+     read, and the way back is a button rather than a correction sent after. */
+  const [review, setReview] = useState(false)
 
   /* A suggestion, not a value: the carrier's own rate times the weight the
      sender is about to type. It fills the price box on the first version and
@@ -102,8 +124,16 @@ export default function TermsProposeForm({
   const lockedForMe = (section: string) =>
     myRole !== 'carrier' && locked.includes(section)
 
-  const submit = async (e: React.FormEvent) => {
+  /* «Отправить» no longer sends. It asks the browser to validate the required
+     fields — that is why it is still a submit — and then opens the preview. The
+     request itself is one press further on, in `send`. */
+  const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    setReview(true)
+  }
+
+  const send = async () => {
     setBusy(true)
     setError('')
     try {
@@ -113,7 +143,7 @@ export default function TermsProposeForm({
          form somebody opened and walked away from would hold the deal for two
          minutes over nothing. */
       await takeEditHold(dealId)
-      await proposeTerms(dealId, {
+      const terms = await proposeTerms(dealId, {
         weight_kg: Number(weight),
         price_total: Number(price),
         declared_value: Number(declared || 0),
@@ -126,11 +156,21 @@ export default function TermsProposeForm({
         handover_place: handoverPlace || null,
         delivery_method: deliveryMethod || null,
         delivery_place: deliveryPlace || null,
+        payment_method: paymentMethod || undefined,
         payer,
         locked,
-        description: description || null,
+        description: null,
         supersedes_id: supersedesId ?? null,
       })
+      /* After the proposal exists, because they hang on it. Sequential rather
+         than parallel: five photographs of one parcel are five upload slots on
+         somebody's phone connection, and the order they arrive in is the order
+         they were chosen. A failure here leaves the terms standing without
+         their pictures — recoverable by editing, and said out loud rather than
+         rolled back, since the terms themselves are the thing being agreed. */
+      for (const file of photos) {
+        await uploadAttachment(dealId, terms.id, file, 'cargo_photo')
+      }
       onDone()
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response
@@ -164,29 +204,96 @@ export default function TermsProposeForm({
     </label>
   )
 
+  /* T3.11.27 (owner, 2026-09-12): «Условия передачи товара в отправку выбирает
+     Перевозчик, и это должно указываться при формировании рейса. Для
+     Отправителя он указывает как хочет получить посылку.»
+
+     The carrier states both ends when they publish. The agreement then offers
+     those and nothing else — the same master rule as the categories, «в заявке
+     появляется только то что есть в опубликованом рейсе». Offering a sender
+     «постамат» on a trip whose carrier only meets people is offering them a
+     refusal.
+
+     A stated value outside the list is still kept as an option: an agreement
+     struck before the carrier narrowed their trip must keep rendering what it
+     actually says rather than silently showing an empty box. */
   const methodBox = (
     label: string,
     value: string,
     setter: (v: string) => void,
     section: string,
-  ) => (
-    <label className="flex-1 min-w-[8rem]">
-      <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
-      <select
-        value={value}
-        disabled={lockedForMe(section)}
-        onChange={(e) => setter(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm disabled:bg-navy/5 disabled:text-navy/40"
-      >
-        <option value="">—</option>
-        {HANDOVER_METHODS.map((m) => (
-          <option key={m} value={m}>
-            {t(`cards.opt.${m}`, m)}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
+    offered?: string[],
+  ) => {
+    const allowed =
+      offered && offered.length > 0
+        ? offered.filter((m) => (HANDOVER_METHODS as readonly string[]).includes(m))
+        : [...HANDOVER_METHODS]
+    const options = value && !allowed.includes(value) ? [value, ...allowed] : allowed
+    return (
+      <label className="flex-1 min-w-[8rem]">
+        <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
+        <select
+          value={value}
+          disabled={lockedForMe(section)}
+          onChange={(e) => setter(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm disabled:bg-navy/5 disabled:text-navy/40"
+        >
+          <option value="">—</option>
+          {options.map((m) => (
+            <option key={m} value={m}>
+              {t(`cards.opt.${m}`, m)}
+            </option>
+          ))}
+        </select>
+      </label>
+    )
+  }
+
+  /* What the preview shows: every answered field, in the order the sections are
+     negotiated. Built from the form's own state rather than from the payload it
+     is about to send, so what somebody reads and what leaves the screen cannot
+     differ. Empty fields are skipped — a summary listing «Упаковка: —» teaches
+     people to stop reading summaries. */
+  const summary: { section: string; label: string; value: string }[] = [
+    { section: 'cargo', label: t('agreement.field.what'), value: what },
+    { section: 'cargo', label: t('terms.weight'), value: weight },
+    { section: 'cargo', label: t('terms.declaredValue'), value: declared },
+    { section: 'cargo', label: t('agreement.field.packaging'), value: packaging },
+    { section: 'cargo', label: t('agreement.field.url'), value: url },
+    {
+      section: 'cargo',
+      label: t('agreement.field.fragile'),
+      value: fragile ? t('common.yes') : '',
+    },
+    {
+      section: 'cargo',
+      label: t('agreement.field.openOnHandover'),
+      value: openOnHandover ? t('common.yes') : '',
+    },
+    {
+      section: 'handover',
+      label: t('agreement.field.method'),
+      value: handoverMethod ? t(`cards.opt.${handoverMethod}`, handoverMethod) : '',
+    },
+    { section: 'handover', label: t('agreement.field.place'), value: handoverPlace },
+    {
+      section: 'delivery',
+      label: t('agreement.field.method'),
+      value: deliveryMethod ? t(`cards.opt.${deliveryMethod}`, deliveryMethod) : '',
+    },
+    { section: 'delivery', label: t('agreement.field.place'), value: deliveryPlace },
+    { section: 'payment', label: t('terms.price'), value: price },
+    {
+      section: 'payment',
+      label: t('agreement.field.paymentMethod'),
+      value: paymentMethod ? t(`cards.opt.${paymentMethod}`, paymentMethod) : '',
+    },
+    {
+      section: 'payment',
+      label: t('agreement.field.payer'),
+      value: t(`agreement.payer.${payer}`),
+    },
+  ].filter((row) => row.value.trim() !== '')
 
   const heading = (section: string) => (
     <div className="flex items-center gap-2 mt-3 mb-1">
@@ -281,6 +388,7 @@ export default function TermsProposeForm({
           handoverMethod,
           setHandoverMethod,
           'handover',
+          fromBoard?.trip_handover_methods,
         )}
         {box(t('agreement.field.place'), handoverPlace, setHandoverPlace, {
           section: 'handover',
@@ -294,6 +402,7 @@ export default function TermsProposeForm({
           deliveryMethod,
           setDeliveryMethod,
           'delivery',
+          fromBoard?.trip_delivery_methods,
         )}
         {box(t('agreement.field.place'), deliveryPlace, setDeliveryPlace, {
           section: 'delivery',
@@ -321,18 +430,56 @@ export default function TermsProposeForm({
             <option value="recipient">{t('agreement.payer.recipient')}</option>
           </select>
         </label>
+        {/* T3.11.27 — «Способ оплаты» was a chip beside the form and is now a
+            field in it. Required: «Модель расчета обязательна, но может быть
+            изменена по обоюдному согласию» (owner, 2026-09-08) — the change
+            later is the `payment.method_agreed` card, which speaks the same
+            three words. */}
+        <label className="flex-1 min-w-[9rem]">
+          <span className="block text-xs font-body text-navy/40 mb-1">
+            {t('agreement.field.paymentMethod')}
+          </span>
+          <select
+            value={paymentMethod}
+            required
+            disabled={lockedForMe('payment')}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm disabled:bg-navy/5 disabled:text-navy/40"
+          >
+            <option value="">—</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m} value={m}>
+                {t(`cards.opt.${m}`, m)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <label className="block mt-3">
-        <span className="block text-xs font-body text-navy/40 mb-1">
-          {t('terms.cargoDescription')}
-        </span>
-        <input
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm"
-        />
-      </label>
+      {/* T3.11.27 — «Над кнопкой добавить возможность загрузки нескольких фото
+          товара и переименовать Фото товара в Прикрепить фото отправления»
+          (owner, 2026-09-12). The second «Что везём» box that used to stand
+          here is gone: the cargo section at the top asks that question, and
+          asking it twice in one form is how two answers to it get stored. */}
+      <div className="mt-3">
+        <label className="block">
+          <span className="block text-xs font-body text-navy/40 mb-1">
+            {t('terms.attachPhotos')}
+          </span>
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
+            className="text-xs font-body"
+          />
+        </label>
+        {photos.length > 0 && (
+          <p className="mt-1 text-[11px] font-body text-navy/40">
+            {t('terms.photosChosen', { count: photos.length })}
+          </p>
+        )}
+      </div>
 
       {error && <p className="mt-2 text-xs font-body text-danger">{error}</p>}
       <button
@@ -342,6 +489,83 @@ export default function TermsProposeForm({
       >
         {busy ? '...' : t('terms.send')}
       </button>
+
+      {/* T3.11.27 — the preview, and then the two buttons the owner named. It
+          shows what the other side will read, in their order, with the empty
+          fields left out: a summary that lists «Упаковка: —» teaches people to
+          stop reading summaries. */}
+      {review && (
+        <div
+          className="fixed inset-0 z-modal bg-navy/50 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReview(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-card p-5 max-w-md w-full max-h-[85vh] overflow-y-auto space-y-3"
+          >
+            <h3 className="font-display font-semibold text-base text-navy">
+              {t('terms.reviewTitle')}
+            </h3>
+            <p className="text-xs font-body text-navy/50">
+              {t('terms.reviewHint')}
+            </p>
+
+            <dl className="space-y-2">
+              {SECTIONS.map((section) => {
+                const rows = summary.filter((row) => row.section === section)
+                if (rows.length === 0) return null
+                return (
+                  <div key={section}>
+                    <h4 className="text-[11px] font-display font-semibold text-navy/45 uppercase tracking-wide mb-1">
+                      {t(`agreement.section.${section}`)}
+                    </h4>
+                    {rows.map((row) => (
+                      <div
+                        key={row.label}
+                        className="flex justify-between gap-4 py-0.5"
+                      >
+                        <dt className="text-xs font-body text-navy/50">
+                          {row.label}
+                        </dt>
+                        <dd className="text-xs font-mono text-navy">{row.value}</dd>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </dl>
+
+            {photos.length > 0 && (
+              <p className="text-xs font-body text-navy/50">
+                {t('terms.photosChosen', { count: photos.length })}
+              </p>
+            )}
+
+            {error && <p className="text-xs font-body text-danger">{error}</p>}
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void send()}
+                className="px-4 py-2 rounded-lg bg-navy text-white text-sm font-body disabled:opacity-50"
+              >
+                {busy ? '...' : t('terms.confirmSend')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setReview(false)}
+                className="px-4 py-2 rounded-lg border border-navy/15 text-sm font-body disabled:opacity-50"
+              >
+                {t('terms.backToEdit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

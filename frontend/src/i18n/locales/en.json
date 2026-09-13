@@ -835,6 +835,7 @@
       "place": "Place",
       "at": "When",
       "price": "Price",
+      "paymentMethod": "How to settle",
       "payer": "Who pays"
     }
   },
@@ -842,6 +843,7 @@
     "terms": "Terms",
     "handover": "Handover",
     "transit": "In transit",
+    "arrived": "Landed",
     "delivery": "Delivery",
     "payment": "Payment",
     "closed": "Closed",
@@ -853,16 +855,11 @@
       "terms": "Agree the price and how the parcel changes hands. Nothing starts until the terms are fixed.",
       "handover": "The terms are fixed. Agree where and when, then mark the handover with a photo.",
       "transit": "The carrier has the parcel. Post updates, and at the end: posted by mail or handed to delivery.",
+      "arrived": "The flight has landed. Agree where and when the parcel is handed over — or post it onward.",
       "delivery": "What is left is confirming receipt.",
       "payment": "Settling up.",
       "closed": "The deal is closed. The record stays as it is.",
       "cancelled": "Called off before the handover. The record stays as it is."
-    },
-    "photo": {
-      "terms": "Photo of the item",
-      "handover": "Photo of the handover",
-      "transit": "Photo before sealing",
-      "delivery": "Photo of receipt"
     }
   },
   "deals": {
@@ -1467,6 +1464,13 @@
     "proposalTitle": "Proposed terms",
     "agreedTitle": "Agreed terms",
     "proposeTitle": "Propose terms",
+    "attachPhotos": "Attach photos of the shipment",
+    "photosChosen_one": "{{count}} photo attached",
+    "photosChosen_other": "{{count}} photos attached",
+    "reviewTitle": "This is what the carrier will see",
+    "reviewHint": "Check it before it goes into the chat — after this it becomes a card the other side answers.",
+    "confirmSend": "Propose these terms",
+    "backToEdit": "Back to editing",
     "counterTitle": "Counter-offer",
     "normalized": "Comparable figures",
     "price": "Price",
@@ -1563,6 +1567,9 @@
       "cash": "Cash",
       "platform": "On platform",
       "escrow": "Escrow",
+      "cash_on_delivery": "Cash on delivery",
+      "emoney_on_delivery": "E-money on delivery",
+      "platform_wallet": "From the platform wallet",
       "delay": "Delay",
       "damage": "Damage",
       "unreachable": "Unreachable",

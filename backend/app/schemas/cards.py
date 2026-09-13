@@ -38,6 +38,25 @@ HandoverMethod = Literal[
 #: adding a method means editing one line above and nothing else.
 HANDOVER_METHODS: frozenset[str] = frozenset(get_args(HandoverMethod))
 
+#: T3.11.27 — **the** settlement vocabulary, declared once, for the same reason
+#: as the handover methods above.
+#:
+#: Owner, 2026-09-08: «Опция расчета три: наличными при получении, электронными
+#: деньгами при получении, с кошелька на платформе». The trip is published with
+#: exactly these words (`models.marketplace`), and until now the deal answered
+#: the same question with a different set — `cash | platform | escrow` — that
+#: nothing translated into them. A carrier could publish «электронными при
+#: получении» and be handed an agreement saying «cash», and no screen could tell
+#: that was the same answer or a different one.
+#:
+#: Payloads written before today keep their old words: they are history, not
+#: choices, and the card renderer falls back to the raw key.
+PaymentMethod = Literal[
+    "cash_on_delivery", "emoney_on_delivery", "platform_wallet"
+]
+
+PAYMENT_METHODS: frozenset[str] = frozenset(get_args(PaymentMethod))
+
 
 class HandoverConditions(BaseModel):
     packaging: str | None = Field(default=None, max_length=200)
@@ -116,7 +135,11 @@ class DeliveryDeclared(BaseModel):
 
 
 class PaymentMethodAgreed(BaseModel):
-    method: Literal["cash", "platform", "escrow"]
+    # T3.11.27 — the same `PaymentMethod` the agreement itself uses. This card
+    # exists to **change** what the agreement says («модель может быть изменена
+    # по обоюдному согласию»), and a card whose options differ from the field it
+    # edits can only produce a disagreement neither screen can render.
+    method: PaymentMethod
 
 
 class PaymentDeclared(BaseModel):
@@ -124,7 +147,7 @@ class PaymentDeclared(BaseModel):
     # T3.11.07 — four characters: `USDT` and `USDC` are four, and a payment is
     # declared in the currency the deal was agreed in.
     currency: str = Field(default="USD", min_length=3, max_length=4)
-    method: Literal["cash", "platform", "escrow"] = "cash"
+    method: PaymentMethod = "cash_on_delivery"
 
 
 class ComplianceChecklist(BaseModel):

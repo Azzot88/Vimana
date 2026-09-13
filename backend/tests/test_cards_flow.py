@@ -284,7 +284,7 @@ async def test_money_is_not_declared_before_the_parcel_arrives(
     """
     r = await _card(
         client, sender_headers, deal.id, "payment.declared",
-        {"amount": 120, "currency": "USD", "method": "cash"},
+        {"amount": 120, "currency": "USD", "method": "cash_on_delivery"},
     )
     assert r.status_code == 409, r.text
 
@@ -314,7 +314,7 @@ async def test_payment_confirmation_closes_the_deal(
     await _deliver(session_maker, deal.id)
     declared = await _card(
         client, sender_headers, deal.id, "payment.declared",
-        {"amount": 120, "currency": "USD", "method": "cash"},
+        {"amount": 120, "currency": "USD", "method": "cash_on_delivery"},
     )
     assert declared.status_code == 201, declared.text
     assert declared.json()["requires_ack_by"] == "carrier"
@@ -1002,7 +1002,7 @@ async def test_closing_by_the_pair_seals_the_vault(
     await _deliver(session_maker, deal.id)
     declared = await _card(
         client, sender_headers, deal.id, "payment.declared",
-        {"amount": 120, "currency": "USD", "method": "cash"},
+        {"amount": 120, "currency": "USD", "method": "cash_on_delivery"},
     )
     await _ack(client, carrier_headers, deal.id, declared.json()["id"])
 

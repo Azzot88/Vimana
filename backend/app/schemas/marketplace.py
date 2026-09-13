@@ -484,6 +484,26 @@ class DealDetailOut(BaseModel):
     #: A suggestion, never a value the server writes: the price is what the two
     #: of them agree, and `price_total` stays the field they answer.
     trip_price_per_kg: float | None = None
+    # T3.11.27 (owner, 2026-09-12): «Условия передачи товара в отправку выбирает
+    # Перевозчик, и это должно указываться при формировании рейса. Для
+    # Отправителя он указывает как хочет получить посылку.»
+    #
+    # The carrier already states both ends when publishing (`handover_origin`,
+    # `handover_destination`). What was missing is that the agreement form never
+    # saw them, so it offered the sender every method there is — including the
+    # ones this carrier had said they do not do. Same master rule as the
+    # categories: «в заявке появляется только то что есть в опубликованном
+    # рейсе».
+    #
+    # Methods only, not the whole side: places and addresses are the carrier's
+    # own rows, shared deliberately in the deal and not by a lookup the other
+    # party can run. An empty list means the carrier named none, and the form
+    # then offers all of them — silence is not a refusal.
+    trip_handover_methods: list[str] = Field(default_factory=list)
+    trip_delivery_methods: list[str] = Field(default_factory=list)
+    #: The settlement model the trip was published with. The agreement's own
+    #: «Способ расчёта» opens on it rather than on a guess.
+    trip_payment_model: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

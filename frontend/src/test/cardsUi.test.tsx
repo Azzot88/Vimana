@@ -382,7 +382,6 @@ describe('DealStages', () => {
       deal={null}
       messages={[]}
       onDone={() => {}}
-      onMessage={() => {}}
     />
   )
 
@@ -502,7 +501,6 @@ describe('DealStages · the late stages', () => {
       deal={null}
       messages={[]}
       onDone={() => {}}
-      onMessage={() => {}}
     />
   )
 
@@ -709,7 +707,6 @@ describe('DealStages · a card already raised', () => {
       deal={null}
       messages={over.messages ?? []}
       onDone={() => {}}
-      onMessage={() => {}}
     />
   )
 
@@ -764,5 +761,56 @@ describe('DealStages · a card already raised', () => {
     expect(
       screen.getByText(/handed to the carrier|Передал перевозчику/i),
     ).toBeInTheDocument()
+  })
+})
+
+// ── T3.11.27 · landing is its own step ────────────────────────────────────
+
+describe('the ladder after the flight lands', () => {
+  const panel = (messages: VaultMessage[]) => (
+    <DealStages
+      dealId="d1"
+      status="in_transit"
+      myRole="carrier"
+      terms={null}
+      deal={null}
+      messages={messages}
+      onDone={() => {}}
+    />
+  )
+
+  it('stands on «в пути» until somebody says it landed', () => {
+    renderWithProviders(panel([]))
+    expect(screen.getByRole('heading', { name: /in transit|В пути/i })).toBeInTheDocument()
+  })
+
+  it('moves to «прилетел» on the carrier’s own update', () => {
+    /* «Разделить статусы Вылетел В Пути и Прилетел на два экрана» (owner,
+       2026-09-12). One rung covered a flight, a landing and a day of waiting
+       for a call — three situations that look the same on the ladder and feel
+       nothing alike to the person waiting. */
+    renderWithProviders(
+      panel([
+        msg({
+          card_kind: 'transit.update',
+          card_state: 'accepted',
+          card_payload: { stage: 'arrived' },
+        }),
+      ]),
+    )
+    expect(screen.getByRole('heading', { name: /landed|Прилетел/i })).toBeInTheDocument()
+  })
+
+  it('is not moved by a departure', () => {
+    renderWithProviders(
+      panel([
+        msg({
+          card_kind: 'transit.update',
+          card_state: 'accepted',
+          card_payload: { stage: 'departed' },
+        }),
+      ]),
+    )
+    expect(screen.getByRole('heading', { name: /in transit|В пути/i })).toBeInTheDocument()
   })
 })

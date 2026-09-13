@@ -112,7 +112,7 @@ MATRIX: dict[tuple[str, str], Case] = {
             "price_total": 50,
             "declared_value": 500,
             "currency": "USD",
-            "payment_method": "cash",
+            "payment_method": "cash_on_delivery",
         },
     ),
     ("POST", "/api/deals/{deal_id}/terms/hold"): Case(
