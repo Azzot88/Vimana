@@ -57,7 +57,7 @@ BASE = {
     "price_total": 100,
     "declared_value": 1200,
     "currency": "USD",
-    "payment_method": "cash",
+    "payment_method": "cash_on_delivery",
 }
 
 

@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DealDetail, DealStatus } from '../api/deals'
 import { DISPUTE_REASONS, openDispute, type DisputeReason } from '../api/admin'
-import { sendPhotoMessage, type VaultMessage } from '../api/dealvault'
+import type { VaultMessage } from '../api/dealvault'
 import {
   ALWAYS_AVAILABLE,
   DEAL_STAGES,
@@ -33,7 +33,6 @@ interface Props {
    *  raises that kind is not offered again. */
   messages: VaultMessage[]
   onDone: () => void
-  onMessage: (msg: VaultMessage) => void
 }
 
 /** T3.11.17 — the left-hand side of a deal: where it stands, and what to do next.
@@ -49,10 +48,11 @@ interface Props {
  *  out the stage for itself would be a second opinion about where a deal stands,
  *  and the two would disagree on the day it mattered.
  *
- *  The photograph belongs to the stage: at a handover it is a picture of the
- *  handover, before posting it is the open parcel. So the kind is preselected
- *  rather than chosen from a dropdown — that dropdown asked, at the moment
- *  somebody is holding a parcel and a phone, a question with one answer.
+ *  **No photograph belongs to a stage** (T3.11.27, 2026-09-12). Every picture in
+ *  a deal hangs on the act it is evidence for — the custody photos on their
+ *  cards, «вот что я отправляю» on the proposal. A panel that could file one
+ *  beside an act instead of on it is what left cards unconfirmable with their
+ *  own evidence three lines above them.
  *
  *  **The arbiter lives here too** (T3.11.27). It used to sit in `DealPage`,
  *  which is now rendered folded inside «Ещё о сделке» — an accordion whose own
@@ -72,14 +72,10 @@ export default function DealStages({
   deal,
   messages,
   onDone,
-  onMessage,
 }: Props) {
   const { t } = useTranslation()
   const [termsOpen, setTermsOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
   // T3.11.27 — the arbiter moved here from «Ещё о сделке». Owner's rule
   // 2026-09-07: «Спор как этап вклинивается в сделку на любом моменте» and
   // «Отдано, но не оплачено — доступно "Пригласить арбитра"». It was behind a
@@ -92,26 +88,19 @@ export default function DealStages({
   const [disputeBusy, setDisputeBusy] = useState(false)
   const [disputeError, setDisputeError] = useState('')
 
-  const currentKey: DealStageKey = stageOf(status)
-  const current = DEAL_STAGES.find((s) => s.key === currentKey)
+  /* T3.11.27 — the landing, read off the card that announced it (owner,
+     2026-09-12). A `transit.update` with `stage: arrived` is the carrier
+     saying the flight is down; it is already in the chain, so the ladder reads
+     it rather than keeping a second record. Superseded and declined updates
+     count too: the plane landed either way, and a correction to the ETA does
+     not un-land it. */
+  const arrived = messages.some(
+    (m) =>
+      m.card_kind === 'transit.update' &&
+      (m.card_payload as { stage?: string } | null)?.stage === 'arrived',
+  )
+  const currentKey: DealStageKey = stageOf(status, { arrived })
   const currentIndex = stageIndex(currentKey)
-
-  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !current?.photo) return
-    setBusy(true)
-    setError('')
-    try {
-      onMessage(await sendPhotoMessage(dealId, file, current.photo))
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response
-        ?.data?.detail
-      setError(typeof detail === 'string' ? detail : t('chat.uploadFailed'))
-    } finally {
-      setBusy(false)
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }
 
   const raiseDispute = async () => {
     setDisputeBusy(true)
@@ -127,9 +116,6 @@ export default function DealStages({
       setDisputeBusy(false)
     }
   }
-
-  const canAttach =
-    current?.photo && myRole && (current.photoBy ?? []).includes(myRole)
 
   /* T3.11.27 — «Отдано, но не оплачено» (owner, 2026-09-07). The parcel is with
      the person it was for and the money has not been settled: the one moment
@@ -344,21 +330,12 @@ export default function DealStages({
             money was the same second route to a status that was taken off the
             boarding pass for the same reason. */}
 
-        {canAttach && (
-          <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-body text-cyan hover:underline">
-            📷 {busy ? t('common.sending') : t(`stages.photo.${currentKey}`)}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              onChange={upload}
-              className="hidden"
-              disabled={busy}
-            />
-          </label>
-        )}
-
-        {error && <p className="text-xs font-body text-amber">{error}</p>}
+        {/* T3.11.27 — the stage's own camera button is gone (owner,
+            2026-09-12). Every photograph in a deal now hangs on the act it is
+            evidence for: the custody photos travel with their cards, and «вот
+            что я отправляю» travels with the proposal, where it can be several.
+            A picture filed beside an act instead of on it is what made a card
+            unconfirmable with its own evidence three lines above it. */}
 
         {/* T3.11.27 — «Отдано, но не оплачено — доступно "Пригласить арбитра"».
             Stated as a sentence with the action under it: the person reading it

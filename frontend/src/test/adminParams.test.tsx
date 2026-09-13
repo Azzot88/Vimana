@@ -28,8 +28,17 @@ vi.mock('../api/terms', async () => {
   return { ...actual, proposeTerms: vi.fn(), takeEditHold: vi.fn() }
 })
 
+vi.mock('../api/dealvault', async () => {
+  const actual =
+    await vi.importActual<typeof import('../api/dealvault')>('../api/dealvault')
+  // T3.11.27 — the proposal carries its photographs now, so the form reaches
+  // for the uploader the moment one is chosen.
+  return { ...actual, uploadAttachment: vi.fn() }
+})
+
 import { listParams, paramHistory, setParam } from '../api/platformParams'
 import { proposeTerms } from '../api/terms'
+import { uploadAttachment } from '../api/dealvault'
 
 /** `roles` as an array, not `role` as a string.
  *
@@ -76,6 +85,11 @@ beforeEach(() => {
   vi.mocked(listParams).mockReset().mockResolvedValue([row()])
   vi.mocked(setParam).mockReset().mockResolvedValue({} as never)
   vi.mocked(paramHistory).mockReset().mockResolvedValue([])
+  // T3.11.27 — reset here rather than trusting the default: one test rejects
+  // the proposal on purpose, and a leaked rejection would fail the next file's
+  // worth of tests with an error nobody wrote.
+  vi.mocked(proposeTerms).mockReset().mockResolvedValue({ id: 'terms-1' } as never)
+  vi.mocked(uploadAttachment).mockReset().mockResolvedValue({} as never)
 })
 
 describe('AdminParamsPage', () => {
@@ -145,20 +159,65 @@ describe('AdminParamsPage', () => {
 })
 
 describe('TermsProposeForm', () => {
-  it('sends the numbers as numbers', async () => {
+  /* T3.11.27 (owner, 2026-09-12) — «Отправить» opens the preview; the proposal
+     leaves on the second press. Three numbers and a settlement method are what
+     the form requires, so every path below fills those and then confirms. */
+  const fill = (over: { price?: string; method?: string } = {}) => {
+    const numbers = screen.getAllByRole('spinbutton')
+    fireEvent.change(numbers[0], { target: { value: '4' } })
+    fireEvent.change(numbers[1], { target: { value: '900' } })
+    fireEvent.change(numbers[2], { target: { value: over.price ?? '120' } })
+    const selects = screen.getAllByRole('combobox')
+    const settlement = selects[selects.length - 1]
+    fireEvent.change(settlement, {
+      target: { value: over.method ?? 'cash_on_delivery' },
+    })
+  }
+  const review = () => fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
+  const confirm = () =>
+    fireEvent.click(
+      screen.getByText(/propose these terms|Предложить условия перевозчику/i),
+    )
+
+  it('shows the proposal before it sends it', async () => {
+    /* «После выбора условий должно показываться окно предпросмотра перед
+       отправкой в чат.» The form is long and mostly optional, so the first
+       press used to be a press into the dark — the other side read the
+       proposal before its author ever saw it whole. */
+    renderWithProviders(
+      <TermsProposeForm dealId="d1" myRole="sender" onDone={() => {}} />,
+    )
+    fill()
+    review()
+
+    expect(
+      screen.getByText(/what the carrier will see|увидит перевозчик/i),
+    ).toBeInTheDocument()
+    expect(proposeTerms).not.toHaveBeenCalled()
+  })
+
+  it('goes back to editing without sending anything', async () => {
+    renderWithProviders(
+      <TermsProposeForm dealId="d1" myRole="sender" onDone={() => {}} />,
+    )
+    fill()
+    review()
+    fireEvent.click(screen.getByText(/back to editing|Вернуться к редактированию/i))
+
+    expect(
+      screen.queryByText(/what the carrier will see|увидит перевозчик/i),
+    ).not.toBeInTheDocument()
+    expect(proposeTerms).not.toHaveBeenCalled()
+  })
+
+  it('sends the numbers as numbers, and the settlement with them', async () => {
     const onDone = vi.fn()
     renderWithProviders(
       <TermsProposeForm dealId="d1" myRole="sender" onDone={onDone} />,
     )
-    // T3.11.27 — the form grew from three numbers to the four sections of the
-    // agreement, and the numeric boxes now read weight, declared value, price:
-    // the price moved to the payment section at the bottom, which is where a
-    // reader looks for it.
-    const numbers = screen.getAllByRole('spinbutton')
-    fireEvent.change(numbers[0], { target: { value: '4' } })
-    fireEvent.change(numbers[1], { target: { value: '900' } })
-    fireEvent.change(numbers[2], { target: { value: '120' } })
-    fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
+    fill()
+    review()
+    confirm()
 
     await waitFor(() =>
       expect(proposeTerms).toHaveBeenCalledWith(
@@ -167,6 +226,9 @@ describe('TermsProposeForm', () => {
           weight_kg: 4,
           price_total: 120,
           declared_value: 900,
+          // T3.11.27 — «Способ оплаты» moved inside the form: it was a chip
+          // beside it, raising a second card about the same agreement.
+          payment_method: 'cash_on_delivery',
           description: null,
           supersedes_id: null,
           payer: 'sender',
@@ -187,11 +249,9 @@ describe('TermsProposeForm', () => {
         onDone={() => {}}
       />,
     )
-    const numbers = screen.getAllByRole('spinbutton')
-    fireEvent.change(numbers[0], { target: { value: '1' } })
-    fireEvent.change(numbers[1], { target: { value: '50' } })
-    fireEvent.change(numbers[2], { target: { value: '100' } })
-    fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
+    fill({ price: '100' })
+    review()
+    confirm()
 
     await waitFor(() =>
       expect(proposeTerms).toHaveBeenCalledWith(
@@ -207,11 +267,9 @@ describe('TermsProposeForm', () => {
     renderWithProviders(
       <TermsProposeForm dealId="d1" myRole="sender" onDone={onDone} />,
     )
-    const numbers = screen.getAllByRole('spinbutton')
-    fireEvent.change(numbers[0], { target: { value: '1' } })
-    fireEvent.change(numbers[1], { target: { value: '50' } })
-    fireEvent.change(numbers[2], { target: { value: '100' } })
-    fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
+    fill({ price: '100' })
+    review()
+    confirm()
 
     await waitFor(() =>
       expect(
@@ -219,5 +277,74 @@ describe('TermsProposeForm', () => {
       ).toBeInTheDocument(),
     )
     expect(onDone).not.toHaveBeenCalled()
+  })
+
+  it('hangs the chosen photos on the proposal itself', async () => {
+    /* «Над кнопкой добавить возможность загрузки нескольких фото товара.» They
+       attach to the proposal, not to a chat row beside it — a picture filed
+       beside an act is the defect this whole batch is about. */
+    vi.mocked(proposeTerms).mockResolvedValue({ id: 'terms-1' } as never)
+    renderWithProviders(
+      <TermsProposeForm dealId="d1" myRole="sender" onDone={() => {}} />,
+    )
+    fill()
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement
+    const one = new File(['a'], 'front.png', { type: 'image/png' })
+    const two = new File(['b'], 'back.png', { type: 'image/png' })
+    fireEvent.change(input, { target: { files: [one, two] } })
+    review()
+    confirm()
+
+    await waitFor(() =>
+      expect(uploadAttachment).toHaveBeenCalledWith(
+        'd1',
+        'terms-1',
+        one,
+        'cargo_photo',
+      ),
+    )
+    expect(uploadAttachment).toHaveBeenCalledWith(
+      'd1',
+      'terms-1',
+      two,
+      'cargo_photo',
+    )
+  })
+
+  it('offers only the handover methods this carrier published', () => {
+    /* «Условия передачи товара в отправку выбирает Перевозчик… при формировании
+       рейса» — the same master rule as the categories. Offering a sender
+       «постамат» on a trip whose carrier only meets people is offering them a
+       refusal. */
+    renderWithProviders(
+      <TermsProposeForm
+        dealId="d1"
+        myRole="sender"
+        fromBoard={
+          {
+            trip_handover_methods: ['in_person'],
+            trip_delivery_methods: ['in_person', 'local_post'],
+          } as never
+        }
+        onDone={() => {}}
+      />,
+    )
+    const [handover] = screen.getAllByRole('combobox')
+    const values = Array.from(handover.querySelectorAll('option')).map(
+      (o) => (o as HTMLOptionElement).value,
+    )
+    expect(values).toEqual(['', 'in_person'])
+  })
+
+  it('offers all of them when the trip named none', () => {
+    // Silence is not a refusal: `allowed` empty means the carrier said nothing,
+    // and a form with one option would invent a restriction they never stated.
+    renderWithProviders(
+      <TermsProposeForm dealId="d1" myRole="sender" onDone={() => {}} />,
+    )
+    const [handover] = screen.getAllByRole('combobox')
+    expect(handover.querySelectorAll('option').length).toBe(6)
   })
 })

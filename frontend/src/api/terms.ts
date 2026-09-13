@@ -63,7 +63,11 @@ export interface TermsInput {
   currency?: string
   dimensions_cm?: number[] | null
   deadline?: string | null
-  payment_method?: 'cash' | 'platform' | 'escrow'
+  /** T3.11.27 — one of `PAYMENT_METHODS`: the same three words the trip is
+   *  published with. Required in practice — the owner's rule 2026-09-08 is
+   *  «модель расчёта обязательна» — but optional on the wire so an older client
+   *  and the server's own default stay in step. */
+  payment_method?: string
   description?: string | null
   supersedes_id?: string | null
   // T3.11.27 — the four sections. Every one optional: a deal born from the

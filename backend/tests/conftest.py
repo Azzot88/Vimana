@@ -2703,7 +2703,7 @@ async def agree_terms(client, sender_headers, carrier_headers, deal_id, **over):
         "price_total": 60,
         "declared_value": 500,
         "currency": "USD",
-        "payment_method": "cash",
+        "payment_method": "cash_on_delivery",
     }
     body.update(over)
     proposal = await client.post(

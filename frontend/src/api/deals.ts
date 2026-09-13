@@ -65,6 +65,16 @@ export interface DealDetail extends Deal {
   /** The carrier's rate, for suggesting a total from a weight. A suggestion:
    *  the price is still what the two of them agree on. */
   trip_price_per_kg?: number | null
+  /** T3.11.27 — what the carrier said they do at each end when they published
+   *  the trip (owner, 2026-09-12: «Условия передачи товара в отправку выбирает
+   *  Перевозчик, и это должно указываться при формировании рейса»). Empty means
+   *  they named none, and the agreement form then offers the whole vocabulary:
+   *  silence is not a refusal. */
+  trip_handover_methods?: string[]
+  trip_delivery_methods?: string[]
+  /** The settlement model the trip was published with — what «Способ расчёта»
+   *  opens on instead of a guess. */
+  trip_payment_model?: string | null
 }
 
 export interface MatchDealPayload {

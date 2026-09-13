@@ -185,21 +185,19 @@ export const uploadAttachment = (
   )
 }
 
-/**
- * High-level helper: creates a placeholder message and attaches the file.
- * Returns the reloaded message (with attachment) for the UI to insert.
+/** T3.11.27 — **removed 2026-09-12**: `sendPhotoMessage`.
+ *
+ *  It created an empty message for a photograph to hang on, which is what made
+ *  a picture a row of its own in the conversation. That is exactly the shape
+ *  the owner's last two reports were about: a handover photo beside the card
+ *  that needed it, the same picture drawn twice, and a declaration nobody could
+ *  confirm because its evidence was somewhere else.
+ *
+ *  Photographs attach to the act they are evidence for — `uploadAttachment` on
+ *  a card's own message — and its last caller went with the stage camera. Left
+ *  named here rather than silently deleted, because «загрузить фото в чат» is
+ *  an obvious thing to reach for, and the answer is not «write this again».
  */
-export const sendPhotoMessage = async (
-  dealId: string,
-  file: File,
-  kind: AttachmentKind,
-): Promise<VaultMessage> => {
-  const { data: msg } = await createMessage(dealId, '', false)
-  await uploadAttachment(dealId, msg.id, file, kind)
-  const { data: page } = await listMessages(dealId, { limit: 100 })
-  const fresh = page.items.find((m) => m.id === msg.id)
-  return fresh ?? msg
-}
 
 /** T3.34 — answer a card that is waiting on this side. */
 export async function ackCard(

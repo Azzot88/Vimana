@@ -46,6 +46,21 @@ export const HANDOVER_METHODS = [
   'poste_restante',
 ] as const
 
+/** T3.11.27 — the settlement vocabulary, the same three words on the trip, in
+ *  the agreement and on the money cards (owner, 2026-09-08: «Опция расчета три»).
+ *
+ *  It is `trips.PAYMENT_MODELS` said once more rather than imported from there
+ *  on purpose: that list is what a **carrier publishes**, this is what a **deal
+ *  settles by**, and they are equal today by decision rather than by nature —
+ *  the labels already live apart (`trips.paymentModel.*` and `cards.opt.*`).
+ *  The mirror the server keeps is `schemas/cards.PaymentMethod`, and that is
+ *  the pair a reviewer compares. */
+export const PAYMENT_METHODS = [
+  'cash_on_delivery',
+  'emoney_on_delivery',
+  'platform_wallet',
+] as const
+
 const MEETING_FIELDS: CardField[] = [
   { name: 'method', type: 'select', options: HANDOVER_METHODS, required: true },
   { name: 'city', type: 'text' },
@@ -136,7 +151,7 @@ export const CARD_FORMS: CardFormSpec[] = [
       {
         name: 'method',
         type: 'select',
-        options: ['cash', 'platform', 'escrow'],
+        options: [...PAYMENT_METHODS],
         required: true,
       },
     ],
@@ -156,7 +171,7 @@ export const CARD_FORMS: CardFormSpec[] = [
       {
         name: 'method',
         type: 'select',
-        options: ['cash', 'platform', 'escrow'],
+        options: [...PAYMENT_METHODS],
         required: true,
       },
     ],

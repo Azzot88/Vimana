@@ -463,7 +463,6 @@ export default function DealVaultPage() {
               deal={deal}
               messages={messages}
               onDone={load}
-              onMessage={(msg) => setMessages((prev) => [...prev, msg])}
             />
           )}
         </section>
