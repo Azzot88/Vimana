@@ -765,6 +765,43 @@ describe('DealStages · a card already raised', () => {
     expect(
       screen.queryByText(/handed to the carrier|Передал перевозчику/i),
     ).not.toBeInTheDocument()
+    /* And **not** «сейчас ход второй стороны»: moving the meeting is still
+       this person's to press, so the stage has not gone quiet — it has one
+       fewer button. The two silences this panel distinguishes are «нечего
+       нажимать» and «не твой ход»; a standing declaration is neither. */
+    expect(
+      screen.getByText(/move the meeting|Перенести встречу/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/other side's turn|ход второй стороны/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('says whose turn it is once every card of theirs is standing', () => {
+    /* Both of the carrier's cards at this stage are awaiting an answer — the
+       receipt they declared and the meeting they asked to move. Now there is
+       genuinely nothing to press, and that is when the line belongs. */
+    renderWithProviders(
+      panel({
+        myRole: 'carrier',
+        messages: [
+          msg({
+            card_kind: 'handoff.received',
+            card_state: 'pending',
+            requires_ack_by: 'sender',
+          }),
+          msg({
+            id: 'm2',
+            card_kind: 'pickup.proposed',
+            card_state: 'pending',
+            requires_ack_by: 'sender',
+          }),
+        ],
+      }),
+    )
+    expect(
+      screen.queryByText(/received the parcel|Получил посылку/i),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByText(/other side's turn|ход второй стороны/i),
     ).toBeInTheDocument()
