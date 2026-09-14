@@ -249,7 +249,7 @@ V_verify_norm = V_verify_factor / 1.30                    — диапазон [
 ### 3.2 Арбитр и споры
 1. Роль `arbiter` в `users.roles` (выдаётся предложением, `T3.42`); консоль. Роли «Оператор» нет (`D-CARGO-MODEL`).
 2. `Dispute` — id, deal_id, opened_by, status, verdict.
-3. `OperatorAccessGrant` — доступ к DealVault конкретной сделки по запросу стороны. Переименовывается в `ArbiterAccessGrant` в Фазе 3.12.
+3. `ArbiterAccessGrant` (до `T3.12.02` — `OperatorAccessGrant`) — доступ к DealVault конкретной сделки по запросу стороны.
 4. Вердикт → при наличии эскроу (Фаза 5) направляет разблокировку через ключ арбитра.
 
 ### ✅ Phase 3 Integrity Check
@@ -554,7 +554,7 @@ V_verify_norm = V_verify_factor / 1.30                    — диапазон [
 | `issue.reported` | категория (задержка · повреждение · недоступность · несоответствие), описание, фото |
 | `cancel.requested` / `.confirmed` | причина, кто несёт понесённые расходы |
 | `dispute.opened` | существует — `DealEvent.dispute_opened` |
-| `arbiter.joined` | существует — `arbiter_opened` + отметка о выданном `OperatorAccessGrant` |
+| `arbiter.joined` | существует — `arbiter_opened` + отметка о выданном `ArbiterAccessGrant` |
 | `dispute.resolved` | вердикт, распределение средств |
 
 **Группа 6 · Закрытие** — уровень 0

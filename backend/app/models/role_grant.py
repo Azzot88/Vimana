@@ -2,7 +2,7 @@
 
 The role column said what somebody may do and never said why. For an arbiter that
 gap is the sharp one: the arbiter opens a deal's vault through an
-`OperatorAccessGrant` (T3.2), and **every one of those reads is written into the
+`ArbiterAccessGrant` (T3.2), and **every one of those reads is written into the
 chain** — so the record of the power being *used* is immutable, while the record
 of where the power came from did not exist at all.
 

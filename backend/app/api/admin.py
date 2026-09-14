@@ -32,7 +32,7 @@ from app.models.deal import (
     DealVaultMessage,
     Dispute,
     DisputeStatus,
-    OperatorAccessGrant,
+    ArbiterAccessGrant,
 )
 from app.models.user import User
 from app.schemas.dealvault import MessageOut
@@ -167,7 +167,7 @@ async def open_dispute(
     await db.flush()
 
     # T3.2 — opener implicitly consents to arbiter reading DealVault.
-    db.add(OperatorAccessGrant(dispute_id=dispute.id, granted_by=current_user.id))
+    db.add(ArbiterAccessGrant(dispute_id=dispute.id, granted_by=current_user.id))
 
     deal.status = DealStatus.disputed
     # T3.7 — a dispute may open after closing (problems surface post-confirm);
@@ -222,14 +222,14 @@ async def grant_arbiter_access(
         raise HTTPException(status_code=403, detail="Not a deal participant")
 
     existing = await db.execute(
-        select(OperatorAccessGrant).where(
-            OperatorAccessGrant.dispute_id == dispute_id,
-            OperatorAccessGrant.granted_by == current_user.id,
+        select(ArbiterAccessGrant).where(
+            ArbiterAccessGrant.dispute_id == dispute_id,
+            ArbiterAccessGrant.granted_by == current_user.id,
         )
     )
     row = existing.scalar_one_or_none()
     if row is None:
-        db.add(OperatorAccessGrant(dispute_id=dispute_id, granted_by=current_user.id))
+        db.add(ArbiterAccessGrant(dispute_id=dispute_id, granted_by=current_user.id))
     else:
         row.revoked_at = None
 
@@ -262,9 +262,9 @@ async def revoke_arbiter_access(
         raise HTTPException(status_code=404, detail="Dispute not found")
 
     row_result = await db.execute(
-        select(OperatorAccessGrant).where(
-            OperatorAccessGrant.dispute_id == dispute_id,
-            OperatorAccessGrant.granted_by == current_user.id,
+        select(ArbiterAccessGrant).where(
+            ArbiterAccessGrant.dispute_id == dispute_id,
+            ArbiterAccessGrant.granted_by == current_user.id,
         )
     )
     row = row_result.scalar_one_or_none()
@@ -471,11 +471,11 @@ async def arbiter_read_vault(
             raise HTTPException(status_code=403, detail="Not your claimed dispute")
         if dispute.status not in (DisputeStatus.claimed, DisputeStatus.resolved):
             raise HTTPException(status_code=403, detail="Dispute not claimed")
-        # T3.2 — at least one active OperatorAccessGrant must exist.
+        # T3.2 — at least one active ArbiterAccessGrant must exist.
         active_grant = await db.execute(
-            select(OperatorAccessGrant).where(
-                OperatorAccessGrant.dispute_id == dispute.id,
-                OperatorAccessGrant.revoked_at.is_(None),
+            select(ArbiterAccessGrant).where(
+                ArbiterAccessGrant.dispute_id == dispute.id,
+                ArbiterAccessGrant.revoked_at.is_(None),
             )
         )
         if active_grant.scalar_one_or_none() is None:
@@ -617,7 +617,7 @@ async def delete_user(
         DealParticipant,
         DealVaultMessage,
         Dispute,
-        OperatorAccessGrant,
+        ArbiterAccessGrant,
     )
     from app.models.marketplace import Chat, ChatMessage, Order, Trip
     from app.models.social import Connection, InviteLink
@@ -664,8 +664,8 @@ async def delete_user(
         ]
         if dispute_ids:
             await db.execute(
-                delete(OperatorAccessGrant).where(
-                    OperatorAccessGrant.dispute_id.in_(dispute_ids)
+                delete(ArbiterAccessGrant).where(
+                    ArbiterAccessGrant.dispute_id.in_(dispute_ids)
                 )
             )
             await db.execute(delete(Dispute).where(Dispute.id.in_(dispute_ids)))

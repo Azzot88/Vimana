@@ -44,7 +44,7 @@ from app.models.deal import (
     DealStatus,
     DealVaultMessage,
     Dispute,
-    OperatorAccessGrant,
+    ArbiterAccessGrant,
 )
 from app.models.marketplace import Chat, ChatMessage, Order, Trip
 from app.models.notices import PlatformNotice, RouteNote
@@ -138,8 +138,8 @@ def cleanup_e2e_users() -> dict:
             ]
             if dispute_ids:
                 db.execute(
-                    delete(OperatorAccessGrant).where(
-                        OperatorAccessGrant.dispute_id.in_(dispute_ids)
+                    delete(ArbiterAccessGrant).where(
+                        ArbiterAccessGrant.dispute_id.in_(dispute_ids)
                     )
                 )
                 db.execute(delete(Dispute).where(Dispute.id.in_(dispute_ids)))
@@ -244,14 +244,14 @@ def cleanup_e2e_users() -> dict:
         ]
         if stray_disputes:
             db.execute(
-                delete(OperatorAccessGrant).where(
-                    OperatorAccessGrant.dispute_id.in_(stray_disputes)
+                delete(ArbiterAccessGrant).where(
+                    ArbiterAccessGrant.dispute_id.in_(stray_disputes)
                 )
             )
             db.execute(delete(Dispute).where(Dispute.id.in_(stray_disputes)))
         db.execute(
-            delete(OperatorAccessGrant).where(
-                OperatorAccessGrant.granted_by.in_(user_ids)
+            delete(ArbiterAccessGrant).where(
+                ArbiterAccessGrant.granted_by.in_(user_ids)
             )
         )
 

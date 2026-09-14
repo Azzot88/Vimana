@@ -827,7 +827,7 @@ async def record_card(
 
     Disputes and sealing are not raised through `POST /cards` and should not be:
     those endpoints do real work the card cannot carry — issuing an
-    `OperatorAccessGrant`, closing the hash chain. What they were missing is the
+    `ArbiterAccessGrant`, closing the hash chain. What they were missing is the
     other half: the deal's own record showed a status change with no card
     explaining it, so a party reading the chat saw the conversation stop.
 

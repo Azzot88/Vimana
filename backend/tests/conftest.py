@@ -990,22 +990,48 @@ async def _ensure_trip_nostr_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE trips ADD COLUMN {col} {ddl}"))
 
 
-async def _ensure_operator_access_grants(engine) -> None:
-    """T3.2 schema fix: operator_access_grants table. Idempotent."""
+async def _ensure_arbiter_access_grants(engine) -> None:
+    """T3.2 schema fix: the arbiter grants table. Idempotent.
+
+    T3.12.02 — was `operator_access_grants`. `vimana_test` is never reset
+    (`ENVIRONMENT §8`), so an old table is renamed the way `0089` renames it in
+    production. If an empty new table already stands beside the old one, the
+    old rows move over and the old table goes: two tables for one grant would
+    let a test read the one the code no longer writes.
+    """
     async with engine.begin() as conn:
-        exists = (
+
+        async def has(name: str) -> bool:
+            return (
+                await conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.tables "
+                        "WHERE table_name = :name"
+                    ),
+                    {"name": name},
+                )
+            ).fetchone() is not None
+
+        old = await has("operator_access_grants")
+        exists = await has("arbiter_access_grants")
+        if old and not exists:
+            await conn.execute(
+                text("ALTER TABLE operator_access_grants RENAME TO arbiter_access_grants")
+            )
+            exists = True
+        elif old and exists:
             await conn.execute(
                 text(
-                    "SELECT 1 FROM information_schema.tables "
-                    "WHERE table_name='operator_access_grants'"
+                    "INSERT INTO arbiter_access_grants "
+                    "SELECT * FROM operator_access_grants ON CONFLICT DO NOTHING"
                 )
             )
-        ).fetchone()
+            await conn.execute(text("DROP TABLE operator_access_grants"))
         if not exists:
             await conn.execute(
                 text(
                     """
-                    CREATE TABLE operator_access_grants (
+                    CREATE TABLE arbiter_access_grants (
                         id UUID PRIMARY KEY,
                         dispute_id UUID NOT NULL REFERENCES disputes(id),
                         granted_by UUID NOT NULL REFERENCES users(id),
@@ -1370,8 +1396,21 @@ async def _ensure_vault_card_columns(engine) -> None:
         await conn.execute(
             text(
                 "DO $$ BEGIN CREATE TYPE cardackrole AS ENUM "
-                "('sender','carrier','recipient','operator'); "
+                "('sender','carrier','recipient','arbiter'); "
                 "EXCEPTION WHEN duplicate_object THEN null; END $$;"
+            )
+        )
+        # T3.12.02 — a test database created before the rename still holds
+        # `operator`; rename it in place, the way `0089` does, so the value the
+        # model writes exists.
+        await conn.execute(
+            text(
+                "DO $$ BEGIN "
+                "IF EXISTS (SELECT 1 FROM pg_enum e "
+                "JOIN pg_type t ON t.oid = e.enumtypid "
+                "WHERE t.typname = 'cardackrole' AND e.enumlabel = 'operator') THEN "
+                "ALTER TYPE cardackrole RENAME VALUE 'operator' TO 'arbiter'; "
+                "END IF; END $$;"
             )
         )
         for ddl in (
@@ -2062,7 +2101,7 @@ async def test_engine():
     await _ensure_webauthn_table(engine)
     await _ensure_nostr_event_columns(engine)
     await _ensure_threshold_columns(engine)
-    await _ensure_operator_access_grants(engine)
+    await _ensure_arbiter_access_grants(engine)
     await _ensure_trip_nostr_columns(engine)
     await _ensure_publish_metrics_table(engine)
     await _ensure_deal_participants(engine)

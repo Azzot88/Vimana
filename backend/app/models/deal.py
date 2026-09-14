@@ -81,12 +81,15 @@ class CardState(str, enum.Enum):
 
 class CardAckRole(str, enum.Enum):
     """Who owes the answer. Resolved against `Deal.sender_id` / `carrier_id` /
-    `recipient_id`; `operator` is the arbiter surface."""
+    `recipient_id`; `arbiter` is the arbiter surface.
+
+    T3.12.02 — was `operator`, a role that does not exist (owner, 2026-09-13).
+    Renamed in the database by `0089`, not added beside the old value."""
 
     sender = "sender"
     carrier = "carrier"
     recipient = "recipient"
-    operator = "operator"
+    arbiter = "arbiter"
 
 
 class DisputeStatus(str, enum.Enum):
@@ -409,7 +412,7 @@ class DealParticipant(Base):
     )
 
 
-class OperatorAccessGrant(Base):
+class ArbiterAccessGrant(Base):
     """T3.2 — explicit consent from a deal participant to let the arbiter read
     DealVault for a given dispute.
 
@@ -420,7 +423,8 @@ class OperatorAccessGrant(Base):
     grants; arbiter needs ≥1 non-revoked grant on the dispute to read.
     """
 
-    __tablename__ = "operator_access_grants"
+    # T3.12.02 — was `operator_access_grants`; renamed by `0089` with its rows.
+    __tablename__ = "arbiter_access_grants"
     __table_args__ = (
         UniqueConstraint(
             "dispute_id", "granted_by", name="uq_grant_dispute_party"

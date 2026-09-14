@@ -44,7 +44,7 @@ export interface VaultMessage {
   card_kind?: string | null
   card_payload?: Record<string, unknown> | null
   card_state?: 'pending' | 'accepted' | 'declined' | 'expired' | 'superseded' | null
-  requires_ack_by?: 'sender' | 'carrier' | 'recipient' | 'operator' | null
+  requires_ack_by?: 'sender' | 'carrier' | 'recipient' | 'arbiter' | null
   acked_by_id?: string | null
   acked_at?: string | null
   supersedes_id?: string | null

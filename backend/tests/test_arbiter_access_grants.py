@@ -1,4 +1,4 @@
-"""T3.2 — OperatorAccessGrant + grant/revoke flow + arbiter vault gate."""
+"""T3.2 — ArbiterAccessGrant + grant/revoke flow + arbiter vault gate."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -115,13 +115,13 @@ async def test_opening_dispute_auto_creates_grant_from_opener(
 ):
     from sqlalchemy import select
 
-    from app.models.deal import OperatorAccessGrant
+    from app.models.deal import ArbiterAccessGrant
 
     d = _open_dispute
     async with session_maker() as db:
         rows = await db.execute(
-            select(OperatorAccessGrant).where(
-                OperatorAccessGrant.dispute_id == d["dispute_id"]
+            select(ArbiterAccessGrant).where(
+                ArbiterAccessGrant.dispute_id == d["dispute_id"]
             )
         )
         grants = list(rows.scalars())
@@ -150,12 +150,23 @@ async def test_an_arbiter_who_is_the_recipient_cannot_take_the_dispute(
     assert claim.status_code == 403
 
 
+def test_the_role_is_called_arbiter():
+    """T3.12.02 — «Роли "Оператор" не существует». The old names are gone from
+    the model, not kept as aliases: an alias is how a second word for one role
+    survives another year."""
+    from app.models.deal import ArbiterAccessGrant, CardAckRole
+
+    assert CardAckRole.arbiter.value == "arbiter"
+    assert "operator" not in {role.value for role in CardAckRole}
+    assert ArbiterAccessGrant.__tablename__ == "arbiter_access_grants"
+
+
 async def test_counterparty_grant_endpoint_creates_second_grant(
     client, _open_dispute, session_maker
 ):
     from sqlalchemy import select
 
-    from app.models.deal import OperatorAccessGrant
+    from app.models.deal import ArbiterAccessGrant
 
     d = _open_dispute
     resp = await client.post(
@@ -166,8 +177,8 @@ async def test_counterparty_grant_endpoint_creates_second_grant(
 
     async with session_maker() as db:
         rows = await db.execute(
-            select(OperatorAccessGrant).where(
-                OperatorAccessGrant.dispute_id == d["dispute_id"]
+            select(ArbiterAccessGrant).where(
+                ArbiterAccessGrant.dispute_id == d["dispute_id"]
             )
         )
         grants = list(rows.scalars())
@@ -195,7 +206,7 @@ async def test_grant_is_idempotent_reactivating_after_revoke(
 ):
     from sqlalchemy import select
 
-    from app.models.deal import OperatorAccessGrant
+    from app.models.deal import ArbiterAccessGrant
 
     d = _open_dispute
 
@@ -214,8 +225,8 @@ async def test_grant_is_idempotent_reactivating_after_revoke(
 
     async with session_maker() as db:
         rows = await db.execute(
-            select(OperatorAccessGrant).where(
-                OperatorAccessGrant.dispute_id == d["dispute_id"]
+            select(ArbiterAccessGrant).where(
+                ArbiterAccessGrant.dispute_id == d["dispute_id"]
             )
         )
         grants = list(rows.scalars())
