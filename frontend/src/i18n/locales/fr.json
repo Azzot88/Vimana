@@ -390,6 +390,22 @@
       "infected": "infecté"
     }
   },
+  "recipientOffer": {
+    "title": "On vous propose le rôle de destinataire",
+    "sectionTitle": "Rôle de destinataire",
+    "sectionHint": "Propositions de recevoir un colis. Rien de l’accord n’est à vous tant que vous n’acceptez pas.",
+    "route": "Trajet",
+    "from": "De la part de",
+    "cargo": "Ce qui est envoyé",
+    "nothingYet": "Tant que vous n’acceptez pas, vous ne voyez ni l’accord ni sa discussion.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "declineRefuse": "Refuser et ne plus me proposer ce rôle",
+    "declined": "Vous avez refusé la proposition.",
+    "answerFailed": "Impossible d’envoyer la réponse",
+    "refuseToggle": "Ne pas me proposer le rôle de destinataire",
+    "refuseHint": "Les expéditeurs verront que vous n’acceptez pas les propositions."
+  },
   "recipient": {
     "foundOnPlatform": "Trouvés sur la plateforme",
     "pendingInvite": "Invitation envoyée",
@@ -406,7 +422,12 @@
     "inviteCopied": "Lien copié — envoyez-le au destinataire",
     "inviteError": "Impossible de créer l'invitation",
     "joinTitle": "Connexion au chat de la transaction…",
-    "joinError": "Impossible de rejoindre"
+    "joinError": "Impossible de rejoindre",
+    "offerSent": "Proposition envoyée à {{name}} — destinataire dès qu’il accepte",
+    "withdraw": "Retirer",
+    "current": "Destinataire : {{name}}",
+    "pending": "En attente de réponse : {{name}}",
+    "linkPending": "Lien envoyé — en attente de réponse"
   },
   "verification": {
     "sectionTitle": "Vérification d'identité",

@@ -48,15 +48,25 @@ async def party_role(
             select(DealParticipant.id).where(
                 DealParticipant.deal_id == deal.id,
                 DealParticipant.user_id == user_id,
-                DealParticipant.revoked_at.is_(None),
+                *_ACCEPTED,
             )
         )
     ).first()
     return "recipient" if row is not None else None
 
 
+#: T3.12.05 — only an accepted offer is a role (owner, 2026-09-14): «роль
+#: предлагается, а не назначается». A pending, declined or revoked row gives
+#: nothing — not the deal, not its list, not its vault.
+_ACCEPTED = (
+    DealParticipant.accepted_at.is_not(None),
+    DealParticipant.declined_at.is_(None),
+    DealParticipant.revoked_at.is_(None),
+)
+
+
 def recipient_deal_ids(user_id: uuid.UUID):
     return select(DealParticipant.deal_id).where(
         DealParticipant.user_id == user_id,
-        DealParticipant.revoked_at.is_(None),
+        *_ACCEPTED,
     )

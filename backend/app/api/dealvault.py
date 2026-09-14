@@ -672,6 +672,9 @@ async def decrypt_message_for_me(
                 select(DP).where(
                     DP.deal_id == deal_id,
                     DP.user_id == current_user.id,
+                    # T3.12.05 — an offer not yet accepted reads nothing.
+                    DP.accepted_at.is_not(None),
+                    DP.declined_at.is_(None),
                     DP.revoked_at.is_(None),
                 )
             )

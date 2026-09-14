@@ -168,6 +168,18 @@
     "cta": "Sprawdź sposoby logowania",
     "note": "Miejsce jest przybliżone i często błędne: sieci komórkowe i VPN przesuwają je o setki kilometrów. Ten list nie jest subskrypcją i nie da się go wyłączyć."
   },
+  "recipient_offered": {
+    "subject": "Vimana · Proponujemy ci rolę odbiorcy",
+    "preheader": "Na razie nic się nie zmieniło — transakcja czeka na twoją odpowiedź",
+    "heading": "Proponujemy ci rolę odbiorcy",
+    "body": [
+      "Ktoś wskazał cię jako odbiorcę paczki na platformie. Dla ciebie nic się nie zmieniło: transakcja i jej czat otworzą się dopiero po przyjęciu roli.",
+      "Otwórz konto, aby zobaczyć trasę i nadawcę, a następnie przyjmij lub odrzuć. Możesz też poprosić, by nie proponować ci więcej tej roli."
+    ],
+    "facts_route": "trasa",
+    "facts_offered_by": "od",
+    "cta": "Zobacz propozycję"
+  },
   "role_granted": {
     "subject": "Vimana · Rola weszła w życie",
     "preheader": "Przyjąłeś ją, więc zaczęła obowiązywać",

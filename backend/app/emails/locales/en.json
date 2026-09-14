@@ -168,6 +168,18 @@
     "cta": "Check how you sign in",
     "note": "The location is approximate and often wrong: mobile networks and VPNs can place a sign-in hundreds of kilometres away. This letter is not a subscription and cannot be turned off."
   },
+  "recipient_offered": {
+    "subject": "Vimana · You are offered the role of recipient",
+    "preheader": "Nothing has changed yet — the deal waits for your answer",
+    "heading": "You are offered the role of recipient",
+    "body": [
+      "Someone has named you as the recipient of a parcel on the platform. Nothing has changed for you: the deal and its chat open only once you accept.",
+      "Open your account to see the route and who made the offer, then accept or decline. You can also ask not to be offered this role again."
+    ],
+    "facts_route": "route",
+    "facts_offered_by": "from",
+    "cta": "See the offer"
+  },
   "role_granted": {
     "subject": "Vimana · The role now applies to your account",
     "preheader": "You accepted it, so it has taken effect",

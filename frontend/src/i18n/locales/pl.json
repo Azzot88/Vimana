@@ -391,6 +391,22 @@
       "infected": "zainfekowany"
     }
   },
+  "recipientOffer": {
+    "title": "Proponujemy ci rolę odbiorcy",
+    "sectionTitle": "Rola odbiorcy",
+    "sectionHint": "Propozycje odebrania paczki. Nic z transakcji nie jest twoje, dopóki nie przyjmiesz.",
+    "route": "Trasa",
+    "from": "Od",
+    "cargo": "Co jest wysyłane",
+    "nothingYet": "Dopóki nie przyjmiesz roli, nie widzisz transakcji ani jej czatu.",
+    "accept": "Przyjmij",
+    "decline": "Odrzuć",
+    "declineRefuse": "Odrzuć i nie proponuj mi więcej tej roli",
+    "declined": "Odrzuciłeś propozycję.",
+    "answerFailed": "Nie udało się wysłać odpowiedzi",
+    "refuseToggle": "Nie proponuj mi roli odbiorcy",
+    "refuseHint": "Nadawcy zobaczą, że nie przyjmujesz propozycji."
+  },
   "recipient": {
     "foundOnPlatform": "Znaleziono na platformie",
     "pendingInvite": "Zaproszenie wysłane",
@@ -407,7 +423,12 @@
     "inviteCopied": "Link skopiowany — wyślij go odbiorcy",
     "inviteError": "Nie udało się utworzyć zaproszenia",
     "joinTitle": "Dołączam do czatu transakcji…",
-    "joinError": "Nie udało się dołączyć"
+    "joinError": "Nie udało się dołączyć",
+    "offerSent": "Propozycja wysłana: {{name}} — zostanie odbiorcą po przyjęciu",
+    "withdraw": "Wycofaj",
+    "current": "Odbiorca: {{name}}",
+    "pending": "Czeka na odpowiedź: {{name}}",
+    "linkPending": "Link wysłany — czekamy na odpowiedź"
   },
   "verification": {
     "sectionTitle": "Weryfikacja tożsamości",

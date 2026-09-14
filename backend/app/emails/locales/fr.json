@@ -168,6 +168,18 @@
     "cta": "Vérifier vos moyens de connexion",
     "note": "Le lieu est approximatif et souvent faux : les réseaux mobiles et les VPN peuvent le déplacer de plusieurs centaines de kilomètres. Ce message n'est pas un abonnement et ne peut pas être désactivé."
   },
+  "recipient_offered": {
+    "subject": "Vimana · On vous propose le rôle de destinataire",
+    "preheader": "Rien n’a encore changé — l’accord attend votre réponse",
+    "heading": "On vous propose le rôle de destinataire",
+    "body": [
+      "Quelqu’un vous a désigné comme destinataire d’un colis sur la plateforme. Rien n’a changé pour vous : l’accord et sa discussion ne s’ouvrent qu’une fois le rôle accepté.",
+      "Ouvrez votre compte pour voir le trajet et l’expéditeur, puis acceptez ou refusez. Vous pouvez aussi demander à ne plus recevoir ce rôle."
+    ],
+    "facts_route": "trajet",
+    "facts_offered_by": "de la part de",
+    "cta": "Voir la proposition"
+  },
   "role_granted": {
     "subject": "Vimana · Le rôle est entré en vigueur",
     "preheader": "Vous l'avez accepté, il s'applique désormais",

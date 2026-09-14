@@ -66,6 +66,9 @@ _LETTERS: dict[str, dict[str, Any]] = {
     # and says nothing that implies the power has already arrived, because it
     # has not: `users.roles` is untouched until the person accepts (§9.1).
     "role_offered": {"cta": True, "facts": ["role", "offered_by"]},
+    # T3.12.05 — the recipient role, offered. The route and the sender are the
+    # two facts somebody needs to recognise the parcel; the rest is in the offer.
+    "recipient_offered": {"cta": True, "facts": ["route", "offered_by"]},
     # T3.42 pt.2 — the two ends of the same lifecycle. `role_granted` goes out
     # when the person accepts: they just clicked it, but if it was not them,
     # this letter is the only thing that says access changed — the same
@@ -162,6 +165,11 @@ def sample_context(kind: str) -> dict[str, Any]:
             "role": "arbiter",
             "offered_by": "Alan Cherkasov — Дубай",
             "cta_url": "https://vimana.dealvault.club/profile/keys",
+        },
+        "recipient_offered": {
+            "route": "DXB → JFK",
+            "offered_by": "Alan Cherkasov — Дубай",
+            "cta_url": "https://vimana.dealvault.club/profile",
         },
         "role_granted": {
             "role": "arbiter",

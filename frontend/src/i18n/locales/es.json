@@ -390,6 +390,22 @@
       "infected": "infectado"
     }
   },
+  "recipientOffer": {
+    "title": "Te ofrecen el papel de destinatario",
+    "sectionTitle": "Papel de destinatario",
+    "sectionHint": "Ofertas para recibir un paquete. Nada de la operación es tuyo hasta que aceptes.",
+    "route": "Ruta",
+    "from": "De",
+    "cargo": "Qué se envía",
+    "nothingYet": "Hasta que aceptes, no ves la operación ni su chat.",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "declineRefuse": "Rechazar y no volver a ofrecerme este papel",
+    "declined": "Rechazaste la oferta.",
+    "answerFailed": "No se pudo enviar la respuesta",
+    "refuseToggle": "No ofrecerme el papel de destinatario",
+    "refuseHint": "Los remitentes verán que no aceptas ofertas."
+  },
   "recipient": {
     "foundOnPlatform": "Encontrados en la plataforma",
     "pendingInvite": "Invitación enviada",
@@ -406,7 +422,12 @@
     "inviteCopied": "Enlace copiado — envíaselo al destinatario",
     "inviteError": "No se pudo crear la invitación",
     "joinTitle": "Uniéndose al chat del acuerdo…",
-    "joinError": "No se pudo unir"
+    "joinError": "No se pudo unir",
+    "offerSent": "Oferta enviada a {{name}}: será destinatario cuando acepte",
+    "withdraw": "Retirar",
+    "current": "Destinatario: {{name}}",
+    "pending": "Esperando respuesta: {{name}}",
+    "linkPending": "Enlace enviado: esperando respuesta"
   },
   "verification": {
     "sectionTitle": "Verificación de identidad",

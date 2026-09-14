@@ -1,4 +1,10 @@
-"""T3.3 — Recipient role: invite, join, revoke, list, chat access."""
+"""T3.3 / T3.12.05 — the recipient: offered, answered, and only then a role.
+
+Owner, 2026-09-14: «роль предлагается, а не назначается» — rights do not arrive
+before the answer. What is pinned is exactly that: an offer — by link or to a
+person — gives nothing; acceptance gives the deal; a refusal can stop the next
+offer; one offer at a time; and the sender can take it all back.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -57,6 +63,56 @@ async def _deal(client):
     return {"sender_headers": s_hdr, "carrier_headers": c_hdr, "deal_id": match.json()["id"]}
 
 
+async def _me(client, hdr) -> str:
+    return (await client.get("/api/auth/me", headers=hdr)).json()["id"]
+
+
+async def _offer(client, _deal, user_id):
+    return await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient-offers",
+        headers=_deal["sender_headers"],
+        json={"user_id": user_id},
+    )
+
+
+async def _offer_id(client, hdr, deal_id) -> str:
+    offers = (await client.get("/api/me/recipient-offers", headers=hdr)).json()
+    return next(o["id"] for o in offers if o["deal_id"] == deal_id)
+
+
+async def _link(client, _deal) -> str:
+    inv = await client.post(
+        f"/api/deals/{_deal['deal_id']}/invite-recipient",
+        headers=_deal["sender_headers"],
+    )
+    assert inv.status_code == 201, inv.text
+    return inv.json()["invite_token"]
+
+
+async def _recipient(client, _deal, prefix: str):
+    """A person offered the role and accepting it — the only way in."""
+    hdr, _ = await _register(client, prefix)
+    user_id = await _me(client, hdr)
+    offered = await _offer(client, _deal, user_id)
+    assert offered.status_code == 201, offered.text
+    accepted = await client.post(
+        f"/api/recipient-offers/{await _offer_id(client, hdr, _deal['deal_id'])}/accept",
+        headers=hdr,
+    )
+    assert accepted.status_code == 200, accepted.text
+    return hdr, user_id
+
+
+async def _deal_visible(client, hdr, deal_id) -> bool:
+    detail = await client.get(f"/api/deals/{deal_id}", headers=hdr)
+    page = await client.get("/api/deals", headers=hdr, params={"limit": 100})
+    listed = deal_id in {d["id"] for d in page.json()["items"]}
+    return detail.status_code == 200 and listed
+
+
+# ── the link ──────────────────────────────────────────────────────────────
+
+
 async def test_only_sender_can_invite(client, _deal):
     r = await client.post(
         f"/api/deals/{_deal['deal_id']}/invite-recipient",
@@ -77,50 +133,50 @@ async def test_invite_returns_token_and_url(client, _deal):
     assert body["role"] == "recipient"
 
 
-async def test_join_attaches_current_user(client, _deal, session_maker):
-    from sqlalchemy import select
+async def test_a_link_finds_its_person_and_gives_them_nothing(client, _deal):
+    """Opening the link used to be the acceptance. Now it shows the offer —
+    route, sender — and the deal stays closed until the answer."""
+    token = await _link(client, _deal)
+    hdr, _ = await _register(client, "r-link")
 
-    from app.models.deal import DealParticipant
+    claimed = await client.post(f"/api/deals/join/{token}", headers=hdr)
+    assert claimed.status_code == 200, claimed.text
+    offer = claimed.json()
+    assert offer["state"] == "pending"
+    assert offer["route"] == "RCP → DST"
+    assert offer["sender_name"] == "R-S"
 
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
-
-    rec_hdr, _ = await _register(client, "r-rec")
-    join = await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
-    assert join.status_code == 200
-    assert join.json()["role"] == "recipient"
-
-    async with session_maker() as db:
-        row = (
-            await db.execute(
-                select(DealParticipant).where(DealParticipant.invite_token == token)
-            )
-        ).scalar_one()
-        assert row.user_id is not None
-        assert row.accepted_at is not None
+    assert not await _deal_visible(client, hdr, _deal["deal_id"])
+    vault = await client.get(f"/api/deals/{_deal['deal_id']}/dealvault", headers=hdr)
+    assert vault.status_code == 403
 
 
-async def test_join_idempotent_for_same_user(client, _deal):
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
-    rec_hdr, _ = await _register(client, "r-idem")
-    a = await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
-    b = await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
+async def test_accepting_the_link_makes_them_the_recipient(client, _deal):
+    token = await _link(client, _deal)
+    hdr, _ = await _register(client, "r-yes")
+    offer_id = (await client.post(f"/api/deals/join/{token}", headers=hdr)).json()["id"]
+
+    accepted = await client.post(f"/api/recipient-offers/{offer_id}/accept", headers=hdr)
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["state"] == "accepted"
+
+    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["recipient_id"] == await _me(client, hdr)
+    assert detail.json()["recipient_name"] == "R-YES"
+
+
+async def test_claiming_twice_is_the_same_offer(client, _deal):
+    token = await _link(client, _deal)
+    hdr, _ = await _register(client, "r-idem")
+    a = await client.post(f"/api/deals/join/{token}", headers=hdr)
+    b = await client.post(f"/api/deals/join/{token}", headers=hdr)
     assert a.status_code == 200 and b.status_code == 200
+    assert a.json()["id"] == b.json()["id"]
 
 
-async def test_join_conflict_for_different_user(client, _deal):
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
+async def test_a_link_belongs_to_one_person(client, _deal):
+    token = await _link(client, _deal)
     rec1, _ = await _register(client, "r-conf-1")
     rec2, _ = await _register(client, "r-conf-2")
     await client.post(f"/api/deals/join/{token}", headers=rec1)
@@ -128,26 +184,163 @@ async def test_join_conflict_for_different_user(client, _deal):
     assert r2.status_code == 409
 
 
-async def test_deal_principals_cant_join_as_recipient(client, _deal):
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
+async def test_deal_principals_cant_take_the_link(client, _deal):
+    token = await _link(client, _deal)
     resp = await client.post(f"/api/deals/join/{token}", headers=_deal["carrier_headers"])
     assert resp.status_code == 400
 
 
-async def test_recipient_can_read_and_write_chat(client, _deal):
-    inv = await client.post(
+# ── an offer to a person ──────────────────────────────────────────────────
+
+
+async def test_an_offer_waits_for_the_person_s_answer(client, _deal):
+    hdr, _ = await _register(client, "r-wait")
+    user_id = await _me(client, hdr)
+
+    offered = await _offer(client, _deal, user_id)
+    assert offered.status_code == 201, offered.text
+    assert offered.json()["state"] == "pending"
+    assert offered.json()["accepted_at"] is None
+
+    sender_view = await client.get(
+        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
+    )
+    assert sender_view.json()["recipient_id"] is None
+    assert not await _deal_visible(client, hdr, _deal["deal_id"])
+
+    offers = (await client.get("/api/me/recipient-offers", headers=hdr)).json()
+    assert [o["deal_id"] for o in offers] == [_deal["deal_id"]]
+
+
+async def test_declining_gives_nothing_and_can_refuse_the_next_offer(client, _deal):
+    """«Отказавшийся может запретить назначать себя получателем» — enforced by
+    the API, for offers by person and by link alike."""
+    hdr, _ = await _register(client, "r-no")
+    user_id = await _me(client, hdr)
+    await _offer(client, _deal, user_id)
+    offer_id = await _offer_id(client, hdr, _deal["deal_id"])
+
+    declined = await client.post(
+        f"/api/recipient-offers/{offer_id}/decline",
+        headers=hdr,
+        json={"refuse_future": True},
+    )
+    assert declined.status_code == 200, declined.text
+    assert declined.json()["state"] == "declined"
+    assert not await _deal_visible(client, hdr, _deal["deal_id"])
+    assert (await client.get("/api/auth/me", headers=hdr)).json()["refuses_recipient_offers"] is True
+
+    again = await _offer(client, _deal, user_id)
+    assert again.status_code == 403, again.text
+
+    token = await _link(client, _deal)
+    by_link = await client.post(f"/api/deals/join/{token}", headers=hdr)
+    assert by_link.status_code == 403, by_link.text
+
+
+async def test_the_setting_refuses_offers_before_any_arrive(client, _deal):
+    hdr, _ = await _register(client, "r-pref")
+    set_ = await client.patch(
+        "/api/auth/me", headers=hdr, json={"refuses_recipient_offers": True}
+    )
+    assert set_.status_code == 200, set_.text
+    r = await _offer(client, _deal, await _me(client, hdr))
+    assert r.status_code == 403
+
+
+async def test_a_new_offer_withdraws_the_unanswered_one(client, _deal):
+    first, _ = await _register(client, "r-one")
+    second, _ = await _register(client, "r-two")
+    await _offer(client, _deal, await _me(client, first))
+    first_offer = await _offer_id(client, first, _deal["deal_id"])
+    await _offer(client, _deal, await _me(client, second))
+
+    stale = await client.post(f"/api/recipient-offers/{first_offer}/accept", headers=first)
+    assert stale.status_code == 409, stale.text
+    fresh = await client.post(
+        f"/api/recipient-offers/{await _offer_id(client, second, _deal['deal_id'])}/accept",
+        headers=second,
+    )
+    assert fresh.status_code == 200, fresh.text
+
+
+async def test_no_new_offer_while_somebody_holds_the_role(client, _deal):
+    await _recipient(client, _deal, "r-holds")
+    other, _ = await _register(client, "r-next")
+
+    assert (await _offer(client, _deal, await _me(client, other))).status_code == 409
+    link = await client.post(
         f"/api/deals/{_deal['deal_id']}/invite-recipient",
         headers=_deal["sender_headers"],
     )
-    token = inv.json()["invite_token"]
-    rec_hdr, _ = await _register(client, "r-chat")
-    await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
+    assert link.status_code == 409
 
-    # Sender writes.
+    withdrawn = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient/withdraw",
+        headers=_deal["sender_headers"],
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert (await _offer(client, _deal, await _me(client, other))).status_code == 201
+
+
+async def test_nobody_answers_somebody_else_s_offer(client, _deal):
+    hdr, _ = await _register(client, "r-mine")
+    await _offer(client, _deal, await _me(client, hdr))
+    offer_id = await _offer_id(client, hdr, _deal["deal_id"])
+    stranger, _ = await _register(client, "r-thief")
+
+    for action in ("accept", "decline"):
+        r = await client.post(f"/api/recipient-offers/{offer_id}/{action}", headers=stranger)
+        assert r.status_code == 404, (action, r.text)
+
+
+async def test_unknown_key_says_so_instead_of_inviting(client, _deal):
+    """A key nobody holds must not quietly become an invitation."""
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient-offers",
+        headers=_deal["sender_headers"],
+        json={"npub": "f" * 64},
+    )
+    assert r.status_code == 404
+    assert "invite" in r.json()["detail"].lower()
+
+
+async def test_an_offer_needs_exactly_one_identifier(client, _deal):
+    both = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient-offers",
+        headers=_deal["sender_headers"],
+        json={"user_id": str(_deal["deal_id"]), "npub": "a" * 64},
+    )
+    assert both.status_code == 422
+    neither = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient-offers",
+        headers=_deal["sender_headers"],
+        json={},
+    )
+    assert neither.status_code == 422
+
+
+async def test_only_sender_can_offer_the_role(client, _deal):
+    hdr, _ = await _register(client, "r-outsider")
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient-offers",
+        headers=_deal["carrier_headers"],
+        json={"user_id": await _me(client, hdr)},
+    )
+    assert r.status_code == 403
+
+
+async def test_carrier_cannot_be_offered_the_role(client, _deal):
+    r = await _offer(client, _deal, await _me(client, _deal["carrier_headers"]))
+    assert r.status_code == 400
+
+
+# ── the role ──────────────────────────────────────────────────────────────
+
+
+async def test_recipient_can_read_and_write_chat(client, _deal):
+    rec_hdr, _ = await _recipient(client, _deal, "r-chat")
+
     s_msg = await client.post(
         f"/api/deals/{_deal['deal_id']}/dealvault/messages",
         headers=_deal["sender_headers"],
@@ -155,15 +348,10 @@ async def test_recipient_can_read_and_write_chat(client, _deal):
     )
     assert s_msg.status_code == 201
 
-    # Recipient reads.
-    r_list = await client.get(
-        f"/api/deals/{_deal['deal_id']}/dealvault", headers=rec_hdr
-    )
+    r_list = await client.get(f"/api/deals/{_deal['deal_id']}/dealvault", headers=rec_hdr)
     assert r_list.status_code == 200
-    texts = [m["text"] for m in r_list.json()["items"]]
-    assert "sender says hi" in texts
+    assert "sender says hi" in [m["text"] for m in r_list.json()["items"]]
 
-    # Recipient writes.
     r_msg = await client.post(
         f"/api/deals/{_deal['deal_id']}/dealvault/messages",
         headers=rec_hdr,
@@ -172,100 +360,76 @@ async def test_recipient_can_read_and_write_chat(client, _deal):
     assert r_msg.status_code == 201
 
 
-async def test_revoke_blocks_further_access(client, _deal, session_maker):
-    from sqlalchemy import select
+async def test_the_recipient_finds_the_deal_in_their_list(client, _deal):
+    hdr, _ = await _recipient(client, _deal, "r-list")
+    page = await client.get("/api/deals", headers=hdr, params={"limit": 100})
+    rows = [d for d in page.json()["items"] if d["id"] == _deal["deal_id"]]
+    assert len(rows) == 1
+    assert rows[0]["recipient_name"] == "R-LIST"
 
-    from app.models.deal import DealParticipant
 
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
+async def test_the_sender_s_list_names_the_recipient_too(client, _deal):
+    await _recipient(client, _deal, "r-named2")
+    page = await client.get(
+        "/api/deals", headers=_deal["sender_headers"], params={"limit": 100}
     )
-    token = inv.json()["invite_token"]
-    rec_hdr, _ = await _register(client, "r-rev")
-    await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
+    rows = [d for d in page.json()["items"] if d["id"] == _deal["deal_id"]]
+    assert rows and rows[0]["recipient_name"] == "R-NAMED2"
 
-    async with session_maker() as db:
-        row = (
-            await db.execute(
-                select(DealParticipant).where(DealParticipant.invite_token == token)
-            )
-        ).scalar_one()
-        recipient_uid = row.user_id
 
-    # Sender revokes.
+async def test_withdrawing_closes_the_deal_to_the_recipient(client, _deal):
+    hdr, _ = await _recipient(client, _deal, "r-gone")
+
     rev = await client.post(
-        f"/api/deals/{_deal['deal_id']}/participants/{recipient_uid}/revoke",
+        f"/api/deals/{_deal['deal_id']}/recipient/withdraw",
         headers=_deal["sender_headers"],
     )
-    assert rev.status_code == 200
+    assert rev.status_code == 200, rev.text
 
-    # Recipient can no longer read.
-    r_list = await client.get(
-        f"/api/deals/{_deal['deal_id']}/dealvault", headers=rec_hdr
+    assert not await _deal_visible(client, hdr, _deal["deal_id"])
+    vault = await client.get(f"/api/deals/{_deal['deal_id']}/dealvault", headers=hdr)
+    assert vault.status_code == 403
+    detail = await client.get(
+        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
     )
-    assert r_list.status_code == 403
+    assert detail.json()["recipient_id"] is None
 
 
-async def test_only_sender_can_revoke(client, _deal, session_maker):
-    from sqlalchemy import select
-
-    from app.models.deal import DealParticipant
-
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
-    rec_hdr, _ = await _register(client, "r-rev2")
-    await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
-
-    async with session_maker() as db:
-        row = (
-            await db.execute(
-                select(DealParticipant).where(DealParticipant.invite_token == token)
-            )
-        ).scalar_one()
-        recipient_uid = row.user_id
-
+async def test_only_sender_withdraws(client, _deal):
+    await _recipient(client, _deal, "r-rev2")
     r = await client.post(
-        f"/api/deals/{_deal['deal_id']}/participants/{recipient_uid}/revoke",
+        f"/api/deals/{_deal['deal_id']}/recipient/withdraw",
         headers=_deal["carrier_headers"],
     )
     assert r.status_code == 403
 
 
-async def test_list_participants_visible_to_deal_members(client, _deal):
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
-    rec_hdr, _ = await _register(client, "r-list")
-    await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
+async def test_participants_are_listed_to_the_deal_s_people_only(client, _deal):
+    pending_hdr, _ = await _register(client, "r-pend")
+    await _offer(client, _deal, await _me(client, pending_hdr))
 
-    # Sender sees.
     s_list = await client.get(
-        f"/api/deals/{_deal['deal_id']}/participants",
-        headers=_deal["sender_headers"],
+        f"/api/deals/{_deal['deal_id']}/participants", headers=_deal["sender_headers"]
     )
     assert s_list.status_code == 200
-    assert len(s_list.json()) == 1
-    assert s_list.json()[0]["role"] == "recipient"
+    assert [p["state"] for p in s_list.json()] == ["pending"]
+    # Offered is not a participant yet.
+    mine = await client.get(f"/api/deals/{_deal['deal_id']}/participants", headers=pending_hdr)
+    assert mine.status_code == 403
 
-    # Carrier sees.
+    await client.post(
+        f"/api/recipient-offers/{await _offer_id(client, pending_hdr, _deal['deal_id'])}/accept",
+        headers=pending_hdr,
+    )
     c_list = await client.get(
-        f"/api/deals/{_deal['deal_id']}/participants",
-        headers=_deal["carrier_headers"],
+        f"/api/deals/{_deal['deal_id']}/participants", headers=_deal["carrier_headers"]
     )
-    assert c_list.status_code == 200
-    assert len(c_list.json()) == 1
+    assert [p["state"] for p in c_list.json()] == ["accepted"]
+    r_list = await client.get(f"/api/deals/{_deal['deal_id']}/participants", headers=pending_hdr)
+    assert r_list.status_code == 200
 
-    # Third party — 403.
     other_hdr, _ = await _register(client, "r-out")
-    o_list = await client.get(
-        f"/api/deals/{_deal['deal_id']}/participants", headers=other_hdr
-    )
+    o_list = await client.get(f"/api/deals/{_deal['deal_id']}/participants", headers=other_hdr)
     assert o_list.status_code == 403
 
 
@@ -278,33 +442,16 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
     import os as _os
 
     from app.core.threshold import nip44_encrypt
-    from app.models.deal import DealVaultMessage
+    from app.models.deal import Deal
     from app.models.user import User
-    from tests.conftest import SEED_PASSWORD
 
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    token = inv.json()["invite_token"]
-    rec_hdr, _ = await _register(client, "r-dec")
-    await client.post(f"/api/deals/join/{token}", headers=rec_hdr)
-
-    # Get sender's + recipient's + carrier's npubs.
-    from sqlalchemy import select
-
-    from app.models.deal import Deal, DealParticipant
+    rec_hdr, recipient_uid = await _recipient(client, _deal, "r-dec")
 
     async with session_maker() as db:
         deal = await db.get(Deal, _deal["deal_id"])
         sender = await db.get(User, deal.sender_id)
         carrier = await db.get(User, deal.carrier_id)
-        p_row = (
-            await db.execute(
-                select(DealParticipant).where(DealParticipant.invite_token == token)
-            )
-        ).scalar_one()
-        recipient = await db.get(User, p_row.user_id)
+        recipient = await db.get(User, recipient_uid)
         recipient_id = recipient.id
         sender_npub = sender.nostr_pubkey
         carrier_npub = carrier.nostr_pubkey
@@ -319,7 +466,6 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
             bytes(sender.nsec_nonce), bytes(sender.nsec_encrypted)
         )
 
-    # Build minimal e2e_payload with plaintext "hello recipient".
     session_key = _os.urandom(32)
     fake_nonce = _os.urandom(12)
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -351,205 +497,9 @@ async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_me
     assert msg_r.status_code == 201, msg_r.json()
     msg_id = msg_r.json()["id"]
 
-    # Recipient asks server to decrypt for them.
     dec = await client.post(
         f"/api/deals/{_deal['deal_id']}/dealvault/messages/{msg_id}/decrypt-for-me",
         headers=rec_hdr,
     )
     assert dec.status_code == 200, dec.json()
     assert dec.json()["text"] == "hello recipient"
-
-
-# ── T3.11.24: naming a recipient who already has an account ──────────────────
-
-
-async def test_recipient_can_be_named_by_user_id(client, _deal):
-    """Owner's brief 2026-09-07: the recipient is chosen from a list, not typed
-    as a string. Somebody already on the platform needs no token and no waiting
-    — the participant row is written accepted, and the deal records who they
-    are."""
-    hdr, _ = await _register(client, "r-known")
-    me = await client.get("/api/auth/me", headers=hdr)
-    user_id = me.json()["id"]
-
-    r = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"user_id": user_id},
-    )
-    assert r.status_code == 201, r.text
-    assert r.json()["user_id"] == user_id
-    assert r.json()["accepted_at"] is not None
-
-    listed = await client.get(
-        f"/api/deals/{_deal['deal_id']}/participants",
-        headers=_deal["sender_headers"],
-    )
-    assert user_id in [p["user_id"] for p in listed.json()]
-
-    detail = await client.get(
-        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
-    )
-    assert detail.json()["recipient_id"] == user_id
-
-
-async def test_naming_the_same_recipient_twice_is_one_row(client, _deal):
-    hdr, _ = await _register(client, "r-twice")
-    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
-
-    first = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"user_id": user_id},
-    )
-    second = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"user_id": user_id},
-    )
-    assert first.json()["id"] == second.json()["id"]
-
-
-async def test_unknown_key_says_so_instead_of_inviting(client, _deal):
-    """The third path — a service link — is a different endpoint on purpose. A
-    key nobody holds must not quietly become an invitation: the sender would
-    believe the recipient is attached when nobody has accepted anything."""
-    r = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"npub": "f" * 64},
-    )
-    assert r.status_code == 404
-    assert "invite" in r.json()["detail"].lower()
-
-
-async def test_recipient_needs_exactly_one_identifier(client, _deal):
-    both = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"user_id": str(_deal["deal_id"]), "npub": "a" * 64},
-    )
-    assert both.status_code == 422
-    neither = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={},
-    )
-    assert neither.status_code == 422
-
-
-async def test_only_sender_can_name_the_recipient(client, _deal):
-    hdr, _ = await _register(client, "r-outsider")
-    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
-    r = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["carrier_headers"],
-        json={"user_id": user_id},
-    )
-    assert r.status_code == 403
-
-
-# ── T3.12.01: the recipient has a deal, not only a chat ──────────────────────
-
-
-async def _join_by_link(client, _deal, prefix: str):
-    inv = await client.post(
-        f"/api/deals/{_deal['deal_id']}/invite-recipient",
-        headers=_deal["sender_headers"],
-    )
-    hdr, _ = await _register(client, prefix)
-    joined = await client.post(
-        f"/api/deals/join/{inv.json()['invite_token']}", headers=hdr
-    )
-    assert joined.status_code == 200, joined.text
-    return hdr
-
-
-async def test_joining_by_link_makes_them_the_recipient_of_the_deal(client, _deal):
-    """Разбор 2026-09-13: the link path never filled `Deal.recipient_id`, so the
-    cards addressed delivery to the sender and the deal detail answered 403 to
-    the one person the parcel was for."""
-    hdr = await _join_by_link(client, _deal, "r-link")
-    me = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
-
-    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
-    assert detail.status_code == 200, detail.text
-    assert detail.json()["recipient_id"] == me
-    assert detail.json()["recipient_name"] == "R-LINK"
-
-
-async def test_a_second_link_does_not_replace_the_recipient(client, _deal):
-    first = await _join_by_link(client, _deal, "r-first")
-    first_id = (await client.get("/api/auth/me", headers=first)).json()["id"]
-    second = await _join_by_link(client, _deal, "r-second")
-
-    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=second)
-    assert detail.status_code == 200, detail.text
-    assert detail.json()["recipient_id"] == first_id
-
-
-async def test_a_recipient_named_from_contacts_opens_the_deal(client, _deal):
-    hdr, _ = await _register(client, "r-named")
-    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
-    named = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"user_id": user_id},
-    )
-    assert named.status_code == 201, named.text
-
-    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
-    assert detail.status_code == 200, detail.text
-    assert detail.json()["recipient_name"] == "R-NAMED"
-
-
-async def test_the_recipient_finds_the_deal_in_their_list(client, _deal):
-    hdr = await _join_by_link(client, _deal, "r-list")
-
-    page = await client.get("/api/deals", headers=hdr, params={"limit": 100})
-    assert page.status_code == 200, page.text
-    rows = [d for d in page.json()["items"] if d["id"] == _deal["deal_id"]]
-    assert len(rows) == 1
-    assert rows[0]["recipient_name"] == "R-LIST"
-
-
-async def test_the_sender_s_list_names_the_recipient_too(client, _deal):
-    await _join_by_link(client, _deal, "r-named2")
-
-    page = await client.get(
-        "/api/deals", headers=_deal["sender_headers"], params={"limit": 100}
-    )
-    rows = [d for d in page.json()["items"] if d["id"] == _deal["deal_id"]]
-    assert rows and rows[0]["recipient_name"] == "R-NAMED2"
-
-
-async def test_revoking_the_recipient_closes_the_deal_to_them(client, _deal):
-    hdr = await _join_by_link(client, _deal, "r-gone")
-    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
-
-    rev = await client.post(
-        f"/api/deals/{_deal['deal_id']}/participants/{user_id}/revoke",
-        headers=_deal["sender_headers"],
-    )
-    assert rev.status_code == 200, rev.text
-
-    gone = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
-    assert gone.status_code == 403
-    page = await client.get("/api/deals", headers=hdr, params={"limit": 100})
-    assert _deal["deal_id"] not in {d["id"] for d in page.json()["items"]}
-    detail = await client.get(
-        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
-    )
-    assert detail.json()["recipient_id"] is None
-
-
-async def test_carrier_cannot_be_made_the_recipient(client, _deal):
-    """They already read everything in the deal; a recipient row would add a
-    role that means nothing and a second reason for the same access."""
-    me = await client.get("/api/auth/me", headers=_deal["carrier_headers"])
-    r = await client.post(
-        f"/api/deals/{_deal['deal_id']}/recipient",
-        headers=_deal["sender_headers"],
-        json={"user_id": me.json()["id"]},
-    )
-    assert r.status_code == 400

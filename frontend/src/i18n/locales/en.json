@@ -437,6 +437,22 @@
       "infected": "infected"
     }
   },
+  "recipientOffer": {
+    "title": "You are offered the role of recipient",
+    "sectionTitle": "Recipient role",
+    "sectionHint": "Offers to receive a parcel. Nothing of the deal is yours until you accept.",
+    "route": "Route",
+    "from": "From",
+    "cargo": "What is sent",
+    "nothingYet": "Until you accept, you do not see the deal or its chat.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "declineRefuse": "Decline and do not offer me this role again",
+    "declined": "You declined the offer.",
+    "answerFailed": "Could not send the answer",
+    "refuseToggle": "Do not offer me the role of recipient",
+    "refuseHint": "Senders are told that you do not accept offers."
+  },
   "recipient": {
     "foundOnPlatform": "Found on the platform",
     "pendingInvite": "Invite sent",
@@ -453,7 +469,12 @@
     "inviteCopied": "Invite link copied — send it to the recipient",
     "inviteError": "Could not create invite",
     "joinTitle": "Joining deal chat…",
-    "joinError": "Could not join this deal"
+    "joinError": "Could not join this deal",
+    "offerSent": "Offer sent to {{name}} — they become the recipient once they accept",
+    "withdraw": "Withdraw",
+    "current": "Recipient: {{name}}",
+    "pending": "Awaiting an answer: {{name}}",
+    "linkPending": "Link sent — awaiting an answer"
   },
   "verification": {
     "declinedPolite": {

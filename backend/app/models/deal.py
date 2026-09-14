@@ -380,8 +380,13 @@ class DealParticipant(Base):
     is orthogonal to it.
 
     Row is created with `user_id=NULL` at invite time; populated when the
-    invitee accepts the link and their user gets bound. `invite_token` is
-    the shareable secret in the URL.
+    invitee signs in with the link. `invite_token` is the shareable secret in
+    the URL.
+
+    T3.12.05 — **the row is an offer before it is a role** (owner, 2026-09-14).
+    Pending while `accepted_at`, `declined_at` and `revoked_at` are all empty;
+    accepted, declined by the person, or revoked by the sender — and only an
+    accepted row gives anything (`core.deal_access`).
     """
 
     __tablename__ = "deal_participants"
@@ -410,6 +415,12 @@ class DealParticipant(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # T3.12.05 — the person said no. Separate from `revoked_at`, which is the
+    # sender taking the offer back: an arbiter reading the record needs to know
+    # which side ended it.
+    declined_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     revoked_at: Mapped[datetime | None] = mapped_column(

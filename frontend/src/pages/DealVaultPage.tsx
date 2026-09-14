@@ -632,10 +632,10 @@ export default function DealVaultPage() {
           open={recipientOpen}
           dealId={dealId}
           onClose={() => setRecipientOpen(false)}
-          /* T3.11.24 — the participant list is what proves it happened, so the
-             page reloads its messages and the confirmation is one line above
-             the composer rather than an alert nobody can re-read. */
-          onAttached={(name) => setNotice(t('recipient.attached', { name: name ?? '' }))}
+          /* T3.11.24 — the confirmation is one line above the composer rather
+             than an alert nobody can re-read. T3.12.05 — and it says «offered»:
+             the person becomes the recipient when they accept. */
+          onAttached={(name) => setNotice(t('recipient.offerSent', { name: name ?? '' }))}
         />
       )}
     </div>

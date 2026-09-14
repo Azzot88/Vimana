@@ -134,6 +134,8 @@ export interface User {
    *  applies, so it is a statement about my own patience rather than about any
    *  one deal. Capped by departure at the moment the request is raised. */
   cancel_timeout_hours?: number
+  /** T3.12.05 — «не предлагать мне роль получателя», enforced by the API. */
+  refuses_recipient_offers?: boolean
   /** T3.11.07 — the currencies new trips may start in, chosen once instead of
    *  re-picked on every publication. **Order is meaningful**: the first entry
    *  is what the form pre-fills, the rest are offered beside it. */
@@ -329,6 +331,7 @@ export interface UserUpdate {
    *  applies, so it is a statement about my own patience rather than about any
    *  one deal. Capped by departure at the moment the request is raised. */
   cancel_timeout_hours?: number
+  refuses_recipient_offers?: boolean
   default_currencies?: string[]
   payment_methods?: PaymentMethod[]
   carriage_rules?: string | null

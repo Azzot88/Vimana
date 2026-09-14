@@ -319,12 +319,17 @@ async def test_the_single_deal_s_recipient_becomes_the_final_recipient(
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
     person = (await client.get("/api/auth/me", headers=headers)).json()["id"]
 
+    # T3.12.05 — offered, then accepted: only an accepted recipient is one.
     named = await client.post(
-        f"/api/deals/{deal_id}/recipient",
+        f"/api/deals/{deal_id}/recipient-offers",
         headers=sender_headers,
         json={"user_id": person},
     )
     assert named.status_code == 201, named.text
+    offers = (await client.get("/api/me/recipient-offers", headers=headers)).json()
+    offer_id = next(o["id"] for o in offers if o["deal_id"] == deal_id)
+    accepted = await client.post(f"/api/recipient-offers/{offer_id}/accept", headers=headers)
+    assert accepted.status_code == 200, accepted.text
 
     cargo_id = (await client.get(f"/api/deals/{deal_id}", headers=sender_headers)).json()[
         "cargo_id"
@@ -334,7 +339,7 @@ async def test_the_single_deal_s_recipient_becomes_the_final_recipient(
         assert str(cargo.final_recipient_id) == person
 
     revoked = await client.post(
-        f"/api/deals/{deal_id}/participants/{person}/revoke", headers=sender_headers
+        f"/api/deals/{deal_id}/recipient/withdraw", headers=sender_headers
     )
     assert revoked.status_code == 200, revoked.text
     async with session_maker() as db:

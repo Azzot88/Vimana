@@ -6,6 +6,7 @@ import { me } from '../api/auth'
 import { getIdentity, type ArchiveRecord } from '../api/trust'
 import ArchiveRecordCard from '../components/ArchiveRecordCard'
 import PublicPageSection from '../components/PublicPageSection'
+import RecipientOfferSection from '../components/RecipientOfferSection'
 import UBASection from '../components/UBASection'
 import VerificationSection from '../components/VerificationSection'
 import EditProfileModal from '../components/EditProfileModal'
@@ -56,6 +57,10 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-4">
+      {/* T3.12.05 — an offer to be a recipient is a question addressed to this
+          person, so it stands first; the letter about it links here. The
+          setting «не предлагать мне роль получателя» lives in the same card. */}
+      <RecipientOfferSection />
       <div className="bg-white rounded-card border border-navy/10 p-6 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-4 min-w-0">

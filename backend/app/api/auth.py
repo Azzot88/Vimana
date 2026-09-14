@@ -1076,6 +1076,9 @@ _NOT_NULL_UPDATE_FIELDS = {
     # T3.11.27 — a timeout with no value is not «no timeout», it is a deal
     # nobody can close by walking away.
     "cancel_timeout_hours",
+    # T3.12.05 — a refusal with no value is not «no answer», it is a column
+    # that cannot be read as either.
+    "refuses_recipient_offers",
     "default_currencies",
     # T3.11.07 — clearing the list is `[]`, which is a real answer ("I have not
     # said"). `null` is what an unset field looks like and must not reach the

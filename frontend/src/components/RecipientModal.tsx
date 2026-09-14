@@ -7,7 +7,13 @@ import {
   type Connection,
   type FoundUser,
 } from '../api/social'
-import { inviteRecipient, setRecipient } from '../api/participants'
+import {
+  inviteRecipient,
+  listParticipants,
+  offerRecipient,
+  withdrawRecipient,
+  type Participant,
+} from '../api/participants'
 import MonoText from './MonoText'
 
 interface Props {
@@ -24,8 +30,10 @@ interface Props {
  *  link, or by public key.
  *
  *  **The three ways are not equal, and the form says so.** A contact and a
- *  pasted key both name somebody who already has an account: they are attached
- *  on the spot, and the deal knows who they are. A link is for a person who is
+ *  pasted key both name somebody who already has an account. T3.12.05 — they
+ *  are **offered** the role and become the recipient when they accept (owner,
+ *  2026-09-14); one offer at a time, and a recipient who has accepted is
+ *  withdrawn here before anybody else is offered. A link is for a person who is
  *  not here yet — nothing is attached, and somebody has to accept it. Merging
  *  the three into one field would have let the sender walk away believing a
  *  recipient is on the deal when nobody has accepted anything, which is the one
@@ -57,12 +65,17 @@ export default function RecipientModal({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [inviteUrl, setInviteUrl] = useState('')
+  /** T3.12.05 — who holds the role or the open offer, if anybody. */
+  const [current, setCurrent] = useState<Participant | null>(null)
 
   useEffect(() => {
     if (!open) return
     setError('')
     setInviteUrl('')
     setLoading(true)
+    listParticipants(dealId)
+      .then(({ data }) => setCurrent(data[0] ?? null))
+      .catch(() => setCurrent(null))
     listConnections()
       .then(({ data }) => setContacts(data))
       .catch(() => setContacts([]))
@@ -105,7 +118,7 @@ export default function RecipientModal({
     setBusy(true)
     setError('')
     try {
-      const { data } = await setRecipient(dealId, who)
+      const { data } = await offerRecipient(dealId, who)
       onAttached(data.display_name ?? name)
       onClose()
     } catch (err: unknown) {
@@ -136,8 +149,10 @@ export default function RecipientModal({
         /* Clipboard refused (no permission, insecure context) — the link is on
            screen and selectable, which is the part that matters. */
       }
-    } catch {
-      setError(t('recipient.inviteError'))
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response
+        ?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('recipient.inviteError'))
     } finally {
       setBusy(false)
     }
@@ -157,6 +172,43 @@ export default function RecipientModal({
         <h3 className="font-display font-semibold text-lg text-navy">
           {t('recipient.pickerTitle')}
         </h3>
+
+        {/* T3.12.05 — one offer at a time. What stands now is said first, with
+            the way to take it back: a new offer replaces an unanswered one, and
+            a recipient who accepted has to be withdrawn before anybody else. */}
+        {current && (
+          <div
+            data-testid="recipient-current"
+            className="flex items-center justify-between gap-3 p-3 rounded-field border border-navy/10 bg-ivory"
+          >
+            <p className="text-sm font-body text-navy">
+              {current.state === 'accepted'
+                ? t('recipient.current', { name: current.display_name ?? '' })
+                : current.display_name
+                  ? t('recipient.pending', { name: current.display_name })
+                  : t('recipient.linkPending')}
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true)
+                setError('')
+                try {
+                  await withdrawRecipient(dealId)
+                  setCurrent(null)
+                } catch {
+                  setError(t('recipient.inviteError'))
+                } finally {
+                  setBusy(false)
+                }
+              }}
+              className="shrink-0 text-xs font-body text-danger hover:underline disabled:opacity-50"
+            >
+              {t('recipient.withdraw')}
+            </button>
+          </div>
+        )}
 
         <input
           type="search"

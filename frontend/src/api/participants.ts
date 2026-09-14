@@ -16,20 +16,60 @@ export interface Participant {
   display_name: string | null
   npub: string | null
   role: 'recipient'
+  /** T3.12.05 — `pending` is an offer nobody has answered; the list never
+   *  shows declined or withdrawn ones. */
+  state: 'pending' | 'accepted'
   invited_at: string
   accepted_at: string | null
 }
 
+/** T3.12.05 — what a person offered the role sees of the deal: enough to
+ *  recognise the parcel, nothing that belongs to its participants. */
+export interface RecipientOffer {
+  id: string
+  deal_id: string
+  state: 'pending' | 'accepted' | 'declined' | 'revoked'
+  route: string
+  depart_at: string | null
+  sender_name: string | null
+  cargo_description: string | null
+  invited_at: string
+}
+
+/** A link, for a recipient not on the platform yet. It binds to whoever signs
+ *  in with it, and they still have to accept. */
 export const inviteRecipient = (dealId: string) =>
   api.post<InviteOut>(`/api/deals/${dealId}/invite-recipient`)
 
-export const joinDeal = (token: string) =>
-  api.post<{ deal_id: string; role: string }>(`/api/deals/join/${token}`)
+/** T3.12.05 — offer the role to somebody already on the platform: from
+ *  friends or search you have their id, from a pasted key you have the key. A
+ *  key nobody holds comes back 404 — the caller offers a link then. */
+export const offerRecipient = (
+  dealId: string,
+  who: { user_id: string } | { npub: string },
+) => api.post<Participant>(`/api/deals/${dealId}/recipient-offers`, who)
 
-export const revokeParticipant = (dealId: string, userId: string) =>
-  api.post<{ revoked: boolean }>(
-    `/api/deals/${dealId}/participants/${userId}/revoke`,
-  )
+/** Bind a link to the signed-in person and read the offer. Accepting is a
+ *  separate press. */
+export const claimInvite = (token: string) =>
+  api.post<RecipientOffer>(`/api/deals/join/${token}`)
+
+export const myRecipientOffers = () =>
+  api.get<RecipientOffer[]>('/api/me/recipient-offers')
+
+export const acceptRecipientOffer = (offerId: string) =>
+  api.post<RecipientOffer>(`/api/recipient-offers/${offerId}/accept`)
+
+/** `refuseFuture` — «отказаться и больше не предлагать мне эту роль»: also
+ *  turns the account setting on. */
+export const declineRecipientOffer = (offerId: string, refuseFuture = false) =>
+  api.post<RecipientOffer>(`/api/recipient-offers/${offerId}/decline`, {
+    refuse_future: refuseFuture,
+  })
+
+/** The sender takes back the open offer and the role, whichever there is. */
+export const withdrawRecipient = (dealId: string) =>
+  api.post<{ withdrawn: boolean }>(`/api/deals/${dealId}/recipient/withdraw`)
 
 export const listParticipants = (dealId: string) =>
   api.get<Participant[]>(`/api/deals/${dealId}/participants`)
@@ -39,12 +79,3 @@ export const decryptMessageForMe = (dealId: string, messageId: string) =>
   api.post<{ message_id: string; text: string }>(
     `/api/deals/${dealId}/dealvault/messages/${messageId}/decrypt-for-me`,
   )
-
-/** T3.11.24 — name a recipient who already has an account: from contacts you
- *  have their id, from a pasted key you have the key. A key nobody holds comes
- *  back 404 — the caller is expected to offer an invite link then, not to
- *  pretend the person was attached. */
-export const setRecipient = (
-  dealId: string,
-  who: { user_id: string } | { npub: string },
-) => api.post<Participant>(`/api/deals/${dealId}/recipient`, who)

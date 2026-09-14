@@ -228,8 +228,21 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/deals/{deal_id}/invite-recipient"): Case(
         DENIED, "minting an invite into a stranger's deal"
     ),
-    ("POST", "/api/deals/{deal_id}/participants/{user_id}/revoke"): Case(
-        DENIED, "kicking a participant out of a deal that is not mine"
+    # T3.12.05 — the recipient is offered, answers, and can be withdrawn.
+    ("POST", "/api/deals/{deal_id}/recipient/withdraw"): Case(
+        DENIED, "withdrawing the recipient of a deal that is not mine"
+    ),
+    ("POST", "/api/deals/{deal_id}/recipient-offers"): Case(
+        DENIED,
+        "offering the recipient role in a stranger's deal",
+        # A body, because a missing one is 422 before the ownership check.
+        json={"npub": "0" * 64},
+    ),
+    ("POST", "/api/recipient-offers/{offer_id}/accept"): Case(
+        DENIED, "accepting an offer made to somebody else"
+    ),
+    ("POST", "/api/recipient-offers/{offer_id}/decline"): Case(
+        DENIED, "declining an offer made to somebody else", json={}
     ),
     ("GET", "/api/deals/{deal_id}/participants"): Case(
         DENIED, "the participant list names people and their roles"
@@ -241,13 +254,6 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED,
         "putting my own document into a stranger's deal",
         json={"user_file_id": "00000000-0000-4000-8000-000000000000"},
-    ),
-    ("POST", "/api/deals/{deal_id}/recipient"): Case(
-        DENIED,
-        "naming the recipient of a stranger's deal",
-        # A body, because a missing one is 422 before the ownership check and
-        # the row would then pass for the wrong reason.
-        json={"npub": "0" * 64},
     ),
     # ---- contacts ------------------------------------------------------
     ("DELETE", "/api/me/connections/{user_id}"): Case(
@@ -695,6 +701,10 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "address_id": address_id,
         "place_id": place_id,
         "template_id": template_id,
+        # T3.12.05 — random on purpose: an offer is answered only by the person
+        # it was made to, and the answer to anyone else is 404 before any row is
+        # read, so a real offer would prove nothing the guard does not.
+        "offer_id": str(uuidlib.uuid4()),
         "inquiry_id": inquiry_id,
         "badge_id": str(badge_id),
         "note_id": str(note_id),
@@ -910,19 +920,6 @@ async def test_own_deal_with_foreign_verification_request_is_404(
         json={"action": "declined"},
     )
     assert resp.status_code == 404, resp.text
-
-
-async def test_own_deal_with_foreign_participant_is_refused(
-    client, stranger, stranger_deal, seed_carrier
-):
-    """Revoking somebody who is not in my deal must not touch their row
-    elsewhere. 404 or 403 — both say "not here"; a 200 would mean the
-    `user_id` was taken on trust."""
-    resp = await client.post(
-        f"/api/deals/{stranger_deal}/participants/{seed_carrier.id}/revoke",
-        headers=stranger["headers"],
-    )
-    assert resp.status_code in (403, 404), resp.text
 
 
 async def test_foreign_message_share_is_not_reachable_by_id_alone(

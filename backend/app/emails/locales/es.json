@@ -168,6 +168,18 @@
     "cta": "Revisar cómo accedes",
     "note": "El lugar es aproximado y a menudo erróneo: las redes móviles y las VPN lo desplazan cientos de kilómetros. Este mensaje no es una suscripción y no se puede desactivar."
   },
+  "recipient_offered": {
+    "subject": "Vimana · Te ofrecen el papel de destinatario",
+    "preheader": "Aún no ha cambiado nada: la operación espera tu respuesta",
+    "heading": "Te ofrecen el papel de destinatario",
+    "body": [
+      "Alguien te ha nombrado destinatario de un paquete en la plataforma. Para ti no ha cambiado nada: la operación y su chat se abren solo cuando aceptes.",
+      "Abre tu cuenta para ver la ruta y quién te lo ofrece, y acepta o rechaza. También puedes pedir que no te vuelvan a ofrecer este papel."
+    ],
+    "facts_route": "ruta",
+    "facts_offered_by": "de",
+    "cta": "Ver la oferta"
+  },
   "role_granted": {
     "subject": "Vimana · El rol ya está en vigor",
     "preheader": "Lo aceptaste, así que ha entrado en vigor",

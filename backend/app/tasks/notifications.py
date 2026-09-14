@@ -556,6 +556,36 @@ def send_role_offered(user_id: str, role: str, offered_by: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_recipient_offered")
+def send_recipient_offered(user_id: str, route: str, offered_by: str) -> None:
+    """T3.12.05 — somebody has been offered the role of recipient.
+
+    The deal class, not security: it is news about a parcel, and the person may
+    switch it off — the offer still waits in their account either way. Like
+    `send_role_offered`, the letter says «offered», never «named»: nothing about
+    the deal is theirs until they accept.
+
+    Called by: `api/participants.offer_recipient`.
+    """
+    import os
+
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        _notify_user(
+            user,
+            "recipient_offered",
+            route=route,
+            offered_by=offered_by,
+            cta_url=f"{base}/profile",
+        )
+
+
 @celery_app.task(name="app.tasks.notifications.send_role_granted")
 def send_role_granted(user_id: str, role: str) -> None:
     """T3.42 — the role the person accepted has taken effect.

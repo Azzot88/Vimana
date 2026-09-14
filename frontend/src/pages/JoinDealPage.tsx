@@ -1,20 +1,29 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { joinDeal } from '../api/participants'
+import { claimInvite, type RecipientOffer } from '../api/participants'
+import { RecipientOfferCard } from '../components/RecipientOfferSection'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
 
-/** T3.3 — landing page for a `/join/deal/:token` invite link.
+/** T3.3 / T3.12.05 — landing page for a `/join/deal/:token` invite link.
  *
- * Not logged in → redirect to /login with `?next=` back here.
- * Logged in → POST /deals/join/:token, redirect to the deal's chat on OK. */
+ * Not logged in → `/login?next=` back here. Logged in → the link is bound to this
+ * person and **the offer is shown** (owner, 2026-09-14): opening a link used to
+ * make somebody the recipient on the spot, which is exactly «меня вписали в
+ * чужую сделку». Now they see the route, the sender and what is sent, and
+ * accept, decline, or decline and ask not to be offered the role again.
+ *
+ * An offer already accepted by this person goes straight to the deal.
+ */
 export default function JoinDealPage() {
   const { t } = useTranslation()
   const { token } = useParams<{ token: string }>()
   const nav = useNavigate()
   const user = useAuthStore((s) => s.user)
-  const [state, setState] = useState<'pending' | 'ok' | string>('pending')
+  const [offer, setOffer] = useState<RecipientOffer | null>(null)
+  const [declined, setDeclined] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!token) return
@@ -22,27 +31,38 @@ export default function JoinDealPage() {
       nav(`/login?next=/join/deal/${token}`, { replace: true })
       return
     }
-    joinDeal(token)
+    claimInvite(token)
       .then(({ data }) => {
-        setState('ok')
-        nav(`/deals/${data.deal_id}/vault`, { replace: true })
+        if (data.state === 'accepted') {
+          nav(`/deals/${data.deal_id}/vault`, { replace: true })
+          return
+        }
+        setOffer(data)
       })
       .catch((err) => {
         const detail = err?.response?.data?.detail
-        setState(typeof detail === 'string' ? detail : t('recipient.joinError'))
+        setError(typeof detail === 'string' ? detail : t('recipient.joinError'))
       })
   }, [token, user])
 
   return (
-    <div className="max-w-md mx-auto py-16 text-center space-y-4">
-      <h1 className="font-display font-bold text-xl text-navy">
-        {t('recipient.joinTitle')}
+    <div className="max-w-md mx-auto py-16 space-y-4">
+      <h1 className="font-display font-bold text-xl text-navy text-center">
+        {t('recipientOffer.title')}
       </h1>
-      {state === 'pending' && (
-        <MonoText className="text-xs text-navy/40">{t('common.loading')}</MonoText>
+      {error && <p className="text-sm font-body text-danger text-center">{error}</p>}
+      {!error && !offer && (
+        <MonoText className="block text-center text-xs text-navy/40">
+          {t('common.loading')}
+        </MonoText>
       )}
-      {state !== 'pending' && state !== 'ok' && (
-        <p className="text-sm font-body text-danger">{state}</p>
+      {offer && !declined && (
+        <RecipientOfferCard offer={offer} onDeclined={() => setDeclined(true)} />
+      )}
+      {declined && (
+        <p className="text-sm font-body text-navy/60 text-center">
+          {t('recipientOffer.declined')}
+        </p>
       )}
     </div>
   )

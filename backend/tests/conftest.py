@@ -1087,6 +1087,14 @@ async def _add_cargo_fields(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _add_recipient_offer_columns(engine) -> None:
+    """T3.12.05 — the columns of `0094`, after `create_all` for the reason
+    `_add_cargo_fields` gives. Idempotent."""
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0094_recipient_offers.py"):
+            await conn.execute(text(statement))
+
+
 async def _rename_operator_to_arbiter(engine) -> None:
     """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
@@ -2197,6 +2205,7 @@ async def test_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _add_cargo_fields(engine)
+    await _add_recipient_offer_columns(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
     await _ensure_role_column(engine)

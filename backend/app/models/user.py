@@ -148,6 +148,13 @@ class User(Base):
     cancel_timeout_hours: Mapped[int] = mapped_column(
         Integer, default=48, server_default="48"
     )
+    # T3.12.05 — «отказавшийся может запретить назначать себя получателем»
+    # (`IMPLEMENTATIONPLAN §3.12.3` п. 3). Enforced where offers are made
+    # (`api.participants`), not by hiding a button: a refusal the API ignores is
+    # a preference the next client quietly overrides.
+    refuses_recipient_offers: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     # T3.11.07 — the currencies this account prices in. **Several** (owner's
     # decision 2026-09-06): a carrier on two corridors quotes in two, and one
     # who settles in a stablecoin quotes in that as well. The first is the one a
