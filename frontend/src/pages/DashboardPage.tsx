@@ -15,6 +15,7 @@ import DepartureChip from '../components/DepartureChip'
 import MonoText from '../components/MonoText'
 import StatusBadge from '../components/StatusBadge'
 import { routeChain } from '../lib/format'
+import { roleIn } from '../lib/dealRole'
 
 /** T_UX.19 — the panel answers one question, and which one depends on the mode.
  *
@@ -130,6 +131,12 @@ export default function DashboardPage() {
   )
   const sending = deals.filter(
     (d) => d.sender_id === user?.id && ACTIVE.includes(d.status),
+  )
+  /* T3.12.01 — the parcels on their way to me. The list endpoint returns them
+     now; without their own block they would have been fetched and dropped,
+     because they are neither mine to send nor mine to carry. */
+  const receiving = deals.filter(
+    (d) => roleIn(d, user?.id) === 'recipient' && ACTIVE.includes(d.status),
   )
   const inquiriesFor = (tripId: string) => asks[tripId] ?? 0
 
@@ -336,6 +343,14 @@ export default function DashboardPage() {
               <div className="grid gap-3">{sending.map(dealRow)}</div>
             </section>
           )}
+          {receiving.length > 0 && (
+            <section>
+              <h2 className="font-display font-semibold text-lg text-navy mb-3">
+                {t('dashboard.receivingNow')}
+              </h2>
+              <div className="grid gap-3">{receiving.map(dealRow)}</div>
+            </section>
+          )}
         </>
       ) : (
         <>
@@ -375,6 +390,14 @@ export default function DashboardPage() {
               {t('dashboard.carryingNow')}
             </h2>
             <div className="grid gap-3">{carrying.map(dealRow)}</div>
+          </section>
+        )}
+        {receiving.length > 0 && (
+          <section>
+            <h2 className="font-display font-semibold text-lg text-navy mb-3">
+              {t('dashboard.receivingNow')}
+            </h2>
+            <div className="grid gap-3">{receiving.map(dealRow)}</div>
           </section>
         )}
         </>

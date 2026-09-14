@@ -564,6 +564,8 @@
     "myTrips": "Mis viajes",
     "carryingNow": "Llevando ahora",
     "myShipments": "Mis envíos",
+    "receivingNow": "En camino hacia mí",
+    "recipient": "Destinatario",
     "noShipments": "Nada en camino todavía.",
     "withdraw": "Retirar",
     "withdrawFailed": "No se pudo retirar el viaje",

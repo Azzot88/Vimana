@@ -257,6 +257,52 @@ async def test_transit_update_is_carrier_only_and_needs_no_answer(
     assert denied.status_code == 403
 
 
+async def test_the_recipient_moves_the_delivery_and_the_carrier_answers(
+    client, session_maker, deal
+):
+    """T3.12.01 — the recipient's own end of the route. The one who has to agree
+    to be there is the carrier; the answer used to go to the sender."""
+    from sqlalchemy import select
+
+    from app.models.deal import Deal
+    from app.models.user import User
+
+    email = unique_email("rcp-drop")
+    await make_account(
+        {"email": email, "password": SEED_PASSWORD, "display_name": "Rcp"}
+    )
+    login = await client.post(
+        "/api/auth/login", json={"login": email, "password": SEED_PASSWORD}
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    async with session_maker() as db:
+        person = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        row = await db.get(Deal, deal.id)
+        row.recipient_id = person.id
+        await db.commit()
+
+    moved = await _card(
+        client, headers, deal.id, "dropoff.proposed",
+        {"method": "in_person", "city": "New York"},
+    )
+    assert moved.status_code == 201, moved.text
+    assert moved.json()["requires_ack_by"] == "carrier"
+
+
+def test_the_recipient_s_counterparty_is_the_carrier():
+    from types import SimpleNamespace
+
+    from app.core.cards import CardAckRole, CardKind, resolve_ack_role, spec_for
+
+    spec = spec_for(CardKind.dropoff_proposed.value)
+    deal = SimpleNamespace(recipient_id=uuid.uuid4())
+    assert resolve_ack_role(spec, deal, CardAckRole.recipient) is CardAckRole.carrier
+    assert resolve_ack_role(spec, deal, CardAckRole.sender) is CardAckRole.carrier
+    assert resolve_ack_role(spec, deal, CardAckRole.carrier) is CardAckRole.sender
+
+
 async def test_delivery_is_confirmed_by_the_sender_when_there_is_no_recipient(
     client, carrier_headers, sender_headers, deal
 ):

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listDeals, type Deal } from '../api/deals'
+import { roleIn } from '../lib/dealRole'
 import StatusBadge from '../components/StatusBadge'
 import MonoText from '../components/MonoText'
 import { usePrefs } from '../hooks/usePrefs'
@@ -41,7 +42,15 @@ export default function DealsPage() {
       ) : (
         <div className="grid gap-3">
           {deals.map((deal) => {
-            const role = deal.carrier_id === user?.id ? t('dashboard.carrier') : t('dashboard.sender')
+            // T3.12.01 — «not the carrier» used to mean «the sender», which
+            // labelled every recipient as the person who sent them the parcel.
+            const who = roleIn(deal, user?.id)
+            const role =
+              who === 'carrier'
+                ? t('dashboard.carrier')
+                : who === 'recipient'
+                  ? t('dashboard.recipient')
+                  : t('dashboard.sender')
             return (
               <Link
                 key={deal.id}

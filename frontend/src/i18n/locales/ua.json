@@ -571,6 +571,8 @@
     "myTrips": "Мої рейси",
     "carryingNow": "Везу зараз",
     "myShipments": "Мої відправлення",
+    "receivingNow": "Отримую",
+    "recipient": "Отримувач",
     "noShipments": "Поки нічого в дорозі.",
     "withdraw": "Зняти з публікації",
     "withdrawFailed": "Не вдалося зняти рейс",

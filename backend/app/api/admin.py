@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, is_superuser
 from app.core.database import get_db
+from app.core.deal_access import party_role
 from app.core.pagination import Page, clamp_limit, paginate_desc
 from app.core.permissions import Permission, require_perm
 from app.core.deal_chain import append_deal_event, content_hash_of
@@ -305,9 +306,10 @@ async def claim_dispute(
     if not dispute:
         raise HTTPException(status_code=404, detail="Dispute not found")
 
-    # Arbiter cannot judge own deal
+    # Arbiter cannot judge own deal. T3.12.01 — «own» includes being its
+    # recipient: the check knew only the sender and the carrier.
     deal = await db.get(Deal, dispute.deal_id)
-    if deal and current_user.id in (deal.sender_id, deal.carrier_id):
+    if deal and await party_role(db, deal, current_user.id) is not None:
         raise HTTPException(status_code=403, detail="Cannot judge your own deal")
 
     if dispute.status != DisputeStatus.open:

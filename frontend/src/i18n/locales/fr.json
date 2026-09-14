@@ -564,6 +564,8 @@
     "myTrips": "Mes trajets",
     "carryingNow": "En cours de transport",
     "myShipments": "Mes envois",
+    "receivingNow": "En route vers moi",
+    "recipient": "Destinataire",
     "noShipments": "Rien en route pour l'instant.",
     "withdraw": "Retirer",
     "withdrawFailed": "Impossible de retirer le trajet",

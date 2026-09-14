@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, is_superuser
 from app.core.chats import chat_for_pair
+from app.core.deal_access import party_role, recipient_deal_ids
 from app.core.database import get_db
 from app.core.identity import require_live_identity
 from app.core.pagination import Page, clamp_limit, paginate_desc
@@ -336,13 +337,19 @@ async def get_deal(
     deal = await db.get(Deal, deal_id)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
-    if current_user.id not in (deal.sender_id, deal.carrier_id):
+    # T3.12.01 — the recipient reads the deal too. The vault already let them in
+    # and the server already addressed the delivery confirmation to them; a 403
+    # here is what left them with a chat and no deal to confirm anything in.
+    if await party_role(db, deal, current_user.id) is None:
         raise HTTPException(status_code=403, detail="Not a deal participant")
 
     trip = await db.get(Trip, deal.trip_id)
     order = await db.get(Order, deal.order_id)
     sender = await db.get(User, deal.sender_id)
     carrier = await db.get(User, deal.carrier_id)
+    recipient = (
+        await db.get(User, deal.recipient_id) if deal.recipient_id else None
+    )
 
     return DealDetailOut(
         id=deal.id,
@@ -358,6 +365,7 @@ async def get_deal(
         depart_at=trip.depart_at if trip else deal.created_at,
         sender_name=sender.display_name if sender else "",
         carrier_name=carrier.display_name if carrier else "",
+        recipient_name=recipient.display_name if recipient else None,
         sender_npub=sender.nostr_pubkey if sender else None,
         carrier_npub=carrier.nostr_pubkey if carrier else None,
         cargo_description=order.description or "" if order else "",
@@ -537,8 +545,16 @@ async def list_deals(
     place either way: a chat id is not a capability, and a guessed one must not
     turn into a way to read someone else's deals.
     """
+    # T3.12.01 — «on either side» includes the recipient's. A recipient whose
+    # deals are not on their panel learns about the parcel only from a chat
+    # they would have to know to open.
     base = select(Deal).where(
-        or_(Deal.sender_id == current_user.id, Deal.carrier_id == current_user.id)
+        or_(
+            Deal.sender_id == current_user.id,
+            Deal.carrier_id == current_user.id,
+            Deal.recipient_id == current_user.id,
+            Deal.id.in_(recipient_deal_ids(current_user.id)),
+        )
     )
     if chat_id is not None:
         base = base.where(Deal.chat_id == chat_id)
@@ -550,7 +566,11 @@ async def list_deals(
     #
     # `.get()` per deal would have been four round trips × twenty rows, and it is
     # the shape this endpoint would have grown into one row at a time.
-    people = {d.sender_id for d in items} | {d.carrier_id for d in items}
+    people = (
+        {d.sender_id for d in items}
+        | {d.carrier_id for d in items}
+        | {d.recipient_id for d in items if d.recipient_id}
+    )
     trips = {d.trip_id for d in items}
     names: dict[uuid.UUID, str] = {}
     routes: dict[uuid.UUID, tuple[str, str]] = {}
@@ -626,6 +646,9 @@ async def list_deals(
                 created_at=deal.created_at,
                 sender_name=names.get(deal.sender_id),
                 carrier_name=names.get(deal.carrier_id),
+                recipient_name=(
+                    names.get(deal.recipient_id) if deal.recipient_id else None
+                ),
                 origin=route[0] if route else None,
                 destination=route[1] if route else None,
                 shipment_no=deal.shipment_no,

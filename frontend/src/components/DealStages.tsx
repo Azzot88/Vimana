@@ -123,11 +123,17 @@ export default function DealStages({
      the arbiter stops being a last resort and becomes the next step. Named on
      the panel rather than left to be found, because somebody in this position
      is already unsure whether they are allowed to complain. */
+  /* T3.12.01 — not the recipient. The server refuses them (`api/admin.
+     open_dispute`), and the owner's rule is that the recipient asks the sender
+     to open it (`T3.12.05`): a button drawn only to be refused is worse than
+     none. */
+  const mayDispute = Boolean(myRole) && myRole !== 'recipient'
+
   const handedOverUnpaid =
-    (status === 'delivered' || status === 'posted') && Boolean(myRole)
+    (status === 'delivered' || status === 'posted') && mayDispute
 
   const canDispute =
-    Boolean(myRole) &&
+    mayDispute &&
     ['accepted', 'in_transit', 'posted', 'delivered'].includes(status)
 
   /* T3.11.27 — «Плательщик определён на этапе условий, поэтому

@@ -620,6 +620,8 @@
     "myTrips": "My trips",
     "carryingNow": "Carrying now",
     "myShipments": "My shipments",
+    "receivingNow": "Coming to me",
+    "recipient": "Recipient",
     "noShipments": "Nothing on its way yet.",
     "withdraw": "Withdraw",
     "withdrawFailed": "Could not withdraw the trip",
@@ -813,6 +815,7 @@
     "empty": "No terms proposed yet.",
     "locked": "locked by the carrier",
     "lockIt": "lock this",
+    "noRecipient": "recipient not named yet",
     "section": {
       "cargo": "Cargo",
       "handover": "Handover",

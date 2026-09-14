@@ -565,6 +565,8 @@
     "myTrips": "Moje loty",
     "carryingNow": "Wiozę teraz",
     "myShipments": "Moje przesyłki",
+    "receivingNow": "Jedzie do mnie",
+    "recipient": "Odbiorca",
     "noShipments": "Nic jeszcze w drodze.",
     "withdraw": "Wycofaj",
     "withdrawFailed": "Nie udało się wycofać lotu",

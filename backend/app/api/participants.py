@@ -118,9 +118,22 @@ async def accept_deal_invite(
             detail="You are already a principal participant of this deal",
         )
 
+    changed = False
     if row.user_id is None:
         row.user_id = current_user.id
         row.accepted_at = datetime.now(tz=timezone.utc)
+        changed = True
+    # T3.12.01 — accepting the link makes this person *the* recipient of the
+    # deal, not only a reader of its chat. This path never filled the column,
+    # so the cards read the deal as having no recipient and addressed delivery
+    # to the sender, while the actual recipient sat in the vault unable to act.
+    #
+    # Only when nobody holds the role yet: a second link must not silently move
+    # the parcel to somebody else. One recipient per deal is `T3.12.05`.
+    if deal.recipient_id is None:
+        deal.recipient_id = current_user.id
+        changed = True
+    if changed:
         await db.commit()
     return {"deal_id": str(row.deal_id), "role": row.role.value}
 
@@ -153,6 +166,11 @@ async def revoke_participant(
     if row is None:
         raise HTTPException(status_code=404, detail="No active participant to revoke")
     row.revoked_at = datetime.now(tz=timezone.utc)
+    # T3.12.01 — the column has to leave with the row. Otherwise a revoked
+    # recipient keeps the deal through `recipient_id` after losing the vault,
+    # and the cards keep addressing them.
+    if deal.recipient_id == user_id:
+        deal.recipient_id = None
     await db.commit()
     return {"revoked": True}
 

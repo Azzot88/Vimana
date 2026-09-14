@@ -451,6 +451,100 @@ async def test_only_sender_can_name_the_recipient(client, _deal):
     assert r.status_code == 403
 
 
+# ── T3.12.01: the recipient has a deal, not only a chat ──────────────────────
+
+
+async def _join_by_link(client, _deal, prefix: str):
+    inv = await client.post(
+        f"/api/deals/{_deal['deal_id']}/invite-recipient",
+        headers=_deal["sender_headers"],
+    )
+    hdr, _ = await _register(client, prefix)
+    joined = await client.post(
+        f"/api/deals/join/{inv.json()['invite_token']}", headers=hdr
+    )
+    assert joined.status_code == 200, joined.text
+    return hdr
+
+
+async def test_joining_by_link_makes_them_the_recipient_of_the_deal(client, _deal):
+    """Разбор 2026-09-13: the link path never filled `Deal.recipient_id`, so the
+    cards addressed delivery to the sender and the deal detail answered 403 to
+    the one person the parcel was for."""
+    hdr = await _join_by_link(client, _deal, "r-link")
+    me = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
+
+    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["recipient_id"] == me
+    assert detail.json()["recipient_name"] == "R-LINK"
+
+
+async def test_a_second_link_does_not_replace_the_recipient(client, _deal):
+    first = await _join_by_link(client, _deal, "r-first")
+    first_id = (await client.get("/api/auth/me", headers=first)).json()["id"]
+    second = await _join_by_link(client, _deal, "r-second")
+
+    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=second)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["recipient_id"] == first_id
+
+
+async def test_a_recipient_named_from_contacts_opens_the_deal(client, _deal):
+    hdr, _ = await _register(client, "r-named")
+    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
+    named = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient",
+        headers=_deal["sender_headers"],
+        json={"user_id": user_id},
+    )
+    assert named.status_code == 201, named.text
+
+    detail = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["recipient_name"] == "R-NAMED"
+
+
+async def test_the_recipient_finds_the_deal_in_their_list(client, _deal):
+    hdr = await _join_by_link(client, _deal, "r-list")
+
+    page = await client.get("/api/deals", headers=hdr, params={"limit": 100})
+    assert page.status_code == 200, page.text
+    rows = [d for d in page.json()["items"] if d["id"] == _deal["deal_id"]]
+    assert len(rows) == 1
+    assert rows[0]["recipient_name"] == "R-LIST"
+
+
+async def test_the_sender_s_list_names_the_recipient_too(client, _deal):
+    await _join_by_link(client, _deal, "r-named2")
+
+    page = await client.get(
+        "/api/deals", headers=_deal["sender_headers"], params={"limit": 100}
+    )
+    rows = [d for d in page.json()["items"] if d["id"] == _deal["deal_id"]]
+    assert rows and rows[0]["recipient_name"] == "R-NAMED2"
+
+
+async def test_revoking_the_recipient_closes_the_deal_to_them(client, _deal):
+    hdr = await _join_by_link(client, _deal, "r-gone")
+    user_id = (await client.get("/api/auth/me", headers=hdr)).json()["id"]
+
+    rev = await client.post(
+        f"/api/deals/{_deal['deal_id']}/participants/{user_id}/revoke",
+        headers=_deal["sender_headers"],
+    )
+    assert rev.status_code == 200, rev.text
+
+    gone = await client.get(f"/api/deals/{_deal['deal_id']}", headers=hdr)
+    assert gone.status_code == 403
+    page = await client.get("/api/deals", headers=hdr, params={"limit": 100})
+    assert _deal["deal_id"] not in {d["id"] for d in page.json()["items"]}
+    detail = await client.get(
+        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
+    )
+    assert detail.json()["recipient_id"] is None
+
+
 async def test_carrier_cannot_be_made_the_recipient(client, _deal):
     """They already read everything in the deal; a recipient row would add a
     role that means nothing and a second reason for the same access."""

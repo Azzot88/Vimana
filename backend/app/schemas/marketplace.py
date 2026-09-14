@@ -426,6 +426,9 @@ class DealOut(BaseModel):
     # the server already has open in front of it.
     sender_name: str | None = None
     carrier_name: str | None = None
+    # T3.12.01 — the third name on the card. `None` while nobody is named, which
+    # is a real state of a deal and not an empty string to print.
+    recipient_name: str | None = None
     origin: str | None = None
     destination: str | None = None
     # T3.11.23 — what makes a row in the chat a *deal card* instead of a link.
@@ -457,6 +460,9 @@ class DealDetailOut(BaseModel):
     depart_at: datetime
     sender_name: str
     carrier_name: str
+    # T3.12.01 — shown in the deal header always, even when it is the sender
+    # (owner, 2026-09-13). `None` means no recipient is named yet.
+    recipient_name: str | None = None
     # T2.3 — needed by client to encrypt vault messages under both parties' npubs.
     sender_npub: str | None = None
     carrier_npub: str | None = None

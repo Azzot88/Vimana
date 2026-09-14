@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listDeals, type Deal } from '../api/deals'
+import { roleIn } from '../lib/dealRole'
 import { listMyInquiries } from '../api/inquiry'
 import DealSummaryCard from '../components/DealSummaryCard'
 import MonoText from '../components/MonoText'
@@ -54,12 +55,18 @@ export default function DealsByPersonPage() {
       .catch(() => setChats({}))
   }, [])
 
-  /** The counterparty of a deal — whoever is not me. A deal always has both a
-   *  sender and a carrier, and exactly one of them is the reader. */
-  const other = (deal: Deal) =>
-    deal.carrier_id === user?.id
+  /** The counterparty of a deal — whoever is not me.
+   *
+   *  T3.12.01 — the reader can also be the recipient, and the person a
+   *  recipient's deal is «with» is the sender who named them: that is who they
+   *  know and who they ask. Grouping them under the carrier would file the
+   *  parcel under a stranger. */
+  const other = (deal: Deal) => {
+    const me = roleIn(deal, user?.id)
+    return me === 'carrier' || me === 'recipient'
       ? { id: deal.sender_id, name: deal.sender_name }
       : { id: deal.carrier_id, name: deal.carrier_name }
+  }
 
   const groups = useMemo(() => {
     const by = new Map<string, { id: string; name: string; deals: Deal[] }>()

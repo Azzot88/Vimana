@@ -14,9 +14,11 @@ import {
 import api from '../api/client'
 import { getDeal, type DealDetail, type DealStatus } from '../api/deals'
 import { getTerms, type Terms } from '../api/terms'
+import { decryptMessageForMe } from '../api/participants'
 import RecipientModal from '../components/RecipientModal'
 import SafeFilePicker from '../components/SafeFilePicker'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
+import { roleIn } from '../lib/dealRole'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
 import TermsCard from '../components/TermsCard'
@@ -77,7 +79,8 @@ export default function DealVaultPage() {
     e2e: E2EParties | null
     senderId: string | null
     carrierId: string | null
-  }>({ e2e: null, senderId: null, carrierId: null })
+    recipientId: string | null
+  }>({ e2e: null, senderId: null, carrierId: null, recipientId: null })
   const [decrypted, setDecrypted] = useState<Record<string, string>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
   /* Bumped by the poll. The status and the agreement hang off it as well as off
@@ -87,12 +90,24 @@ export default function DealVaultPage() {
 
   // T3.35 — a card that awaits the other side must not offer this user a
   // button the server will refuse anyway.
-  const dealRole: 'sender' | 'carrier' | null =
-    user?.id && parties.senderId === user.id
-      ? 'sender'
-      : user?.id && parties.carrierId === user.id
-        ? 'carrier'
-        : null
+  //
+  // T3.12.01 — and the recipient is a role like the other two. This screen used
+  // to know only sender and carrier, so the recipient saw every card as
+  // somebody else's — including the delivery the server had addressed to them.
+  const dealRole =
+    parties.senderId && parties.carrierId
+      ? roleIn(
+          {
+            sender_id: parties.senderId,
+            carrier_id: parties.carrierId,
+            recipient_id: parties.recipientId,
+          },
+          user?.id,
+        )
+      : null
+  /** Messages whose server-side decrypt is already on its way: the poll re-runs
+   *  the effect every ten seconds, and without this each run would ask again. */
+  const decrypting = useRef(new Set<string>())
 
   const load = async () => {
     if (!dealId) return
@@ -138,6 +153,7 @@ export default function DealVaultPage() {
       .get<{
         sender_id: string
         carrier_id: string
+        recipient_id: string | null
         status: DealStatus
         sender_npub: string | null
         carrier_npub: string | null
@@ -155,6 +171,7 @@ export default function DealVaultPage() {
         setParties((prev) =>
           prev.senderId === data.sender_id &&
           prev.carrierId === data.carrier_id &&
+          prev.recipientId === data.recipient_id &&
           prev.e2e?.senderNpub === (data.sender_npub ?? undefined) &&
           prev.e2e?.carrierNpub === (data.carrier_npub ?? undefined)
             ? prev
@@ -168,6 +185,7 @@ export default function DealVaultPage() {
                     : null,
                 senderId: data.sender_id,
                 carrierId: data.carrier_id,
+                recipientId: data.recipient_id,
               },
         )
       })
@@ -200,17 +218,28 @@ export default function DealVaultPage() {
   // Try to decrypt e2e messages using own read_package + author's npub.
   // Failures (custodial user, missing extension, corrupt blob) leave the
   // message showing a "🔒 encrypted" placeholder.
+  //
+  // T3.12.01 — the recipient holds no package the browser can open: sender and
+  // carrier get theirs written client-side, the recipient's is
+  // `recipient_<id>` and is opened by the server (T3.3, `decrypt-for-me`).
+  // Until now the screen did not know it had a recipient in front of it, so
+  // every encrypted line stayed a padlock for the person the parcel is for.
   useEffect(() => {
-    const myRole: 'sender' | 'carrier' | null =
-      user && parties.senderId === user.id
-        ? 'sender'
-        : user && parties.carrierId === user.id
-        ? 'carrier'
-        : null
-    if (!myRole) return
+    const myRole = dealRole
+    if (!myRole || !dealId) return
 
     for (const msg of messages) {
       if (!msg.is_e2e || decrypted[msg.id] !== undefined) continue
+      if (myRole === 'recipient') {
+        if (decrypting.current.has(msg.id)) continue
+        decrypting.current.add(msg.id)
+        decryptMessageForMe(dealId, msg.id)
+          .then(({ data }) =>
+            setDecrypted((prev) => ({ ...prev, [msg.id]: data.text })),
+          )
+          .catch(() => setDecrypted((prev) => ({ ...prev, [msg.id]: '' })))
+        continue
+      }
       if (!msg.ciphertext_b64 || !msg.nonce_b64 || !msg.read_packages) continue
       const entry = msg.read_packages[myRole]
       if (!entry || !msg.nostr_pubkey) continue
@@ -225,7 +254,7 @@ export default function DealVaultPage() {
           setDecrypted((prev) => ({ ...prev, [msg.id]: '' }))
         })
     }
-  }, [messages, parties, user, decrypted])
+  }, [messages, dealRole, dealId, decrypted])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

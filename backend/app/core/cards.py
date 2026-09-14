@@ -361,6 +361,13 @@ def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole 
         return spec.ack_by
     if spec.kind is CardKind.delivery_declared:
         return CardAckRole.recipient if deal.recipient_id else CardAckRole.sender
+    # T3.12.01 — the recipient's counterparty is the carrier. The recipient moves
+    # the meeting on their own end (`dropoff.proposed`) and the person who has to
+    # agree to be there is the one carrying the parcel; the fallthrough below
+    # read every non-sender as the carrier and sent the answer to the sender, who
+    # is not at that end at all (owner, 2026-09-13).
+    if creator is CardAckRole.recipient:
+        return CardAckRole.carrier
     return (
         CardAckRole.carrier if creator is CardAckRole.sender else CardAckRole.sender
     )

@@ -36,6 +36,7 @@ from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, presign_ttl_for_kind, upload_file
 from app.core.threshold import E2EPayload, envelope_parts, nip44_decrypt
 from app.core.cards import CardKind, role_of, spec_for
+from app.core.deal_access import party_role
 from app.models.deal import (
     Attachment, AttachmentKind, CardState, Deal, DealEventType, DealVaultMessage,
     UserFile,
@@ -327,20 +328,10 @@ async def _get_deal_as_participant(
     deal = await db.get(Deal, deal_id)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
-    if current_user.id in (deal.sender_id, deal.carrier_id):
-        return deal
-    # T3.3 — active recipients also have access.
-    from app.models.deal import DealParticipant as DP
-    row = (
-        await db.execute(
-            select(DP).where(
-                DP.deal_id == deal_id,
-                DP.user_id == current_user.id,
-                DP.revoked_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if row is None:
+    # T3.3 — active recipients also have access. T3.12.01 — asked through the
+    # one helper every endpoint now shares, so the vault, the deal card, the
+    # list and the arbiter guard cannot disagree about who is in the deal.
+    if await party_role(db, deal, current_user.id) is None:
         raise HTTPException(status_code=403, detail="Not a deal participant")
     return deal
 

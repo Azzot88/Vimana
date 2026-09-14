@@ -101,8 +101,13 @@ export default function DealAgreementCard({ deal, terms, open, onToggle }: Props
               № {deal.shipment_no}
             </MonoText>
           )}
+          {/* T3.12.01 — the recipient is named always, even when it is the
+              sender (owner, 2026-09-13): the header says whose hands the
+              parcel passes through, and «the sender again» is an answer, not
+              a blank. Unnamed is said in words for the same reason. */}
           <span className="text-xs font-body text-navy/45">
-            {deal.sender_name} → {deal.carrier_name}
+            {deal.sender_name} → {deal.carrier_name} →{' '}
+            {deal.recipient_name ?? t('agreement.noRecipient')}
           </span>
         </div>
       </button>

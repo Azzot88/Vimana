@@ -84,6 +84,7 @@ async def _open_dispute(client, session_maker):
         await db.commit()
         await db.refresh(arb)
         arb_email = arb.email
+        arb_id = arb.id
 
     a_login = await client.post(
         "/api/auth/login", json={"login": arb_email, "password": SEED_PASSWORD}
@@ -103,6 +104,7 @@ async def _open_dispute(client, session_maker):
         "sender_headers": s_headers,
         "carrier_headers": c_headers,
         "arbiter_headers": a_headers,
+        "arbiter_id": arb_id,
         "deal_id": deal_id,
         "dispute_id": dispute_id,
     }
@@ -125,6 +127,27 @@ async def test_opening_dispute_auto_creates_grant_from_opener(
         grants = list(rows.scalars())
         assert len(grants) == 1
         assert grants[0].revoked_at is None
+
+
+async def test_an_arbiter_who_is_the_recipient_cannot_take_the_dispute(
+    client, _open_dispute, session_maker
+):
+    """T3.12.01 — «арбитр никогда не судит свою сделку», and the recipient is a
+    side of the deal. The guard knew only the sender and the carrier."""
+    import uuid
+
+    from app.models.deal import Deal
+
+    d = _open_dispute
+    async with session_maker() as db:
+        row = await db.get(Deal, uuid.UUID(d["deal_id"]))
+        row.recipient_id = d["arbiter_id"]
+        await db.commit()
+
+    claim = await client.post(
+        f"/api/disputes/{d['dispute_id']}/claim", headers=d["arbiter_headers"]
+    )
+    assert claim.status_code == 403
 
 
 async def test_counterparty_grant_endpoint_creates_second_grant(
