@@ -32,6 +32,7 @@ from app.core.cards import (
     PAYABLE_STATUSES,
     CardKind,
     CardSpec,
+    addressed_role,
     resolve_ack_role,
     role_of,
 )
@@ -403,6 +404,8 @@ async def _raise_card(
         expected = (
             CardAckRole.recipient if payer == "recipient" else CardAckRole.sender
         )
+        # T3.12.05 — a sender who is also the recipient pays as the sender.
+        expected = addressed_role(expected, deal)
         if creator is not expected:
             raise HTTPException(
                 status_code=403,

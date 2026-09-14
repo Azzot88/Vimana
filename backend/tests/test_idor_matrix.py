@@ -232,6 +232,9 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("POST", "/api/deals/{deal_id}/recipient/withdraw"): Case(
         DENIED, "withdrawing the recipient of a deal that is not mine"
     ),
+    ("POST", "/api/deals/{deal_id}/recipient/self"): Case(
+        DENIED, "making myself the recipient of a stranger's parcel"
+    ),
     ("POST", "/api/deals/{deal_id}/recipient-offers"): Case(
         DENIED,
         "offering the recipient role in a stranger's deal",

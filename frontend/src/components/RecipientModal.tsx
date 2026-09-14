@@ -11,6 +11,7 @@ import {
   inviteRecipient,
   listParticipants,
   offerRecipient,
+  setSelfRecipient,
   withdrawRecipient,
   type Participant,
 } from '../api/participants'
@@ -21,6 +22,10 @@ interface Props {
   dealId: string
   onClose: () => void
   onAttached: (displayName: string | null) => void
+  /** T3.12.05 — the sender is already the recipient of this deal. */
+  selfRecipient?: boolean
+  /** T3.12.05 — called after «Получатель — я». */
+  onSelf?: () => void
 }
 
 /** T3.11.24 — who is receiving this parcel, chosen rather than typed.
@@ -52,6 +57,8 @@ export default function RecipientModal({
   dealId,
   onClose,
   onAttached,
+  selfRecipient = false,
+  onSelf,
 }: Props) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
@@ -67,12 +74,14 @@ export default function RecipientModal({
   const [inviteUrl, setInviteUrl] = useState('')
   /** T3.12.05 — who holds the role or the open offer, if anybody. */
   const [current, setCurrent] = useState<Participant | null>(null)
+  const [isSelf, setIsSelf] = useState(selfRecipient)
 
   useEffect(() => {
     if (!open) return
     setError('')
     setInviteUrl('')
     setLoading(true)
+    setIsSelf(selfRecipient)
     listParticipants(dealId)
       .then(({ data }) => setCurrent(data[0] ?? null))
       .catch(() => setCurrent(null))
@@ -176,17 +185,19 @@ export default function RecipientModal({
         {/* T3.12.05 — one offer at a time. What stands now is said first, with
             the way to take it back: a new offer replaces an unanswered one, and
             a recipient who accepted has to be withdrawn before anybody else. */}
-        {current && (
+        {(current || isSelf) && (
           <div
             data-testid="recipient-current"
             className="flex items-center justify-between gap-3 p-3 rounded-field border border-navy/10 bg-ivory"
           >
             <p className="text-sm font-body text-navy">
-              {current.state === 'accepted'
-                ? t('recipient.current', { name: current.display_name ?? '' })
-                : current.display_name
-                  ? t('recipient.pending', { name: current.display_name })
-                  : t('recipient.linkPending')}
+              {isSelf
+                ? t('recipient.currentSelf')
+                : current?.state === 'accepted'
+                  ? t('recipient.current', { name: current.display_name ?? '' })
+                  : current?.display_name
+                    ? t('recipient.pending', { name: current.display_name })
+                    : t('recipient.linkPending')}
             </p>
             <button
               type="button"
@@ -197,6 +208,7 @@ export default function RecipientModal({
                 try {
                   await withdrawRecipient(dealId)
                   setCurrent(null)
+                  setIsSelf(false)
                 } catch {
                   setError(t('recipient.inviteError'))
                 } finally {
@@ -305,6 +317,33 @@ export default function RecipientModal({
         )}
 
         {error && <p className="text-xs font-body text-amber">{error}</p>}
+
+        {/* T3.12.05 — «Получатель — я»: the sender receives their own parcel.
+            No offer, because nobody is being asked anything. */}
+        {!current && !isSelf && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true)
+              setError('')
+              try {
+                await setSelfRecipient(dealId)
+                setIsSelf(true)
+                onSelf?.()
+              } catch (err: unknown) {
+                const detail = (err as { response?: { data?: { detail?: string } } })
+                  ?.response?.data?.detail
+                setError(typeof detail === 'string' ? detail : t('recipient.inviteError'))
+              } finally {
+                setBusy(false)
+              }
+            }}
+            className="w-full text-left p-3 rounded-field border border-cyan/40 bg-cyan/5 hover:border-cyan text-sm font-body text-navy disabled:opacity-50"
+          >
+            {t('recipient.self')}
+          </button>
+        )}
 
         <div className="border-t border-navy/10 pt-3 space-y-2">
           <p className="text-xs font-body text-navy/50">

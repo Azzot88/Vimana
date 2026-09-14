@@ -391,6 +391,12 @@
       "infected": "zainfekowany"
     }
   },
+  "disputeRequest": {
+    "button": "Poproś nadawcę o otwarcie sporu",
+    "title": "Poproś nadawcę o otwarcie sporu",
+    "hint": "Spór otwiera nadawca, nie odbiorca. Napisz, co jest nie tak — nadawca zobaczy to na czacie.",
+    "submit": "Wyślij prośbę"
+  },
   "recipientOffer": {
     "title": "Proponujemy ci rolę odbiorcy",
     "sectionTitle": "Rola odbiorcy",
@@ -428,7 +434,10 @@
     "withdraw": "Wycofaj",
     "current": "Odbiorca: {{name}}",
     "pending": "Czeka na odpowiedź: {{name}}",
-    "linkPending": "Link wysłany — czekamy na odpowiedź"
+    "linkPending": "Link wysłany — czekamy na odpowiedź",
+    "self": "Odbiorcą jestem ja",
+    "selfSet": "Jesteś odbiorcą tej paczki",
+    "currentSelf": "Odbiorca: ty"
   },
   "verification": {
     "sectionTitle": "Weryfikacja tożsamości",
@@ -1466,7 +1475,8 @@
       "cancel_requested": "Poproś o anulowanie",
       "cancel_confirmed": "Anulowanie potwierdzone",
       "terms_reconfirm_requested": "Warunki wymagają potwierdzenia",
-      "cargo_photographed": "Zdjęcia ładunku"
+      "cargo_photographed": "Zdjęcia ładunku",
+      "dispute_requested": "Prośba o otwarcie sporu"
     },
     "field": {
       "method": "Sposób",

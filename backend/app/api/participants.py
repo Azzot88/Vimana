@@ -482,6 +482,28 @@ async def decline_recipient_offer(
     return await _offer_view(db, row)
 
 
+@router.post("/deals/{deal_id}/recipient/self")
+async def name_self_recipient(
+    deal_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.12.05 — «Получатель — я»: the sender takes the parcel at the other end.
+
+    The one combination of places a person may hold in a deal (`D-CARGO-MODEL`
+    (3)), and the one that needs no offer: nobody is being asked anything. The
+    sender still reads the deal as the sender; cards addressed to the recipient
+    go to them (`core.cards.addressed_role`).
+    """
+    deal = await _sender_deal(db, deal_id, current_user)
+    _can_offer(deal)
+    await _withdraw_pending(db, deal_id)
+    deal.recipient_id = current_user.id
+    await follow_recipient(db, deal)
+    await db.commit()
+    return {"recipient_id": str(current_user.id)}
+
+
 # ── taking it back ────────────────────────────────────────────────────────
 
 

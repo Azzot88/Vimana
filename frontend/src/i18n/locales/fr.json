@@ -390,6 +390,12 @@
       "infected": "infecté"
     }
   },
+  "disputeRequest": {
+    "button": "Demander à l’expéditeur d’ouvrir un litige",
+    "title": "Demander à l’expéditeur d’ouvrir un litige",
+    "hint": "C’est l’expéditeur qui ouvre un litige, pas le destinataire. Dites ce qui ne va pas : l’expéditeur le verra dans la discussion.",
+    "submit": "Envoyer la demande"
+  },
   "recipientOffer": {
     "title": "On vous propose le rôle de destinataire",
     "sectionTitle": "Rôle de destinataire",
@@ -427,7 +433,10 @@
     "withdraw": "Retirer",
     "current": "Destinataire : {{name}}",
     "pending": "En attente de réponse : {{name}}",
-    "linkPending": "Lien envoyé — en attente de réponse"
+    "linkPending": "Lien envoyé — en attente de réponse",
+    "self": "Le destinataire, c’est moi",
+    "selfSet": "Vous êtes le destinataire de ce colis",
+    "currentSelf": "Destinataire : vous"
   },
   "verification": {
     "sectionTitle": "Vérification d'identité",
@@ -1463,7 +1472,8 @@
       "cancel_requested": "Demander l'annulation",
       "cancel_confirmed": "Annulation confirmée",
       "terms_reconfirm_requested": "Conditions à reconfirmer",
-      "cargo_photographed": "Photos du colis"
+      "cargo_photographed": "Photos du colis",
+      "dispute_requested": "Demande d’ouvrir un litige"
     },
     "field": {
       "method": "Méthode",

@@ -782,6 +782,21 @@ async def ack_card(
             detail="The other side is still editing — try again in a moment",
         )
 
+    # T3.12.05 — «получатель обязателен до фиксации условий» (`D-CARGO-MODEL`
+    # (4)): without somebody at the other end who accepted the role — or the
+    # sender naming themselves — there is nobody the agreement can hand the
+    # parcel to. Refused before the card changes, so it stays answerable.
+    if (
+        body.decision == "accepted"
+        and msg.card_kind
+        in (CardKind.terms_proposed.value, CardKind.terms_countered.value)
+        and deal.recipient_id is None
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Name a recipient who has accepted the role before agreeing the terms",
+        )
+
     msg.card_state = (
         CardState.accepted if body.decision == "accepted" else CardState.declined
     )

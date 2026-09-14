@@ -41,6 +41,9 @@ async def deal(session_maker, seed_carrier, seed_sender, seed_trip):
             trip_id=seed_trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,
+            # T3.12.05 — terms are agreed only with a recipient; the sender
+            # receiving their own parcel is the case these tests are about.
+            recipient_id=seed_sender.id,
             status=DealStatus.matched,
         )
         db.add(d)
@@ -247,6 +250,40 @@ async def test_acceptance_creates_the_contract(
     assert body["card_kind"] == "terms.agreed"
     assert body["payload"]["price_total"] == 140
     assert body["payload"]["proposal_id"] == msg_id
+
+
+async def test_no_contract_without_a_recipient(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """T3.12.05 — «получатель обязателен до фиксации условий». The proposal
+    stays pending, so naming a recipient and answering again is the way on."""
+    from app.models.deal import Deal
+
+    async with session_maker() as db:
+        row = await db.get(Deal, deal.id)
+        row.recipient_id = None
+        await db.commit()
+
+    proposal = await _propose(client, sender_headers, deal.id)
+    msg_id = proposal.json()["id"]
+    refused = await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{msg_id}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert refused.status_code == 409, refused.text
+    assert "recipient" in refused.json()["detail"]
+    current = await client.get(f"/api/deals/{deal.id}/terms", headers=sender_headers)
+    assert current.json()["card_state"] == "pending"
+
+    named = await client.post(f"/api/deals/{deal.id}/recipient/self", headers=sender_headers)
+    assert named.status_code == 200, named.text
+    agreed = await client.post(
+        f"/api/deals/{deal.id}/dealvault/messages/{msg_id}/ack",
+        headers=carrier_headers,
+        json={"decision": "accepted"},
+    )
+    assert agreed.status_code == 200, agreed.text
 
 
 async def test_contract_stamps_the_parameter_version(

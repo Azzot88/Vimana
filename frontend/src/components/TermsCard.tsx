@@ -35,8 +35,13 @@ export default function TermsCard({ msg, dealId, myRole, onChanged }: Props) {
     try {
       await ackCard(dealId, msg.id, decision)
       onChanged()
-    } catch {
-      setError(t('terms.answerFailed'))
+    } catch (err: unknown) {
+      /* T3.12.05 — the server's own words when it has them: «name a recipient
+         before agreeing the terms» is something to act on, «could not answer»
+         is not. */
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response
+        ?.data?.detail
+      setError(typeof detail === 'string' ? detail : t('terms.answerFailed'))
     } finally {
       setBusy(false)
     }

@@ -437,6 +437,12 @@
       "infected": "infected"
     }
   },
+  "disputeRequest": {
+    "button": "Ask the sender to open a dispute",
+    "title": "Ask the sender to open a dispute",
+    "hint": "The recipient does not open a dispute — the sender does. Say what went wrong; the sender sees it in the chat.",
+    "submit": "Send the request"
+  },
   "recipientOffer": {
     "title": "You are offered the role of recipient",
     "sectionTitle": "Recipient role",
@@ -474,7 +480,10 @@
     "withdraw": "Withdraw",
     "current": "Recipient: {{name}}",
     "pending": "Awaiting an answer: {{name}}",
-    "linkPending": "Link sent — awaiting an answer"
+    "linkPending": "Link sent — awaiting an answer",
+    "self": "I am the recipient",
+    "selfSet": "You are the recipient of this parcel",
+    "currentSelf": "Recipient: you"
   },
   "verification": {
     "declinedPolite": {
@@ -1611,7 +1620,8 @@
       "cancel_requested": "Request cancellation",
       "cancel_confirmed": "Cancellation confirmed",
       "terms_reconfirm_requested": "Terms need reconfirming",
-      "cargo_photographed": "Photos of the cargo"
+      "cargo_photographed": "Photos of the cargo",
+      "dispute_requested": "Asked to open a dispute"
     },
     "field": {
       "method": "Method",

@@ -104,6 +104,10 @@ class CardKind(str, enum.Enum):
 
     # Group 5 — exceptions (T3.39)
     issue_reported = "issue.reported"
+    # T3.12.05 — the recipient does not open a dispute; they ask the sender to
+    # (`D-CARGO-MODEL` (4)). Informational only (owner, 2026-09-14): the sender
+    # reads it and opens the dispute with the ordinary button if they agree.
+    dispute_requested = "dispute.requested"
     cancel_requested = "cancel.requested"
     cancel_confirmed = "cancel.confirmed"
     dispute_opened = "dispute.opened"
@@ -317,6 +321,11 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         # ── group 5 · exceptions ───────────────────────────────────────────
         _s(CardKind.issue_reported, "exceptions", creator_roles=ALL_PARTIES,
            implemented=True),
+        # Nobody answers it: it is addressed to the sender by being in the deal
+        # they read, and the answer to it is a dispute or none.
+        _s(CardKind.dispute_requested, "exceptions",
+           creator_roles=frozenset({CardAckRole.recipient}),
+           implemented=True),
         # T3.11.27 — a cancellation is agreed by both, and reaches `cancelled`
         # rather than `closed`: a deal called off is not a deal completed, and
         # the record has to keep the two apart. Unanswered, it closes itself by
@@ -363,8 +372,9 @@ def role_of(deal, user_id) -> CardAckRole | None:
     return None
 
 
-def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole | None:
-    """Who owes the answer to this card.
+def _addressee(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole | None:
+    """Who owes the answer to this card, before `addressed_role` folds a
+    sender-recipient into the sender.
 
     `COUNTERPARTY` is resolved here rather than stored, because it depends on
     who spoke. Delivery is the one asymmetric case: the person receiving the
@@ -388,6 +398,33 @@ def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole 
     return (
         CardAckRole.carrier if creator is CardAckRole.sender else CardAckRole.sender
     )
+
+
+def addressed_role(role: CardAckRole | None, deal) -> CardAckRole | None:
+    """T3.12.05 — «Получатель — я»: the one person who holds two places.
+
+    A sender who named themselves the recipient reads the deal as the sender
+    (`role_of`), so a card addressed to the recipient would wait for somebody
+    nobody can act as. It is addressed to the sender instead — which is exactly
+    what a deal without a separate recipient always did.
+
+    Called by: `resolve_ack_role`, `api.cards._raise_card` (the payer check).
+    """
+    if (
+        role is CardAckRole.recipient
+        and deal.recipient_id is not None
+        and deal.recipient_id == deal.sender_id
+    ):
+        return CardAckRole.sender
+    return role
+
+
+def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole | None:
+    """Who owes the answer to this card.
+
+    Called by: `api.cards._raise_card`.
+    """
+    return addressed_role(_addressee(spec, deal, creator), deal)
 
 
 # ── T3.11.27 · the agreement in four sections ───────────────────────────────

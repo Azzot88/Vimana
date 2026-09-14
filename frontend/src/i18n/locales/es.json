@@ -390,6 +390,12 @@
       "infected": "infectado"
     }
   },
+  "disputeRequest": {
+    "button": "Pedir al remitente que abra una disputa",
+    "title": "Pedir al remitente que abra una disputa",
+    "hint": "La disputa la abre el remitente, no el destinatario. Di qué salió mal: el remitente lo verá en el chat.",
+    "submit": "Enviar la petición"
+  },
   "recipientOffer": {
     "title": "Te ofrecen el papel de destinatario",
     "sectionTitle": "Papel de destinatario",
@@ -427,7 +433,10 @@
     "withdraw": "Retirar",
     "current": "Destinatario: {{name}}",
     "pending": "Esperando respuesta: {{name}}",
-    "linkPending": "Enlace enviado: esperando respuesta"
+    "linkPending": "Enlace enviado: esperando respuesta",
+    "self": "El destinatario soy yo",
+    "selfSet": "Eres el destinatario de este paquete",
+    "currentSelf": "Destinatario: tú"
   },
   "verification": {
     "sectionTitle": "Verificación de identidad",
@@ -1463,7 +1472,8 @@
       "cancel_requested": "Solicitar cancelación",
       "cancel_confirmed": "Cancelación confirmada",
       "terms_reconfirm_requested": "Hay que reconfirmar las condiciones",
-      "cargo_photographed": "Fotos de la carga"
+      "cargo_photographed": "Fotos de la carga",
+      "dispute_requested": "Petición de abrir una disputa"
     },
     "field": {
       "method": "Método",

@@ -636,6 +636,8 @@ export default function DealVaultPage() {
              than an alert nobody can re-read. T3.12.05 — and it says «offered»:
              the person becomes the recipient when they accept. */
           onAttached={(name) => setNotice(t('recipient.offerSent', { name: name ?? '' }))}
+          selfRecipient={Boolean(deal?.recipient_id) && deal?.recipient_id === deal?.sender_id}
+          onSelf={() => setNotice(t('recipient.selfSet'))}
         />
       )}
     </div>

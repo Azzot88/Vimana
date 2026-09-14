@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DealDetail, DealStatus } from '../api/deals'
 import { DISPUTE_REASONS, openDispute, type DisputeReason } from '../api/admin'
+import { raiseCard } from '../api/terms'
 import type { VaultMessage } from '../api/dealvault'
 import {
   ALWAYS_AVAILABLE,
@@ -88,6 +89,9 @@ export default function DealStages({
   const [disputeDetails, setDisputeDetails] = useState('')
   const [disputeBusy, setDisputeBusy] = useState(false)
   const [disputeError, setDisputeError] = useState('')
+  /* T3.12.05 — the same form, sent as a request to the sender rather than as a
+     dispute: the recipient does not open one, they ask (owner, 2026-09-13/14). */
+  const asking = myRole === 'recipient'
 
   /* T3.11.27 — the landing, read off the card that announced it (owner,
      2026-09-12). A `transit.update` with `stage: arrived` is the carrier
@@ -107,7 +111,16 @@ export default function DealStages({
     setDisputeBusy(true)
     setDisputeError('')
     try {
-      await openDispute(dealId, disputeReason, disputeDetails.trim() || undefined)
+      if (asking) {
+        await raiseCard(
+          dealId,
+          'dispute.requested',
+          { reason: disputeReason },
+          disputeDetails.trim() || undefined,
+        )
+      } else {
+        await openDispute(dealId, disputeReason, disputeDetails.trim() || undefined)
+      }
       setDisputeOpen(false)
       setDisputeDetails('')
       onDone()
@@ -408,6 +421,18 @@ export default function DealStages({
                     {t('dispute.openButton')}
                   </button>
                 )}
+                {/* T3.12.05 — the recipient's way to the arbiter is through the
+                    sender: a request the sender reads, not a dispute. */}
+                {asking &&
+                  ['accepted', 'in_transit', 'posted', 'delivered'].includes(status) && (
+                    <button
+                      type="button"
+                      onClick={() => setDisputeOpen(true)}
+                      className="text-xs font-body text-danger/70 hover:text-danger"
+                    >
+                      {t('disputeRequest.button')}
+                    </button>
+                  )}
               </div>
             ) : (
               <button
@@ -436,10 +461,10 @@ export default function DealStages({
             className="bg-white rounded-card p-6 max-w-md w-full space-y-4 shadow-2xl"
           >
             <h2 className="font-display font-semibold text-lg text-navy">
-              {t('dispute.modalTitle')}
+              {asking ? t('disputeRequest.title') : t('dispute.modalTitle')}
             </h2>
             <p className="text-sm font-body text-navy/60">
-              {t('dispute.modalHint')}
+              {asking ? t('disputeRequest.hint') : t('dispute.modalHint')}
             </p>
             <select
               value={disputeReason}
@@ -474,7 +499,7 @@ export default function DealStages({
                 disabled={disputeBusy}
                 className="bg-danger text-white font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-danger/90 transition-colors disabled:opacity-40"
               >
-                {disputeBusy ? '…' : t('dispute.submit')}
+                {disputeBusy ? '…' : asking ? t('disputeRequest.submit') : t('dispute.submit')}
               </button>
             </div>
           </div>

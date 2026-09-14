@@ -67,6 +67,10 @@ export const declineRecipientOffer = (offerId: string, refuseFuture = false) =>
     refuse_future: refuseFuture,
   })
 
+/** T3.12.05 — «Получатель — я»: no offer, nobody is being asked. */
+export const setSelfRecipient = (dealId: string) =>
+  api.post<{ recipient_id: string }>(`/api/deals/${dealId}/recipient/self`)
+
 /** The sender takes back the open offer and the role, whichever there is. */
 export const withdrawRecipient = (dealId: string) =>
   api.post<{ withdrawn: boolean }>(`/api/deals/${dealId}/recipient/withdraw`)

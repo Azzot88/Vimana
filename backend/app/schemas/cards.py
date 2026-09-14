@@ -219,6 +219,14 @@ class IssueReported(BaseModel):
     category: Literal["delay", "damage", "unreachable", "mismatch"]
 
 
+class DisputeRequested(BaseModel):
+    """T3.12.05 — the recipient asks the sender to open a dispute. The reason is
+    the dispute's own list, so the sender can open one with the same answer; the
+    sentence goes in the encrypted `text`."""
+
+    reason: Literal["unpaid", "undelivered", "damaged", "other"]
+
+
 class CancelRequested(BaseModel):
     # Who eats the costs already incurred. Named at request time, because the
     # question surfaces anyway and answering it later means answering it in a
@@ -246,6 +254,7 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.buyout_purchased: BuyoutPurchased,
     CardKind.compliance_checklist: ComplianceChecklist,
     CardKind.issue_reported: IssueReported,
+    CardKind.dispute_requested: DisputeRequested,
     CardKind.cancel_requested: CancelRequested,
 }
 

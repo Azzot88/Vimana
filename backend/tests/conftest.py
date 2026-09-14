@@ -2856,6 +2856,14 @@ async def agree_terms(client, sender_headers, carrier_headers, deal_id, **over):
         "payment_method": "cash_on_delivery",
     }
     body.update(over)
+    # T3.12.05 — terms are agreed only with a recipient. A test that merely
+    # needs an accepted deal gets the sender as its recipient, which reads the
+    # deal exactly as one without a separate recipient always did; a deal that
+    # already has one keeps it (409 here is that answer).
+    named = await client.post(
+        f"/api/deals/{deal_id}/recipient/self", headers=sender_headers
+    )
+    assert named.status_code in (200, 409), named.text
     proposal = await client.post(
         f"/api/deals/{deal_id}/terms", headers=sender_headers, json=body
     )

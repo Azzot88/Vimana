@@ -433,6 +433,122 @@ async def test_participants_are_listed_to_the_deal_s_people_only(client, _deal):
     assert o_list.status_code == 403
 
 
+# ── T3.12.05 pt.2 · the sender at the other end, and what the recipient can do ─
+
+
+async def test_the_sender_can_be_their_own_recipient(client, _deal):
+    """«Получатель — я» needs no offer — nobody is being asked anything — and
+    the sender still reads the deal as the sender."""
+    named = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient/self", headers=_deal["sender_headers"]
+    )
+    assert named.status_code == 200, named.text
+    detail = await client.get(
+        f"/api/deals/{_deal['deal_id']}", headers=_deal["sender_headers"]
+    )
+    assert detail.json()["recipient_id"] == await _me(client, _deal["sender_headers"])
+
+    # One recipient: somebody else is not offered the role over it.
+    other, _ = await _register(client, "r-over-self")
+    assert (await _offer(client, _deal, await _me(client, other))).status_code == 409
+    withdrawn = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient/withdraw",
+        headers=_deal["sender_headers"],
+    )
+    assert withdrawn.status_code == 200
+    assert (await _offer(client, _deal, await _me(client, other))).status_code == 201
+
+
+async def test_only_the_sender_names_themselves(client, _deal):
+    r = await client.post(
+        f"/api/deals/{_deal['deal_id']}/recipient/self", headers=_deal["carrier_headers"]
+    )
+    assert r.status_code == 403
+
+
+def test_cards_for_the_recipient_go_to_a_sender_who_is_one():
+    """Otherwise a delivery addressed to the recipient would wait for a role
+    nobody can act as — the sender reads the deal as the sender."""
+    from types import SimpleNamespace
+
+    from app.core.cards import CATALOGUE, CardKind, resolve_ack_role
+    from app.models.deal import CardAckRole
+
+    spec = CATALOGUE[CardKind.delivery_declared]
+    self_deal = SimpleNamespace(sender_id="s", carrier_id="c", recipient_id="s")
+    other_deal = SimpleNamespace(sender_id="s", carrier_id="c", recipient_id="r")
+    assert resolve_ack_role(spec, self_deal, CardAckRole.carrier) is CardAckRole.sender
+    assert resolve_ack_role(spec, other_deal, CardAckRole.carrier) is CardAckRole.recipient
+
+
+async def test_the_recipient_asks_the_sender_to_open_a_dispute(client, _deal):
+    """The recipient does not open a dispute (owner, 2026-09-13); they ask the
+    sender to, and the request is a line the sender reads — nobody answers it
+    (owner, 2026-09-14)."""
+    rec_hdr, _ = await _recipient(client, _deal, "r-asks")
+
+    asked = await client.post(
+        f"/api/deals/{_deal['deal_id']}/cards",
+        headers=rec_hdr,
+        json={"kind": "dispute.requested", "payload": {"reason": "damaged"}, "text": "the box is wet"},
+    )
+    assert asked.status_code == 201, asked.text
+    assert asked.json()["card_kind"] == "dispute.requested"
+    assert asked.json()["requires_ack_by"] is None
+
+    for hdr in (_deal["sender_headers"], _deal["carrier_headers"]):
+        r = await client.post(
+            f"/api/deals/{_deal['deal_id']}/cards",
+            headers=hdr,
+            json={"kind": "dispute.requested", "payload": {"reason": "damaged"}},
+        )
+        assert r.status_code == 403, r.text
+
+    seen = await client.get(
+        f"/api/deals/{_deal['deal_id']}/dealvault", headers=_deal["sender_headers"]
+    )
+    assert "dispute.requested" in {m["card_kind"] for m in seen.json()["items"]}
+    # And the recipient still cannot open one themselves.
+    direct = await client.post(
+        f"/api/deals/{_deal['deal_id']}/dispute",
+        headers=rec_hdr,
+        json={"reason": "other", "details": "trying the door anyway"},
+    )
+    assert direct.status_code == 403
+
+
+async def test_the_recipient_moves_the_delivery_and_the_carrier_answers(client, _deal):
+    """«Получатель меняет условия встречи и вручения, подтверждает перевозчик,
+    отправитель видит это в чате»."""
+    rec_hdr, _ = await _recipient(client, _deal, "r-moves")
+
+    proposed = await client.post(
+        f"/api/deals/{_deal['deal_id']}/cards",
+        headers=rec_hdr,
+        json={"kind": "dropoff.proposed", "payload": {"method": "in_person", "city": "Queens"}},
+    )
+    assert proposed.status_code == 201, proposed.text
+    assert proposed.json()["requires_ack_by"] == "carrier"
+
+    by_sender = await client.post(
+        f"/api/deals/{_deal['deal_id']}/dealvault/messages/{proposed.json()['id']}/ack",
+        headers=_deal["sender_headers"],
+        json={"decision": "accepted"},
+    )
+    assert by_sender.status_code == 403
+    by_carrier = await client.post(
+        f"/api/deals/{_deal['deal_id']}/dealvault/messages/{proposed.json()['id']}/ack",
+        headers=_deal["carrier_headers"],
+        json={"decision": "accepted"},
+    )
+    assert by_carrier.status_code == 200, by_carrier.text
+
+    seen = await client.get(
+        f"/api/deals/{_deal['deal_id']}/dealvault", headers=_deal["sender_headers"]
+    )
+    assert proposed.json()["id"] in {m["id"] for m in seen.json()["items"]}
+
+
 async def test_decrypt_for_me_endpoint_returns_plaintext_for_recipient_of_e2e_message(
     client, _deal, session_maker
 ):
