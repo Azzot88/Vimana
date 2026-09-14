@@ -48,9 +48,9 @@ export default function DealSummaryCard({ deal }: { deal: Deal }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {/* The number is set in mono and not truncated: it exists to be read
                 aloud and pasted, and a shortened one cannot do either. */}
-            {deal.shipment_no && (
+            {(deal.deal_no ?? deal.shipment_no) && (
               <MonoText className="text-xs text-navy/60 tracking-wide">
-                № {deal.shipment_no}
+                № {(deal.deal_no ?? deal.shipment_no)}
               </MonoText>
             )}
             {deal.price_total != null && (

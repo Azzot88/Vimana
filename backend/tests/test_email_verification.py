@@ -359,10 +359,7 @@ async def test_unverified_user_can_start_a_deal(client, fixed_code, captured_cod
         headers=headers,
         json={
             "trip_id": str(uuid.uuid4()),
-            "order": {
-                "recipient_contact": "someone@verify.test",
-                "origin": "Tbilisi",
-                "destination": "Yerevan",
+            "cargo": {
                 "category": "documents",
                 "declared_value": 10.0,
             },

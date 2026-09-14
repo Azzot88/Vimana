@@ -72,10 +72,7 @@ async def test_confirm_deal_creates_dealt_with_edges(
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000009999",
-                "origin": "TGH",
-                "destination": "TG2",
+            "cargo": {
                 "category": "document",
                 "declared_value": 50.0,
             },

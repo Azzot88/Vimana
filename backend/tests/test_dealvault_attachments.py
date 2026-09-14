@@ -278,10 +278,7 @@ async def _second_deal(client, sender_headers, carrier_headers) -> str:
         headers=sender_headers,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000002222",
-                "origin": "SAF",
-                "destination": "ETY",
+            "cargo": {
                 "category": "document",
                 "declared_value": 25.0,
             },

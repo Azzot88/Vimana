@@ -133,10 +133,23 @@ class Deal(Base):
     __table_args__ = (
         Index("ix_deals_sender_id", "sender_id"),
         Index("ix_deals_carrier_id", "carrier_id"),
+        # T3.12.03 — one deal per place in a cargo's chain. This is what keeps a
+        # second deal from standing where the first one is, before multi-hop has
+        # any API of its own.
+        UniqueConstraint("cargo_id", "position", name="uq_deals_cargo_position"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id"))
+    # T3.12.03 — the cargo this deal carries, and where the deal stands in that
+    # cargo's chain (1 is the first). A deal is one carriage of one cargo by one
+    # carrier; the cargo is the same row through every deal it passes.
+    cargo_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cargos.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    # T3.12.03 — the deadline of this carriage. It was the order's, and a cargo
+    # that travels through two deals has two.
+    deadline: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id"))
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     carrier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
@@ -156,17 +169,9 @@ class Deal(Base):
     chat_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("chats.id"), nullable=True, index=True
     )
-    # T3.11.23 — the number people say out loud (owner's request 2026-09-07:
-    # «должно быть понятно какая сделка для чего — название, цена, номер
-    # отправки»). A UUID is neither dictated nor pasted into a message.
-    #
-    # **Random, not sequential.** A counter publishes how many deals the
-    # platform has ever had, to every user, forever — and for a young
-    # marketplace that is a number to keep. Generated in `core.shipment_no`,
-    # which also drops the characters that get misread aloud.
-    shipment_no: Mapped[str | None] = mapped_column(
-        String(12), unique=True, nullable=True, index=True
-    )
+    # T3.11.23 — the number people say out loud lived here. T3.12.03 moved it to
+    # the cargo (`Cargo.shipment_no`); the deal's number is derived from it and
+    # `position` (`core.cargo.deal_no`).
     # T3.11.27 — who is editing the agreement right now, and until when.
     #
     # Owner's rule 2026-09-07: «две минуты — это окно для правки, пока другой

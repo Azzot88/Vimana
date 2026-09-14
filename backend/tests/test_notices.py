@@ -369,10 +369,7 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
         headers=sender_hdr,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+79990000001",
-                "origin": unique_origin,
-                "destination": unique_dest,
+            "cargo": {
                 "category": "docs",
                 "declared_value": 100,
                 "currency": "USD",
@@ -450,10 +447,7 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
         headers=hdr_s,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+79990000002",
-                "origin": origin,
-                "destination": dest,
+            "cargo": {
                 "category": "docs",
                 "declared_value": 10,
                 "currency": "USD",

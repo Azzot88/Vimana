@@ -138,7 +138,7 @@ async def test_proposal_flags_a_price_below_the_carrier_minimum(
     """Not an error — the carrier may still accept — but the card says so, so
     nobody agrees to a number they had already ruled out."""
     from app.models.deal import Deal, DealStatus
-    from app.models.marketplace import Order, OrderStatus, Trip, TripStatus
+    from app.models.marketplace import Cargo, Trip, TripStatus
 
     async with session_maker() as db:
         trip = Trip(
@@ -154,21 +154,17 @@ async def test_proposal_flags_a_price_below_the_carrier_minimum(
         )
         db.add(trip)
         await db.flush()
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000000",
-            origin=trip.origin,
-            destination=trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=900.0,
             currency="USD",
-            status=OrderStatus.matched,
-            trip_id=trip.id,
+            final_destination=trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         deal = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,

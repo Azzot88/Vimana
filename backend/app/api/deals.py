@@ -33,16 +33,21 @@ from app.models.deal import (
     DealStatus,
     DealVaultMessage,
 )
-from app.models.marketplace import Category, Order, OrderStatus, Trip, TripStatus
+from app.models.marketplace import Cargo, Category, Trip, TripStatus
 from app.models.user import User
-from app.schemas.marketplace import DealDetailOut, DealEventOut, DealOut, OrderCreate
+from app.core.cargo import cargo_location, deal_no, multihop_deal_count
+from app.schemas.marketplace import CargoCreate, DealDetailOut, DealEventOut, DealOut
 
 router = APIRouter()
 
 
 class MatchBody(BaseModel):
+    """T3.12.03 — a response to a trip: the cargo, and the deadline of this
+    carriage. The deadline belongs to the deal, not to the cargo."""
+
     trip_id: uuid.UUID
-    order: OrderCreate
+    cargo: CargoCreate
+    deadline: datetime | None = None
 
 
 class EventBody(BaseModel):
@@ -64,7 +69,7 @@ async def match_deal(
     if trip.status != TripStatus.open:
         raise HTTPException(status_code=400, detail="Trip not available")
 
-    category_key = body.order.category.strip().lower()
+    category_key = body.cargo.category.strip().lower()
     if not category_key or len(category_key) > 50:
         raise HTTPException(status_code=422, detail="Invalid category")
 
@@ -102,23 +107,34 @@ async def match_deal(
     )
     await db.execute(stmt)
 
-    order = Order(
-        sender_id=current_user.id,
-        recipient_contact=body.order.recipient_contact,
-        origin=body.order.origin,
-        destination=body.order.destination,
+    # T3.12.03 — the response to a trip creates the cargo, once, and its first
+    # deal. «Груз создаётся перед первой сделкой, ровно один раз» (owner,
+    # 2026-09-13): there is no path here that attaches to an existing cargo —
+    # that is the multi-hop mechanics, and until it exists `(cargo_id,
+    # position)` being unique is what keeps a second deal out of the first
+    # one's place.
+    cargo = Cargo(
+        created_by_id=current_user.id,
+        # T3.11.23 — the number people say out loud. Random rather than
+        # sequential; see `core.shipment_no`. The unique index is the guard.
+        shipment_no=new_shipment_no(),
         category=category_key,
-        declared_value=body.order.declared_value,
-        currency=body.order.currency,
-        description=body.order.description,
-        deadline=body.order.deadline,
-        status=OrderStatus.open,
+        declared_value=body.cargo.declared_value,
+        currency=body.cargo.currency,
+        description=body.cargo.description,
+        final_destination=body.cargo.final_destination or trip.destination,
+        weight_kg=body.cargo.weight_kg,
+        dimensions_cm=body.cargo.dimensions_cm,
+        fragile=body.cargo.fragile,
+        cargo_url=body.cargo.cargo_url,
     )
-    db.add(order)
+    db.add(cargo)
     await db.flush()
 
     deal = Deal(
-        order_id=order.id,
+        cargo_id=cargo.id,
+        position=1,
+        deadline=body.deadline,
         trip_id=trip.id,
         sender_id=current_user.id,
         carrier_id=trip.carrier_id,
@@ -128,23 +144,16 @@ async def match_deal(
         # открывает чат, а уже внутри него сделку» (owner, 2026-09-07): the chat
         # is the container, and it exists before the deal it holds.
         chat_id=(await chat_for_pair(db, current_user.id, trip.carrier_id)).id,
-        # T3.11.23 — the number people say out loud. Random rather than
-        # sequential; see `core.shipment_no`. The unique index is the guard, and
-        # a collision at 2×10¹² combinations is a retry, not a design.
-        shipment_no=new_shipment_no(),
     )
     db.add(deal)
     await db.flush()
-
-    order.trip_id = trip.id
-    order.status = OrderStatus.matched
 
     await append_deal_event(
         db,
         deal_id=deal.id,
         event_type=DealEventType.created,
         actor_id=current_user.id,
-        payload={"trip_id": str(trip.id), "order_id": str(order.id)},
+        payload={"trip_id": str(trip.id), "cargo_id": str(cargo.id)},
         author=current_user,
     )
 
@@ -344,7 +353,7 @@ async def get_deal(
         raise HTTPException(status_code=403, detail="Not a deal participant")
 
     trip = await db.get(Trip, deal.trip_id)
-    order = await db.get(Order, deal.order_id)
+    cargo = await db.get(Cargo, deal.cargo_id)
     sender = await db.get(User, deal.sender_id)
     carrier = await db.get(User, deal.carrier_id)
     recipient = (
@@ -353,7 +362,8 @@ async def get_deal(
 
     return DealDetailOut(
         id=deal.id,
-        order_id=deal.order_id,
+        cargo_id=deal.cargo_id,
+        position=deal.position,
         trip_id=deal.trip_id,
         sender_id=deal.sender_id,
         carrier_id=deal.carrier_id,
@@ -368,17 +378,20 @@ async def get_deal(
         recipient_name=recipient.display_name if recipient else None,
         sender_npub=sender.nostr_pubkey if sender else None,
         carrier_npub=carrier.nostr_pubkey if carrier else None,
-        cargo_description=order.description or "" if order else "",
-        cargo_category=order.category if order else "",
-        declared_value=order.declared_value if order else 0,
-        currency=order.currency if order else "USD",
+        cargo_description=cargo.description or "" if cargo else "",
+        cargo_category=cargo.category if cargo else "",
+        declared_value=cargo.declared_value if cargo else 0,
+        currency=cargo.currency if cargo else "USD",
         # T_UX.15 — the trip's own copy, not the carrier's current template: a
         # rule edited after the match is not the rule this deal was struck under.
         carriage_rules=trip.carriage_rules if trip else None,
-        shipment_no=deal.shipment_no,
+        shipment_no=cargo.shipment_no if cargo else None,
+        deal_no=deal_no(cargo.shipment_no if cargo else None, deal.position),
         # T3.11.27 — the board form's own answers, so the deal card opens filled
         # in instead of asking for them a second time.
-        order_deadline=order.deadline if order else None,
+        deadline=deal.deadline,
+        cargo_location=cargo_location(deal.status),
+        multihop=await multihop_deal_count(db, deal.cargo_id) > 1,
         trip_price_per_kg=trip.price_per_kg if trip else None,
         # T3.11.27 — what the carrier said they do at each end, so the agreement
         # form offers those and not the whole vocabulary. `handover_*` is JSON
@@ -599,18 +612,21 @@ async def list_deals(
     # reason as the names above.
     from app.core.cards import CardKind
 
-    order_ids = {d.order_id for d in items}
+    cargo_ids = {d.cargo_id for d in items}
     deal_ids = [d.id for d in items]
-    categories: dict[uuid.UUID, str] = {}
+    cargos: dict[uuid.UUID, tuple[str, str | None]] = {}
     prices: dict[uuid.UUID, tuple[float | None, str | None]] = {}
-    if order_ids:
-        categories = dict(
-            (
+    if cargo_ids:
+        cargos = {
+            row[0]: (row[1], row[2])
+            for row in (
                 await db.execute(
-                    select(Order.id, Order.category).where(Order.id.in_(order_ids))
+                    select(Cargo.id, Cargo.category, Cargo.shipment_no).where(
+                        Cargo.id.in_(cargo_ids)
+                    )
                 )
             ).all()
-        )
+        }
     if deal_ids:
         agreed = (
             await db.execute(
@@ -635,7 +651,8 @@ async def list_deals(
         out.append(
             DealOut(
                 id=deal.id,
-                order_id=deal.order_id,
+                cargo_id=deal.cargo_id,
+                position=deal.position,
                 trip_id=deal.trip_id,
                 sender_id=deal.sender_id,
                 carrier_id=deal.carrier_id,
@@ -651,9 +668,12 @@ async def list_deals(
                 ),
                 origin=route[0] if route else None,
                 destination=route[1] if route else None,
-                shipment_no=deal.shipment_no,
+                shipment_no=cargos.get(deal.cargo_id, (None, None))[1],
+                deal_no=deal_no(
+                    cargos.get(deal.cargo_id, (None, None))[1], deal.position
+                ),
                 chat_id=deal.chat_id,
-                cargo_category=categories.get(deal.order_id),
+                cargo_category=cargos.get(deal.cargo_id, (None, None))[0],
                 price_total=price[0] if price else None,
                 currency=price[1] if price else None,
             )

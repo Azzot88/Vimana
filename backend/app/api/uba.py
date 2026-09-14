@@ -32,7 +32,7 @@ from app.models.deal import (
     DealStatus,
     DealVaultMessage,
 )
-from app.models.marketplace import Order
+from app.models.marketplace import Cargo
 from app.models.user import User
 
 router = APIRouter()
@@ -61,9 +61,9 @@ async def _compute_components_async(
 
     v_sum = (
         await db.execute(
-            select(func.coalesce(func.sum(Order.declared_value), 0.0))
+            select(func.coalesce(func.sum(Cargo.declared_value), 0.0))
             .select_from(Deal)
-            .join(Order, Order.id == Deal.order_id)
+            .join(Cargo, Cargo.id == Deal.cargo_id)
             .where(
                 Deal.carrier_id == user_id,
                 Deal.status == DealStatus.closed,

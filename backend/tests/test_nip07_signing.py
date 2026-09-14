@@ -60,10 +60,7 @@ async def _matched_deal(client):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000007777",
-                "origin": "AAA",
-                "destination": "BBB",
+            "cargo": {
                 "category": "document",
                 "declared_value": 40.0,
             },
@@ -209,10 +206,7 @@ async def test_custodial_writes_nip01_event_id(client):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000006666",
-                "origin": "NIP",
-                "destination": "ONE",
+            "cargo": {
                 "category": "document",
                 "declared_value": 40.0,
             },
@@ -289,10 +283,7 @@ async def test_custodial_deal_event_signed_new_format(client, session_maker):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000005555",
-                "origin": "DE1",
-                "destination": "DE2",
+            "cargo": {
                 "category": "document",
                 "declared_value": 40.0,
             },

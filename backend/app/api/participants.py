@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.cargo import follow_recipient
 from app.core.database import get_db
 from app.models.deal import Deal, DealParticipant, DealParticipantRole
 from app.models.user import User
@@ -132,6 +133,8 @@ async def accept_deal_invite(
     # the parcel to somebody else. One recipient per deal is `T3.12.05`.
     if deal.recipient_id is None:
         deal.recipient_id = current_user.id
+        # T3.12.03 — for a single deal its recipient is the cargo's final one.
+        await follow_recipient(db, deal)
         changed = True
     if changed:
         await db.commit()
@@ -171,6 +174,7 @@ async def revoke_participant(
     # and the cards keep addressing them.
     if deal.recipient_id == user_id:
         deal.recipient_id = None
+        await follow_recipient(db, deal)
     await db.commit()
     return {"revoked": True}
 
@@ -308,6 +312,7 @@ async def set_recipient(
     if existing is None:
         db.add(row)
     deal.recipient_id = person.id
+    await follow_recipient(db, deal)
     await db.commit()
     await db.refresh(row)
     return ParticipantOut(

@@ -96,9 +96,9 @@ export default function DealAgreementCard({ deal, terms, open, onToggle }: Props
               {p.price_total} {p.currency ?? prefs.currency}
             </MonoText>
           )}
-          {deal.shipment_no && (
+          {(deal.deal_no ?? deal.shipment_no) && (
             <MonoText className="text-xs text-navy/50">
-              № {deal.shipment_no}
+              № {(deal.deal_no ?? deal.shipment_no)}
             </MonoText>
           )}
           {/* T3.12.01 — the recipient is named always, even when it is the

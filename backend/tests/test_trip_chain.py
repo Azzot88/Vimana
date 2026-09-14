@@ -892,10 +892,7 @@ async def test_moving_the_flight_tells_the_deals_riding_on_it(
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000003333",
-                "origin": "DXB",
-                "destination": "JFK",
+            "cargo": {
                 "category": "document",
                 "declared_value": 10.0,
             },

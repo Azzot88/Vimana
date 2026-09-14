@@ -47,10 +47,7 @@ async def _deal(client):
         headers=s_hdr,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000001111",
-                "origin": "RCP",
-                "destination": "DST",
+            "cargo": {
                 "category": "document",
                 "declared_value": 50.0,
             },

@@ -56,10 +56,7 @@ async def _open_dispute(client, session_maker):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000002222",
-                "origin": "GRT",
-                "destination": "GRD",
+            "cargo": {
                 "category": "document",
                 "declared_value": 300.0,
             },

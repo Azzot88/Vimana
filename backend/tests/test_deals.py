@@ -29,10 +29,7 @@ async def _match_deal(client, sender_headers, trip_id: str) -> str:
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000001",
-                "origin": "MTC",
-                "destination": "DXB",
+            "cargo": {
                 "category": "document",
                 "declared_value": 50.0,
                 "description": "Test cargo",
@@ -267,10 +264,7 @@ async def test_order_cannot_ask_for_a_category_the_trip_does_not_carry(
         headers=sender_headers,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000000001",
-                "origin": "AAA",
-                "destination": "BBB",
+            "cargo": {
                 "category": "animals",
                 "declared_value": 100.0,
             },
@@ -311,10 +305,7 @@ async def test_a_trip_that_named_no_categories_still_takes_a_deal(
         headers=sender_headers,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000000002",
-                "origin": "CCC",
-                "destination": "DDD",
+            "cargo": {
                 "category": "document",
                 "declared_value": 100.0,
             },

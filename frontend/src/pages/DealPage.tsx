@@ -224,13 +224,13 @@ export default function DealPage({ embedded = false }: { embedded?: boolean }) {
               readable size: it is the one identifier that gets dictated on the
               phone and pasted into a message. The UUID stays for support, where
               exactness beats speakability. */}
-          {deal.shipment_no && (
+          {(deal.deal_no ?? deal.shipment_no) && (
             <div>
               <p className="text-xs font-body font-medium text-navy/40 mb-1">
                 {t('deals.shipmentNo')}
               </p>
               <MonoText className="text-sm text-navy tracking-wide">
-                {deal.shipment_no}
+                {(deal.deal_no ?? deal.shipment_no)}
               </MonoText>
             </div>
           )}

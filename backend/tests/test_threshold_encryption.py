@@ -137,10 +137,7 @@ async def _e2e_deal(client, session_maker):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000004444",
-                "origin": "TE2",
-                "destination": "END",
+            "cargo": {
                 "category": "document",
                 "declared_value": 40.0,
             },

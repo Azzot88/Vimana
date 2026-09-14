@@ -98,7 +98,6 @@ def notify_deal_status(deal_id: str, status: str) -> None:
 @celery_app.task(name="app.tasks.notifications.check_upcoming_deadlines")
 def check_upcoming_deadlines() -> None:
     from sqlalchemy import select, and_
-    from app.models.marketplace import Order, OrderStatus
     from app.models.deal import Deal, DealStatus
     from app.models.user import User
 
@@ -106,30 +105,19 @@ def check_upcoming_deadlines() -> None:
     window = now + timedelta(hours=24)
 
     with SyncSessionLocal() as db:
-        stmt = (
-            select(Order)
-            .where(
-                and_(
-                    Order.deadline.isnot(None),
-                    Order.deadline <= window,
-                    Order.deadline >= now,
-                    Order.status.notin_([OrderStatus.closed]),
-                )
+        # T3.12.03 — the deadline is the deal's now, not the order's: a cargo
+        # that travels through two deals has two deadlines.
+        stmt = select(Deal).where(
+            and_(
+                Deal.deadline.isnot(None),
+                Deal.deadline <= window,
+                Deal.deadline >= now,
+                Deal.status.notin_([DealStatus.closed, DealStatus.confirmed]),
             )
         )
-        orders = db.execute(stmt).scalars().all()
+        deals = db.execute(stmt).scalars().all()
 
-        for order in orders:
-            deal = db.execute(
-                select(Deal).where(
-                    and_(
-                        Deal.order_id == order.id,
-                        Deal.status.notin_([DealStatus.closed, DealStatus.confirmed]),
-                    )
-                )
-            ).scalar_one_or_none()
-            if not deal:
-                continue
+        for deal in deals:
 
             sender = db.get(User, str(deal.sender_id))
             carrier = db.get(User, str(deal.carrier_id))

@@ -25,7 +25,7 @@ async def deal(session_maker, seed_carrier, seed_sender):
     the calendar.
     """
     from app.models.deal import Deal, DealStatus
-    from app.models.marketplace import Order, OrderStatus, Trip, TripStatus
+    from app.models.marketplace import Cargo, Trip, TripStatus
 
     async with session_maker() as db:
         trip = Trip(
@@ -41,21 +41,17 @@ async def deal(session_maker, seed_carrier, seed_sender):
         )
         db.add(trip)
         await db.flush()
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000000",
-            origin=trip.origin,
-            destination=trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=1200.0,
             currency="USD",
-            status=OrderStatus.matched,
-            trip_id=trip.id,
+            final_destination=trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         d = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,
@@ -845,7 +841,7 @@ async def test_deal_detail_carries_what_the_board_form_answered(
     # The carrier's own rate, so the card can suggest a total from a weight.
     # A suggestion only: `price_total` is still what the two of them answer.
     assert body["trip_price_per_kg"] == 25.0
-    assert "order_deadline" in body
+    assert "deadline" in body
 
 
 # ── T3.11.17 ч.2 · buying goods to order ──────────────────────────────────
@@ -859,7 +855,7 @@ async def buyout_deal(session_maker, seed_carrier, seed_sender):
     test here, and a trip that offers the service is a different trip.
     """
     from app.models.deal import Deal, DealStatus
-    from app.models.marketplace import Order, OrderStatus, Trip, TripStatus
+    from app.models.marketplace import Cargo, Trip, TripStatus
 
     async with session_maker() as db:
         trip = Trip(
@@ -878,21 +874,17 @@ async def buyout_deal(session_maker, seed_carrier, seed_sender):
         )
         db.add(trip)
         await db.flush()
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000000",
-            origin=trip.origin,
-            destination=trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=1200.0,
             currency="USD",
-            status=OrderStatus.matched,
-            trip_id=trip.id,
+            final_destination=trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         d = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,

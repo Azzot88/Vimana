@@ -396,20 +396,30 @@ class TripOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class OrderCreate(BaseModel):
-    recipient_contact: str
-    origin: str
-    destination: str
+class CargoCreate(BaseModel):
+    """T3.12.03 — what a sender answers a trip with.
+
+    No recipient contact and no origin: the recipient is a person on the
+    platform (`T3.12.05`) and the origin is the trip's. `final_destination`
+    defaults to the trip's destination — for a single deal they are the same
+    place. The deadline is not here: it belongs to the deal (`MatchBody`).
+    Packaging is not asked for (owner, 2026-09-13)."""
+
     category: str
     declared_value: float
     currency: str = "USD"
     description: str | None = None
-    deadline: datetime | None = None
+    final_destination: str | None = None
+    weight_kg: float | None = None
+    dimensions_cm: list[float] | None = None
+    fragile: bool = False
+    cargo_url: str | None = None
 
 
 class DealOut(BaseModel):
     id: uuid.UUID
-    order_id: uuid.UUID
+    cargo_id: uuid.UUID
+    position: int = 1
     trip_id: uuid.UUID
     sender_id: uuid.UUID
     carrier_id: uuid.UUID
@@ -439,6 +449,9 @@ class DealOut(BaseModel):
     # agreed — a deal being negotiated has no price, and printing zero would be
     # a claim nobody made.
     shipment_no: str | None = None
+    # T3.12.03 — the number of this deal: the cargo's number and its position
+    # (`PF-482-19375-1`), or the old number as it was.
+    deal_no: str | None = None
     chat_id: uuid.UUID | None = None
     cargo_category: str | None = None
     price_total: float | None = None
@@ -448,7 +461,8 @@ class DealOut(BaseModel):
 
 class DealDetailOut(BaseModel):
     id: uuid.UUID
-    order_id: uuid.UUID
+    cargo_id: uuid.UUID
+    position: int = 1
     trip_id: uuid.UUID
     sender_id: uuid.UUID
     carrier_id: uuid.UUID
@@ -478,6 +492,7 @@ class DealDetailOut(BaseModel):
     # well as in the list: the boarding pass is where someone looks it up to
     # dictate it, and the UUID beside it is for support, not for speech.
     shipment_no: str | None = None
+    deal_no: str | None = None
     # T3.11.27 — what the board form already answered, so the deal card opens
     # filled in rather than blank. Owner's decision 2026-09-07: «Форма на доске
     # остаётся как есть, карточка подставляется заполненной из неё.»
@@ -485,7 +500,12 @@ class DealDetailOut(BaseModel):
     # A blank first stage asks the sender to retype what they typed on the board
     # a minute ago, and every retyped number is a chance for the two records to
     # disagree about the same parcel.
-    order_deadline: datetime | None = None
+    # T3.12.03 — the deadline of this carriage (was the order's).
+    deadline: datetime | None = None
+    # T3.12.03 — where the cargo is, read off this deal's status, and whether the
+    # cargo travels through more than one deal. Both computed (`core.cargo`).
+    cargo_location: str | None = None
+    multihop: bool = False
     #: The carrier's own rate, for the card to suggest a total from a weight.
     #: A suggestion, never a value the server writes: the price is what the two
     #: of them agree, and `price_total` stays the field they answer.

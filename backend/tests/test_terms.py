@@ -22,25 +22,21 @@ async def deal(session_maker, seed_carrier, seed_sender, seed_trip):
     fail in the one arrangement nobody runs locally.
     """
     from app.models.deal import Deal, DealStatus
-    from app.models.marketplace import Order, OrderStatus
+    from app.models.marketplace import Cargo
 
     async with session_maker() as db:
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000000",
-            origin=seed_trip.origin,
-            destination=seed_trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=100.0,
             currency="USD",
-            description="Terms test order",
-            status=OrderStatus.matched,
-            trip_id=seed_trip.id,
+            description="Terms test cargo",
+            final_destination=seed_trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         d = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=seed_trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,

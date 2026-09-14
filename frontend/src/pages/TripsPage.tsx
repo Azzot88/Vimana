@@ -63,7 +63,6 @@ export default function TripsPage() {
      unanswered question now looks unanswered. */
   const [cargoCategory, setCargoCategory] = useState('')
   const [declaredValue, setDeclaredValue] = useState('')
-  const [recipientContact, setRecipientContact] = useState('')
   const [orderLoading, setOrderLoading] = useState(false)
   const [error, setError] = useState('')
   /* T3.11.07 — the trip that was just published (owner's request 2026-09-06).
@@ -144,10 +143,10 @@ export default function TripsPage() {
     try {
       const { data: deal } = await matchDeal({
         trip_id: orderTripId,
-        order: {
-          recipient_contact: recipientContact,
-          origin: trip.origin,
-          destination: trip.destination,
+        /* T3.12.03 — the response creates the cargo. No recipient contact:
+           the recipient is chosen as a person inside the deal (`T3.12.05`),
+           and the route is the trip's. */
+        cargo: {
           category: cargoCategory,
           declared_value: Number(declaredValue),
           description: cargoDesc,
@@ -404,16 +403,6 @@ export default function TripsPage() {
                 <form onSubmit={handleOrder} className="mt-4 pt-4 border-t border-navy/10 space-y-3">
                   <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">{t('trips.requestTitle')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.recipientContact')}</label>
-                      <input
-                        type="text"
-                        value={recipientContact}
-                        onChange={(e) => setRecipientContact(e.target.value)}
-                        required
-                        className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-                      />
-                    </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.cargoDescription')}</label>
                       <input

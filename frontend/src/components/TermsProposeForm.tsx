@@ -52,7 +52,7 @@ function boardDefaults(deal: DealDetail | null | undefined): TermsPayload {
     cargo_what: deal.cargo_description || null,
     declared_value: deal.declared_value,
     currency: deal.currency,
-    deadline: deal.order_deadline ?? null,
+    deadline: deal.deadline ?? null,
   }
 }
 

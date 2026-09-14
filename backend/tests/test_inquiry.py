@@ -191,10 +191,7 @@ async def test_inquiry_linked_to_deal_after_match(client, carrier_headers):
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000020",
-                "origin": "INQ",
-                "destination": "TST",
+            "cargo": {
                 "category": "document",
                 "declared_value": 100.0,
             },
@@ -329,10 +326,7 @@ async def test_the_chat_names_the_deal_to_carry_on_in(
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000000",
-                "origin": "DXB",
-                "destination": "JFK",
+            "cargo": {
                 "category": "document",
                 "declared_value": 100.0,
                 "description": "chat nesting probe",
@@ -360,10 +354,7 @@ async def test_a_matched_deal_gets_a_chat_and_a_spoken_number(
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000000",
-                "origin": "DXB",
-                "destination": "JFK",
+            "cargo": {
                 "category": "document",
                 "declared_value": 100.0,
                 "description": "shipment number probe",
@@ -392,9 +383,14 @@ async def test_a_matched_deal_gets_a_chat_and_a_spoken_number(
             )
         ).scalar_one()
         assert deal.chat_id is not None
-        assert deal.shipment_no and len(deal.shipment_no) == 8
-        # Dictated aloud, so the characters that get misheard are not in it.
-        assert not set(deal.shipment_no) & set("01OIL")
+        # T3.12.03 — the number lives on the cargo now, in the owner's format:
+        # `PF-` and eight digits, nothing that is misheard when dictated.
+        import re
+
+        from app.models.marketplace import Cargo
+
+        cargo = await db.get(Cargo, deal.cargo_id)
+        assert re.fullmatch(r"PF-\d{3}-\d{5}", cargo.shipment_no)
 
 
 async def test_asks_counts_people_not_messages(client, carrier_headers):
@@ -476,10 +472,7 @@ async def test_the_deal_card_carries_number_name_and_price(
             headers=sender_headers,
             json={
                 "trip_id": trip_id,
-                "order": {
-                    "recipient_contact": "+10000000001",
-                    "origin": "INQ",
-                    "destination": "TST",
+                "cargo": {
                     "category": "document",
                     "declared_value": 100.0,
                 },
@@ -493,7 +486,11 @@ async def test_the_deal_card_carries_number_name_and_price(
     before = await client.get("/api/deals", headers=sender_headers)
     assert before.status_code == 200, before.text
     card = _find(before.json()["items"])
-    assert card["shipment_no"] and len(card["shipment_no"]) == 8
+    # T3.12.03 — the card prints the deal's number: the cargo's plus position.
+    import re
+
+    assert re.fullmatch(r"PF-\d{3}-\d{5}", card["shipment_no"])
+    assert card["deal_no"] == f"{card['shipment_no']}-1"
     assert card["chat_id"]
     assert card["cargo_category"] == "document"
     assert (card["origin"], card["destination"]) == ("INQ", "TST")
@@ -519,10 +516,7 @@ async def test_deals_can_be_narrowed_to_one_chat(
     but the caller's own.
     """
     trip_id = await _make_open_trip(client, carrier_headers)
-    order = {
-        "recipient_contact": "+10000000002",
-        "origin": "INQ",
-        "destination": "TST",
+    cargo = {
         "category": "document",
         "declared_value": 10.0,
     }
@@ -530,7 +524,7 @@ async def test_deals_can_be_narrowed_to_one_chat(
         await client.post(
             "/api/deals/match",
             headers=sender_headers,
-            json={"trip_id": trip_id, "order": order},
+            json={"trip_id": trip_id, "cargo": cargo},
         )
     ).json()["id"]
     chat_id = (
@@ -585,10 +579,7 @@ async def test_chat_list_names_the_person_and_counts_deals(
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000003",
-                "origin": "INQ",
-                "destination": "TST",
+            "cargo": {
                 "category": "document",
                 "declared_value": 10.0,
             },

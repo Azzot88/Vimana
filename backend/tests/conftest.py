@@ -74,7 +74,7 @@ from app.worker import celery_app as _celery_app  # noqa: E402
 _celery_app.conf.broker_url = "memory://"
 _celery_app.conf.result_backend = "cache+memory://"
 from app.models.deal import Deal, DealStatus
-from app.models.marketplace import Category, DEFAULT_CATEGORIES, Order, OrderStatus, Trip, TripStatus
+from app.models.marketplace import Cargo, Category, DEFAULT_CATEGORIES, Trip, TripStatus
 from app.models.user import User
 
 
@@ -990,6 +990,43 @@ async def _ensure_trip_nostr_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE trips ADD COLUMN {col} {ddl}"))
 
 
+async def _migrate_orders_to_cargo(engine) -> None:
+    """T3.12.03 — the `0090` move from `orders` to `cargos`, applied to
+    `vimana_test`. Idempotent: nothing happens once `cargos` exists.
+
+    **Before `create_all`**, for the reason `_rename_operator_to_arbiter` gives.
+    Left for later, `create_all` would add an empty `cargos` beside `orders`,
+    and `deals` would keep `order_id NOT NULL` — every new deal would then fail
+    on a column the model no longer writes. The statements are the migration's
+    own, imported rather than copied, so the test database cannot drift from
+    what production went through.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    async with engine.begin() as conn:
+
+        async def has(name: str) -> bool:
+            return (
+                await conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.tables "
+                        "WHERE table_name = :name"
+                    ),
+                    {"name": name},
+                )
+            ).fetchone() is not None
+
+        if not await has("orders") or await has("cargos"):
+            return
+        path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0090_cargo.py"
+        spec = importlib.util.spec_from_file_location("migration_0090", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for statement in module.UPGRADE:
+            await conn.execute(text(statement))
+
+
 async def _rename_operator_to_arbiter(engine) -> None:
     """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
@@ -1309,16 +1346,12 @@ async def _ensure_inquiry_tables(engine) -> None:
             await conn.execute(text("DROP TABLE inquiry_messages"))
             await conn.execute(text("DROP TABLE trip_inquiries"))
 
-        # 0073 — the deal is nested in a chat and carries a spoken number.
-        for ddl in (
-            "ADD COLUMN IF NOT EXISTS chat_id UUID REFERENCES chats(id)",
-            "ADD COLUMN IF NOT EXISTS shipment_no VARCHAR(12)",
-        ):
-            await conn.execute(text(f"ALTER TABLE deals {ddl}"))
+        # 0073 — the deal is nested in a chat. Its spoken number moved to the
+        # cargo in 0090 (T3.12.03) and must not be re-added to `deals` here.
         await conn.execute(
             text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS ix_deals_shipment_no "
-                "ON deals(shipment_no)"
+                "ALTER TABLE deals ADD COLUMN IF NOT EXISTS chat_id UUID "
+                "REFERENCES chats(id)"
             )
         )
 
@@ -1777,7 +1810,8 @@ async def _ensure_trip_chain(engine) -> None:
         # 0068 — `USDT` and `USDC` are four characters. A test database created
         # before it kept VARCHAR(3), which does not refuse the value: it raises
         # a truncation error from inside whichever test happened to publish one.
-        for table in ("trips", "orders"):
+        # T3.12.03 — `orders` is gone; `cargos` is created with VARCHAR(4).
+        for table in ("trips",):
             await conn.execute(
                 text(f"ALTER TABLE {table} ALTER COLUMN currency TYPE VARCHAR(4)")
             )
@@ -2097,6 +2131,8 @@ async def test_engine():
     # T3.12.02 — before `create_all`, or it collides with the old table's
     # constraint name. See the function.
     await _rename_operator_to_arbiter(engine)
+    # T3.12.03 — same reason: before `create_all`.
+    await _migrate_orders_to_cargo(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_orders_category_to_string(engine)
@@ -2555,22 +2591,18 @@ async def seed_deal(session_maker, seed_carrier, seed_sender, seed_trip) -> Deal
         deal = result.scalars().first()
         if deal:
             return deal
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000000",
-            origin=seed_trip.origin,
-            destination=seed_trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=100.0,
             currency="USD",
-            description="Seed order",
-            status=OrderStatus.matched,
-            trip_id=seed_trip.id,
+            description="Seed cargo",
+            final_destination=seed_trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         deal = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=seed_trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,
@@ -2605,22 +2637,18 @@ async def fresh_vault_deal(session_maker, seed_carrier, seed_sender, seed_trip) 
     Called by: `test_dealvault`, `test_encryption`, `test_hardening_block5`.
     """
     async with session_maker() as db:
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000000",
-            origin=seed_trip.origin,
-            destination=seed_trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=100.0,
             currency="USD",
-            description=f"Vault-walk order {uuid.uuid4().hex[:8]}",
-            status=OrderStatus.matched,
-            trip_id=seed_trip.id,
+            description=f"Vault-walk cargo {uuid.uuid4().hex[:8]}",
+            final_destination=seed_trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         deal = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=seed_trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,

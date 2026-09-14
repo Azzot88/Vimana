@@ -58,10 +58,7 @@ async def test_new_category_created_on_match(client, carrier_headers, sender_hea
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000002",
-                "origin": "MTC",
-                "destination": "DXB",
+            "cargo": {
                 "category": custom,
                 "declared_value": 50.0,
             },
@@ -84,10 +81,7 @@ async def test_usage_count_increments_on_reuse(client, carrier_headers, sender_h
             headers=sender_headers,
             json={
                 "trip_id": trip_id,
-                "order": {
-                    "recipient_contact": "+10000000003",
-                    "origin": "MTC",
-                    "destination": "DXB",
+                "cargo": {
                     "category": shared,
                     "declared_value": 25.0,
                 },

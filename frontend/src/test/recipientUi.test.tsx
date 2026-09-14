@@ -20,7 +20,7 @@ const en = i18n.getFixedT('en')
 const detail = (over: Partial<DealDetail> = {}): DealDetail =>
   ({
     id: 'd1',
-    order_id: 'o1',
+    cargo_id: 'c1',
     trip_id: 't1',
     sender_id: 'u-sender',
     carrier_id: 'u-carrier',

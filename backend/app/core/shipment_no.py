@@ -1,36 +1,35 @@
-"""T3.11.23 — the number a person says out loud.
+"""T3.11.23 — the number a person says out loud. T3.12.03 — it belongs to the cargo.
 
 Owner's request 2026-09-07: a deal needs «название, цена, номер отправки», and
 what it had was a UUID. Nobody dictates `55468906-95a9-4cb1-89e5-56d42384836f`
 over the phone and nobody pastes it into a message about a parcel.
 
-**Random, not sequential**, and that is the one decision here worth defending. A
-counter is easier and tells every user how many deals the platform has ever had,
-every time they look at their own. For a young marketplace that is a number to
-keep; and once it is out, it is out of every screenshot anybody ever took.
+**Format, owner's decision 2026-09-13: `PF-` and eight random digits with a dash
+after the third** — `PF-482-19375`. The deal's own number adds its position in
+the cargo's chain (`PF-482-19375-1`), derived in `core.cargo.deal_no` and never
+stored. Numbers issued before the change keep their eight letters and are shown
+without a suffix: they are already in people's mail and chats.
 
-The alphabet drops what gets misread when it is read aloud or copied by hand:
-`0`/`O`, `1`/`I`/`L`. What is left is 31 characters, and eight of them give
-about 2×10¹² combinations — enough that a collision is a retry rather than a
-design problem, and short enough to say in one breath.
+**Random, not sequential**, and that is the one decision here worth defending. A
+counter is easier and tells every user how many shipments the platform has ever
+had, every time they look at their own. For a young marketplace that is a number
+to keep; and once it is out, it is out of every screenshot anybody ever took.
+Eight digits give 10⁸ combinations — a collision is a retry on the unique index,
+not a design problem.
 """
 
 from __future__ import annotations
 
 import secrets
 
-# Crockford's alphabet minus the vowels that make words nobody wants printed on
-# their shipment. `U` is the one usually dropped for that reason; the rest go
-# because a code that spells something is a code people remember wrong.
-ALPHABET = "23456789ACDEFGHJKMNPQRTVWXYZ"
-
-LENGTH = 8
+PREFIX = "PF"
 
 
 def new_shipment_no() -> str:
-    """A fresh code. Not checked for uniqueness here — the column carries the
+    """A fresh number. Not checked for uniqueness here — the column carries the
     unique index, and the caller retries on the conflict.
 
-    Called by: `api.deals.match_deal`, `alembic/0073` (backfill).
+    Called by: `api.deals.match_deal`.
     """
-    return "".join(secrets.choice(ALPHABET) for _ in range(LENGTH))
+    digits = f"{secrets.randbelow(10**8):08d}"
+    return f"{PREFIX}-{digits[:3]}-{digits[3:]}"

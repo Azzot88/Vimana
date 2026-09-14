@@ -46,7 +46,7 @@ from app.models.deal import (
     Dispute,
     ArbiterAccessGrant,
 )
-from app.models.marketplace import Chat, ChatMessage, Order, Trip
+from app.models.marketplace import Cargo, Chat, ChatMessage, Trip
 from app.models.notices import PlatformNotice, RouteNote
 from app.models.social import Connection, InviteLink
 from app.models.trust import TrustEdge
@@ -255,9 +255,10 @@ def cleanup_e2e_users() -> dict:
             )
         )
 
-        # Orders. The previous version matched `Order.id` against *deal* ids and
-        # therefore never deleted anything; orders are reachable by sender.
-        db.execute(delete(Order).where(Order.sender_id.in_(user_ids)))
+        # Cargo (was orders). Reached by who created it, after the deals that
+        # refer to it are gone — the earlier version matched ids against *deal*
+        # ids and therefore never deleted anything.
+        db.execute(delete(Cargo).where(Cargo.created_by_id.in_(user_ids)))
 
         # Social + trust edges.
         db.execute(

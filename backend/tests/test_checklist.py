@@ -197,10 +197,7 @@ async def fresh_deal(client, carrier_headers, sender_headers):
         headers=sender_headers,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000000077",
-                "origin": "CHK",
-                "destination": "LST",
+            "cargo": {
                 "category": "document",
                 "declared_value": 100.0,
             },

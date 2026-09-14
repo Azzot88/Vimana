@@ -213,10 +213,7 @@ async def test_message_from_new_user_gets_server_signed(client):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000009999",
-                "origin": "SIG",
-                "destination": "TST",
+            "cargo": {
                 "category": "document",
                 "declared_value": 50.0,
             },
@@ -291,10 +288,7 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000008888",
-                "origin": "SCC",
-                "destination": "SLF",
+            "cargo": {
                 "category": "document",
                 "declared_value": 30.0,
             },

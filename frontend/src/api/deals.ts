@@ -18,7 +18,10 @@ export type DealStatus =
 
 export interface Deal {
   id: string
-  order_id: string
+  /** T3.12.03 — the cargo this deal carries, and where the deal stands in the
+   *  cargo's chain (1 is the first). */
+  cargo_id: string
+  position?: number
   trip_id: string
   sender_id: string
   carrier_id: string
@@ -41,6 +44,9 @@ export interface Deal {
   /** T3.11.23 — the deal card: the number people say out loud, the chat the
    *  deal is nested in, and the two halves of a name nobody has to type. */
   shipment_no?: string | null
+  /** T3.12.03 — the number of this deal: the cargo's number and its position
+   *  (`PF-482-19375-1`), or an old number as it was. What screens print. */
+  deal_no?: string | null
   chat_id?: string | null
   cargo_category?: string | null
   price_total?: number | null
@@ -63,7 +69,12 @@ export interface DealDetail extends Deal {
   /** T3.11.27 — what the board form already answered, so the deal card opens
    *  filled in rather than blank. Retyping a number a minute after typing it is
    *  how two records end up disagreeing about the same parcel. */
-  order_deadline?: string | null
+  deadline?: string | null
+  /** T3.12.03 — where the cargo is, read off this deal's status:
+   *  `awaiting_carrier` · `in_transit` · `with_postal_service` · `delivered`. */
+  cargo_location?: string | null
+  /** T3.12.03 — the cargo travels through more than one deal. */
+  multihop?: boolean
   /** The carrier's rate, for suggesting a total from a weight. A suggestion:
    *  the price is still what the two of them agree on. */
   trip_price_per_kg?: number | null
@@ -79,17 +90,23 @@ export interface DealDetail extends Deal {
   trip_payment_model?: string | null
 }
 
+/** T3.12.03 — a response to a trip: the cargo, and the deadline of this
+ *  carriage. No recipient contact (the recipient is a person on the platform)
+ *  and no origin (the trip's). */
 export interface MatchDealPayload {
   trip_id: string
-  order: {
-    recipient_contact: string
-    origin: string
-    destination: string
+  cargo: {
     category: string
     declared_value: number
     currency?: string
     description?: string
+    final_destination?: string
+    weight_kg?: number
+    dimensions_cm?: number[]
+    fragile?: boolean
+    cargo_url?: string
   }
+  deadline?: string
 }
 
 export interface DealEvent {

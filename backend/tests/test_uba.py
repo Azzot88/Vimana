@@ -190,10 +190,7 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
         headers=s_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000003333",
-                "origin": "UBX",
-                "destination": "UBY",
+            "cargo": {
                 "category": "document",
                 "declared_value": 500.0,
             },

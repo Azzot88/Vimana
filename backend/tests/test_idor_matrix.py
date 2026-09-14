@@ -554,10 +554,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000077",
-                "origin": "IDR",
-                "destination": "MTX",
+            "cargo": {
                 "category": "document",
                 "declared_value": 250.0,
             },
@@ -858,10 +855,7 @@ async def stranger_deal(client, stranger, carrier_headers) -> str:
         headers=stranger["headers"],
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000000078",
-                "origin": "OWN",
-                "destination": "MIN",
+            "cargo": {
                 "category": "document",
                 "declared_value": 60.0,
             },
@@ -972,10 +966,7 @@ async def disputed_deal(client, carrier_headers, sender_headers) -> dict:
         headers=sender_headers,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000000079",
-                "origin": "ARB",
-                "destination": "GNT",
+            "cargo": {
                 "category": "document",
                 "declared_value": 40.0,
             },

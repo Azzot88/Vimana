@@ -29,10 +29,7 @@ async def _make_active_deal(client, carrier_headers, sender_headers) -> str:
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000005000",
-                "origin": "VER",
-                "destination": "IFY",
+            "cargo": {
                 "category": "document",
                 "declared_value": 100.0,
             },

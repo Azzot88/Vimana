@@ -102,13 +102,13 @@ async def _declared_value(db: AsyncSession, deal: Deal | None) -> tuple[float | 
 
     Read from the agreed card rather than from the order: the order is what the
     sender typed on the board, the agreement is what the carrier accepted, and
-    a charge is measured against the second. Falls back to the order for deals
+    a charge is measured against the second. Falls back to the cargo for deals
     struck before the card carried the figure.
 
     Called by: `resolve_dispute`, to bound a ruling by what was declared.
     """
     from app.core.cards import CardKind
-    from app.models.marketplace import Order
+    from app.models.marketplace import Cargo
 
     if deal is None:
         return None, "USD"
@@ -127,10 +127,10 @@ async def _declared_value(db: AsyncSession, deal: Deal | None) -> tuple[float | 
     value = payload.get("declared_value")
     currency = payload.get("currency") or "USD"
     if value is None:
-        order = await db.get(Order, deal.order_id)
-        if order is not None:
-            value = order.declared_value
-            currency = order.currency or currency
+        cargo = await db.get(Cargo, deal.cargo_id)
+        if cargo is not None:
+            value = cargo.declared_value
+            currency = cargo.currency or currency
     return (float(value) if value is not None else None), currency
 
 
@@ -619,7 +619,7 @@ async def delete_user(
         Dispute,
         ArbiterAccessGrant,
     )
-    from app.models.marketplace import Chat, ChatMessage, Order, Trip
+    from app.models.marketplace import Cargo, Chat, ChatMessage, Trip
     from app.models.social import Connection, InviteLink
     from app.models.trust import TrustEdge
 
@@ -716,7 +716,7 @@ async def delete_user(
             (InviteLink.creator_id.in_(ids)) | (InviteLink.used_by.in_(ids))
         )
     )
-    await db.execute(delete(Order).where(Order.sender_id.in_(ids)))
+    await db.execute(delete(Cargo).where(Cargo.created_by_id.in_(ids)))
     await db.execute(delete(User).where(User.id.in_(ids)))
     await db.commit()
     return

@@ -40,7 +40,7 @@ from app.models.deal import (
     DealVaultMessage,
 )
 from app.core.freshness import freshness_factor
-from app.models.marketplace import Order
+from app.models.marketplace import Cargo
 from app.models.user import User
 from app.models.verification import VerificationBadge
 
@@ -70,7 +70,7 @@ LEVELS: list[tuple[int, str]] = [
 class UBAComponents:
     f_count: int      # closed deals as carrier in window
     q_count: int      # closed deals with both DealVault photos
-    v_sum: float      # sum of Order.declared_value on closed deals
+    v_sum: float      # sum of Cargo.declared_value on closed deals
     d_peak: float     # peak active collateral (0 until T5.x Collateral model)
     verify_level: str | None  # highest_verification_level
     # T_TRUST.1 — when the badge behind that level was issued. None means either
@@ -98,9 +98,9 @@ def compute_components(db: Session, user_id: uuid.UUID) -> UBAComponents:
 
     # V — sum of declared_value on closed deals (as carrier).
     v_sum = db.execute(
-        select(func.coalesce(func.sum(Order.declared_value), 0.0))
+        select(func.coalesce(func.sum(Cargo.declared_value), 0.0))
         .select_from(Deal)
-        .join(Order, Order.id == Deal.order_id)
+        .join(Cargo, Cargo.id == Deal.cargo_id)
         .where(
             Deal.carrier_id == user_id,
             Deal.status == DealStatus.closed,

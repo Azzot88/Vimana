@@ -318,7 +318,7 @@ async def test_e2e_read_package_survives_the_transition(
         # A deal of this user's own, reusing the seed order/trip rows. The seed
         # deal itself is shared across the session and must not be mutated.
         own_deal = Deal(
-            order_id=seed_deal.order_id,
+            cargo_id=await _own_cargo(db, user.id),
             trip_id=seed_deal.trip_id,
             sender_id=user.id,
             carrier_id=seed_deal.carrier_id,
@@ -360,6 +360,24 @@ async def test_e2e_read_package_survives_the_transition(
     assert nip44_decrypt(ciphertext, new_nsec, sender_pubkey) == session_key
 
 
+async def _own_cargo(db, user_id):
+    """T3.12.03 — a cargo of this user's own. Reusing the seed deal's cargo
+    would collide on `(cargo_id, position)`: every run adds a deal, and the test
+    database is never reset."""
+    from app.models.marketplace import Cargo
+
+    cargo = Cargo(
+        created_by_id=user_id,
+        category="document",
+        declared_value=10.0,
+        currency="USD",
+        final_destination="SEED-DEST",
+    )
+    db.add(cargo)
+    await db.flush()
+    return cargo.id
+
+
 async def test_other_participants_packages_are_left_alone(
     client, session_maker, seed_deal, seed_carrier
 ):
@@ -375,7 +393,7 @@ async def test_other_participants_packages_are_left_alone(
         ).scalar_one()
         author_nsec, author_npub = generate_keypair()
         own_deal = Deal(
-            order_id=seed_deal.order_id,
+            cargo_id=await _own_cargo(db, user.id),
             trip_id=seed_deal.trip_id,
             sender_id=user.id,
             carrier_id=seed_carrier.id,

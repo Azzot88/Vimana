@@ -35,7 +35,7 @@ from app.core.deal_chain import (
 from app.core.keypair import generate_keypair, npub_from_nsec, verify_event_id
 from app.core.signing import compute_event_id
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealEventType, DealStatus
-from app.models.marketplace import Order, OrderStatus
+from app.models.marketplace import Cargo
 from tests.conftest import TEST_DATABASE_URL, make_account, unique_email
 
 # `asyncio_mode = auto` (pytest.ini) — async defs run as asyncio tests, sync defs
@@ -56,22 +56,18 @@ from tests.conftest import TEST_DATABASE_URL, make_account, unique_email
 async def _fresh_deal(session_maker, seed_trip, seed_sender, seed_carrier) -> Deal:
     """A deal with an empty chain, isolated from other tests."""
     async with session_maker() as db:
-        order = Order(
-            sender_id=seed_sender.id,
-            recipient_contact="+10000000001",
-            origin=seed_trip.origin,
-            destination=seed_trip.destination,
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
             category="document",
             declared_value=50.0,
             currency="USD",
-            description="chain test order",
-            status=OrderStatus.matched,
-            trip_id=seed_trip.id,
+            description="chain test cargo",
+            final_destination=seed_trip.destination,
         )
-        db.add(order)
+        db.add(cargo)
         await db.flush()
         deal = Deal(
-            order_id=order.id,
+            cargo_id=cargo.id,
             trip_id=seed_trip.id,
             sender_id=seed_sender.id,
             carrier_id=seed_carrier.id,
@@ -556,10 +552,7 @@ async def test_deal_lifecycle_produces_a_valid_chain(
         headers=sender_headers,
         json={
             "trip_id": trip.json()["id"],
-            "order": {
-                "recipient_contact": "+10000000002",
-                "origin": "MTC",
-                "destination": "DXB",
+            "cargo": {
                 "category": "document",
                 "declared_value": 10.0,
                 "description": "lifecycle chain",
@@ -738,22 +731,18 @@ def _seed_sync_chain(db: Session, n: int = 2) -> tuple[uuid.UUID, bytes]:
         # async tests above create deals in definition order during a full run.
         pytest.skip("no deal in the test DB — run the full module")
 
-    order = Order(
-        sender_id=seed.sender_id,
-        recipient_contact="+10000000003",
-        origin="AAA",
-        destination="BBB",
+    cargo = Cargo(
+        created_by_id=seed.sender_id,
         category="document",
         declared_value=10.0,
         currency="USD",
         description="anchor test",
-        status=OrderStatus.matched,
-        trip_id=seed.trip_id,
+        final_destination="BBB",
     )
-    db.add(order)
+    db.add(cargo)
     db.flush()
     deal = Deal(
-        order_id=order.id,
+        cargo_id=cargo.id,
         trip_id=seed.trip_id,
         sender_id=seed.sender_id,
         carrier_id=seed.carrier_id,

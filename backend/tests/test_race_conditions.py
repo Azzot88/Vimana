@@ -32,10 +32,7 @@ async def _match(client, sender_headers, trip_id, category):
         headers=sender_headers,
         json={
             "trip_id": trip_id,
-            "order": {
-                "recipient_contact": "+10000000099",
-                "origin": "RCE",
-                "destination": "DXB",
+            "cargo": {
                 "category": category,
                 "declared_value": 25.0,
             },

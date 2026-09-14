@@ -74,14 +74,6 @@ class Category(Base):
     )
 
 
-class OrderStatus(str, enum.Enum):
-    draft = "draft"
-    open = "open"
-    matched = "matched"
-    closed = "closed"
-    cancelled = "cancelled"
-
-
 class Trip(Base):
     __tablename__ = "trips"
     # Marketplace listing filters on status and pages by (created_at, id);
@@ -396,23 +388,57 @@ class TripLeg(Base):
     trip: Mapped["Trip"] = relationship(back_populates="legs")
 
 
-class Order(Base):
-    __tablename__ = "orders"
+class Cargo(Base):
+    """T3.12.03 — the thing that is carried (`D-CARGO-MODEL`, 2026-09-13).
+
+    «Груз создаётся перед первой сделкой, ровно один раз, и не меняется»: it is
+    the same parcel in every deal it passes through, so everything about the
+    parcel lives here and everything about one carriage — the trip, the people,
+    the deadline, the terms — lives on the deal. What was `Order` held both
+    halves, and a cargo that travels through two deals cannot be one row with
+    one route.
+
+    **No update path exists, on purpose.** A cargo is written once by the
+    response to a trip (`api.deals.match_deal`); a second deal refers to it and
+    never creates another.
+
+    `created_by_id` records who answered the trip with it. It is not an owner:
+    ownership of the parcel changes at every handover, and the roles live on the
+    deals.
+
+    `shipment_no` is the number people dictate: `PF-482-19375` for new cargo;
+    existing ones keep their eight letters (owner, 2026-09-13). The deal's own
+    number is derived from it and the deal's position — `core.cargo.deal_no`.
+
+    Packaging is not a field: the owner removed it (2026-09-13). Where the cargo
+    is right now is not a field either — it is read off its current deal's
+    status (`core.cargo.cargo_location`).
+    """
+
+    __tablename__ = "cargos"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    recipient_contact: Mapped[str] = mapped_column(String(255))
-    origin: Mapped[str] = mapped_column(String(100))
-    destination: Mapped[str] = mapped_column(String(100))
+    created_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    shipment_no: Mapped[str | None] = mapped_column(
+        String(16), unique=True, nullable=True, index=True
+    )
     category: Mapped[str] = mapped_column(String(50))
     declared_value: Mapped[float] = mapped_column(Float)
-    # T3.11.07 — four characters, matching `Trip.currency`: an order is priced
-    # in what the trip it answers was published in.
-    currency: Mapped[str] = mapped_column(String(4), default="USD")
+    # T3.11.07 — four characters, matching `Trip.currency`.
+    currency: Mapped[str] = mapped_column(String(4), default="USD", server_default="USD")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    status: Mapped[OrderStatus] = mapped_column(SAEnum(OrderStatus), default=OrderStatus.draft)
-    trip_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("trips.id"), nullable=True)
+    # Where the cargo is going in the end, shown to the sender from the first
+    # day. For a single deal it is the trip's destination.
+    final_destination: Mapped[str] = mapped_column(String(100))
+    # Empty until a recipient has accepted the role (`T3.12.05`). A deal is the
+    # last in its chain exactly when its recipient is this person.
+    final_recipient_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dimensions_cm: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    fragile: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    cargo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
