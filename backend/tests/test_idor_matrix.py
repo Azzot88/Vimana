@@ -95,6 +95,13 @@ MATRIX: dict[tuple[str, str], Case] = {
             ]
         },
     ),
+    # T3.12.03 pt.2 — the response page reads one trip. An open listing is the
+    # board, readable by anyone; the victim's trip here is open, so the row
+    # asserts only that a stranger does not 500. That a withdrawn trip is not
+    # found by a stranger is pinned in `test_trips.py`.
+    ("GET", "/api/trips/{trip_id}"): Case(
+        PUBLIC, "an open trip is a public listing on the board"
+    ),
     ("POST", "/api/deals/{deal_id}/cards"): Case(
         DENIED,
         "raising a card in a stranger's deal",
@@ -390,6 +397,14 @@ MATRIX: dict[tuple[str, str], Case] = {
     ("DELETE", "/api/me/meeting-places/{place_id}"): Case(
         DENIED, "deleting a stranger's meeting place"
     ),
+    # ---- cargo templates (T3.12.03 pt.2) --------------------------------
+    # One person's list, like the addresses: not found rather than forbidden.
+    ("PATCH", "/api/me/cargo-templates/{template_id}"): Case(
+        DENIED, "rewriting a stranger's cargo template", json={"name": "idor probe"}
+    ),
+    ("DELETE", "/api/me/cargo-templates/{template_id}"): Case(
+        DENIED, "deleting a stranger's cargo template"
+    ),
     # ---- inquiries -----------------------------------------------------
     ("POST", "/api/trips/{trip_id}/inquiry"): Case(
         PUBLIC,
@@ -609,6 +624,14 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
     assert place.status_code == 201, place.text
     place_id = place.json()["id"]
 
+    template = await client.post(
+        "/api/me/cargo-templates",
+        headers=sender_headers,
+        json={"name": "Victim documents", "category": "document"},
+    )
+    assert template.status_code == 201, template.text
+    template_id = template.json()["id"]
+
     inquiry = await client.post(
         f"/api/trips/{trip_id}/inquiry", headers=sender_headers
     )
@@ -672,6 +695,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         "dispute_id": dispute_id,
         "address_id": address_id,
         "place_id": place_id,
+        "template_id": template_id,
         "inquiry_id": inquiry_id,
         "badge_id": str(badge_id),
         "note_id": str(note_id),

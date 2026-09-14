@@ -18,7 +18,7 @@ import { corridorForTrip, type CorridorForTrip } from '../api/checklist'
  *
  *  Functions (PROJECT §6.2a):
  *  - `LeadTimeWarning({ origin, destination, category, departAt })` — default
- *    export. Called by: `pages/NewTripPage`, `pages/TripsPage`.
+ *    export. Called by: `pages/NewTripPage`, `pages/RespondPage`.
  */
 interface Props {
   /** IATA codes, as a trip carries them. */

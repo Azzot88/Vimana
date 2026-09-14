@@ -38,6 +38,9 @@ const SECTIONS: Section[] = [
   // working carrier reopens, and the ones below it are read once. Order lives
   // here and nowhere else, so moving a section is moving a line.
   { to: '/profile/rules', labelKey: 'profile.nav.rules' },
+  // T3.12.03 pt.2 — beside the rules, for the same reason they are second: a
+  // working sender reopens it, and a response to a trip links straight here.
+  { to: '/profile/cargo-templates', labelKey: 'profile.nav.cargoTemplates' },
   { to: '/profile/trust', labelKey: 'profile.nav.trust' },
   { to: '/profile/keys', labelKey: 'profile.nav.keys', testId: 'profile-keys-link' },
   // T_UX.22 — right after access, before the settings: what already happened,

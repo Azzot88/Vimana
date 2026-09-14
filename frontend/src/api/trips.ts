@@ -260,6 +260,11 @@ export const tripAskCounts = () =>
 export const listTrips = (filters?: TripFilters) =>
   api.get<Page<Trip>>('/api/trips', { params: filters })
 
+/** T3.12.03 pt.2 — one trip, in the shape of its card on the board. The
+ *  response page has its own address, so a reload arrives with an id and
+ *  nothing else. A withdrawn or flown trip is found only by its carrier. */
+export const getTrip = (tripId: string) => api.get<Trip>(`/api/trips/${tripId}`)
+
 /** T_UX.19 — withdraw a published trip. Cancelled, not deleted: somebody may
  *  already be talking about it. */
 export const cancelTrip = (tripId: string) =>

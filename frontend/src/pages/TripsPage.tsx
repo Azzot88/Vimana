@@ -3,11 +3,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
-import { matchDeal } from '../api/deals'
 import AirportSelect from '../components/AirportSelect'
-import CategorySelect from '../components/CategorySelect'
 import DepartureChip from '../components/DepartureChip'
-import LeadTimeWarning from '../components/LeadTimeWarning'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
 import NostrBadge from '../components/NostrBadge'
@@ -53,18 +50,7 @@ export default function TripsPage() {
   const [origin, setOrigin] = usePersistedState<string>('trips:filter:origin', '')
   const [destination, setDestination] = usePersistedState<string>('trips:filter:destination', '')
   const [date, setDate] = usePersistedState<string>('trips:filter:date', '')
-  const [orderTripId, setOrderTripId] = useState<string | null>(null)
   const [chatTrip, setChatTrip] = useState<{ id: string; carrierName: string } | null>(null)
-  const [cargoDesc, setCargoDesc] = useState('')
-  /* T3.11.27 — no preselection (owner, 2026-09-12). It defaulted to «другое»,
-     which is how the press could fail with nothing wrong on screen: on a trip
-     that does not carry «другое» no chip was lit, the value went anyway, and
-     the server answered 409 about a category the sender had never chosen. An
-     unanswered question now looks unanswered. */
-  const [cargoCategory, setCargoCategory] = useState('')
-  const [declaredValue, setDeclaredValue] = useState('')
-  const [orderLoading, setOrderLoading] = useState(false)
-  const [error, setError] = useState('')
   /* T3.11.07 — the trip that was just published (owner's request 2026-09-06).
      Publishing used to drop the carrier on the board with no way to tell which
      of the cards was the one they had just written — on a busy corridor it is
@@ -118,58 +104,6 @@ export default function TripsPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     fetchTrips()
-  }
-
-  const handleOrder = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!orderTripId) return
-    const trip = trips.find((t) => t.id === orderTripId)
-    if (!trip) return
-    /* T3.11.27 (owner, 2026-09-12): «Если не выбрать категорию заявка не
-       создаётся и появляется ошибка — надо указать что не так.»
-
-       The category is not a text input, so `required` cannot carry it: the
-       browser has nothing to point at. Without this, the press did nothing
-       visible — the server answered 422, the catch wrote «не удалось создать
-       заявку», and the one field that needed touching was three rows up with
-       no mark on it. Named before anything is sent, so the answer arrives
-       instantly and says what to do rather than what failed. */
-    if (!cargoCategory.trim()) {
-      setError(t('trips.categoryRequired'))
-      return
-    }
-    setOrderLoading(true)
-    setError('')
-    try {
-      const { data: deal } = await matchDeal({
-        trip_id: orderTripId,
-        /* T3.12.03 — the response creates the cargo. No recipient contact:
-           the recipient is chosen as a person inside the deal (`T3.12.05`),
-           and the route is the trip's. */
-        cargo: {
-          category: cargoCategory,
-          declared_value: Number(declaredValue),
-          description: cargoDesc,
-        },
-      })
-      setOrderTripId(null)
-      /* T3.11.23 — one press, and you are inside the deal (owner's model
-         2026-09-07): the server opens the chat with this carrier and nests the
-         deal in it, and the person lands in the deal. They see a deal; they are
-         in fact in a chat that has one open. A success banner on the board
-         instead would have left the conversation somewhere they have to go
-         looking for — and it was already unclear where. */
-      navigate(`/deals/${deal.id}/vault`)
-    } catch (err: unknown) {
-      /* The server's own words when it has any: «этот перевозчик не берёт такую
-         категорию» is something a sender can act on, «не удалось создать
-         заявку» is not. */
-      const detail = (err as { response?: { data?: { detail?: unknown } } })
-        ?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : t('trips.requestError'))
-    } finally {
-      setOrderLoading(false)
-    }
   }
 
   return (
@@ -385,97 +319,19 @@ export default function TripsPage() {
                     >
                       {t('inquiry.chatButton')}
                     </button>
-                    <button
-                      onClick={() => {
-                        setOrderTripId(trip.id)
-                        setCargoCategory('')
-                        setError('')
-                      }}
-                      className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity"
+                    {/* T3.12.03 pt.2 — «Отклики» is a page of its own (owner,
+                        2026-09-14): the cargo is created there once and never
+                        changes, which is too much for a panel inside a card. */}
+                    <Link
+                      to={`/trips/${trip.id}/respond`}
+                      className="bg-amber text-white font-display font-medium px-4 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity text-center"
                     >
-                      {t('trips.sendPackage')}
-                    </button>
+                      {t('trips.respondButton')}
+                    </Link>
                   </div>
                 )}
               </div>
 
-              {orderTripId === trip.id && (
-                <form onSubmit={handleOrder} className="mt-4 pt-4 border-t border-navy/10 space-y-3">
-                  <p className="text-xs font-display font-semibold text-navy/60 uppercase tracking-wide">{t('trips.requestTitle')}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.cargoDescription')}</label>
-                      <input
-                        type="text"
-                        value={cargoDesc}
-                        onChange={(e) => setCargoDesc(e.target.value)}
-                        className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-body text-navy focus:outline-none focus:border-cyan"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.declaredValue')}</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={declaredValue}
-                        onChange={(e) => setDeclaredValue(e.target.value)}
-                        required
-                        className="w-full border border-navy/20 rounded-field px-3 py-2 text-sm font-mono text-navy focus:outline-none focus:border-cyan"
-                        placeholder="100"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.category')}</label>
-                      {/* T3.11.07 — only what this trip carries. The carrier
-                          states the capability, the sender picks from it; the
-                          server refuses anything else with a 409. */}
-                      <CategorySelect
-                        value={cargoCategory}
-                        onChange={setCargoCategory}
-                        only={trip.allowed_categories}
-                        /* …and the whole catalogue when the trip named
-                           nothing: a sender picks, never invents. */
-                        catalogue
-                      />
-                    </div>
-                  </div>
-                  {/* T3.11.06 — «не успеваете», at the moment a sender is
-                      deciding rather than on a page about documents.
-
-                      On the **opened** card only, and that is a deliberate
-                      narrowing of «в выдаче»: one request per card would be
-                      twenty requests for a line that is empty on nineteen of
-                      them, and a board that fires twenty calls to draw nothing
-                      is a board that loads slowly for everyone to warn nobody.
-                      Opened is also when it matters — that is when a person is
-                      about to commit. */}
-                  <LeadTimeWarning
-                    origin={trip.origin}
-                    destination={trip.destination}
-                    category={cargoCategory}
-                    departAt={trip.depart_at}
-                  />
-                  {error && <p className="text-xs font-mono text-amber">{error}</p>}
-
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={orderLoading}
-                      className="bg-navy text-ivory font-display font-medium px-4 py-2 rounded-field text-sm hover:bg-navy-mid transition-colors disabled:opacity-50"
-                    >
-                      {orderLoading ? t('trips.submitting') : t('trips.submit')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOrderTripId(null)}
-                      className="text-sm font-body text-navy/50 hover:text-navy transition-colors px-3"
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  </div>
-                </form>
-              )}
             </div>
           ))}
         </div>

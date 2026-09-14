@@ -33,7 +33,8 @@ from app.models.deal import (
     DealStatus,
     DealVaultMessage,
 )
-from app.models.marketplace import Cargo, Category, Trip, TripStatus
+from app.api.cargo_templates import TemplateName
+from app.models.marketplace import Cargo, CargoTemplate, Category, Trip, TripStatus
 from app.models.user import User
 from app.core.cargo import cargo_location, deal_no, multihop_deal_count
 from app.schemas.marketplace import CargoCreate, DealDetailOut, DealEventOut, DealOut
@@ -48,6 +49,11 @@ class MatchBody(BaseModel):
     trip_id: uuid.UUID
     cargo: CargoCreate
     deadline: datetime | None = None
+    # T3.12.03 pt.2 — «сохранить как шаблон», with the name to keep it under.
+    # Saved here rather than by a second request from the client: a response
+    # the server refuses must not leave a template behind, and two requests
+    # cannot promise that.
+    save_as_template: TemplateName | None = None
 
 
 class EventBody(BaseModel):
@@ -130,6 +136,19 @@ async def match_deal(
     )
     db.add(cargo)
     await db.flush()
+
+    # T3.12.03 pt.2 — the template is a copy of what was just answered, not a
+    # link to it: the cargo never changes, the template is the sender's to edit.
+    if body.save_as_template:
+        db.add(
+            CargoTemplate(
+                owner_id=current_user.id,
+                name=body.save_as_template,
+                category=category_key,
+                declared_value=body.cargo.declared_value,
+                description=body.cargo.description,
+            )
+        )
 
     deal = Deal(
         cargo_id=cargo.id,

@@ -107,6 +107,9 @@ export interface MatchDealPayload {
     cargo_url?: string
   }
   deadline?: string
+  /** T3.12.03 pt.2 — keep this cargo as a template under this name. Saved by
+   *  the server with the response, so a refused response keeps nothing. */
+  save_as_template?: string
 }
 
 export interface DealEvent {

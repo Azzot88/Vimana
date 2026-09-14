@@ -444,6 +444,42 @@ class Cargo(Base):
     )
 
 
+class CargoTemplate(Base):
+    """T3.12.03 pt.2 — a description of cargo a sender keeps for the next trip.
+
+    `D-CARGO-MODEL`: «заполняется при отклике и может быть сохранён в кабинете;
+    в груз копируется снимком». A snapshot, as `carriage_rules` is copied into a
+    trip (`T_UX.15`): the response form is filled from the template and the
+    cargo is written from the form, so there is no reference from a cargo to
+    the template it came from. Editing or deleting a template cannot reach a
+    cargo that is already in a deal — there is nothing to follow.
+
+    Several per person, each with a name (owner, 2026-09-14): a sender who
+    sends documents to Lisbon and medicine to Almaty has two answers, not one.
+
+    Every field but the name is optional. A template is a head start on a form,
+    and the form still asks what the trip requires — a category this trip does
+    not carry is refused at the response, not here.
+    """
+
+    __tablename__ = "cargo_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(60))
+    category: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    declared_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Chat(Base):
     """T3.11.23 — one chat per person, and only one, forever.
 

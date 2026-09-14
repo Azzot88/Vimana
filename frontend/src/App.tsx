@@ -37,6 +37,7 @@ const ProfileKeysPage = lazy(() => import('./pages/ProfileKeysPage'))
 const ProfileLayout = lazy(() => import('./pages/ProfileLayout'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const ProfileRulesPage = lazy(() => import('./pages/ProfileRulesPage'))
+const ProfileCargoTemplatesPage = lazy(() => import('./pages/ProfileCargoTemplatesPage'))
 const ProfileHistoryPage = lazy(() => import('./pages/ProfileHistoryPage'))
 const ProfileTrustPage = lazy(() => import('./pages/ProfileTrustPage'))
 const ProfilePrefsPage = lazy(() => import('./pages/ProfilePrefsPage'))
@@ -52,6 +53,7 @@ const RulesPage = lazy(() => import('./pages/RulesPage'))
 const RulesIndexPage = lazy(() => import('./pages/RulesIndexPage'))
 const ChecklistWizardPage = lazy(() => import('./pages/ChecklistWizardPage'))
 const RequestsPage = lazy(() => import('./pages/RequestsPage'))
+const RespondPage = lazy(() => import('./pages/RespondPage'))
 const AdminVaultPage = lazy(() => import('./pages/AdminVaultPage'))
 const AdminParamsPage = lazy(() => import('./pages/AdminParamsPage'))
 const CarrierPage = lazy(() => import('./pages/CarrierPage'))
@@ -160,6 +162,10 @@ export default function App() {
                   addressed to somebody and needs an account to reach. */}
               <Route path="/requests" element={<RequestsPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />
+              {/* T3.12.03 pt.2 — «Отклики»: answering a trip with cargo is a
+                  page of its own (owner, 2026-09-14), so a reload or a link
+                  returns to it. */}
+              <Route path="/trips/:tripId/respond" element={<RespondPage />} />
               {/* T_UX.18 — the deals tab became history: a finished delivery is
                   something you look up, not something you navigate by. `/deals`
                   stays as the entry point old links point at. */}
@@ -194,6 +200,7 @@ export default function App() {
               <Route path="/profile" element={<ProfileLayout />}>
                 <Route index element={<ProfilePage />} />
                 <Route path="rules" element={<ProfileRulesPage />} />
+                <Route path="cargo-templates" element={<ProfileCargoTemplatesPage />} />
                 {/* T_UX.21 — «Уровень активности» folded into the account, so
                     the address retires rather than disappears. Cheap to keep:
                     nothing outside the app links here (the section existed for

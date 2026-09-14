@@ -216,3 +216,62 @@ async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_header
             user = await db.get(User, uuidlib.UUID(carrier_id))
             user.key_lost_at = None
             await db.commit()
+
+
+# ── one trip (T3.12.03 pt.2) ──────────────────────────────────────────────
+
+
+async def _publish_unique(client, carrier_headers) -> tuple[str, str]:
+    origin = f"ONE{uuidlib.uuid4().hex[:6].upper()}"
+    created = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "payment_model": "cash_on_delivery",
+            "segments": [
+                {
+                    "origin": origin,
+                    "destination": f"{origin}-D",
+                    "depart_at": (datetime.now(timezone.utc) + timedelta(days=6)).isoformat(),
+                }
+            ],
+            "capacity": 1.0,
+            "allowed_categories": ["document"],
+        },
+    )
+    assert created.status_code == 201, created.text
+    return created.json()["id"], origin
+
+
+async def test_one_open_trip_reads_as_its_card_on_the_board(client, carrier_headers):
+    """The response page shows the card the sender clicked, not a second
+    version of it — and nobody has to be signed in to read a listing."""
+    trip_id, origin = await _publish_unique(client, carrier_headers)
+    listed = (await client.get("/api/trips", params={"origin": origin})).json()["items"]
+
+    single = await client.get(f"/api/trips/{trip_id}")
+    assert single.status_code == 200, single.text
+    assert single.json() == listed[0]
+
+
+async def test_an_unknown_trip_is_not_found(client):
+    resp = await client.get(f"/api/trips/{uuidlib.uuid4()}")
+    assert resp.status_code == 404
+
+
+async def test_a_withdrawn_trip_is_found_only_by_its_carrier(
+    client, carrier_headers, sender_headers
+):
+    """The same rule as the board's status filter: a withdrawn listing is a
+    carrier's change of plan, and a stranger cannot read it by id either."""
+    trip_id, _ = await _publish_unique(client, carrier_headers)
+    withdrawn = await client.post(f"/api/trips/{trip_id}/cancel", headers=carrier_headers)
+    assert withdrawn.status_code == 200, withdrawn.text
+
+    assert (await client.get(f"/api/trips/{trip_id}")).status_code == 404
+    assert (
+        await client.get(f"/api/trips/{trip_id}", headers=sender_headers)
+    ).status_code == 404
+    own = await client.get(f"/api/trips/{trip_id}", headers=carrier_headers)
+    assert own.status_code == 200
+    assert own.json()["status"] != "open"

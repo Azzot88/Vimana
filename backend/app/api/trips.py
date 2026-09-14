@@ -482,76 +482,115 @@ async def list_trips(
         )
 
     items, next_cursor = await paginate_desc(db, stmt, Trip, after, clamp_limit(limit))
+    return Page(items=await _trip_outs(db, items), next_cursor=next_cursor)
 
-    # Enrich with carrier name + UBA. One additional query batched by ids.
+
+@router.get("/{trip_id}", response_model=TripOut)
+async def get_trip(
+    trip_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """T3.12.03 pt.2 — one trip, for the response page («Отклики»).
+
+    The page has its own address, so it cannot lean on the board having been
+    loaded: a reload or a shared link arrives with an id and nothing else.
+
+    **Readable exactly as the board is.** An open trip that has not flown is a
+    public listing; anything else — withdrawn, matched, flown — is shown only to
+    its carrier, for the reason `list_trips` gives: a stranger enumerating those
+    would read a carrier's changes of plan. Not found rather than forbidden, so
+    the answer does not say the trip exists.
+    """
+    trip = await db.get(Trip, trip_id)
+    own = trip is not None and current_user is not None and trip.carrier_id == current_user.id
+    listed = (
+        trip is not None
+        and trip.status == TripStatus.open
+        and (trip.expires_at is None or trip.expires_at >= datetime.now(timezone.utc))
+    )
+    if not (own or listed):
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return (await _trip_outs(db, [trip]))[0]
+
+
+async def _trip_outs(db: AsyncSession, items: list[Trip]) -> list[TripOut]:
+    """The listing shape of trips, with the carrier's name and UBA.
+
+    One query for the carriers, batched by id. Shared by the board and by the
+    single trip, so the response page shows the card the sender clicked and not
+    a second version of it.
+
+    Called by: `list_trips`, `get_trip`.
+    """
     from app.core.uba import level_of
     from app.models.user import User
 
-    if items:
-        carrier_ids = list({t.carrier_id for t in items})
-        rows = await db.execute(
-            select(
-                User.id,
-                User.display_name,
-                User.business_activity_level,
-                User.key_lost_at,
-            ).where(User.id.in_(carrier_ids))
-        )
-        by_id = {r.id: r for r in rows}
-        out: list[TripOut] = []
-        for t in items:
-            row = by_id.get(t.carrier_id)
-            uba = int(row.business_activity_level) if row and row.business_activity_level is not None else None
-            out.append(
-                TripOut(
-                    id=t.id,
-                    carrier_id=t.carrier_id,
-                    carrier_name=row.display_name if row else None,
-                    carrier_uba=uba,
-                    carrier_uba_level=level_of(uba) if uba is not None else None,
-                    carrier_key_lost=bool(row and row.key_lost_at is not None),
-                    origin=t.origin,
-                    destination=t.destination,
-                    depart_at=t.depart_at,
-                    capacity=t.capacity,
-                    allowed_categories=t.allowed_categories,
-                    # T3.35 — the listing is the whole point of storing a
-                    # baseline: two trips on one corridor have to be comparable
-                    # before anyone opens a chat. This block is hand-built
-                    # rather than `from_attributes`, so a new column reaches the
-                    # POST response for free and the listing only if named here.
-                    price_per_kg=t.price_per_kg,
-                    min_deal_price=t.min_deal_price,
-                    currency=t.currency,
-                    max_declared_value=t.max_declared_value,
-                    max_declared_value_currency=t.max_declared_value_currency,
-                    # T3.11.15 — a trip whose chain is invisible in the listing
-                    # is a trip whose second flight nobody can find, and the
-                    # second flight is present in 36.6 % of real posts.
-                    space_kind=t.space_kind,
-                    size_hint=t.size_hint,
-                    handover_origin=t.handover_origin,
-                    handover_destination=t.handover_destination,
-                    segments=[TripSegmentOut.model_validate(segment) for segment in t.segments],
-                    excluded=t.excluded,
-                    services=t.services,
-                    payment_model=t.payment_model,
-                    payment_systems=t.payment_systems,
-                    buyout_limit=t.buyout_limit,
-                    buyout_paid_by=t.buyout_paid_by,
-                    carriage_rules=t.carriage_rules,
-                    status=t.status.value if hasattr(t.status, "value") else str(t.status),
-                    created_at=t.created_at,
-                    # T3.11.16 — when the listing stops being one: the card
-                    # can say «сегодня последний день» instead of leaving the
-                    # reader to work it out from the segments.
-                    expires_at=t.expires_at,
-                    nostr_event_id=t.nostr_event_id,
-                    nostr_published_at=t.nostr_published_at,
-                )
+    if not items:
+        return []
+    carrier_ids = list({t.carrier_id for t in items})
+    rows = await db.execute(
+        select(
+            User.id,
+            User.display_name,
+            User.business_activity_level,
+            User.key_lost_at,
+        ).where(User.id.in_(carrier_ids))
+    )
+    by_id = {r.id: r for r in rows}
+    out: list[TripOut] = []
+    for t in items:
+        row = by_id.get(t.carrier_id)
+        uba = int(row.business_activity_level) if row and row.business_activity_level is not None else None
+        out.append(
+            TripOut(
+                id=t.id,
+                carrier_id=t.carrier_id,
+                carrier_name=row.display_name if row else None,
+                carrier_uba=uba,
+                carrier_uba_level=level_of(uba) if uba is not None else None,
+                carrier_key_lost=bool(row and row.key_lost_at is not None),
+                origin=t.origin,
+                destination=t.destination,
+                depart_at=t.depart_at,
+                capacity=t.capacity,
+                allowed_categories=t.allowed_categories,
+                # T3.35 — the listing is the whole point of storing a
+                # baseline: two trips on one corridor have to be comparable
+                # before anyone opens a chat. This block is hand-built
+                # rather than `from_attributes`, so a new column reaches the
+                # POST response for free and the listing only if named here.
+                price_per_kg=t.price_per_kg,
+                min_deal_price=t.min_deal_price,
+                currency=t.currency,
+                max_declared_value=t.max_declared_value,
+                max_declared_value_currency=t.max_declared_value_currency,
+                # T3.11.15 — a trip whose chain is invisible in the listing
+                # is a trip whose second flight nobody can find, and the
+                # second flight is present in 36.6 % of real posts.
+                space_kind=t.space_kind,
+                size_hint=t.size_hint,
+                handover_origin=t.handover_origin,
+                handover_destination=t.handover_destination,
+                segments=[TripSegmentOut.model_validate(segment) for segment in t.segments],
+                excluded=t.excluded,
+                services=t.services,
+                payment_model=t.payment_model,
+                payment_systems=t.payment_systems,
+                buyout_limit=t.buyout_limit,
+                buyout_paid_by=t.buyout_paid_by,
+                carriage_rules=t.carriage_rules,
+                status=t.status.value if hasattr(t.status, "value") else str(t.status),
+                created_at=t.created_at,
+                # T3.11.16 — when the listing stops being one: the card
+                # can say «сегодня последний день» instead of leaving the
+                # reader to work it out from the segments.
+                expires_at=t.expires_at,
+                nostr_event_id=t.nostr_event_id,
+                nostr_published_at=t.nostr_published_at,
             )
-        return Page(items=out, next_cursor=next_cursor)
-    return Page(items=[], next_cursor=next_cursor)
+        )
+    return out
 
 
 @router.get("/{trip_id}/nostr-event")
