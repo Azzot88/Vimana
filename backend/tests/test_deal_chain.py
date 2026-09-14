@@ -553,6 +553,7 @@ async def test_deal_lifecycle_produces_a_valid_chain(
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 10.0,
                 "description": "lifecycle chain",

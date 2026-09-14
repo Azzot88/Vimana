@@ -33,7 +33,7 @@ from app.core.terms import below_carrier_minimum, normalize
 from app.models.deal import (
     CardAckRole, CardState, Deal, DealEventType, DealStatus, DealVaultMessage,
 )
-from app.models.marketplace import Trip
+from app.models.marketplace import Cargo, Trip
 from app.models.user import User
 from app.schemas.terms import TermsIn, TermsOut
 
@@ -59,20 +59,23 @@ def _counterparty(deal: Deal, proposer: CardAckRole) -> CardAckRole:
     return CardAckRole.carrier if proposer is CardAckRole.sender else CardAckRole.sender
 
 
-async def _build_payload(db: AsyncSession, trip: Trip, body: TermsIn) -> dict:
+async def _build_payload(
+    db: AsyncSession, trip: Trip, cargo: Cargo | None, body: TermsIn
+) -> dict:
+    """The card's payload. T3.12.04 — the weight and dimensions the price is
+    normalised by are the cargo's: the terms refer to the cargo and never carry
+    a copy of it (`D-CARGO-MODEL`). A cargo from before weight was asked, that the
+    backfill found nothing for, normalises without a weight rather than failing."""
     normalized = await normalize(
         db,
         origin=trip.origin,
         destination=trip.destination,
-        weight_kg=body.weight_kg,
+        weight_kg=cargo.weight_kg if cargo else None,
         price_total=body.price_total,
         currency=body.currency,
-        dimensions_cm=body.dimensions_cm,
+        dimensions_cm=cargo.dimensions_cm if cargo else None,
     )
     return {
-        "weight_kg": body.weight_kg,
-        "dimensions_cm": body.dimensions_cm,
-        "declared_value": body.declared_value,
         "price_total": body.price_total,
         "currency": body.currency,
         "deadline": body.deadline.isoformat() if body.deadline else None,
@@ -80,11 +83,6 @@ async def _build_payload(db: AsyncSession, trip: Trip, body: TermsIn) -> dict:
         # T3.11.27 — the rest of the agreement. One card holds what four used to,
         # so that «договориться о передаче» stops being a step after both sides
         # have already agreed the deal.
-        "cargo_what": body.cargo_what,
-        "cargo_packaging": body.cargo_packaging,
-        "cargo_fragile": body.cargo_fragile,
-        "cargo_open_on_handover": body.cargo_open_on_handover,
-        "cargo_url": body.cargo_url,
         "handover_method": body.handover_method,
         "handover_place": body.handover_place,
         "handover_at": body.handover_at.isoformat() if body.handover_at else None,
@@ -263,6 +261,7 @@ async def propose_terms(
     ).scalar_one_or_none()
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
+    cargo = await db.get(Cargo, deal.cargo_id)
 
     # T3.11.27 — somebody else's editing window blocks the change itself, not
     # the proposal that came before it. Checked once, before anything is built:
@@ -322,7 +321,7 @@ async def propose_terms(
         forbidden = _locked_against(superseded.card_payload, proposer)
         if forbidden:
             touched = changed_sections(
-                superseded.card_payload, await _build_payload(db, trip, body)
+                superseded.card_payload, await _build_payload(db, trip, cargo, body)
             )
             clash = [s for s in touched if s in forbidden]
             if clash:
@@ -331,7 +330,7 @@ async def propose_terms(
                     detail=f"Locked by the carrier: {', '.join(clash)}",
                 )
 
-    payload = await _build_payload(db, trip, body)
+    payload = await _build_payload(db, trip, cargo, body)
     kind = CardKind.terms_countered if superseded else CardKind.terms_proposed
 
     msg = DealVaultMessage(

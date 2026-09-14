@@ -360,6 +360,7 @@ async def test_unverified_user_can_start_a_deal(client, fixed_code, captured_cod
         json={
             "trip_id": str(uuid.uuid4()),
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "documents",
                 "declared_value": 10.0,
             },

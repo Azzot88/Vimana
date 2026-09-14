@@ -572,6 +572,12 @@
     "inquiries": "demandes : {{count}}",
     "viewAsSender": "Voir côté expéditeur"
   },
+  "cargoFields": {
+    "dimensions": "Dimensions, cm",
+    "length": "Longueur",
+    "width": "Largeur",
+    "height": "Hauteur"
+  },
   "respond": {
     "title": "Répondre à un trajet",
     "back": "Retour aux trajets",
@@ -582,7 +588,9 @@
     "templateName": "Nom du modèle",
     "ownTrip": "C’est votre trajet — vous ne pouvez pas y répondre.",
     "notForCarrier": "Passez en mode envoi pour répondre à un trajet.",
-    "tripGone": "Trajet introuvable ou qui n’accepte plus de réponses."
+    "tripGone": "Trajet introuvable ou qui n’accepte plus de réponses.",
+    "photosFailed": "L’accord est créé, mais les photos n’ont pas été envoyées.",
+    "openDeal": "Ouvrir l’accord"
   },
   "cargoTemplates": {
     "title": "Modèles de colis",
@@ -1373,6 +1381,7 @@
     "agreedTitle": "Conditions convenues",
     "proposeTitle": "Proposer des conditions",
     "attachPhotos": "Joindre des photos de l' envoi",
+    "cargoFixed": "Fixé lors de la réponse et non négocié — la remise est comparée à lui.",
     "photosChosen_one": "{{count}} photo jointe",
     "photosChosen_other": "{{count}} photos jointes",
     "reviewTitle": "Voici ce que verra le transporteur",
@@ -1432,7 +1441,8 @@
       "issue_reported": "Signaler un problème",
       "cancel_requested": "Demander l'annulation",
       "cancel_confirmed": "Annulation confirmée",
-      "terms_reconfirm_requested": "Conditions à reconfirmer"
+      "terms_reconfirm_requested": "Conditions à reconfirmer",
+      "cargo_photographed": "Photos du colis"
     },
     "field": {
       "method": "Méthode",

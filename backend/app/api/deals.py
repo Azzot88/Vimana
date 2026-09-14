@@ -132,6 +132,7 @@ async def match_deal(
         weight_kg=body.cargo.weight_kg,
         dimensions_cm=body.cargo.dimensions_cm,
         fragile=body.cargo.fragile,
+        open_on_handover=body.cargo.open_on_handover,
         cargo_url=body.cargo.cargo_url,
     )
     db.add(cargo)
@@ -147,6 +148,11 @@ async def match_deal(
                 category=category_key,
                 declared_value=body.cargo.declared_value,
                 description=body.cargo.description,
+                weight_kg=body.cargo.weight_kg,
+                dimensions_cm=body.cargo.dimensions_cm,
+                fragile=body.cargo.fragile,
+                open_on_handover=body.cargo.open_on_handover,
+                cargo_url=body.cargo.cargo_url,
             )
         )
 
@@ -409,6 +415,12 @@ async def get_deal(
         # T3.11.27 — the board form's own answers, so the deal card opens filled
         # in instead of asking for them a second time.
         deadline=deal.deadline,
+        # T3.12.04 — the cargo the terms refer to, read-only on the deal card.
+        cargo_weight_kg=cargo.weight_kg if cargo else None,
+        cargo_dimensions_cm=cargo.dimensions_cm if cargo else None,
+        cargo_fragile=bool(cargo and cargo.fragile),
+        cargo_open_on_handover=bool(cargo and cargo.open_on_handover),
+        cargo_url=cargo.cargo_url if cargo else None,
         cargo_location=cargo_location(deal.status),
         multihop=await multihop_deal_count(db, deal.cargo_id) > 1,
         trip_price_per_kg=trip.price_per_kg if trip else None,

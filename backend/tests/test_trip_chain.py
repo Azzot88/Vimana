@@ -893,6 +893,7 @@ async def test_moving_the_flight_tells_the_deals_riding_on_it(
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 10.0,
             },

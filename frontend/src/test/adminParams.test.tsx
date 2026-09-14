@@ -163,10 +163,9 @@ describe('TermsProposeForm', () => {
      leaves on the second press. Three numbers and a settlement method are what
      the form requires, so every path below fills those and then confirms. */
   const fill = (over: { price?: string; method?: string } = {}) => {
-    const numbers = screen.getAllByRole('spinbutton')
-    fireEvent.change(numbers[0], { target: { value: '4' } })
-    fireEvent.change(numbers[1], { target: { value: '900' } })
-    fireEvent.change(numbers[2], { target: { value: over.price ?? '120' } })
+    // T3.12.04 — the price is the only number left: the cargo is not asked.
+    const [price] = screen.getAllByRole('spinbutton')
+    fireEvent.change(price, { target: { value: over.price ?? '120' } })
     const selects = screen.getAllByRole('combobox')
     const settlement = selects[selects.length - 1]
     fireEvent.change(settlement, {
@@ -223,9 +222,7 @@ describe('TermsProposeForm', () => {
       expect(proposeTerms).toHaveBeenCalledWith(
         'd1',
         expect.objectContaining({
-          weight_kg: 4,
           price_total: 120,
-          declared_value: 900,
           // T3.11.27 — «Способ оплаты» moved inside the form: it was a chip
           // beside it, raising a second card about the same agreement.
           payment_method: 'cash_on_delivery',
@@ -236,6 +233,11 @@ describe('TermsProposeForm', () => {
       ),
     )
     await waitFor(() => expect(onDone).toHaveBeenCalled())
+    // T3.12.04 — the server refuses any cargo field by name; the form sends none.
+    const sent = vi.mocked(proposeTerms).mock.calls[0][1] as unknown as Record<string, unknown>
+    for (const field of ['weight_kg', 'declared_value', 'cargo_what', 'cargo_url']) {
+      expect(sent).not.toHaveProperty(field)
+    }
   })
 
   it('carries the card it supersedes when countering', async () => {
@@ -279,38 +281,33 @@ describe('TermsProposeForm', () => {
     expect(onDone).not.toHaveBeenCalled()
   })
 
-  it('hangs the chosen photos on the proposal itself', async () => {
-    /* «Над кнопкой добавить возможность загрузки нескольких фото товара.» They
-       attach to the proposal, not to a chat row beside it — a picture filed
-       beside an act is the defect this whole batch is about. */
-    vi.mocked(proposeTerms).mockResolvedValue({ id: 'terms-1' } as never)
+  it('shows the cargo it cannot change, and prices it from its weight', () => {
+    /* T3.12.04 (owner, 2026-09-14) — the cargo was written at the response. The
+       form shows it without an input for any of it, takes no photographs (they
+       are taken at the response), and opens the price on the carrier's rate
+       times the cargo's weight. */
     renderWithProviders(
-      <TermsProposeForm dealId="d1" myRole="sender" onDone={() => {}} />,
+      <TermsProposeForm
+        dealId="d1"
+        myRole="sender"
+        fromBoard={
+          {
+            cargo_description: 'Spare keys',
+            cargo_weight_kg: 2.5,
+            declared_value: 50,
+            currency: 'USD',
+            trip_price_per_kg: 10,
+          } as never
+        }
+        onDone={() => {}}
+      />,
     )
-    fill()
-    const input = document.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement
-    const one = new File(['a'], 'front.png', { type: 'image/png' })
-    const two = new File(['b'], 'back.png', { type: 'image/png' })
-    fireEvent.change(input, { target: { files: [one, two] } })
-    review()
-    confirm()
-
-    await waitFor(() =>
-      expect(uploadAttachment).toHaveBeenCalledWith(
-        'd1',
-        'terms-1',
-        one,
-        'cargo_photo',
-      ),
-    )
-    expect(uploadAttachment).toHaveBeenCalledWith(
-      'd1',
-      'terms-1',
-      two,
-      'cargo_photo',
-    )
+    const cargo = screen.getByTestId('terms-cargo')
+    expect(cargo).toHaveTextContent('Spare keys')
+    expect(cargo.querySelector('input')).toBeNull()
+    expect(document.querySelector('input[type="file"]')).toBeNull()
+    const [price] = screen.getAllByRole('spinbutton')
+    expect(price).toHaveValue(25)
   })
 
   it('offers only the handover methods this carrier published', () => {

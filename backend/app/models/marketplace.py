@@ -438,6 +438,11 @@ class Cargo(Base):
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     dimensions_cm: Mapped[list | None] = mapped_column(JSON, nullable=True)
     fragile: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # T3.12.04 — «вскрыть при передаче» is the sender's consent, given with the
+    # cargo and not negotiated afterwards (owner, 2026-09-14).
+    open_on_handover: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     cargo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -472,6 +477,15 @@ class CargoTemplate(Base):
     category: Mapped[str | None] = mapped_column(String(50), nullable=True)
     declared_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # T3.12.04 — the rest of what the response form asks, so a template fills
+    # all of it. No photograph: a picture is of one parcel, not of a kind of one.
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dimensions_cm: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    fragile: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    open_on_handover: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    cargo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

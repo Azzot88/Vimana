@@ -178,9 +178,7 @@ async def test_proposal_flags_a_price_below_the_carrier_minimum(
         f"/api/deals/{deal.id}/terms",
         headers=sender_headers,
         json={
-            "weight_kg": 2,
             "price_total": 50,
-            "declared_value": 900,
             "currency": "USD",
         },
     )
@@ -191,9 +189,7 @@ async def test_proposal_flags_a_price_below_the_carrier_minimum(
         f"/api/deals/{deal.id}/terms",
         headers=sender_headers,
         json={
-            "weight_kg": 8,
             "price_total": 250,
-            "declared_value": 900,
             "currency": "USD",
         },
     )

@@ -53,6 +53,7 @@ async def _fresh_deal(client, carrier_headers, sender_headers, origin="VLT", des
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 100.0,
             },

@@ -33,6 +33,7 @@ async def _match(client, sender_headers, trip_id, category):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": category,
                 "declared_value": 25.0,
             },

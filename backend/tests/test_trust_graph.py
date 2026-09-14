@@ -73,6 +73,7 @@ async def test_confirm_deal_creates_dealt_with_edges(
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 50.0,
             },

@@ -26,8 +26,10 @@ class NormalizedTerms:
     direction: str | None            # corridor, e.g. "AE->US"
     route: str                       # the IATA pair as published
     distance_km: float | None        # straight line — see airports.route_distance_km
-    weight_kg: float
-    chargeable_weight_kg: float
+    # T3.12.04 — the cargo's. `None` only for a cargo from before weight was
+    # asked at the response and that its old terms said nothing about.
+    weight_kg: float | None
+    chargeable_weight_kg: float | None
     price_total: float
     currency: str
     price_per_kg: float | None
@@ -56,7 +58,7 @@ async def normalize(
     *,
     origin: str,
     destination: str,
-    weight_kg: float,
+    weight_kg: float | None,
     price_total: float,
     currency: str,
     dimensions_cm: list | None = None,
@@ -65,14 +67,15 @@ async def normalize(
     divisor = int(await resolve(db, "volumetric_divisor", scope=corridor))
 
     volumetric = volumetric_weight_kg(dimensions_cm, divisor)
-    chargeable = max(weight_kg, volumetric) if volumetric is not None else weight_kg
+    known = [w for w in (weight_kg, volumetric) if w is not None]
+    chargeable = max(known) if known else None
 
     distance = route_distance_km(origin, destination)
 
     # Guarded rather than assumed: a zero weight or an unknown airport pair is a
     # legitimate proposal, and a ZeroDivisionError in the middle of agreeing
     # terms would be a spectacular way to lose a deal.
-    per_kg = round(price_total / chargeable, 2) if chargeable > 0 else None
+    per_kg = round(price_total / chargeable, 2) if chargeable else None
     per_km = (
         round(price_total / distance, 4) if distance and distance > 0 else None
     )
@@ -82,7 +85,7 @@ async def normalize(
         route=f"{(origin or '').upper()}->{(destination or '').upper()}",
         distance_km=round(distance, 1) if distance is not None else None,
         weight_kg=weight_kg,
-        chargeable_weight_kg=round(chargeable, 3),
+        chargeable_weight_kg=round(chargeable, 3) if chargeable is not None else None,
         price_total=price_total,
         currency=currency,
         price_per_kg=per_kg,

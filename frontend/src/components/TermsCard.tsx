@@ -73,8 +73,8 @@ export default function TermsCard({ msg, dealId, myRole, onChanged }: Props) {
       </div>
 
       {row(t('terms.price'), `${payload.price_total ?? '—'} ${payload.currency ?? ''}`)}
-      {row(t('terms.weight'), payload.weight_kg)}
-      {row(t('terms.declaredValue'), payload.declared_value)}
+      {/* T3.12.04 — the cargo's weight, as the terms were normalised by it. */}
+      {row(t('terms.weight'), norm?.weight_kg)}
       {row(t('terms.paymentMethod'), payload.payment_method)}
 
       {norm && (

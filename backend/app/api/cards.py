@@ -157,14 +157,22 @@ async def _fixation_payload(db: AsyncSession, deal: Deal) -> dict:
     the agreed terms at this moment and never re-read. A rate changed tomorrow
     must not reach back into a parcel already in the air.
     """
+    from app.models.marketplace import Cargo
+
     terms = await _agreed_terms(db, deal.id)
     agreed = dict(terms.card_payload or {}) if terms else {}
     corridor = (agreed.get("normalized") or {}).get("direction")
+    # T3.12.04 — the declared value is the cargo's; terms agreed before the cargo
+    # left them still carry their own figure, and that one is what was accepted.
+    declared = agreed.get("declared_value")
+    if declared is None:
+        cargo = await db.get(Cargo, deal.cargo_id)
+        declared = cargo.declared_value if cargo else None
     return {
         "fixed_at": datetime.now(timezone.utc).isoformat(),
         "price_total": agreed.get("price_total"),
         "currency": agreed.get("currency"),
-        "declared_value": agreed.get("declared_value"),
+        "declared_value": declared,
         "terms_id": str(terms.id) if terms else None,
         "platform_params": {
             k: str(v) for k, v in (await resolve_all(db, scope=corridor)).items()
@@ -295,6 +303,19 @@ async def _raise_card(
     if creator not in spec.creator_roles:
         raise HTTPException(
             status_code=403, detail="Your role does not raise this card"
+        )
+
+    # T3.12.04 — the cargo is photographed at the response (owner, 2026-09-14),
+    # while the deal can still be refused. A picture of «what I send» taken after
+    # the carrier agreed would be evidence written after the fact, and the
+    # handover has a photograph of its own.
+    if kind is CardKind.cargo_photographed and deal.status not in (
+        DealStatus.draft,
+        DealStatus.matched,
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="The cargo is photographed at the response, before the terms are agreed",
         )
 
     # T3.35 — the fixation window closes when the flight leaves, whichever side

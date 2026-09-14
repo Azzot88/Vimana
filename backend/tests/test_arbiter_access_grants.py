@@ -57,6 +57,7 @@ async def _open_dispute(client, session_maker):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 300.0,
             },

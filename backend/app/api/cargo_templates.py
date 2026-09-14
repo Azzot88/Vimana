@@ -42,12 +42,21 @@ TemplateName = Annotated[
 ]
 
 
+#: T3.12.04 — length, width, height; each positive, as on the cargo.
+Dimensions = Annotated[list[Annotated[float, Field(gt=0, le=1000)]], Field(min_length=3, max_length=3)]
+
+
 class CargoTemplateOut(BaseModel):
     id: uuid.UUID
     name: str
     category: str | None
     declared_value: float | None
     description: str | None
+    weight_kg: float | None
+    dimensions_cm: list[float] | None
+    fragile: bool
+    open_on_handover: bool
+    cargo_url: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -59,6 +68,11 @@ class CargoTemplateCreate(BaseModel):
     category: str | None = Field(default=None, max_length=50)
     declared_value: float | None = Field(default=None, ge=0, le=1_000_000_000)
     description: str | None = Field(default=None, max_length=1000)
+    weight_kg: float | None = Field(default=None, gt=0, le=100)
+    dimensions_cm: Dimensions | None = None
+    fragile: bool = False
+    open_on_handover: bool = False
+    cargo_url: str | None = Field(default=None, max_length=500)
 
 
 class CargoTemplateUpdate(BaseModel):
@@ -66,6 +80,11 @@ class CargoTemplateUpdate(BaseModel):
     category: str | None = Field(default=None, max_length=50)
     declared_value: float | None = Field(default=None, ge=0, le=1_000_000_000)
     description: str | None = Field(default=None, max_length=1000)
+    weight_kg: float | None = Field(default=None, gt=0, le=100)
+    dimensions_cm: Dimensions | None = None
+    fragile: bool | None = None
+    open_on_handover: bool | None = None
+    cargo_url: str | None = Field(default=None, max_length=500)
 
 
 def _category(value: str | None) -> str | None:
@@ -110,6 +129,11 @@ async def create_template(
         category=_category(body.category),
         declared_value=body.declared_value,
         description=body.description,
+        weight_kg=body.weight_kg,
+        dimensions_cm=body.dimensions_cm,
+        fragile=body.fragile,
+        open_on_handover=body.open_on_handover,
+        cargo_url=body.cargo_url,
     )
     db.add(template)
     await db.commit()
@@ -130,6 +154,10 @@ async def update_template(
     # for it is not a way to clear it.
     if "name" in data and data["name"] is None:
         raise HTTPException(status_code=422, detail="A template needs a name")
+    # Two flags that are never unknown: `null` for either means «not sent».
+    for flag in ("fragile", "open_on_handover"):
+        if flag in data and data[flag] is None:
+            del data[flag]
     if "category" in data:
         data["category"] = _category(data["category"])
     for field, value in data.items():

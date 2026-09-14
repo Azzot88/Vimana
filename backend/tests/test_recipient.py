@@ -48,6 +48,7 @@ async def _deal(client):
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 50.0,
             },

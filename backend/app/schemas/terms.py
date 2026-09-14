@@ -4,10 +4,28 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.currencies import CURRENCIES
 from app.schemas.cards import HandoverMethod, PaymentMethod
+
+#: T3.12.04 — what used to be the «Груз» section and belongs to the cargo now.
+#: `D-CARGO-MODEL`: the cargo is written once at the response and does not
+#: change, so terms that carried their own weight or their own «хрупкое» would be
+#: a second copy of the parcel that two people could edit. Named here so that a
+#: client still sending them is refused by name, not silently ignored.
+CARGO_FIELDS: frozenset[str] = frozenset(
+    {
+        "weight_kg",
+        "dimensions_cm",
+        "declared_value",
+        "cargo_what",
+        "cargo_packaging",
+        "cargo_fragile",
+        "cargo_open_on_handover",
+        "cargo_url",
+    }
+)
 
 
 class TermsIn(BaseModel):
@@ -16,23 +34,23 @@ class TermsIn(BaseModel):
     `description` is the only free-text field and it goes to the encrypted
     column, not into the payload — the payload holds what the server has to be
     able to read (§6.9.3).
+
+    T3.12.04 — no cargo. The weight and dimensions the price is normalised by
+    are read from the deal's cargo (`api.terms._build_payload`).
     """
 
-    weight_kg: float = Field(gt=0, le=100)
     price_total: float = Field(gt=0)
-    declared_value: float = Field(ge=0)
     # T3.11.07 — four characters, because `USDT` and `USDC` are four. A deal is
     # negotiated in the currency the trip was published in, so a limit narrower
     # than the trip's would refuse the ordinary continuation of that trip.
     currency: str = Field(default="USD", min_length=3, max_length=4)
-    dimensions_cm: list[float] | None = None
     deadline: datetime | None = None
     payment_method: PaymentMethod = "cash_on_delivery"
     description: str | None = None
     # Set when countering: the proposal this one replaces.
     supersedes_id: uuid.UUID | None = None
 
-    # ── T3.11.27 — the whole agreement, in four sections ──────────────────
+    # ── T3.11.27 — the whole agreement, in sections ───────────────────────
     #
     # Owner's decision 2026-09-07: one card instead of four. The same facts used
     # to be spread across `terms.*`, `handover.conditions`, `pickup.proposed`
@@ -41,21 +59,11 @@ class TermsIn(BaseModel):
     # had already reached.
     #
     # The fields are flat with section prefixes rather than nested: the sections
-    # exist to name what changed («изменены условия: Груз, Оплата»), and a flat
-    # shape keeps every caller that already sends a price working unchanged.
-    # `SECTION_OF` in `api.terms` is what maps one to the other.
+    # exist to name what changed («изменены условия: Передача, Оплата»).
+    # `SECTION_OF` in `core.cards` is what maps one to the other.
     #
-    # All of them optional: a deal born from the board form has a price and a
-    # weight and nothing else, and a half-filled agreement is the normal state
-    # of the first stage rather than an error.
-    cargo_what: str | None = Field(default=None, max_length=200)
-    cargo_packaging: str | None = Field(default=None, max_length=200)
-    cargo_fragile: bool = False
-    cargo_open_on_handover: bool = False
-    #: A link to the item, for a deal that starts as «купи и привези». The photo
-    #: itself is an attachment — this is the address of the thing.
-    cargo_url: str | None = Field(default=None, max_length=500)
-
+    # All of them optional: a half-filled agreement is the normal state of the
+    # first stage rather than an error.
     handover_method: HandoverMethod | None = None
     handover_place: str | None = Field(default=None, max_length=200)
     handover_at: datetime | None = None
@@ -75,6 +83,17 @@ class TermsIn(BaseModel):
     #: and softer with another.
     locked: list[str] = Field(default_factory=list)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _no_cargo(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            sent = sorted(CARGO_FIELDS & set(data))
+            if sent:
+                raise ValueError(
+                    f"The cargo is not part of the terms: {', '.join(sent)}"
+                )
+        return data
+
     @field_validator("locked")
     @classmethod
     def _known_sections(cls, v: list[str]) -> list[str]:
@@ -92,15 +111,6 @@ class TermsIn(BaseModel):
         if code not in CURRENCIES:
             raise ValueError(f"unknown currency: {code}")
         return code
-
-    @field_validator("dimensions_cm")
-    @classmethod
-    def _three_positive(cls, v: list[float] | None) -> list[float] | None:
-        if v is None:
-            return None
-        if len(v) != 3 or any(x <= 0 for x in v):
-            raise ValueError("dimensions_cm must be three positive numbers")
-        return v
 
 
 class TermsOut(BaseModel):

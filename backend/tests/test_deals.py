@@ -30,6 +30,7 @@ async def _match_deal(client, sender_headers, trip_id: str) -> str:
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 50.0,
                 "description": "Test cargo",
@@ -81,7 +82,7 @@ async def test_own_proposal_cannot_be_accepted_by_its_author(
     proposal = await client.post(
         f"/api/deals/{deal_id}/terms",
         headers=sender_headers,
-        json={"weight_kg": 2, "price_total": 60, "declared_value": 500},
+        json={"price_total": 60},
     )
     resp = await client.post(
         f"/api/deals/{deal_id}/dealvault/messages/{proposal.json()['id']}/ack",
@@ -265,6 +266,7 @@ async def test_order_cannot_ask_for_a_category_the_trip_does_not_carry(
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "animals",
                 "declared_value": 100.0,
             },
@@ -306,6 +308,7 @@ async def test_a_trip_that_named_no_categories_still_takes_a_deal(
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 100.0,
             },

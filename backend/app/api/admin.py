@@ -100,10 +100,10 @@ class ResolveBody(BaseModel):
 async def _declared_value(db: AsyncSession, deal: Deal | None) -> tuple[float | None, str]:
     """What the two of them agreed the parcel was worth, and in what.
 
-    Read from the agreed card rather than from the order: the order is what the
-    sender typed on the board, the agreement is what the carrier accepted, and
-    a charge is measured against the second. Falls back to the cargo for deals
-    struck before the card carried the figure.
+    Read from the agreed card first: for deals struck while the terms carried a
+    figure, that figure is what the carrier accepted, and a charge is measured
+    against it. T3.12.04 — new terms carry none, and the cargo's own declared
+    value, written once at the response, is the answer.
 
     Called by: `resolve_dispute`, to bound a ruling by what was declared.
     """

@@ -3,9 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { listCargoTemplates, type CargoTemplate } from '../api/cargoTemplates'
 import { matchDeal } from '../api/deals'
+import { raiseCardWithFiles } from '../api/terms'
 import { getTrip, type Trip } from '../api/trips'
 import CargoFields, {
   EMPTY_CARGO,
+  cargoFromFields,
   fieldsFromTemplate,
   type CargoFieldsValue,
 } from '../components/CargoFields'
@@ -49,6 +51,12 @@ export default function RespondPage() {
   const [cargo, setCargo] = useState<CargoFieldsValue>(EMPTY_CARGO)
   const [saveTemplate, setSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
+  /* T3.12.04 — «вот что я отправляю», optional, at the response (owner,
+     2026-09-14). Several, because one photograph of a parcel is one side of it. */
+  const [photos, setPhotos] = useState<File[]>([])
+  /* The deal a failed photo upload left behind: it exists, and saying so with a
+     way into it is better than pretending the press did nothing. */
+  const [createdDeal, setCreatedDeal] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
@@ -92,17 +100,36 @@ export default function RespondPage() {
     }
     setSending(true)
     setError('')
+    const body = cargoFromFields(cargo)
     try {
       const { data: deal } = await matchDeal({
         trip_id: trip.id,
         cargo: {
           category: cargo.category,
-          declared_value: Number(cargo.declaredValue),
-          description: cargo.description,
+          declared_value: body.declared_value ?? 0,
+          description: body.description ?? undefined,
+          weight_kg: body.weight_kg ?? 0,
+          dimensions_cm: body.dimensions_cm ?? undefined,
+          fragile: body.fragile,
+          open_on_handover: body.open_on_handover,
+          cargo_url: body.cargo_url ?? undefined,
         },
         save_as_template:
           saveTemplate && templateName.trim() ? templateName.trim() : undefined,
       })
+      /* T3.12.04 — the photographs go into the new deal's vault as one card,
+         after the deal exists because they hang on it. The server validates
+         every file before it writes the card, so a refusal leaves no card
+         without its pictures — only a deal without them. */
+      if (photos.length > 0) {
+        try {
+          await raiseCardWithFiles(deal.id, 'cargo.photographed', photos)
+        } catch {
+          setCreatedDeal(deal.id)
+          setError(t('respond.photosFailed'))
+          return
+        }
+      }
       /* T3.11.23 — one press, and you are inside the deal, nested in the chat
          with this carrier. */
       navigate(`/deals/${deal.id}/vault`)
@@ -212,8 +239,30 @@ export default function RespondPage() {
             value={cargo}
             onChange={setCargo}
             only={trip.allowed_categories}
-            valueRequired
+            required
           />
+
+          <div>
+            <label className="block">
+              <span className="block text-xs font-body font-medium text-navy/60 mb-1">
+                {t('terms.attachPhotos')}
+              </span>
+              <input
+                type="file"
+                multiple
+                /* Every picture: what is acceptable is decided by the bytes,
+                   server-side, not by a list of types here. */
+                accept="image/*"
+                onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
+                className="text-xs font-body"
+              />
+            </label>
+            {photos.length > 0 && (
+              <p className="mt-1 text-[11px] font-body text-navy/40">
+                {t('terms.photosChosen', { count: photos.length })}
+              </p>
+            )}
+          </div>
 
           {/* T3.11.06 — «не успеваете», at the moment a sender is deciding. */}
           <LeadTimeWarning
@@ -254,10 +303,18 @@ export default function RespondPage() {
           </div>
 
           {error && <p className="text-xs font-mono text-amber">{error}</p>}
+          {createdDeal && (
+            <Link
+              to={`/deals/${createdDeal}/vault`}
+              className="inline-block text-sm font-body text-cyan hover:underline"
+            >
+              {t('respond.openDeal')}
+            </Link>
+          )}
 
           <button
             type="submit"
-            disabled={sending}
+            disabled={sending || createdDeal !== null}
             className="bg-amber text-white font-display font-medium px-5 py-3 min-h-[2.75rem] rounded-field text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {sending ? t('trips.submitting') : t('trips.submit')}

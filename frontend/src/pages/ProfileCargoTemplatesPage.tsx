@@ -9,6 +9,7 @@ import {
 } from '../api/cargoTemplates'
 import CargoFields, {
   EMPTY_CARGO,
+  cargoFromFields,
   fieldsFromTemplate,
   type CargoFieldsValue,
 } from '../components/CargoFields'
@@ -68,12 +69,7 @@ export default function ProfileCargoTemplatesPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    const body = {
-      name: name.trim(),
-      category: cargo.category || null,
-      declared_value: cargo.declaredValue === '' ? null : Number(cargo.declaredValue),
-      description: cargo.description || null,
-    }
+    const body = { name: name.trim(), ...cargoFromFields(cargo) }
     try {
       if (editing === 'new') await createCargoTemplate(body)
       else if (editing) await updateCargoTemplate(editing, body)
@@ -167,6 +163,7 @@ export default function ProfileCargoTemplatesPage() {
                   <p className="text-xs font-body text-navy/50 break-words">
                     {[
                       template.category,
+                      template.weight_kg != null ? `${template.weight_kg} kg` : null,
                       template.declared_value != null ? String(template.declared_value) : null,
                       template.description,
                     ]

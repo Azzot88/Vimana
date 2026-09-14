@@ -279,6 +279,7 @@ async def _second_deal(client, sender_headers, carrier_headers) -> str:
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 25.0,
             },

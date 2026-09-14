@@ -628,6 +628,12 @@
     "inquiries": "{{count}} asking",
     "viewAsSender": "See as a sender"
   },
+  "cargoFields": {
+    "dimensions": "Dimensions, cm",
+    "length": "Length",
+    "width": "Width",
+    "height": "Height"
+  },
   "respond": {
     "title": "Respond to a trip",
     "back": "Back to trips",
@@ -638,7 +644,9 @@
     "templateName": "Template name",
     "ownTrip": "This is your trip — you cannot respond to it.",
     "notForCarrier": "Switch to sending to respond to a trip.",
-    "tripGone": "This trip is not found or no longer takes responses."
+    "tripGone": "This trip is not found or no longer takes responses.",
+    "photosFailed": "The deal is created, but the photos did not upload.",
+    "openDeal": "Open the deal"
   },
   "cargoTemplates": {
     "title": "Cargo templates",
@@ -852,6 +860,7 @@
     "field": {
       "what": "What we carry",
       "weight": "Weight",
+      "dimensions": "Dimensions",
       "declared": "Declared value",
       "packaging": "Packaging",
       "fragile": "Fragile",
@@ -1509,6 +1518,7 @@
     "agreedTitle": "Agreed terms",
     "proposeTitle": "Propose terms",
     "attachPhotos": "Attach photos of the shipment",
+    "cargoFixed": "Set at the response and not negotiated — the handover is checked against it.",
     "photosChosen_one": "{{count}} photo attached",
     "photosChosen_other": "{{count}} photos attached",
     "reviewTitle": "This is what the carrier will see",
@@ -1579,7 +1589,8 @@
       "issue_reported": "Report an issue",
       "cancel_requested": "Request cancellation",
       "cancel_confirmed": "Cancellation confirmed",
-      "terms_reconfirm_requested": "Terms need reconfirming"
+      "terms_reconfirm_requested": "Terms need reconfirming",
+      "cargo_photographed": "Photos of the cargo"
     },
     "field": {
       "method": "Method",

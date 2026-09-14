@@ -137,6 +137,107 @@ async def test_responding_to_a_trip_creates_the_cargo_and_its_first_deal(
     assert row["cargo_category"] == "document"
 
 
+async def test_a_response_without_a_weight_is_refused(
+    client, carrier_headers, sender_headers
+):
+    """T3.12.04 (owner, 2026-09-14) — the weight is the cargo's and required:
+    the terms no longer carry one, so a cargo without it would leave the price
+    nothing to be compared by."""
+    trip_id, _ = await _open_trip(client, carrier_headers)
+    r = await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={"trip_id": trip_id, "cargo": {"category": "document", "declared_value": 5.0}},
+    )
+    assert r.status_code == 422, r.text
+    assert "weight_kg" in r.text
+
+
+async def _matched(client, carrier_headers, sender_headers, **cargo) -> str:
+    trip_id, _ = await _open_trip(client, carrier_headers)
+    r = await client.post(
+        "/api/deals/match",
+        headers=sender_headers,
+        json={
+            "trip_id": trip_id,
+            "cargo": {
+                "category": "document",
+                "declared_value": 40.0,
+                "weight_kg": 1.5,
+                **cargo,
+            },
+        },
+    )
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+async def test_the_deal_shows_the_cargo_its_terms_refer_to(
+    client, carrier_headers, sender_headers
+):
+    deal_id = await _matched(
+        client,
+        carrier_headers,
+        sender_headers,
+        weight_kg=2.5,
+        dimensions_cm=[30, 20, 10],
+        fragile=True,
+        open_on_handover=True,
+        cargo_url="https://example.test/thing",
+    )
+    detail = (await client.get(f"/api/deals/{deal_id}", headers=sender_headers)).json()
+    assert detail["cargo_weight_kg"] == 2.5
+    assert detail["cargo_dimensions_cm"] == [30, 20, 10]
+    assert detail["cargo_fragile"] is True
+    assert detail["cargo_open_on_handover"] is True
+    assert detail["cargo_url"] == "https://example.test/thing"
+
+
+async def _photograph(client, headers, deal_id):
+    from tests.test_dealvault_attachments import PNG_1X1
+
+    return await client.post(
+        f"/api/deals/{deal_id}/cards/with-files",
+        headers=headers,
+        files=[("files", ("front.png", PNG_1X1, "image/png"))],
+        data={"kind": "cargo.photographed"},
+    )
+
+
+async def test_the_sender_photographs_the_cargo_at_the_response(
+    client, carrier_headers, sender_headers
+):
+    """T3.12.04 (owner, 2026-09-14) — optional, at the response, into the
+    vault of the first deal. The carrier does not photograph somebody else's
+    cargo on its behalf, and a photograph is never a card without the file."""
+    deal_id = await _matched(client, carrier_headers, sender_headers)
+
+    photo = await _photograph(client, sender_headers, deal_id)
+    assert photo.status_code == 201, photo.text
+    assert photo.json()["card_kind"] == "cargo.photographed"
+
+    assert (await _photograph(client, carrier_headers, deal_id)).status_code == 403
+    bare = await client.post(
+        f"/api/deals/{deal_id}/cards",
+        headers=sender_headers,
+        json={"kind": "cargo.photographed", "payload": {}},
+    )
+    assert bare.status_code == 422, bare.text
+
+
+async def test_no_cargo_photographs_once_the_terms_are_agreed(
+    client, carrier_headers, sender_headers, session_maker
+):
+    deal_id = await _matched(client, carrier_headers, sender_headers)
+    async with session_maker() as db:
+        deal = await db.get(Deal, uuid.UUID(deal_id))
+        deal.status = DealStatus.accepted
+        await db.commit()
+
+    r = await _photograph(client, sender_headers, deal_id)
+    assert r.status_code == 409, r.text
+
+
 async def test_no_cargo_can_hold_two_deals_in_one_place(
     session_maker, seed_deal
 ):
@@ -205,7 +306,7 @@ async def test_the_single_deal_s_recipient_becomes_the_final_recipient(
             headers=sender_headers,
             json={
                 "trip_id": trip_id,
-                "cargo": {"category": "document", "declared_value": 20.0},
+                "cargo": {"category": "document", "declared_value": 20.0, "weight_kg": 1.0},
             },
         )
     ).json()["id"]

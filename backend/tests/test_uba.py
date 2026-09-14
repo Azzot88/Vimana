@@ -191,6 +191,7 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 500.0,
             },

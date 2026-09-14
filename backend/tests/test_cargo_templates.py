@@ -166,6 +166,7 @@ async def test_a_response_can_keep_its_cargo_as_a_template(
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 75.0,
                 "description": "signed copy",
@@ -196,6 +197,7 @@ async def test_editing_the_template_does_not_reach_the_cargo(
             json={
                 "trip_id": trip_id,
                 "cargo": {
+                    "weight_kg": 1.0,
                     "category": "document",
                     "declared_value": 30.0,
                     "description": "as answered",
@@ -235,7 +237,7 @@ async def test_a_refused_response_keeps_no_template(
         json={
             "trip_id": trip_id,
             # The trip carries documents only.
-            "cargo": {"category": "animals", "declared_value": 5.0},
+            "cargo": {"weight_kg": 1.0, "category": "animals", "declared_value": 5.0},
             "save_as_template": name,
         },
     )

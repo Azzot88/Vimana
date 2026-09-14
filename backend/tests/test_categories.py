@@ -59,6 +59,7 @@ async def test_new_category_created_on_match(client, carrier_headers, sender_hea
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": custom,
                 "declared_value": 50.0,
             },
@@ -82,6 +83,7 @@ async def test_usage_count_increments_on_reuse(client, carrier_headers, sender_h
             json={
                 "trip_id": trip_id,
                 "cargo": {
+                    "weight_kg": 1.0,
                     "category": shared,
                     "declared_value": 25.0,
                 },

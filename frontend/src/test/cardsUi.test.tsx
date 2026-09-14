@@ -68,8 +68,6 @@ describe('TermsCard', () => {
       card_payload: {
         price_total: 140,
         currency: 'USD',
-        weight_kg: 4,
-        declared_value: 1200,
         normalized: {
           direction: 'AE->US',
           route: 'DXB->JFK',

@@ -32,6 +32,7 @@ async def deal(session_maker, seed_carrier, seed_sender, seed_trip):
             currency="USD",
             description="Terms test cargo",
             final_destination=seed_trip.destination,
+            weight_kg=4.0,
         )
         db.add(cargo)
         await db.flush()
@@ -49,9 +50,7 @@ async def deal(session_maker, seed_carrier, seed_sender, seed_trip):
 
 
 BASE = {
-    "weight_kg": 4,
     "price_total": 100,
-    "declared_value": 1200,
     "currency": "USD",
     "payment_method": "cash_on_delivery",
 }
@@ -117,9 +116,12 @@ async def test_proposal_on_missing_deal_is_404(client, sender_headers):
 
 
 async def test_normalised_view_is_computed(client, sender_headers, deal):
-    r = await _propose(client, sender_headers, deal.id, weight_kg=4, price_total=100)
+    """T3.12.04 — per kilo of the **cargo's** weight: the terms carry a price,
+    the kilos are what the sender declared at the response."""
+    r = await _propose(client, sender_headers, deal.id, price_total=100)
     norm = r.json()["payload"]["normalized"]
     assert norm["price_per_kg"] == 25.0
+    assert norm["weight_kg"] == 4
     assert norm["chargeable_weight_kg"] == 4
     assert norm["currency"] == "USD"
     assert "route" in norm
@@ -134,23 +136,43 @@ async def test_both_entry_points_normalise_identically(
     assert a.json()["payload"]["normalized"] == b.json()["payload"]["normalized"]
 
 
+async def _reweigh(session_maker, deal, weight_kg, dimensions_cm=None):
+    """The cargo as the response would have written it — set directly, because
+    no API changes a cargo and none should."""
+    from app.models.marketplace import Cargo
+
+    async with session_maker() as db:
+        cargo = await db.get(Cargo, deal.cargo_id)
+        cargo.weight_kg = weight_kg
+        cargo.dimensions_cm = dimensions_cm
+        await db.commit()
+
+
 async def test_volumetric_weight_wins_when_bulkier(
-    client, sender_headers, deal
+    client, session_maker, sender_headers, deal
 ):
     """A light bulky box is charged by volume — the airline convention, and the
     reason `chargeable_weight_kg` exists separately from `weight_kg`."""
-    r = await _propose(
-        client,
-        sender_headers,
-        deal.id,
-        weight_kg=1,
-        dimensions_cm=[60, 40, 40],  # 96000/5000 = 19.2 kg
-        price_total=100,
-    )
+    await _reweigh(session_maker, deal, 1.0, [60, 40, 40])  # 96000/5000 = 19.2 kg
+    r = await _propose(client, sender_headers, deal.id, price_total=100)
     norm = r.json()["payload"]["normalized"]
     assert norm["weight_kg"] == 1
     assert norm["chargeable_weight_kg"] > 19
     assert norm["price_per_kg"] < 6
+
+
+async def test_a_cargo_without_a_weight_still_gets_terms(
+    client, session_maker, sender_headers, deal
+):
+    """A cargo from before weight was asked, that its old terms said nothing
+    about: the price is still a price, only there is no «per kilo» to show."""
+    await _reweigh(session_maker, deal, None)
+    r = await _propose(client, sender_headers, deal.id, price_total=100)
+    assert r.status_code == 201, r.text
+    norm = r.json()["payload"]["normalized"]
+    assert norm["weight_kg"] is None
+    assert norm["chargeable_weight_kg"] is None
+    assert norm["price_per_kg"] is None
 
 
 async def test_unknown_airports_give_no_distance_not_an_error(
@@ -165,9 +187,23 @@ async def test_unknown_airports_give_no_distance_not_an_error(
     assert norm["price_per_km"] is None
 
 
-async def test_bad_dimensions_rejected(client, sender_headers, deal):
-    r = await _propose(client, sender_headers, deal.id, dimensions_cm=[1, 2])
-    assert r.status_code == 422
+async def test_the_terms_refuse_the_cargo(client, sender_headers, deal):
+    """T3.12.04 — «правка груза через условия сделки отказывается API».
+
+    Refused by name rather than dropped: a client that still sends a weight
+    believes it is changing one, and silence would let it go on believing that.
+    """
+    for field, value in (
+        ("weight_kg", 9),
+        ("dimensions_cm", [10, 10, 10]),
+        ("declared_value", 5000),
+        ("cargo_what", "something else"),
+        ("cargo_fragile", True),
+        ("cargo_url", "https://example.test"),
+    ):
+        r = await _propose(client, sender_headers, deal.id, **{field: value})
+        assert r.status_code == 422, (field, r.text)
+        assert field in r.text
 
 
 async def test_zero_price_rejected(client, sender_headers, deal):
@@ -358,20 +394,19 @@ def test_corridor_of_real_airports():
 # ── T3.11.27 · one card, four sections, and who may move them ───────────────
 
 
-async def test_the_card_carries_all_four_sections(client, sender_headers, deal):
+async def test_the_card_carries_its_sections(client, sender_headers, deal):
     """T3.11.27 — one card instead of four (owner's decision 2026-09-07).
 
-    Cargo, handover, delivery and payment used to live in `terms.*`,
+    Handover, delivery and payment used to live in `terms.*`,
     `handover.conditions`, `pickup.proposed` and `dropoff.proposed`, which made
     «договориться о передаче» a step *after* both sides had agreed the deal —
-    describing an agreement they had already reached.
+    describing an agreement they had already reached. The cargo is not one of
+    them since T3.12.04: it is the cargo's own row.
     """
     r = await _propose(
         client,
         sender_headers,
         deal.id,
-        cargo_what="Конструктор",
-        cargo_fragile=True,
         handover_method="in_person",
         handover_place="Дубай, у метро",
         delivery_method="local_post",
@@ -380,8 +415,8 @@ async def test_the_card_carries_all_four_sections(client, sender_headers, deal):
     )
     assert r.status_code == 201, r.text
     payload = r.json()["payload"]
-    assert payload["cargo_what"] == "Конструктор"
-    assert payload["cargo_fragile"] is True
+    assert "cargo_what" not in payload
+    assert "weight_kg" not in payload
     assert payload["handover_place"] == "Дубай, у метро"
     assert payload["delivery_method"] == "local_post"
     # T3.11.27 — who pays decides whose button closes the deal.
@@ -398,7 +433,7 @@ async def test_an_edit_announces_which_sections_moved(
     under terms they never read.
     """
     first = await _propose(
-        client, sender_headers, deal.id, price_total=100, cargo_what="Документы"
+        client, sender_headers, deal.id, price_total=100, handover_place="Dubai Mall"
     )
     card_id = first.json()["id"]
 
@@ -407,7 +442,7 @@ async def test_an_edit_announces_which_sections_moved(
         carrier_headers,
         deal.id,
         price_total=140,
-        cargo_what="Документы",
+        handover_place="Dubai Mall",
         supersedes_id=card_id,
     )
     assert countered.status_code == 201, countered.text

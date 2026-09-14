@@ -192,6 +192,7 @@ async def test_inquiry_linked_to_deal_after_match(client, carrier_headers):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 100.0,
             },
@@ -327,6 +328,7 @@ async def test_the_chat_names_the_deal_to_carry_on_in(
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 100.0,
                 "description": "chat nesting probe",
@@ -355,6 +357,7 @@ async def test_a_matched_deal_gets_a_chat_and_a_spoken_number(
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 100.0,
                 "description": "shipment number probe",
@@ -473,6 +476,7 @@ async def test_the_deal_card_carries_number_name_and_price(
             json={
                 "trip_id": trip_id,
                 "cargo": {
+                    "weight_kg": 1.0,
                     "category": "document",
                     "declared_value": 100.0,
                 },
@@ -517,6 +521,7 @@ async def test_deals_can_be_narrowed_to_one_chat(
     """
     trip_id = await _make_open_trip(client, carrier_headers)
     cargo = {
+        "weight_kg": 1.0,
         "category": "document",
         "declared_value": 10.0,
     }
@@ -580,6 +585,7 @@ async def test_chat_list_names_the_person_and_counts_deals(
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 10.0,
             },

@@ -75,6 +75,13 @@ export interface DealDetail extends Deal {
   cargo_location?: string | null
   /** T3.12.03 — the cargo travels through more than one deal. */
   multihop?: boolean
+  /** T3.12.04 — the cargo the terms refer to, shown read-only on the deal
+   *  card: the terms no longer carry a copy of it. */
+  cargo_weight_kg?: number | null
+  cargo_dimensions_cm?: number[] | null
+  cargo_fragile?: boolean
+  cargo_open_on_handover?: boolean
+  cargo_url?: string | null
   /** The carrier's rate, for suggesting a total from a weight. A suggestion:
    *  the price is still what the two of them agree on. */
   trip_price_per_kg?: number | null
@@ -101,9 +108,11 @@ export interface MatchDealPayload {
     currency?: string
     description?: string
     final_destination?: string
-    weight_kg?: number
+    /** T3.12.04 — required: the terms normalise the price by it. */
+    weight_kg: number
     dimensions_cm?: number[]
     fragile?: boolean
+    open_on_handover?: boolean
     cargo_url?: string
   }
   deadline?: string

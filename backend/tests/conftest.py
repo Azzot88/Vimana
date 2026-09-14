@@ -1074,6 +1074,19 @@ async def _rename_trip_legs_to_segments(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _add_cargo_fields(engine) -> None:
+    """T3.12.04 — the columns of `0093` on tables `create_all` never alters.
+
+    **After `create_all`**, unlike the renames above: these are new columns on
+    tables that must already exist, and on a fresh database it is `create_all`
+    that makes them. Only `UPGRADE` — the backfill from old terms has nothing to
+    move here. Idempotent (`ADD COLUMN IF NOT EXISTS`).
+    """
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0093_cargo_out_of_terms.py"):
+            await conn.execute(text(statement))
+
+
 async def _rename_operator_to_arbiter(engine) -> None:
     """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
@@ -2183,6 +2196,7 @@ async def test_engine():
     await _rename_trip_legs_to_segments(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _add_cargo_fields(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
     await _ensure_role_column(engine)
@@ -2828,9 +2842,7 @@ async def agree_terms(client, sender_headers, carrier_headers, deal_id, **over):
     exists in the product either.
     """
     body = {
-        "weight_kg": 2,
         "price_total": 60,
-        "declared_value": 500,
         "currency": "USD",
         "payment_method": "cash_on_delivery",
     }

@@ -5,18 +5,19 @@ export interface NormalizedTerms {
   direction: string | null
   route: string
   distance_km: number | null
-  weight_kg: number
-  chargeable_weight_kg: number
+  /** T3.12.04 — the cargo's. Null only for a cargo from before weight was asked
+   *  at the response. */
+  weight_kg: number | null
+  chargeable_weight_kg: number | null
   price_total: number
   currency: string
   price_per_kg: number | null
   price_per_km: number | null
 }
 
+/** T3.12.04 — no cargo: the terms refer to the deal's cargo and never carry a
+ *  copy of it (`D-CARGO-MODEL`). */
 export interface TermsPayload {
-  weight_kg?: number
-  dimensions_cm?: number[] | null
-  declared_value?: number
   price_total?: number
   currency?: string
   deadline?: string | null
@@ -27,11 +28,6 @@ export interface TermsPayload {
   proposal_id?: string
   platform_params?: Record<string, string>
   // T3.11.27 — the rest of the agreement: one card holds what four used to.
-  cargo_what?: string | null
-  cargo_packaging?: string | null
-  cargo_fragile?: boolean
-  cargo_open_on_handover?: boolean
-  cargo_url?: string | null
   handover_method?: string | null
   handover_place?: string | null
   handover_at?: string | null
@@ -57,11 +53,8 @@ export interface Terms {
 }
 
 export interface TermsInput {
-  weight_kg: number
   price_total: number
-  declared_value: number
   currency?: string
-  dimensions_cm?: number[] | null
   deadline?: string | null
   /** T3.11.27 — one of `PAYMENT_METHODS`: the same three words the trip is
    *  published with. Required in practice — the owner's rule 2026-09-08 is
@@ -70,14 +63,9 @@ export interface TermsInput {
   payment_method?: string
   description?: string | null
   supersedes_id?: string | null
-  // T3.11.27 — the four sections. Every one optional: a deal born from the
-  // board form has a price and a weight and nothing else, and a half-filled
-  // agreement is the normal state of the first stage.
-  cargo_what?: string | null
-  cargo_packaging?: string | null
-  cargo_fragile?: boolean
-  cargo_open_on_handover?: boolean
-  cargo_url?: string | null
+  // T3.11.27 — the sections. Every one optional: a half-filled agreement is the
+  // normal state of the first stage. T3.12.04 — sending a cargo field is
+  // refused by the server by name.
   handover_method?: string | null
   handover_place?: string | null
   handover_at?: string | null

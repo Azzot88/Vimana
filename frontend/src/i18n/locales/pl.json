@@ -573,6 +573,12 @@
     "inquiries": "pytających: {{count}}",
     "viewAsSender": "Zobacz jak nadawca"
   },
+  "cargoFields": {
+    "dimensions": "Wymiary, cm",
+    "length": "Długość",
+    "width": "Szerokość",
+    "height": "Wysokość"
+  },
   "respond": {
     "title": "Odpowiedź na lot",
     "back": "Wróć do lotów",
@@ -583,7 +589,9 @@
     "templateName": "Nazwa szablonu",
     "ownTrip": "To twój lot — nie możesz na niego odpowiedzieć.",
     "notForCarrier": "Przełącz się na tryb nadawcy, aby odpowiedzieć na lot.",
-    "tripGone": "Nie znaleziono lotu lub nie przyjmuje już odpowiedzi."
+    "tripGone": "Nie znaleziono lotu lub nie przyjmuje już odpowiedzi.",
+    "photosFailed": "Transakcja utworzona, ale zdjęcia się nie wysłały.",
+    "openDeal": "Otwórz transakcję"
   },
   "cargoTemplates": {
     "title": "Szablony ładunku",
@@ -1375,6 +1383,7 @@
     "agreedTitle": "Uzgodnione warunki",
     "proposeTitle": "Zaproponuj warunki",
     "attachPhotos": "Dołącz zdjęcia przesyłki",
+    "cargoFixed": "Ustalony przy odpowiedzi i nienegocjowany — przy przekazaniu porównuje się z nim.",
     "photosChosen_one": "Dołączono {{count}} zdjęcie",
     "photosChosen_few": "Dołączono {{count}} zdjęcia",
     "photosChosen_many": "Dołączono {{count}} zdjęć",
@@ -1435,7 +1444,8 @@
       "issue_reported": "Zgłoś problem",
       "cancel_requested": "Poproś o anulowanie",
       "cancel_confirmed": "Anulowanie potwierdzone",
-      "terms_reconfirm_requested": "Warunki wymagają potwierdzenia"
+      "terms_reconfirm_requested": "Warunki wymagają potwierdzenia",
+      "cargo_photographed": "Zdjęcia ładunku"
     },
     "field": {
       "method": "Sposób",

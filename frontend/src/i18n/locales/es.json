@@ -572,6 +572,12 @@
     "inquiries": "preguntan: {{count}}",
     "viewAsSender": "Ver como remitente"
   },
+  "cargoFields": {
+    "dimensions": "Dimensiones, cm",
+    "length": "Largo",
+    "width": "Ancho",
+    "height": "Alto"
+  },
   "respond": {
     "title": "Responder a un viaje",
     "back": "Volver a los viajes",
@@ -582,7 +588,9 @@
     "templateName": "Nombre de la plantilla",
     "ownTrip": "Es tu viaje: no puedes responder a él.",
     "notForCarrier": "Cambia al modo de envío para responder a un viaje.",
-    "tripGone": "No se encontró el viaje o ya no acepta respuestas."
+    "tripGone": "No se encontró el viaje o ya no acepta respuestas.",
+    "photosFailed": "La operación se creó, pero las fotos no se subieron.",
+    "openDeal": "Abrir la operación"
   },
   "cargoTemplates": {
     "title": "Plantillas de carga",
@@ -1373,6 +1381,7 @@
     "agreedTitle": "Condiciones acordadas",
     "proposeTitle": "Proponer condiciones",
     "attachPhotos": "Adjuntar fotos del envío",
+    "cargoFixed": "Se fija en la respuesta y no se negocia: la entrega se compara con ello.",
     "photosChosen_one": "{{count}} foto adjunta",
     "photosChosen_other": "{{count}} fotos adjuntas",
     "reviewTitle": "Esto es lo que verá el transportista",
@@ -1432,7 +1441,8 @@
       "issue_reported": "Informar de un problema",
       "cancel_requested": "Solicitar cancelación",
       "cancel_confirmed": "Cancelación confirmada",
-      "terms_reconfirm_requested": "Hay que reconfirmar las condiciones"
+      "terms_reconfirm_requested": "Hay que reconfirmar las condiciones",
+      "cargo_photographed": "Fotos de la carga"
     },
     "field": {
       "method": "Método",

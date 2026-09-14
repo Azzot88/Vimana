@@ -61,6 +61,7 @@ async def _matched_deal(client):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 40.0,
             },
@@ -207,6 +208,7 @@ async def test_custodial_writes_nip01_event_id(client):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 40.0,
             },
@@ -284,6 +286,7 @@ async def test_custodial_deal_event_signed_new_format(client, session_maker):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 40.0,
             },

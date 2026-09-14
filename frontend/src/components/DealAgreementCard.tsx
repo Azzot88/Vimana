@@ -114,47 +114,52 @@ export default function DealAgreementCard({ deal, terms, open, onToggle }: Props
 
       {open && (
         <div className="px-3 pb-3 space-y-2">
+          {/* T3.12.04 — the cargo is the deal's, written once at the response,
+              and shown before and after any terms exist: the terms refer to it
+              and never carry a copy (`D-CARGO-MODEL`). */}
+          {section('cargo', [
+            row(t('agreement.field.what'), deal.cargo_description),
+            row(
+              t('agreement.field.weight'),
+              deal.cargo_weight_kg != null ? prefs.weight(deal.cargo_weight_kg) : null,
+            ),
+            row(
+              t('agreement.field.dimensions'),
+              deal.cargo_dimensions_cm && deal.cargo_dimensions_cm.length === 3
+                ? `${deal.cargo_dimensions_cm.join(' × ')} cm`
+                : null,
+            ),
+            row(
+              t('agreement.field.declared'),
+              deal.declared_value != null
+                ? `${deal.declared_value} ${deal.currency ?? ''}`.trim()
+                : null,
+            ),
+            row(t('agreement.field.fragile'), deal.cargo_fragile ? t('common.yes') : null),
+            row(
+              t('agreement.field.openOnHandover'),
+              deal.cargo_open_on_handover ? t('common.yes') : null,
+            ),
+            row(
+              t('agreement.field.url'),
+              deal.cargo_url ? (
+                <a
+                  href={deal.cargo_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-cyan hover:underline break-all"
+                >
+                  {deal.cargo_url}
+                </a>
+              ) : null,
+            ),
+          ])}
           {terms === null ? (
             <p className="text-xs font-body text-navy/45 border-t border-navy/10 pt-2">
               {t('agreement.empty')}
             </p>
           ) : (
             <>
-              {section('cargo', [
-                row(t('agreement.field.what'), p.cargo_what),
-                row(
-                  t('agreement.field.weight'),
-                  p.weight_kg != null ? prefs.weight(p.weight_kg) : null,
-                ),
-                row(
-                  t('agreement.field.declared'),
-                  p.declared_value != null
-                    ? `${p.declared_value} ${p.currency ?? ''}`.trim()
-                    : null,
-                ),
-                row(t('agreement.field.packaging'), p.cargo_packaging),
-                row(
-                  t('agreement.field.fragile'),
-                  p.cargo_fragile ? t('common.yes') : null,
-                ),
-                row(
-                  t('agreement.field.openOnHandover'),
-                  p.cargo_open_on_handover ? t('common.yes') : null,
-                ),
-                row(
-                  t('agreement.field.url'),
-                  p.cargo_url ? (
-                    <a
-                      href={p.cargo_url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="text-cyan hover:underline break-all"
-                    >
-                      {p.cargo_url}
-                    </a>
-                  ) : null,
-                ),
-              ])}
               {section('handover', [
                 row(t('agreement.field.method'), method(p.handover_method)),
                 row(t('agreement.field.place'), p.handover_place),

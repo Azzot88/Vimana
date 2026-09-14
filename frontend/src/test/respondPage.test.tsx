@@ -37,6 +37,10 @@ vi.mock('../api/deals', async () => {
   const actual = await vi.importActual<typeof import('../api/deals')>('../api/deals')
   return { ...actual, matchDeal: vi.fn() }
 })
+vi.mock('../api/terms', async () => {
+  const actual = await vi.importActual<typeof import('../api/terms')>('../api/terms')
+  return { ...actual, raiseCardWithFiles: vi.fn() }
+})
 vi.mock('../api/categories', async () => {
   const actual =
     await vi.importActual<typeof import('../api/categories')>('../api/categories')
@@ -48,6 +52,7 @@ vi.mock('../components/LeadTimeWarning', () => ({ default: () => null }))
 import { getTrip } from '../api/trips'
 import { deleteCargoTemplate, listCargoTemplates } from '../api/cargoTemplates'
 import { matchDeal } from '../api/deals'
+import { raiseCardWithFiles } from '../api/terms'
 import { listCategories } from '../api/categories'
 
 const t = i18n.t.bind(i18n)
@@ -90,6 +95,11 @@ const template = (over: Partial<CargoTemplate>): CargoTemplate => ({
   category: null,
   declared_value: null,
   description: null,
+  weight_kg: null,
+  dimensions_cm: null,
+  fragile: false,
+  open_on_handover: false,
+  cargo_url: null,
   created_at: '2026-09-14T10:00:00Z',
   updated_at: '2026-09-14T10:00:00Z',
   ...over,
@@ -102,6 +112,9 @@ const TEMPLATES = [
     category: 'document',
     declared_value: 120,
     description: 'a folder',
+    weight_kg: 0.4,
+    dimensions_cm: [30, 22, 2],
+    fragile: true,
   }),
   template({ id: 'tp2', name: 'Medicine', category: 'medicine', description: 'pills' }),
 ]
@@ -124,6 +137,7 @@ beforeEach(() => {
   vi.mocked(getTrip).mockReset().mockResolvedValue({ data: trip } as never)
   vi.mocked(listCargoTemplates).mockReset().mockResolvedValue({ data: TEMPLATES } as never)
   vi.mocked(matchDeal).mockReset().mockResolvedValue({ data: { id: 'd1' } } as never)
+  vi.mocked(raiseCardWithFiles).mockReset().mockResolvedValue({} as never)
   vi.mocked(deleteCargoTemplate).mockReset().mockResolvedValue({} as never)
   vi.mocked(listCategories).mockReset().mockResolvedValue({ data: [] } as never)
 })
@@ -135,6 +149,9 @@ describe('RespondPage', () => {
 
     expect(screen.getByLabelText(t('trips.cargoDescription'))).toHaveValue('a folder')
     expect(screen.getByLabelText(t('trips.declaredValue'))).toHaveValue(120)
+    expect(screen.getByLabelText(t('terms.weight'))).toHaveValue(0.4)
+    expect(screen.getByLabelText(t('cargoFields.length'))).toHaveValue(30)
+    expect(screen.getByLabelText(t('agreement.field.fragile'))).toBeChecked()
     expect(documentChip()).toHaveAttribute('aria-pressed', 'true')
   })
 
@@ -162,9 +179,51 @@ describe('RespondPage', () => {
     await waitFor(() => expect(matchDeal).toHaveBeenCalledTimes(1))
     expect(matchDeal).toHaveBeenCalledWith({
       trip_id: 't1',
-      cargo: { category: 'document', declared_value: 120, description: 'a folder' },
+      cargo: {
+        category: 'document',
+        declared_value: 120,
+        description: 'a folder',
+        weight_kg: 0.4,
+        dimensions_cm: [30, 22, 2],
+        fragile: true,
+        open_on_handover: false,
+        cargo_url: undefined,
+      },
       save_as_template: 'Papers',
     })
+    // No photographs chosen, so no card.
+    expect(raiseCardWithFiles).not.toHaveBeenCalled()
+  })
+
+  it('files the chosen photographs into the new deal as one card', async () => {
+    renderRespond()
+    fireEvent.click(await screen.findByRole('button', { name: 'Lisbon papers' }))
+    const one = new File(['a'], 'front.png', { type: 'image/png' })
+    const two = new File(['b'], 'back.png', { type: 'image/png' })
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [one, two] },
+    })
+    fireEvent.submit(screen.getByRole('button', { name: t('trips.submit') }).closest('form')!)
+
+    await waitFor(() =>
+      expect(raiseCardWithFiles).toHaveBeenCalledWith('d1', 'cargo.photographed', [one, two]),
+    )
+  })
+
+  it('says the deal exists when its photographs did not upload', async () => {
+    vi.mocked(raiseCardWithFiles).mockRejectedValue(new Error('415'))
+    renderRespond()
+    fireEvent.click(await screen.findByRole('button', { name: 'Lisbon papers' }))
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [new File(['a'], 'x.png', { type: 'image/png' })] },
+    })
+    fireEvent.submit(screen.getByRole('button', { name: t('trips.submit') }).closest('form')!)
+
+    expect(await screen.findByText(t('respond.photosFailed'))).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: t('respond.openDeal') })).toHaveAttribute(
+      'href',
+      '/deals/d1/vault',
+    )
   })
 
   it('does not offer the carrier a response to their own trip', async () => {

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import (
     AliasChoices,
@@ -403,17 +403,29 @@ class CargoCreate(BaseModel):
     platform (`T3.12.05`) and the origin is the trip's. `final_destination`
     defaults to the trip's destination — for a single deal they are the same
     place. The deadline is not here: it belongs to the deal (`MatchBody`).
-    Packaging is not asked for (owner, 2026-09-13)."""
+    Packaging is not asked for (owner, 2026-09-13).
+
+    T3.12.04 (owner, 2026-09-14) — the weight is required: the terms no longer
+    carry one, and the chargeable weight the price is compared by is computed
+    from this. Dimensions stay optional. «Вскрыть при передаче» is given here,
+    with the cargo, and does not change afterwards."""
 
     category: str
     declared_value: float
     currency: str = "USD"
     description: str | None = None
     final_destination: str | None = None
-    weight_kg: float | None = None
-    dimensions_cm: list[float] | None = None
+    weight_kg: float = Field(gt=0, le=100)
+    dimensions_cm: (
+        Annotated[
+            list[Annotated[float, Field(gt=0, le=1000)]],
+            Field(min_length=3, max_length=3),
+        ]
+        | None
+    ) = None
     fragile: bool = False
-    cargo_url: str | None = None
+    open_on_handover: bool = False
+    cargo_url: str | None = Field(default=None, max_length=500)
 
 
 class DealOut(BaseModel):
@@ -506,6 +518,13 @@ class DealDetailOut(BaseModel):
     # cargo travels through more than one deal. Both computed (`core.cargo`).
     cargo_location: str | None = None
     multihop: bool = False
+    # T3.12.04 — the cargo the terms refer to. Shown read-only on the deal card:
+    # the terms stopped carrying a copy of it (`D-CARGO-MODEL`).
+    cargo_weight_kg: float | None = None
+    cargo_dimensions_cm: list[float] | None = None
+    cargo_fragile: bool = False
+    cargo_open_on_handover: bool = False
+    cargo_url: str | None = None
     #: The carrier's own rate, for the card to suggest a total from a weight.
     #: A suggestion, never a value the server writes: the price is what the two
     #: of them agree, and `price_total` stays the field they answer.

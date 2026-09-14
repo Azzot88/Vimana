@@ -33,6 +33,14 @@ class CardKind(str, enum.Enum):
     terms_amended = "terms.amended"
     terms_reconfirm_requested = "terms.reconfirm_requested"
 
+    # Group 1a — the cargo (T3.12.04)
+    #
+    # «Вот что я отправляю», photographed at the response to the trip (owner,
+    # 2026-09-14). It used to hang on the terms card as `cargo_photo`; the terms
+    # no longer carry the cargo, and a picture of it filed under «условия» would
+    # mislabel the one piece of evidence taken while the deal could be refused.
+    cargo_photographed = "cargo.photographed"
+
     # Group 2 — handover logistics (T3.36)
     handover_conditions = "handover.conditions"
     pickup_proposed = "pickup.proposed"
@@ -185,6 +193,15 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         _s(CardKind.terms_declined, "terms"),
         _s(CardKind.terms_amended, "terms", ack_by=COUNTERPARTY),
         _s(CardKind.terms_reconfirm_requested, "terms", ack_by=COUNTERPARTY, implemented=True),
+
+        # ── group 1a · the cargo (T3.12.04) ────────────────────────────────
+        # Informational: nobody answers a photograph, and the carrier's answer
+        # to it is the terms. Raised only before the terms are agreed —
+        # `api.cards._raise_card` refuses it after.
+        _s(CardKind.cargo_photographed, "terms",
+           creator_roles=frozenset({CardAckRole.sender}),
+           requires_attachment=AttachmentKind.cargo_photo,
+           implemented=True),
 
         # ── group 2 · handover logistics ───────────────────────────────────
         _s(CardKind.handover_conditions, "logistics", creator_roles=PARTIES,
@@ -375,25 +392,19 @@ def resolve_ack_role(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole 
 
 # ── T3.11.27 · the agreement in four sections ───────────────────────────────
 
-#: The four parts of one deal card, in reading order. They exist so a change can
-#: be announced by name — «изменены условия: Груз, Оплата» — and so the two ends
-#: of the route stay distinguishable: editing the meeting place in Dubai must not
-#: read as editing the delivery in New York (owner's decision 2026-09-07).
-DEAL_SECTIONS: tuple[str, ...] = ("cargo", "handover", "delivery", "payment")
+#: The negotiated parts of one deal card, in reading order. They exist so a
+#: change can be announced by name — «изменены условия: Передача, Оплата» — and
+#: so the two ends of the route stay distinguishable: editing the meeting place
+#: in Dubai must not read as editing the delivery in New York (owner's decision
+#: 2026-09-07). T3.12.04 — the cargo is no longer one of them: it is written
+#: once at the response, and the card shows it without negotiating it.
+DEAL_SECTIONS: tuple[str, ...] = ("handover", "delivery", "payment")
 
 #: Which section each payload field belongs to. Fields absent from this map are
 #: not part of the agreement people negotiate — `normalized` is computed,
 #: `below_carrier_minimum` is a warning about a value already listed under
 #: payment — and naming them in a change notice would report noise as news.
 SECTION_OF: dict[str, str] = {
-    "weight_kg": "cargo",
-    "dimensions_cm": "cargo",
-    "declared_value": "cargo",
-    "cargo_what": "cargo",
-    "cargo_packaging": "cargo",
-    "cargo_fragile": "cargo",
-    "cargo_open_on_handover": "cargo",
-    "cargo_url": "cargo",
     "handover_method": "handover",
     "handover_place": "handover",
     "handover_at": "handover",

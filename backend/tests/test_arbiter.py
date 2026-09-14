@@ -71,6 +71,7 @@ async def _make_active_deal(client, carrier_headers, sender_headers) -> str:
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 100.0,
             },

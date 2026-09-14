@@ -12,6 +12,13 @@ export interface CargoTemplate {
   category: string | null
   declared_value: number | null
   description: string | null
+  /** T3.12.04 — the rest of what the response form asks. No photograph: a
+   *  picture is of one parcel, not of a kind of one. */
+  weight_kg: number | null
+  dimensions_cm: number[] | null
+  fragile: boolean
+  open_on_handover: boolean
+  cargo_url: string | null
   created_at: string
   updated_at: string
 }
@@ -21,6 +28,11 @@ export interface CargoTemplateInput {
   category?: string | null
   declared_value?: number | null
   description?: string | null
+  weight_kg?: number | null
+  dimensions_cm?: number[] | null
+  fragile?: boolean
+  open_on_handover?: boolean
+  cargo_url?: string | null
 }
 
 export const listCargoTemplates = () =>

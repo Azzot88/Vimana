@@ -214,6 +214,7 @@ async def test_message_from_new_user_gets_server_signed(client):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 50.0,
             },
@@ -289,6 +290,7 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 30.0,
             },

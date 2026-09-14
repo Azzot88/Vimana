@@ -115,9 +115,7 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED,
         "proposing terms into a stranger's deal",
         json={
-            "weight_kg": 2,
             "price_total": 50,
-            "declared_value": 500,
             "currency": "USD",
             "payment_method": "cash_on_delivery",
         },
@@ -570,6 +568,7 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         json={
             "trip_id": trip_id,
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 250.0,
             },
@@ -880,6 +879,7 @@ async def stranger_deal(client, stranger, carrier_headers) -> str:
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 60.0,
             },
@@ -991,6 +991,7 @@ async def disputed_deal(client, carrier_headers, sender_headers) -> dict:
         json={
             "trip_id": trip.json()["id"],
             "cargo": {
+                "weight_kg": 1.0,
                 "category": "document",
                 "declared_value": 40.0,
             },
