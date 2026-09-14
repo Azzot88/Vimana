@@ -990,14 +990,19 @@ async def _ensure_trip_nostr_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE trips ADD COLUMN {col} {ddl}"))
 
 
-async def _ensure_arbiter_access_grants(engine) -> None:
-    """T3.2 schema fix: the arbiter grants table. Idempotent.
+async def _rename_operator_to_arbiter(engine) -> None:
+    """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
-    T3.12.02 — was `operator_access_grants`. `vimana_test` is never reset
-    (`ENVIRONMENT §8`), so an old table is renamed the way `0089` renames it in
-    production. If an empty new table already stands beside the old one, the
-    old rows move over and the old table goes: two tables for one grant would
-    let a test read the one the code no longer writes.
+    **Runs before `create_all`, not beside the other fixes.** The test database
+    is never reset (`ENVIRONMENT §8`), so it still holds `operator_access_grants`
+    with its constraint `uq_grant_dispute_party`. Left for later, `create_all`
+    tries to create `arbiter_access_grants` first, and Postgres refuses the
+    second constraint of that name — the whole session then fails at setup,
+    ninety-four errors for one rename (2026-09-13). Renamed first, the table is
+    already there when `create_all` looks, and it is left alone.
+
+    The enum value goes in the same place for the same reason: the model writes
+    `arbiter`, and the type has to hold it before anything else touches it.
     """
     async with engine.begin() as conn:
 
@@ -1012,21 +1017,40 @@ async def _ensure_arbiter_access_grants(engine) -> None:
                 )
             ).fetchone() is not None
 
-        old = await has("operator_access_grants")
-        exists = await has("arbiter_access_grants")
-        if old and not exists:
+        if await has("operator_access_grants") and not await has(
+            "arbiter_access_grants"
+        ):
             await conn.execute(
                 text("ALTER TABLE operator_access_grants RENAME TO arbiter_access_grants")
             )
-            exists = True
-        elif old and exists:
+        await conn.execute(
+            text(
+                "DO $$ BEGIN "
+                "IF EXISTS (SELECT 1 FROM pg_enum e "
+                "JOIN pg_type t ON t.oid = e.enumtypid "
+                "WHERE t.typname = 'cardackrole' AND e.enumlabel = 'operator') THEN "
+                "ALTER TYPE cardackrole RENAME VALUE 'operator' TO 'arbiter'; "
+                "END IF; END $$;"
+            )
+        )
+
+
+async def _ensure_arbiter_access_grants(engine) -> None:
+    """T3.2 schema fix: the arbiter grants table. Idempotent.
+
+    T3.12.02 — was `operator_access_grants`; an old test database is renamed by
+    `_rename_operator_to_arbiter` before `create_all`, so here the table either
+    exists already or is created fresh.
+    """
+    async with engine.begin() as conn:
+        exists = (
             await conn.execute(
                 text(
-                    "INSERT INTO arbiter_access_grants "
-                    "SELECT * FROM operator_access_grants ON CONFLICT DO NOTHING"
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name='arbiter_access_grants'"
                 )
             )
-            await conn.execute(text("DROP TABLE operator_access_grants"))
+        ).fetchone()
         if not exists:
             await conn.execute(
                 text(
@@ -1398,19 +1422,6 @@ async def _ensure_vault_card_columns(engine) -> None:
                 "DO $$ BEGIN CREATE TYPE cardackrole AS ENUM "
                 "('sender','carrier','recipient','arbiter'); "
                 "EXCEPTION WHEN duplicate_object THEN null; END $$;"
-            )
-        )
-        # T3.12.02 — a test database created before the rename still holds
-        # `operator`; rename it in place, the way `0089` does, so the value the
-        # model writes exists.
-        await conn.execute(
-            text(
-                "DO $$ BEGIN "
-                "IF EXISTS (SELECT 1 FROM pg_enum e "
-                "JOIN pg_type t ON t.oid = e.enumtypid "
-                "WHERE t.typname = 'cardackrole' AND e.enumlabel = 'operator') THEN "
-                "ALTER TYPE cardackrole RENAME VALUE 'operator' TO 'arbiter'; "
-                "END IF; END $$;"
             )
         )
         for ddl in (
@@ -2083,6 +2094,9 @@ async def _ensure_deal_event_chain(engine) -> None:
 async def test_engine():
     _ensure_test_database()
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
+    # T3.12.02 — before `create_all`, or it collides with the old table's
+    # constraint name. See the function.
+    await _rename_operator_to_arbiter(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_orders_category_to_string(engine)
