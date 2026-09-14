@@ -998,10 +998,14 @@ async def _migrate_orders_to_cargo(engine) -> None:
     Left for later, `create_all` would add an empty `cargos` beside `orders`,
     and `deals` would keep `order_id NOT NULL` — every new deal would then fail
     on a column the model no longer writes. The statements are the migration's
-    own, imported rather than copied, so the test database cannot drift from
-    what production went through.
+    own, so the test database cannot drift from what production went through —
+    but **read out of the file with `ast`, never imported**. Tests run from
+    `/app`, where the migrations directory `alembic/` shadows the installed
+    package: importing the file makes its `from alembic import op` resolve to
+    the directory and fail, and the whole session errors at setup (162 errors,
+    2026-09-13).
     """
-    import importlib.util
+    import ast
     from pathlib import Path
 
     async with engine.begin() as conn:
@@ -1020,10 +1024,14 @@ async def _migrate_orders_to_cargo(engine) -> None:
         if not await has("orders") or await has("cargos"):
             return
         path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0090_cargo.py"
-        spec = importlib.util.spec_from_file_location("migration_0090", path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        for statement in module.UPGRADE:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        statements = next(
+            ast.literal_eval(node.value)
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "UPGRADE" for t in node.targets)
+        )
+        for statement in statements:
             await conn.execute(text(statement))
 
 
