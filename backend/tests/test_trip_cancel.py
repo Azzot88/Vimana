@@ -16,7 +16,7 @@ from tests.conftest import SEED_PASSWORD, make_account, unique_email
 def _payload(**overrides):
     body = {
         "payment_model": "cash_on_delivery",
-        "legs": [
+        "segments": [
             {
                 "origin": "DXB",
                 "destination": "JFK",

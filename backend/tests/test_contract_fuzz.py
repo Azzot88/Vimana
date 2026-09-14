@@ -42,7 +42,7 @@ from app.models.user import User
 #
 # The health check fires when Hypothesis discards far more generated examples
 # than it keeps. It started firing on `POST /api/trips` when the trip body grew
-# a **required array of nested objects** (`legs`) alongside several nullable
+# a **required array of nested objects** (`segments`) alongside several nullable
 # `$ref` objects (`handover_origin`, `handover_destination`): that shape is more
 # than `hypothesis-jsonschema` can encode directly, so it falls back to
 # generating and filtering, and the keep rate collapses. Measured on the run

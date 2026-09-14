@@ -21,7 +21,7 @@ import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.07 — the landing at the end of the route, or null.
  *
- *  Read off the last leg rather than off the trip: the arrival belongs to a
+ *  Read off the last segment rather than off the trip: the arrival belongs to a
  *  flight, and a trip has no column for it — `Trip.depart_at` is denormalised
  *  because search and the countdown stand on it, and nothing stands on the
  *  landing. Null for every trip published before 2026-09-06 and for every
@@ -30,7 +30,7 @@ import { usePrefs } from '../hooks/usePrefs'
  *  Called by: the route card below.
  */
 function arrivalOf(trip: Trip): string | null {
-  const last = trip.legs?.[trip.legs.length - 1]
+  const last = trip.segments?.[trip.segments.length - 1]
   return last?.arrive_at ?? null
 }
 

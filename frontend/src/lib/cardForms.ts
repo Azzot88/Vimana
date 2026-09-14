@@ -19,8 +19,8 @@ export interface CardFormSpec {
   roles: DealRole[]
   fields: CardField[]
   /** Attachment the card cannot be confirmed without (checked server-side). */
-  /** T3.11.17 — `pre_seal_photo` joined when the postal leg did: the parcel
-   *  photographed before it was sealed is the evidence that leg stands on. */
+  /** T3.11.17 — `pre_seal_photo` joined when the postal stretch did: the parcel
+   *  photographed before it was sealed is the evidence that stretch stands on. */
   needsPhoto?: 'handoff_photo' | 'receipt_photo' | 'pre_seal_photo'
   /** Whether a free-text note is offered. It travels encrypted, not in payload. */
   hasText?: boolean

@@ -65,7 +65,7 @@ async def _postal_usage(db: AsyncSession, country: str) -> dict[str, int]:
     """How often each service was named on a trip arriving in `country`.
 
     Counted over `Trip.handover_destination.postal_services` — the arrival end,
-    because that is the leg onward shipping belongs to. Names are free text
+    because that is the stretch onward shipping belongs to. Names are free text
     (`T3.11.22`: this catalogue has no external source and must not tell a
     carrier their local service does not exist), so they are matched
     case-folded and nothing else: normalising further would merge «CDEK» and

@@ -264,7 +264,7 @@ async def _ensure_connection_tier(engine) -> None:
                 "ALTER TYPE dealeventtype ADD VALUE IF NOT EXISTS 'file_reattached'"
             )
         )
-        # T3.11.17 — the onward postal leg (`0079`). Three enum values: the
+        # T3.11.17 — the onward postal stretch (`0079`). Three enum values: the
         # status between «handed over» and «received», its chain event, and the
         # photograph taken before the parcel was sealed.
         for value, type_name in (
@@ -305,8 +305,8 @@ async def _ensure_connection_tier(engine) -> None:
         await conn.execute(
             text(
                 "UPDATE trips SET expires_at = COALESCE("
-                "  (SELECT MAX(depart_at) FROM trip_legs"
-                "   WHERE trip_legs.trip_id = trips.id), depart_at)"
+                "  (SELECT MAX(depart_at) FROM trip_segments"
+                "   WHERE trip_segments.trip_id = trips.id), depart_at)"
                 " WHERE expires_at IS NULL"
             )
         )
@@ -990,6 +990,29 @@ async def _ensure_trip_nostr_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE trips ADD COLUMN {col} {ddl}"))
 
 
+def _migration_statements(filename: str) -> list[str]:
+    """The `UPGRADE` list of a migration file, read with `ast` and never imported.
+
+    Tests run from `/app`, where the migrations directory `alembic/` shadows the
+    installed package: importing a migration makes its `from alembic import op`
+    resolve to the directory and fail (162 errors, 2026-09-13). Reading the
+    literal keeps the migration the one source of its SQL without executing it.
+
+    Called by: `_migrate_orders_to_cargo`, `_rename_trip_legs_to_segments`.
+    """
+    import ast
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / filename
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return next(
+        ast.literal_eval(node.value)
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "UPGRADE" for t in node.targets)
+    )
+
+
 async def _migrate_orders_to_cargo(engine) -> None:
     """T3.12.03 — the `0090` move from `orders` to `cargos`, applied to
     `vimana_test`. Idempotent: nothing happens once `cargos` exists.
@@ -1005,9 +1028,6 @@ async def _migrate_orders_to_cargo(engine) -> None:
     the directory and fail, and the whole session errors at setup (162 errors,
     2026-09-13).
     """
-    import ast
-    from pathlib import Path
-
     async with engine.begin() as conn:
 
         async def has(name: str) -> bool:
@@ -1023,15 +1043,34 @@ async def _migrate_orders_to_cargo(engine) -> None:
 
         if not await has("orders") or await has("cargos"):
             return
-        path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0090_cargo.py"
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        statements = next(
-            ast.literal_eval(node.value)
-            for node in tree.body
-            if isinstance(node, ast.Assign)
-            and any(isinstance(t, ast.Name) and t.id == "UPGRADE" for t in node.targets)
-        )
-        for statement in statements:
+        for statement in _migration_statements("0090_cargo.py"):
+            await conn.execute(text(statement))
+
+
+async def _rename_trip_legs_to_segments(engine) -> None:
+    """T3.12.03 pt.3 — the `0091` rename, applied to `vimana_test`. Idempotent.
+
+    **Before `create_all`**, for the reason `_rename_operator_to_arbiter` gives:
+    left for later, `create_all` would add an empty `trip_segments` beside the
+    old table and collide on the constraint names. The old table name appears
+    here only because this is the one place that has to find it.
+    """
+    async with engine.begin() as conn:
+
+        async def has(name: str) -> bool:
+            return (
+                await conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.tables "
+                        "WHERE table_name = :name"
+                    ),
+                    {"name": name},
+                )
+            ).fetchone() is not None
+
+        if not await has("trip_legs") or await has("trip_segments"):
+            return
+        for statement in _migration_statements("0091_trip_segments.py"):
             await conn.execute(text(statement))
 
 
@@ -1643,11 +1682,11 @@ async def _ensure_trip_terms_columns(engine) -> None:
 
 
 async def _ensure_trip_chain(engine) -> None:
-    """T3.11.15: the leg chain and the second capacity on an existing `trips`
+    """T3.11.15: the segment chain and the second capacity on an existing `trips`
     table. Mirrors migration 0059.
 
     The backfill is here too, and for the same reason it is in the migration: a
-    trip row that predates the chain still has a route, and an empty `legs` in
+    trip row that predates the chain still has a route, and an empty `segments` in
     the response would misreport it as having none.
     """
     async with engine.begin() as conn:
@@ -1844,18 +1883,18 @@ async def _ensure_trip_chain(engine) -> None:
         )
         await conn.execute(
             text(
-                "CREATE TABLE IF NOT EXISTS trip_legs ("
+                "CREATE TABLE IF NOT EXISTS trip_segments ("
                 "id UUID PRIMARY KEY, "
                 "trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE, "
-                "leg_order INTEGER NOT NULL, "
+                "segment_order INTEGER NOT NULL, "
                 "origin VARCHAR(100) NOT NULL, "
                 "destination VARCHAR(100) NOT NULL, "
                 "depart_at TIMESTAMPTZ NOT NULL, "
                 "flown_by VARCHAR(8) NOT NULL DEFAULT 'self', "
-                "CONSTRAINT uq_trip_legs_order UNIQUE (trip_id, leg_order), "
-                "CONSTRAINT ck_trip_legs_order_nonneg CHECK (leg_order >= 0), "
-                "CONSTRAINT ck_trip_legs_distinct CHECK (origin <> destination), "
-                "CONSTRAINT ck_trip_legs_flown_by "
+                "CONSTRAINT uq_trip_segments_order UNIQUE (trip_id, segment_order), "
+                "CONSTRAINT ck_trip_segments_order_nonneg CHECK (segment_order >= 0), "
+                "CONSTRAINT ck_trip_segments_distinct CHECK (origin <> destination), "
+                "CONSTRAINT ck_trip_segments_flown_by "
                 "CHECK (flown_by IN ('self','proxy')))"
             )
         )
@@ -1864,24 +1903,24 @@ async def _ensure_trip_chain(engine) -> None:
         # the table, and CREATE IF NOT EXISTS says nothing about its columns.
         await conn.execute(
             text(
-                "ALTER TABLE trip_legs ADD COLUMN IF NOT EXISTS "
+                "ALTER TABLE trip_segments ADD COLUMN IF NOT EXISTS "
                 "arrive_at TIMESTAMPTZ"
             )
         )
         await conn.execute(
             text(
-                "CREATE INDEX IF NOT EXISTS ix_trip_legs_trip_order "
-                "ON trip_legs (trip_id, leg_order)"
+                "CREATE INDEX IF NOT EXISTS ix_trip_segments_trip_order "
+                "ON trip_segments (trip_id, segment_order)"
             )
         )
         await conn.execute(
             text(
-                "INSERT INTO trip_legs (id, trip_id, leg_order, origin, "
+                "INSERT INTO trip_segments (id, trip_id, segment_order, origin, "
                 "destination, depart_at, flown_by) "
                 "SELECT gen_random_uuid(), t.id, 0, t.origin, t.destination, "
                 "t.depart_at, 'self' FROM trips t "
                 "WHERE t.origin <> t.destination AND NOT EXISTS "
-                "(SELECT 1 FROM trip_legs l WHERE l.trip_id = t.id)"
+                "(SELECT 1 FROM trip_segments l WHERE l.trip_id = t.id)"
             )
         )
 
@@ -2141,6 +2180,7 @@ async def test_engine():
     await _rename_operator_to_arbiter(engine)
     # T3.12.03 — same reason: before `create_all`.
     await _migrate_orders_to_cargo(engine)
+    await _rename_trip_legs_to_segments(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_orders_category_to_string(engine)

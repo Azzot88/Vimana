@@ -13,16 +13,16 @@ from app.core.nostr_publish import (
     is_publish_enabled,
 )
 from app.core.pagination import Page, clamp_limit, paginate_desc
-from app.core.trip_legs import (
-    LegChainError,
+from app.core.trip_segments import (
+    SegmentChainError,
     head_and_tail,
     last_departure,
-    normalise_legs,
+    normalise_segments,
 )
 from app.models.address import MeetingPlace, ReceivingAddress
-from app.models.marketplace import ChatMessage, Trip, TripLeg, TripStatus
+from app.models.marketplace import ChatMessage, Trip, TripSegment, TripStatus
 from app.models.user import User
-from app.schemas.marketplace import TripCreate, TripLegOut, TripOut
+from app.schemas.marketplace import TripCreate, TripSegmentOut, TripOut
 
 router = APIRouter()
 
@@ -155,14 +155,14 @@ async def create_trip(
     require_live_identity(current_user)  # T3.12 — a lost key cannot sign a trip
 
     # T3.11.15 — the chain is normalised before anything is built from it:
-    # codes upper-cased (T_PERF.1 — the filter compares exactly, so a leg stored
+    # codes upper-cased (T_PERF.1 — the filter compares exactly, so a segment stored
     # as `dxb` is invisible to every search for `DXB`), order assigned densely,
-    # legs checked not to travel backwards in time.
+    # segments checked not to travel backwards in time.
     try:
-        legs = normalise_legs([leg.model_dump() for leg in body.legs])
-    except LegChainError as exc:
+        segments = normalise_segments([segment.model_dump() for segment in body.segments])
+    except SegmentChainError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    head_origin, tail_destination, first_departure = head_and_tail(legs)
+    head_origin, tail_destination, first_departure = head_and_tail(segments)
 
     # T3.11.07 — a handover end may point at one of the carrier's addresses or
     # meeting places. Ownership is checked here because a schema cannot know
@@ -174,25 +174,25 @@ async def create_trip(
         carrier_id=current_user.id,
         # Denormalised head of the chain. Search, the board, the Nostr event and
         # the T3.11.06 countdown all stand on these three; they are derived, not
-        # submitted, so they cannot disagree with the legs.
+        # submitted, so they cannot disagree with the segments.
         origin=head_origin,
         destination=tail_destination,
         depart_at=first_departure,
         # T3.11.16 — when this stops being a listing. Derived like the three
-        # above, so it cannot disagree with the legs it comes from.
-        expires_at=last_departure(legs),
+        # above, so it cannot disagree with the segments it comes from.
+        expires_at=last_departure(segments),
         status=TripStatus.open,
     )
     _apply_terms(trip, body, current_user.carriage_rules)
-    # Cascade `all, delete-orphan`: the legs are written by the same commit and
-    # a leg outliving its trip would be a record of nothing.
-    trip.legs = [TripLeg(**leg) for leg in legs]
+    # Cascade `all, delete-orphan`: the segments are written by the same commit and
+    # a segment outliving its trip would be a record of nothing.
+    trip.segments = [TripSegment(**segment) for segment in segments]
     db.add(trip)
     await db.commit()
-    # Full refresh rather than `refresh(trip, ["legs"])`. Naming attributes
+    # Full refresh rather than `refresh(trip, ["segments"])`. Naming attributes
     # would refresh only those and leave `created_at` — a server-side default
     # never loaded on this instance — unloaded, which in an async session
-    # raises at serialisation instead of lazy-loading. The `legs` collection
+    # raises at serialisation instead of lazy-loading. The `segments` collection
     # comes along regardless: refresh honours the `selectin` loader on the
     # mapper.
     await db.refresh(trip)
@@ -268,10 +268,10 @@ async def update_trip(
         )
 
     try:
-        legs = normalise_legs([leg.model_dump() for leg in body.legs])
-    except LegChainError as exc:
+        segments = normalise_segments([segment.model_dump() for segment in body.segments])
+    except SegmentChainError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    head_origin, tail_destination, first_departure = head_and_tail(legs)
+    head_origin, tail_destination, first_departure = head_and_tail(segments)
 
     await _assert_owns_referenced_places(body, current_user, db)
 
@@ -284,21 +284,21 @@ async def update_trip(
     trip.origin = head_origin
     trip.destination = tail_destination
     trip.depart_at = first_departure
-    trip.expires_at = last_departure(legs)
+    trip.expires_at = last_departure(segments)
     _apply_terms(trip, body, current_user.carriage_rules)
-    # Replaced wholesale rather than diffed. `leg_order` is dense and assigned by
-    # `normalise_legs`, so matching old rows to new ones would mean guessing
-    # which leg the carrier meant to keep — and guessing wrong leaves a chain
+    # Replaced wholesale rather than diffed. `segment_order` is dense and assigned by
+    # `normalise_segments`, so matching old rows to new ones would mean guessing
+    # which segment the carrier meant to keep — and guessing wrong leaves a chain
     # that is off by one city.
     #
     # **In two flushes, and that is not optional.** `delete-orphan` removes the
     # old rows, but the unit of work does not order that removal before an
-    # insert that reuses the same key: the new leg 0 goes in while the old leg 0
-    # is still there and hits `uq_trip_legs_order`. Every edit failed with a
+    # insert that reuses the same key: the new segment 0 goes in while the old segment 0
+    # is still there and hits `uq_trip_segments_order`. Every edit failed with a
     # database error until the delete got a flush of its own.
-    trip.legs.clear()
+    trip.segments.clear()
     await db.flush()
-    trip.legs = [TripLeg(**leg) for leg in legs]
+    trip.segments = [TripSegment(**segment) for segment in segments]
 
     await db.commit()
     await db.refresh(trip)
@@ -532,7 +532,7 @@ async def list_trips(
                     size_hint=t.size_hint,
                     handover_origin=t.handover_origin,
                     handover_destination=t.handover_destination,
-                    legs=[TripLegOut.model_validate(leg) for leg in t.legs],
+                    segments=[TripSegmentOut.model_validate(segment) for segment in t.segments],
                     excluded=t.excluded,
                     services=t.services,
                     payment_model=t.payment_model,
@@ -544,7 +544,7 @@ async def list_trips(
                     created_at=t.created_at,
                     # T3.11.16 — when the listing stops being one: the card
                     # can say «сегодня последний день» instead of leaving the
-                    # reader to work it out from the legs.
+                    # reader to work it out from the segments.
                     expires_at=t.expires_at,
                     nostr_event_id=t.nostr_event_id,
                     nostr_published_at=t.nostr_published_at,

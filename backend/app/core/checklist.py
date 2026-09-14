@@ -183,14 +183,14 @@ async def build_checklist(
     # Export from the origin, transit through the middle, import at the end.
     # Written as a list of (jurisdiction, direction) pairs rather than three
     # loops, so the reading order is the order of the journey.
-    legs: list[tuple[str, RuleDirection]] = [(origin, RuleDirection.export)]
-    legs += [(code, RuleDirection.transit) for code in (transit or [])]
-    legs.append((destination, RuleDirection.import_))
+    segments: list[tuple[str, RuleDirection]] = [(origin, RuleDirection.export)]
+    segments += [(code, RuleDirection.transit) for code in (transit or [])]
+    segments.append((destination, RuleDirection.import_))
 
     seen: dict[str, ChecklistItem] = {}
     asks: set[str] = set()
 
-    for place, direction in legs:
+    for place, direction in segments:
         for code in await chain_for(db, place):
             if code not in result.corridor:
                 result.corridor.append(code)

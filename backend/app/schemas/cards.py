@@ -111,7 +111,7 @@ class TransitUpdate(BaseModel):
 
 
 class PostedDeclared(BaseModel):
-    """T3.11.17 — «сдано в почту»: the onward leg, declared by the carrier.
+    """T3.11.17 — «сдано в почту»: the onward stretch, declared by the carrier.
 
     Both fields are required, which is unusual here and deliberate. The tracking
     code is the **entire point** — `USERJOURNEY` Этап 4a ends the carrier's

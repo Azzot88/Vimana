@@ -35,7 +35,7 @@ async def _fresh_deal(client, carrier_headers, sender_headers, origin="VLT", des
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": origin,
                     "destination": destination,

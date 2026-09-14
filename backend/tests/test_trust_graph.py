@@ -54,7 +54,7 @@ async def test_confirm_deal_creates_dealt_with_edges(
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "TGH",
                     "destination": "TG2",

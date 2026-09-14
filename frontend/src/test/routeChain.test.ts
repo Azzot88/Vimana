@@ -4,7 +4,7 @@ import { routeChain } from '../lib/format'
 
 /** T3.11.07 — the trip card's route line.
  *
- *  The case worth pinning is the multi-leg one: `Trip.origin` / `destination`
+ *  The case worth pinning is the multi-segment one: `Trip.origin` / `destination`
  *  are the head and tail of the chain, so a card built from them alone reads
  *  correctly and silently drops every city in between — and 15 % of real
  *  listings on this market have cities in between.
@@ -15,7 +15,7 @@ describe('routeChain', () => {
       routeChain({
         origin: 'DXB',
         destination: 'JFK',
-        legs: [{ origin: 'DXB', destination: 'JFK' }],
+        segments: [{ origin: 'DXB', destination: 'JFK' }],
       }),
     ).toBe('DXB → JFK')
   })
@@ -25,7 +25,7 @@ describe('routeChain', () => {
       routeChain({
         origin: 'SVO',
         destination: 'PDX',
-        legs: [
+        segments: [
           { origin: 'SVO', destination: 'MIA' },
           { origin: 'MIA', destination: 'LAX' },
           { origin: 'LAX', destination: 'PDX' },
@@ -34,7 +34,7 @@ describe('routeChain', () => {
     ).toBe('SVO → MIA → LAX → PDX')
   })
 
-  it('falls back to the denormalised pair when legs are absent', () => {
+  it('falls back to the denormalised pair when segments are absent', () => {
     // A trip fetched by an older cached response, or any caller that has the
     // headline and not the chain. The line still has to render.
     expect(routeChain({ origin: 'IST', destination: 'LED' })).toBe('IST → LED')
@@ -47,7 +47,7 @@ describe('routeChain', () => {
       routeChain({
         origin: 'SVO',
         destination: 'SVO',
-        legs: [
+        segments: [
           { origin: 'SVO', destination: 'DXB' },
           { origin: 'DXB', destination: 'SVO' },
         ],
@@ -63,7 +63,7 @@ describe('routeChain with cities', () => {
       routeChain({
         origin: 'JFK',
         destination: 'DME',
-        legs: [
+        segments: [
           {
             origin: 'JFK',
             destination: 'DXB',
@@ -83,13 +83,13 @@ describe('routeChain with cities', () => {
 
   it('keeps the city on a single flight', () => {
     // The old guard fell back to the denormalised pair for anything under two
-    // legs, which threw the city away on every direct flight — the commonest
+    // segments, which threw the city away on every direct flight — the commonest
     // shape on this market.
     expect(
       routeChain({
         origin: 'DXB',
         destination: 'JFK',
-        legs: [
+        segments: [
           {
             origin: 'DXB',
             destination: 'JFK',
@@ -108,7 +108,7 @@ describe('routeChain with cities', () => {
       routeChain({
         origin: 'DXB',
         destination: 'ZZZ',
-        legs: [
+        segments: [
           { origin: 'DXB', destination: 'ZZZ', origin_city: 'Dubai', destination_city: null },
         ],
       }),

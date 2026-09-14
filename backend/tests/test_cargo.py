@@ -27,7 +27,7 @@ async def _open_trip(client, carrier_headers) -> tuple[str, str]:
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "CGO",
                     "destination": "CGD",

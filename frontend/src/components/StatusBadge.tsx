@@ -7,7 +7,7 @@ const statusClass: Record<DealStatus, string> = {
   accepted:   'bg-cyan/10 text-cyan border border-cyan/30',
   in_transit: 'bg-amber/10 text-amber border border-amber/30',
   // T3.11.17 — in the post, not yet received. Its own colour because it is its
-  // own leg: the carrier is done and the parcel is still travelling.
+  // own stretch: the carrier is done and the parcel is still travelling.
   posted:     'bg-cyan/10 text-cyan border border-cyan/30',
   delivered:  'bg-success/10 text-success',
   confirmed:  'bg-success/10 text-success',

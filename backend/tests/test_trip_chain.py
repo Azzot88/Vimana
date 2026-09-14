@@ -8,7 +8,7 @@ bag, "flying in person" sits in the same post as "(a friend is flying)", and
 accepting and handing over are routinely arranged differently at the two ends.
 
 The negatives matter more than the happy path here. A chain that stores in the
-wrong order, a leg that departs before the one before it, and a capacity whose
+wrong order, a segment that departs before the one before it, and a capacity whose
 two halves collapse into one number are all defects that look like working data
 afterwards.
 """
@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 
-def _leg(origin: str, destination: str, days: int) -> dict:
+def _segment(origin: str, destination: str, days: int) -> dict:
     return {
         "origin": origin,
         "destination": destination,
@@ -26,7 +26,7 @@ def _leg(origin: str, destination: str, days: int) -> dict:
 
 
 def _payload(**overrides):
-    body = {"payment_model": "cash_on_delivery", "legs": [_leg("DXB", "JFK", 5)], "capacity": 6.0}
+    body = {"payment_model": "cash_on_delivery", "segments": [_segment("DXB", "JFK", 5)], "capacity": 6.0}
     body.update(overrides)
     return body
 
@@ -34,47 +34,47 @@ def _payload(**overrides):
 # ── the chain ─────────────────────────────────────────────────────────────
 
 
-async def test_three_leg_chain_is_stored_in_order(client, carrier_headers):
+async def test_three_segment_chain_is_stored_in_order(client, carrier_headers):
     """`Москва — Майами — Лос-Анджелес` in one listing: 15 % of real posts."""
     r = await client.post(
         "/api/trips",
         headers=carrier_headers,
         json=_payload(
-            legs=[
-                _leg("SVO", "MIA", 5),
-                _leg("MIA", "LAX", 7),
-                _leg("LAX", "SVO", 12),
+            segments=[
+                _segment("SVO", "MIA", 5),
+                _segment("MIA", "LAX", 7),
+                _segment("LAX", "SVO", 12),
             ]
         ),
     )
     assert r.status_code == 201, r.text
-    legs = r.json()["legs"]
-    assert [leg["order"] for leg in legs] == [0, 1, 2]
-    assert [leg["origin"] for leg in legs] == ["SVO", "MIA", "LAX"]
+    segments = r.json()["segments"]
+    assert [segment["order"] for segment in segments] == [0, 1, 2]
+    assert [segment["origin"] for segment in segments] == ["SVO", "MIA", "LAX"]
 
 
 async def test_denormalised_head_comes_from_the_chain(client, carrier_headers):
     """The trio search stands on is derived, so it cannot disagree with the
-    legs. Departure is the *first* leg's — that is the moment the cargo has to
-    be handed over — and destination is the *last* leg's."""
+    segments. Departure is the *first* segment's — that is the moment the cargo has to
+    be handed over — and destination is the *last* segment's."""
     r = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("SVO", "IST", 3), _leg("IST", "JFK", 4)]),
+        json=_payload(segments=[_segment("SVO", "IST", 3), _segment("IST", "JFK", 4)]),
     )
     body = r.json()
     assert body["origin"] == "SVO"
     assert body["destination"] == "JFK"
-    assert body["depart_at"] == body["legs"][0]["depart_at"]
+    assert body["depart_at"] == body["segments"][0]["depart_at"]
 
 
 async def test_codes_are_upper_cased_on_write(client, carrier_headers):
-    """T_PERF.1 — the listing filter compares exactly, so a leg stored as `dxb`
+    """T_PERF.1 — the listing filter compares exactly, so a segment stored as `dxb`
     would be invisible to every search for `DXB`."""
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(legs=[_leg("dxb", "jfk", 5)])
+        "/api/trips", headers=carrier_headers, json=_payload(segments=[_segment("dxb", "jfk", 5)])
     )
-    assert r.json()["legs"][0]["origin"] == "DXB"
+    assert r.json()["segments"][0]["origin"] == "DXB"
     assert r.json()["origin"] == "DXB"
 
 
@@ -87,51 +87,51 @@ async def test_chain_reaches_the_listing_not_only_the_post_response(
     created = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("SVO", "DXB", 2), _leg("DXB", "SVO", 6)]),
+        json=_payload(segments=[_segment("SVO", "DXB", 2), _segment("DXB", "SVO", 6)]),
     )
     trip_id = created.json()["id"]
     listing = await client.get("/api/trips", headers=carrier_headers)
     mine = next(t for t in listing.json()["items"] if t["id"] == trip_id)
-    assert len(mine["legs"]) == 2
-    assert mine["legs"][1]["destination"] == "SVO"
+    assert len(mine["segments"]) == 2
+    assert mine["segments"][1]["destination"] == "SVO"
 
 
-async def test_legs_may_not_travel_backwards(client, carrier_headers):
+async def test_segments_may_not_travel_backwards(client, carrier_headers):
     r = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("SVO", "DXB", 9), _leg("DXB", "SVO", 2)]),
+        json=_payload(segments=[_segment("SVO", "DXB", 9), _segment("DXB", "SVO", 2)]),
     )
     assert r.status_code == 422, r.text
 
 
-async def test_two_legs_on_the_same_day_are_accepted(client, carrier_headers):
+async def test_two_segments_on_the_same_day_are_accepted(client, carrier_headers):
     """Non-strict on purpose: a carrier who knows the date of the return flight
     but not the hour is ordinary, and refusing them pushes the second flight
     back into a free-text field — the behaviour this model replaces."""
-    same_day = _leg("SVO", "DXB", 4)
-    back = dict(_leg("DXB", "SVO", 4), depart_at=same_day["depart_at"])
+    same_day = _segment("SVO", "DXB", 4)
+    back = dict(_segment("DXB", "SVO", 4), depart_at=same_day["depart_at"])
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(legs=[same_day, back])
+        "/api/trips", headers=carrier_headers, json=_payload(segments=[same_day, back])
     )
     assert r.status_code == 201, r.text
 
 
-async def test_leg_from_a_city_to_itself_is_refused(client, carrier_headers):
+async def test_segment_from_a_city_to_itself_is_refused(client, carrier_headers):
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(legs=[_leg("DXB", "DXB", 5)])
+        "/api/trips", headers=carrier_headers, json=_payload(segments=[_segment("DXB", "DXB", 5)])
     )
     assert r.status_code == 422
 
 
-async def test_trip_without_legs_is_refused(client, carrier_headers):
-    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(legs=[]))
+async def test_trip_without_segments_is_refused(client, carrier_headers):
+    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(segments=[]))
     assert r.status_code == 422
 
 
-async def test_more_than_ten_legs_is_refused(client, carrier_headers):
-    legs = [_leg("SVO", "DXB", 1 + i) for i in range(11)]
-    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(legs=legs))
+async def test_more_than_ten_segments_is_refused(client, carrier_headers):
+    segments = [_segment("SVO", "DXB", 1 + i) for i in range(11)]
+    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(segments=segments))
     assert r.status_code == 422
 
 
@@ -147,7 +147,7 @@ async def test_route_alone_publishes_a_trip(client, carrier_headers):
     carrier must state to become findable.
     """
     r = await client.post(
-        "/api/trips", headers=carrier_headers, json={"payment_model": "cash_on_delivery", "legs": [_leg("DXB", "JFK", 0)]}
+        "/api/trips", headers=carrier_headers, json={"payment_model": "cash_on_delivery", "segments": [_segment("DXB", "JFK", 0)]}
     )
     assert r.status_code == 201, r.text
     body = r.json()
@@ -159,7 +159,7 @@ async def test_unstated_weight_stays_unstated(client, carrier_headers):
     """Null is a different answer from a number, and the listing keeps them
     apart rather than printing a zero nobody typed."""
     created = await client.post(
-        "/api/trips", headers=carrier_headers, json={"payment_model": "cash_on_delivery", "legs": [_leg("SVO", "IST", 3)]}
+        "/api/trips", headers=carrier_headers, json={"payment_model": "cash_on_delivery", "segments": [_segment("SVO", "IST", 3)]}
     )
     trip_id = created.json()["id"]
     listing = await client.get("/api/trips", headers=carrier_headers)
@@ -181,22 +181,22 @@ async def test_stated_weight_is_still_validated(client, carrier_headers):
 
 async def test_flown_by_defaults_to_self(client, carrier_headers):
     r = await client.post("/api/trips", headers=carrier_headers, json=_payload())
-    assert r.json()["legs"][0]["flown_by"] == "self"
+    assert r.json()["segments"][0]["flown_by"] == "self"
 
 
-async def test_proxy_leg_is_declared_not_hidden(client, carrier_headers):
+async def test_proxy_segment_is_declared_not_hidden(client, carrier_headers):
     """"#Лечу лично" and "(летит подруга)" appear in the same real post. The
     claim becomes a field so peer verification can apply to whoever crosses the
     border rather than to whoever runs the account."""
-    leg = dict(_leg("DXB", "SVO", 5), flown_by="proxy")
-    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(legs=[leg]))
+    segment = dict(_segment("DXB", "SVO", 5), flown_by="proxy")
+    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(segments=[segment]))
     assert r.status_code == 201, r.text
-    assert r.json()["legs"][0]["flown_by"] == "proxy"
+    assert r.json()["segments"][0]["flown_by"] == "proxy"
 
 
 async def test_unknown_flown_by_is_refused(client, carrier_headers):
-    leg = dict(_leg("DXB", "SVO", 5), flown_by="autopilot")
-    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(legs=[leg]))
+    segment = dict(_segment("DXB", "SVO", 5), flown_by="autopilot")
+    r = await client.post("/api/trips", headers=carrier_headers, json=_payload(segments=[segment]))
     assert r.status_code == 422
 
 
@@ -642,7 +642,7 @@ async def test_editing_keeps_the_same_trip(client, carrier_headers):
     at, so a carrier fixing a departure hour would orphan the conversation they
     were having about it."""
     created = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(legs=[_leg("DXB", "JFK", 6)])
+        "/api/trips", headers=carrier_headers, json=_payload(segments=[_segment("DXB", "JFK", 6)])
     )
     assert created.status_code == 201, created.text
     trip_id = created.json()["id"]
@@ -650,7 +650,7 @@ async def test_editing_keeps_the_same_trip(client, carrier_headers):
     edited = await client.patch(
         f"/api/trips/{trip_id}",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("DXB", "LHR", 7)], capacity=12.0),
+        json=_payload(segments=[_segment("DXB", "LHR", 7)], capacity=12.0),
     )
     assert edited.status_code == 200, edited.text
     body = edited.json()
@@ -660,14 +660,14 @@ async def test_editing_keeps_the_same_trip(client, carrier_headers):
 
 
 async def test_editing_replaces_the_whole_chain(client, carrier_headers):
-    """Replaced wholesale, not diffed: `leg_order` is dense and assigned on
-    write, so matching old rows to new ones would mean guessing which leg the
+    """Replaced wholesale, not diffed: `segment_order` is dense and assigned on
+    write, so matching old rows to new ones would mean guessing which segment the
     carrier meant to keep — and guessing wrong leaves a chain off by one city."""
     created = await client.post(
         "/api/trips",
         headers=carrier_headers,
         json=_payload(
-            legs=[_leg("SVO", "IST", 5), _leg("IST", "JFK", 6), _leg("JFK", "LAX", 7)]
+            segments=[_segment("SVO", "IST", 5), _segment("IST", "JFK", 6), _segment("JFK", "LAX", 7)]
         ),
     )
     trip_id = created.json()["id"]
@@ -675,12 +675,12 @@ async def test_editing_replaces_the_whole_chain(client, carrier_headers):
     edited = await client.patch(
         f"/api/trips/{trip_id}",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("SVO", "DXB", 5)]),
+        json=_payload(segments=[_segment("SVO", "DXB", 5)]),
     )
     assert edited.status_code == 200, edited.text
-    legs = edited.json()["legs"]
-    assert [(leg["origin"], leg["destination"]) for leg in legs] == [("SVO", "DXB")]
-    assert [leg["order"] for leg in legs] == [0]
+    segments = edited.json()["segments"]
+    assert [(segment["origin"], segment["destination"]) for segment in segments] == [("SVO", "DXB")]
+    assert [segment["order"] for segment in segments] == [0]
 
 
 async def test_a_stranger_cannot_edit_a_trip(client, carrier_headers, sender_headers):
@@ -728,18 +728,18 @@ async def test_editing_validates_the_chain_like_publishing_does(
     r = await client.patch(
         f"/api/trips/{trip_id}",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("DXB", "DXB", 6)]),
+        json=_payload(segments=[_segment("DXB", "DXB", 6)]),
     )
     assert r.status_code == 422, r.text
 
 
 async def test_editing_can_grow_the_chain(client, carrier_headers):
     """One flight becomes three. The shape that first broke this: every edit
-    reuses `leg_order` 0, and the old row has to be gone before the new one
-    lands or `uq_trip_legs_order` refuses it — the delete needs a flush of its
+    reuses `segment_order` 0, and the old row has to be gone before the new one
+    lands or `uq_trip_segments_order` refuses it — the delete needs a flush of its
     own, which is not what `delete-orphan` does by itself."""
     created = await client.post(
-        "/api/trips", headers=carrier_headers, json=_payload(legs=[_leg("SVO", "DXB", 5)])
+        "/api/trips", headers=carrier_headers, json=_payload(segments=[_segment("SVO", "DXB", 5)])
     )
     trip_id = created.json()["id"]
 
@@ -747,12 +747,12 @@ async def test_editing_can_grow_the_chain(client, carrier_headers):
         f"/api/trips/{trip_id}",
         headers=carrier_headers,
         json=_payload(
-            legs=[_leg("SVO", "IST", 5), _leg("IST", "JFK", 6), _leg("JFK", "LAX", 7)]
+            segments=[_segment("SVO", "IST", 5), _segment("IST", "JFK", 6), _segment("JFK", "LAX", 7)]
         ),
     )
     assert edited.status_code == 200, edited.text
     body = edited.json()
-    assert [leg["order"] for leg in body["legs"]] == [0, 1, 2]
+    assert [segment["order"] for segment in body["segments"]] == [0, 1, 2]
     # The denormalised head and tail follow the new chain, not the old one.
     assert body["origin"] == "SVO"
     assert body["destination"] == "LAX"
@@ -810,18 +810,18 @@ async def test_the_handover_vocabulary_is_declared_once(client, carrier_headers)
 # ── T3.11.16 · lifecycle: a listing that has flown is not a listing ─────────
 
 
-async def test_expiry_is_the_last_leg_not_the_first(client, carrier_headers):
+async def test_expiry_is_the_last_segment_not_the_first(client, carrier_headers):
     """T3.11.16 — a trip with a transfer is still a live offer on the day its
     second flight leaves. Retiring it when the first one takes off would hide
     exactly the listings a sender with a transfer route is looking for."""
     r = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("SVO", "IST", 3), _leg("IST", "JFK", 6)]),
+        json=_payload(segments=[_segment("SVO", "IST", 3), _segment("IST", "JFK", 6)]),
     )
     assert r.status_code == 201, r.text
     body = r.json()
-    assert body["expires_at"][:10] == body["legs"][1]["depart_at"][:10]
+    assert body["expires_at"][:10] == body["segments"][1]["depart_at"][:10]
     assert body["expires_at"] > body["depart_at"]
 
 
@@ -905,21 +905,21 @@ async def test_moving_the_flight_tells_the_deals_riding_on_it(
 
     # An edit that does not touch the departure says nothing to anybody: a
     # letter per edit would teach senders to ignore the one that matters. The
-    # legs are echoed back **verbatim** — rebuilding them from `_leg()` would
+    # segments are echoed back **verbatim** — rebuilding them from `_segment()` would
     # move the departure by the milliseconds between two calls, and the test
     # would be asserting the opposite of what it reads.
-    same_legs = [
+    same_segments = [
         {
-            "origin": leg["origin"],
-            "destination": leg["destination"],
-            "depart_at": leg["depart_at"],
+            "origin": segment["origin"],
+            "destination": segment["destination"],
+            "depart_at": segment["depart_at"],
         }
-        for leg in created.json()["legs"]
+        for segment in created.json()["segments"]
     ]
     quiet = await client.patch(
         f"/api/trips/{trip_id}",
         headers=carrier_headers,
-        json=_payload(legs=same_legs, capacity=9.0),
+        json=_payload(segments=same_segments, capacity=9.0),
     )
     assert quiet.status_code == 200, quiet.text
     assert sent == []
@@ -927,7 +927,7 @@ async def test_moving_the_flight_tells_the_deals_riding_on_it(
     moved = await client.patch(
         f"/api/trips/{trip_id}",
         headers=carrier_headers,
-        json=_payload(legs=[_leg("DXB", "JFK", 9)], capacity=9.0),
+        json=_payload(segments=[_segment("DXB", "JFK", 9)], capacity=9.0),
     )
     assert moved.status_code == 200, moved.text
     assert len(sent) == 1
@@ -953,7 +953,7 @@ async def test_the_reschedule_letter_names_the_route_and_both_dates(client):
 def _buyout_trip(**over):
     body = {
         "payment_model": "cash_on_delivery",
-        "legs": [_leg("DXB", "JFK", 5)],
+        "segments": [_segment("DXB", "JFK", 5)],
         "services": ["purchase_on_request"],
         "buyout_limit": 500.0,
         "buyout_paid_by": "carrier_credit",

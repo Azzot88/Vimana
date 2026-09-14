@@ -3,7 +3,7 @@ import type { Page } from './pagination'
 
 /** T3.11.15 — one flight of a trip. `order` is assigned on write; the client
  *  sends the chain in the order it means. */
-export interface TripLeg {
+export interface TripSegment {
   order: number
   origin: string
   destination: string
@@ -23,8 +23,8 @@ export interface TripLeg {
   flown_by: 'self' | 'proxy'
 }
 
-export type TripLegInput = Omit<
-  TripLeg,
+export type TripSegmentInput = Omit<
+  TripSegment,
   'order' | 'origin_city' | 'destination_city'
 >
 
@@ -102,12 +102,12 @@ export interface Trip {
   /** T3.17 — the carrier declared their key lost: the account can be signed
    *  into but can no longer act. Shown before a deal is offered, not after. */
   carrier_key_lost?: boolean
-  /** T3.11.15 — the denormalised head and tail of `legs`. Derived on write, so
+  /** T3.11.15 — the denormalised head and tail of `segments`. Derived on write, so
    *  they never disagree with the chain. Search and the board stand on them. */
   origin: string
   destination: string
   depart_at: string
-  legs: TripLeg[]
+  segments: TripSegment[]
   /** T3.11.07 — null means the carrier did not state a weight, which is a real
    *  answer: kilograms appear in 2.4 % of real listings and `size_hint` in far
    *  more. Every card has to render the missing case. */
@@ -137,7 +137,7 @@ export interface Trip {
   carriage_rules?: string | null
   status: string
   created_at: string
-  /** T3.11.16 — when the listing stops being one: the last leg's departure.
+  /** T3.11.16 — when the listing stops being one: the last segment's departure.
    *  A trip past it is not on the board, and no ceremony was needed to retire
    *  it. */
   expires_at?: string | null
@@ -155,8 +155,8 @@ export interface Trip {
  *  the board hides a flown trip server-side (`expires_at`), while the carrier's
  *  own panel kept showing it as live.
  *
- *  `flown` is decided by `expires_at` — the **last** leg's departure, the same
- *  column the board filters on, so a two-leg trip is not archived while its
+ *  `flown` is decided by `expires_at` — the **last** segment's departure, the same
+ *  column the board filters on, so a two-segment trip is not archived while its
  *  second flight is still ahead. The countdown is decided by `depart_at`, the
  *  first departure: that is the deadline a sender is actually racing.
  *
@@ -198,9 +198,9 @@ export function daysToDeparture(
 
 export interface CreateTripPayload {
   /** T3.11.15 — the route goes on the wire as a chain and only as a chain. A
-   *  single-leg array is the ordinary case; the flat origin/destination/date
+   *  single-segment array is the ordinary case; the flat origin/destination/date
    *  trio no longer exists as an input. */
-  legs: TripLegInput[]
+  segments: TripSegmentInput[]
   /** Omitted publishes the trip without a stated weight — the express path. */
   capacity?: number | null
   allowed_categories: string[]

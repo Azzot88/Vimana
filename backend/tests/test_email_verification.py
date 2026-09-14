@@ -323,7 +323,7 @@ async def test_request_code_without_email(client, session_maker):
 async def _trip_body() -> dict:
     return {
         "payment_model": "cash_on_delivery",
-        "legs": [
+        "segments": [
             {
                 "origin": "Tbilisi",
                 "destination": "Yerevan",

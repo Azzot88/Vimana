@@ -42,7 +42,7 @@ async def _make_open_trip(client, carrier_headers) -> str:
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "INQ",
                     "destination": "TST",

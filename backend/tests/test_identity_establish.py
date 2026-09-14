@@ -615,7 +615,7 @@ async def test_lost_key_cannot_publish_a_trip(client):
         headers=headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "Tbilisi",
                     "destination": "Yerevan",

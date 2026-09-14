@@ -310,7 +310,7 @@ def city_of(iata: str) -> str | None:
     are the same city to everybody except the person who has to be at one of
     them.
 
-    Derived on the way out rather than stored on the leg: the trip holds the
+    Derived on the way out rather than stored on the segment: the trip holds the
     code, which is the fact the carrier stated, and a city copied into the row
     would be a second version of it that never gets corrected.
 
@@ -319,7 +319,7 @@ def city_of(iata: str) -> str | None:
     honest way to pick the Russian or Polish variant out of it. A localised
     board would need a translated city table, which is a different task.
 
-    Called by: `schemas.marketplace.TripLegOut` (computed fields).
+    Called by: `schemas.marketplace.TripSegmentOut` (computed fields).
     """
     a = _by_iata().get((iata or "").strip().upper())
     return a.city if a else None

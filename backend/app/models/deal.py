@@ -15,9 +15,9 @@ class DealStatus(str, enum.Enum):
     in_transit = "in_transit"
     # T3.11.17 — handed to a postal service inside the destination country.
     # 44.9 % of carriers on this market post the parcel onward after landing, so
-    # for half the deals there is a leg between «in the carrier's hands» and
+    # for half the deals there is a stretch between «in the carrier's hands» and
     # «in the recipient's», and the model knew nothing between `handoff` and
-    # `received`. That gap is what made an arbiter's question — on which leg was
+    # `received`. That gap is what made an arbiter's question — on which stretch was
     # it lost — unanswerable from the record.
     posted = "posted"
     delivered = "delivered"
@@ -59,7 +59,7 @@ class DealEventType(str, enum.Enum):
     # reason the status is: a cancellation is not a completion.
     cancelled = "cancelled"
     # T3.11.17 — the parcel was handed to a postal service inside the
-    # destination country. Its own event because it is its own leg: the carrier
+    # destination country. Its own event because it is its own stretch: the carrier
     # is done, the parcel is not there yet, and an arbiter asked «where was it
     # lost» needs to see which of the two answers the record supports.
     posted = "posted"
@@ -114,7 +114,7 @@ class AttachmentKind(str, enum.Enum):
     #
     # Not `handoff_photo` reused: an arbiter reads these labels, and «фото
     # передачи» on a picture of an open parcel would misdescribe the one piece
-    # of evidence the postal leg has.
+    # of evidence the postal stretch has.
     pre_seal_photo = "pre_seal_photo"
     # T3.11.27 — «вот что я отправляю», shown at the terms stage, before the
     # carrier agrees to anything. Owner's decision 2026-09-07: a photo **or** a

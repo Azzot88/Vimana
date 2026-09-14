@@ -31,7 +31,7 @@ async def _deal(client):
         headers=c_hdr,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "RCP",
                     "destination": "DST",

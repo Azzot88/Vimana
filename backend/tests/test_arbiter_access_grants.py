@@ -39,7 +39,7 @@ async def _open_dispute(client, session_maker):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "GRT",
                     "destination": "GRD",

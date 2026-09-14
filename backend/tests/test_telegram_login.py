@@ -5,7 +5,7 @@ has never written to it, so this exchange starts with a link, the code is minted
 only when Start is pressed, and the account is resolved from a chat id the site
 never sees.
 
-The suite drives all three legs — request, webhook, verify — rather than calling
+The suite drives all three segments — request, webhook, verify — rather than calling
 the helpers, because the thing worth pinning is that they agree about one row.
 """
 import itertools
@@ -118,7 +118,7 @@ async def _verify(client, nonce, code):
     )
 
 
-# ── the happy path, in three legs ────────────────────────────────────────────
+# ── the happy path, in three segments ────────────────────────────────────────────
 
 
 async def test_a_request_hands_back_a_link_and_no_code(client, sent_codes):

@@ -176,14 +176,14 @@ async def test_popular_is_open_without_auth(client):
 
 async def test_popular_counts_both_ends_of_a_flight(client, carrier_headers):
     """A corridor is busy in both directions. Counting departures only would
-    rank the return leg at zero, and the picker would offer half a market."""
+    rank the return segment at zero, and the picker would offer half a market."""
     from datetime import datetime, timedelta, timezone
 
     depart = (datetime.now(timezone.utc) + timedelta(days=4)).isoformat()
     created = await client.post(
         "/api/trips",
         headers=carrier_headers,
-        json={"payment_model": "cash_on_delivery", "legs": [{"origin": "DXB", "destination": "JFK", "depart_at": depart}]},
+        json={"payment_model": "cash_on_delivery", "segments": [{"origin": "DXB", "destination": "JFK", "depart_at": depart}]},
     )
     assert created.status_code == 201, created.text
 
@@ -205,7 +205,7 @@ async def test_popular_drops_codes_that_are_not_airports(client, carrier_headers
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {"origin": "ZZQ", "destination": "ZZW", "depart_at": depart}
             ]
         },

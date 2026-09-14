@@ -418,11 +418,11 @@ describe('DealStages', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('has no shortcut on the postal leg either, since 2026-09-12', () => {
+  it('has no shortcut on the postal stretch either, since 2026-09-12', () => {
     /* It was kept there on the honest argument that a carrier who has posted
        the parcel should not wait on a post office. What it actually did was end
        deals past «Оплата произведена» and past anybody confirming receipt — the
-       run the owner walked closed exactly that way. The postal leg now closes
+       run the owner walked closed exactly that way. The postal stretch now closes
        through the same pair as every other deal. */
     renderWithProviders(panel({ status: 'posted' }))
     expect(
@@ -550,7 +550,7 @@ describe('DealStages · the late stages', () => {
     ).toBeInTheDocument()
   })
 
-  it('offers it on the postal leg too', () => {
+  it('offers it on the postal stretch too', () => {
     renderWithProviders(panel({ status: 'posted', myRole: 'sender' }))
     expect(
       screen.getByText(/payment made|Оплата произведена/i),

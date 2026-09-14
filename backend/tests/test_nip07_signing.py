@@ -28,7 +28,7 @@ async def _matched_deal(client):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "AAA",
                     "destination": "BBB",
@@ -181,7 +181,7 @@ async def test_custodial_writes_nip01_event_id(client):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "NIP",
                     "destination": "ONE",
@@ -258,7 +258,7 @@ async def test_custodial_deal_event_signed_new_format(client, session_maker):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "DE1",
                     "destination": "DE2",

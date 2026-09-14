@@ -77,7 +77,7 @@ async def test_post_trip_requires_can_carry(client):
         headers=user["headers"],
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "AAA",
                     "destination": "BBB",
@@ -97,7 +97,7 @@ async def test_post_trip_forbidden_when_can_carry_false(client):
         headers=user["headers"],
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "AAA",
                     "destination": "BBB",

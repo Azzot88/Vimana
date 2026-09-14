@@ -69,7 +69,7 @@ export default function TripPreview({
     }
   }, [onClose])
 
-  const legs = trip.legs ?? []
+  const segments = trip.segments ?? []
   const allowance = trip.max_declared_value
   const allowanceCurrency = trip.max_declared_value_currency || trip.currency
 
@@ -155,10 +155,10 @@ export default function TripPreview({
         <header className="flex items-start justify-between gap-3 p-5 pb-3">
           <div className="min-w-0 space-y-1">
             <MonoText className="block text-lg text-navy font-medium">
-              {legs.length > 0
+              {segments.length > 0
                 ? [
-                    routeNode(legs[0].origin, legs[0].origin_city),
-                    ...legs.map((l) => routeNode(l.destination, l.destination_city)),
+                    routeNode(segments[0].origin, segments[0].origin_city),
+                    ...segments.map((l) => routeNode(l.destination, l.destination_city)),
                   ].join(' → ')
                 : `${trip.origin} → ${trip.destination}`}
             </MonoText>
@@ -180,23 +180,23 @@ export default function TripPreview({
           {section(
             t('trips.newTripCell.route'),
             <ol className="space-y-1.5">
-              {legs.map((leg) => (
-                <li key={leg.order} className="text-xs font-body text-navy/70">
+              {segments.map((segment) => (
+                <li key={segment.order} className="text-xs font-body text-navy/70">
                   <MonoText className="text-xs text-navy">
-                    {routeNode(leg.origin, leg.origin_city)} →{' '}
-                    {routeNode(leg.destination, leg.destination_city)}
+                    {routeNode(segment.origin, segment.origin_city)} →{' '}
+                    {routeNode(segment.destination, segment.destination_city)}
                   </MonoText>
                   <span className="block text-navy/50 mt-0.5">
-                    {prefs.dateTime(leg.depart_at)}
+                    {prefs.dateTime(segment.depart_at)}
                     {/* Only the end of the route carries one, so this shows on
                         a single row of the chain. */}
-                    {leg.arrive_at && ` → ${prefs.dateTime(leg.arrive_at)}`}
+                    {segment.arrive_at && ` → ${prefs.dateTime(segment.arrive_at)}`}
                   </span>
                 </li>
               ))}
-              {legs.length > 0 && (
+              {segments.length > 0 && (
                 <li className="text-[11px] font-body text-navy/45">
-                  {t(`trips.flownBy.${legs[0].flown_by}`)}
+                  {t(`trips.flownBy.${segments[0].flown_by}`)}
                 </li>
               )}
             </ol>,

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import airports as airports_module
 from app.core.database import get_db
-from app.models.marketplace import TripLeg
+from app.models.marketplace import TripSegment
 
 router = APIRouter()
 
@@ -74,8 +74,8 @@ async def popular_airports(
 
     An empty field with a blinking cursor asks the carrier to recall an IATA
     code; this answers with the codes this platform actually flies. Counted over
-    `trip_legs` — both ends of every flight, because a corridor is busy in both
-    directions and counting only departures would rank the return leg at zero.
+    `trip_segments` — both ends of every flight, because a corridor is busy in both
+    directions and counting only departures would rank the return segment at zero.
 
     Open without authentication, like the rest of this router: every one of
     these codes is already on the public board. On an empty database it returns
@@ -84,8 +84,8 @@ async def popular_airports(
     Called by: `frontend/src/components/AirportSelect`.
     """
     ends = union_all(
-        select(TripLeg.origin.label("code")),
-        select(TripLeg.destination.label("code")),
+        select(TripSegment.origin.label("code")),
+        select(TripSegment.destination.label("code")),
     ).subquery()
     rows = (
         await db.execute(

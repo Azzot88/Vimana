@@ -713,10 +713,10 @@ async def test_a_service_on_a_hand_to_hand_meeting_is_refused(
     assert r.status_code == 422, r.text
 
 
-# ── T3.11.17 · the onward postal leg ────────────────────────────────────────
+# ── T3.11.17 · the onward postal stretch ────────────────────────────────────────
 
 
-async def test_posting_declares_its_own_leg_not_a_delivery(
+async def test_posting_declares_its_own_stretch_not_a_delivery(
     client, sender_headers, carrier_headers, deal
 ):
     """T3.11.17 — «сдано в почту» is a state of its own.
@@ -749,7 +749,7 @@ async def test_posting_declares_its_own_leg_not_a_delivery(
     assert "posted.confirmed" in kinds
 
 
-async def test_the_chain_says_which_leg_the_parcel_was_on(
+async def test_the_chain_says_which_stretch_the_parcel_was_on(
     client, session_maker, sender_headers, carrier_headers, deal
 ):
     """«Арбитр видит, на какой ноге груз потерялся.»

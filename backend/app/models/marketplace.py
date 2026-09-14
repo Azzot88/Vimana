@@ -117,7 +117,7 @@ class Trip(Base):
     destination: Mapped[str] = mapped_column(String(100))
     depart_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # T3.11.16 — when the trip stops being a listing: the departure of its
-    # **last** leg, denormalised on write like `origin`/`destination`/`depart_at`
+    # **last** segment, denormalised on write like `origin`/`destination`/`depart_at`
     # are denormalised from the first. The board hides what has already flown
     # without anybody pressing anything — at a median horizon of five days, a
     # board without this fills with trips that no longer exist inside a week.
@@ -232,9 +232,9 @@ class Trip(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    legs: Mapped[list["TripLeg"]] = relationship(
+    segments: Mapped[list["TripSegment"]] = relationship(
         back_populates="trip",
-        order_by="TripLeg.leg_order",
+        order_by="TripSegment.segment_order",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
@@ -331,7 +331,7 @@ EMONEY_MODEL = "emoney_on_delivery"
 
 
 
-class TripLeg(Base):
+class TripSegment(Base):
     """One flight of a trip.
 
     T3.11.15. A trip is a chain, not a pair of cities: 36.6 % of real carrier
@@ -347,22 +347,22 @@ class TripLeg(Base):
     of those at once for no gain.
     """
 
-    __tablename__ = "trip_legs"
+    __tablename__ = "trip_segments"
     __table_args__ = (
-        UniqueConstraint("trip_id", "leg_order", name="uq_trip_legs_order"),
-        CheckConstraint("leg_order >= 0", name="ck_trip_legs_order_nonneg"),
-        CheckConstraint("origin <> destination", name="ck_trip_legs_distinct"),
-        CheckConstraint("flown_by IN ('self','proxy')", name="ck_trip_legs_flown_by"),
-        Index("ix_trip_legs_trip_order", "trip_id", "leg_order"),
+        UniqueConstraint("trip_id", "segment_order", name="uq_trip_segments_order"),
+        CheckConstraint("segment_order >= 0", name="ck_trip_segments_order_nonneg"),
+        CheckConstraint("origin <> destination", name="ck_trip_segments_distinct"),
+        CheckConstraint("flown_by IN ('self','proxy')", name="ck_trip_segments_flown_by"),
+        Index("ix_trip_segments_trip_order", "trip_id", "segment_order"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     trip_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("trips.id", ondelete="CASCADE"), nullable=False
     )
-    # Named `leg_order` rather than `order`: the bare word is reserved in SQL and
+    # Named `segment_order` rather than `order`: the bare word is reserved in SQL and
     # survives only as long as every reader remembers to quote it.
-    leg_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    segment_order: Mapped[int] = mapped_column(Integer, nullable=False)
     origin: Mapped[str] = mapped_column(String(100), nullable=False)
     destination: Mapped[str] = mapped_column(String(100), nullable=False)
     depart_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -385,7 +385,7 @@ class TripLeg(Base):
         String(8), default="self", server_default="self", nullable=False
     )
 
-    trip: Mapped["Trip"] = relationship(back_populates="legs")
+    trip: Mapped["Trip"] = relationship(back_populates="segments")
 
 
 class Cargo(Base):

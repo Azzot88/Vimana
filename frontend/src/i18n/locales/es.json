@@ -653,10 +653,10 @@
     },
     "newTripHookComingSoon": "{{feature}} — próximamente",
     "newTripValidation": {
-      "legRoute": "Vuelo {{n}}: elige origen y destino",
-      "legSameRoute": "Vuelo {{n}}: origen y destino deben ser diferentes",
-      "legDate": "Vuelo {{n}}: elige fecha y hora de salida",
-      "legOutOfOrder": "El vuelo {{n}} sale antes que el anterior",
+      "segmentRoute": "Vuelo {{n}}: elige origen y destino",
+      "segmentSameRoute": "Vuelo {{n}}: origen y destino deben ser diferentes",
+      "segmentDate": "Vuelo {{n}}: elige fecha y hora de salida",
+      "segmentOutOfOrder": "El vuelo {{n}} sale antes que el anterior",
       "arrivalBeforeDeparture": "Vuelo {{n}}: llega antes de salir.",
       "pastDate": "La fecha debe ser en el futuro",
       "capacity": "El peso debe ser al menos 0.5 kg"

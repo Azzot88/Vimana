@@ -120,7 +120,7 @@ async def _e2e_deal(client, session_maker):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "TE2",
                     "destination": "END",

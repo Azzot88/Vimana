@@ -344,7 +344,7 @@ export default function DealStages({
             should have closed it nowhere to be seen, because the stage they
             live on had already passed.
 
-            It was added for the postal leg on the honest argument that the
+            It was added for the postal stretch on the honest argument that the
             carrier has done their part and should not wait on a post office.
             That argument survives — but it is answered by the settlement pair,
             not by skipping it: the sender raises «Оплата произведена» while the

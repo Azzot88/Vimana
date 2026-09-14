@@ -166,7 +166,7 @@ async def test_publishing_a_trip_notifies_only_the_matching_window(
             headers=carrier_headers,
             json={
                 "payment_model": "cash_on_delivery",
-                "legs": [
+                "segments": [
                     {
                         "origin": corridor,
                         "destination": "SVO",
@@ -193,7 +193,7 @@ async def test_publishing_a_trip_notifies_only_the_matching_window(
             headers=carrier_headers,
             json={
                 "payment_model": "cash_on_delivery",
-                "legs": [
+                "segments": [
                     {
                         "origin": corridor,
                         "destination": "SVO",

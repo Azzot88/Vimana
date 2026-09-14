@@ -98,7 +98,7 @@ async def test_build_event_produces_valid_nip01_signature(client, session_maker)
         headers=hdr,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "NEO",
                     "destination": "SFO",
@@ -151,7 +151,7 @@ async def test_nostr_event_endpoint_503_when_disabled(client):
         headers=hdr,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "DIS",
                     "destination": "OFF",
@@ -176,7 +176,7 @@ async def test_nostr_event_endpoint_returns_event_when_enabled(client):
             headers=hdr,
             json={
                 "payment_model": "cash_on_delivery",
-                "legs": [
+                "segments": [
                     {
                         "origin": "ONO",
                         "destination": "STR",
@@ -218,7 +218,7 @@ async def test_publish_task_skips_a_carrier_who_owns_their_key(
         headers=hdr,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "SLF",
                     "destination": "CST",
@@ -252,7 +252,7 @@ async def test_trip_out_exposes_nostr_fields(client):
         headers=hdr,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "OUT",
                     "destination": "SCH",

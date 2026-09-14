@@ -28,9 +28,9 @@ describe('departureState', () => {
   })
 
   it('keeps a chain alive while its second flight is still ahead', () => {
-    /* The first leg left this morning; the connection is tomorrow. Judging this
+    /* The first segment left this morning; the connection is tomorrow. Judging this
        by `depart_at` would archive a trip the carrier is in the middle of — so
-       `expires_at`, the last leg, decides, exactly as the board does
+       `expires_at`, the last segment, decides, exactly as the board does
        server-side. */
     expect(
       departureState(

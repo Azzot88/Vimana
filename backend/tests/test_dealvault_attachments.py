@@ -259,7 +259,7 @@ async def _second_deal(client, sender_headers, carrier_headers) -> str:
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "SAF",
                     "destination": "ETY",

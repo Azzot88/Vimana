@@ -126,7 +126,7 @@ export function freshnessOf(iso: string | null | undefined): Freshness | null {
  *  chain, which is the right headline for a single flight and a lie of omission
  *  for a chain: `Москва → Портленд` hides that the carrier also lands in Miami
  *  and Los Angeles, and 15 % of real listings on this market are exactly that
- *  shape. So a multi-leg trip prints every node.
+ *  shape. So a multi-segment trip prints every node.
  *
  *  Lives here rather than in each card because three pages render the same
  *  line, and a fourth will; the version that got left behind would keep showing
@@ -134,7 +134,7 @@ export function freshnessOf(iso: string | null | undefined): Freshness | null {
  *
  *  Called by: `pages/TripsPage`, `pages/CarrierPage`, `pages/DashboardPage`.
  */
-export interface RouteChainLeg {
+export interface RouteChainSegment {
   origin: string
   destination: string
   /** T3.11.07 — resolved from the IATA code by the API, `null` for a code we do
@@ -147,16 +147,16 @@ export interface RouteChainLeg {
 export function routeChain(trip: {
   origin: string
   destination: string
-  legs?: RouteChainLeg[]
+  segments?: RouteChainSegment[]
 }): string {
-  const legs = trip.legs ?? []
+  const segments = trip.segments ?? []
   // T3.11.07 — the pair is a fallback for a response with no chain at all, not
-  // for a one-flight trip: a single leg carries the cities and the flat columns
+  // for a one-flight trip: a single segment carries the cities and the flat columns
   // do not, so the old `< 2` test threw away the city on every direct flight.
-  if (legs.length === 0) return `${trip.origin} → ${trip.destination}`
+  if (segments.length === 0) return `${trip.origin} → ${trip.destination}`
   const nodes = [
-    { code: legs[0].origin, city: legs[0].origin_city },
-    ...legs.map((leg) => ({ code: leg.destination, city: leg.destination_city })),
+    { code: segments[0].origin, city: segments[0].origin_city },
+    ...segments.map((segment) => ({ code: segment.destination, city: segment.destination_city })),
   ]
   return nodes.map((n) => routeNode(n.code, n.city)).join(' → ')
 }

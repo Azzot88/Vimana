@@ -11,7 +11,7 @@ async def _create_trip(client, carrier_headers, categories=("document",)) -> str
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "MTC",
                     "destination": "DXB",

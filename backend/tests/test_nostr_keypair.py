@@ -195,7 +195,7 @@ async def test_message_from_new_user_gets_server_signed(client):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "SIG",
                     "destination": "TST",
@@ -259,7 +259,7 @@ async def test_self_custody_vault_message_requires_pre_signed(client):
         headers=c_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "SCC",
                     "destination": "SLF",

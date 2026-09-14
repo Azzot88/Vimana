@@ -140,7 +140,7 @@ export default function AirportSelect({
 
   // T3.11.07 — the suggestions are gathered once per mount, not per focus: they
   // do not change between two focuses of the same field, and a request on every
-  // focus would fire several times while somebody tabs through a chain of legs.
+  // focus would fire several times while somebody tabs through a chain of segments.
   useEffect(() => {
     setRecent(loadRecent())
     popularAirports(6)

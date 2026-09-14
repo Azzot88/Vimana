@@ -179,7 +179,7 @@ async def fresh_deal(client, carrier_headers, sender_headers):
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "CHK",
                     "destination": "LST",

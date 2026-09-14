@@ -64,7 +64,7 @@ class CardKind(str, enum.Enum):
     handoff_received = "handoff.received"
     handoff_confirmed = "handoff.confirmed"
     transit_update = "transit.update"
-    # T3.11.17 — the onward postal leg. 44.9 % of carriers post the parcel on
+    # T3.11.17 — the onward postal stretch. 44.9 % of carriers post the parcel on
     # inside the destination country, so for half the deals the custody group
     # had a hole between «handed over» and «delivered».
     posted_declared = "posted.declared"
@@ -108,7 +108,7 @@ class CardKind(str, enum.Enum):
 
     # Group 7 — B2B (stream C, not before the first business contract)
     b2b_order_created = "b2b.order_created"
-    b2b_leg_domestic = "b2b.leg_domestic"
+    b2b_domestic_delivery = "b2b.domestic_delivery"
     b2b_proof_of_delivery = "b2b.proof_of_delivery"
 
 
@@ -318,7 +318,7 @@ CATALOGUE: dict[CardKind, CardSpec] = {
 
         # ── group 7 · B2B ──────────────────────────────────────────────────
         _s(CardKind.b2b_order_created, "b2b"),
-        _s(CardKind.b2b_leg_domestic, "b2b"),
+        _s(CardKind.b2b_domestic_delivery, "b2b"),
         _s(CardKind.b2b_proof_of_delivery, "b2b"),
     )
 }

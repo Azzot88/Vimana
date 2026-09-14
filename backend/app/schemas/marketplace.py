@@ -13,7 +13,7 @@ from pydantic import (
 )
 
 from app.core.currencies import CURRENCIES
-from app.core.trip_legs import MAX_LEGS
+from app.core.trip_segments import MAX_SEGMENTS
 from app.models.marketplace import EMONEY_MODEL, EXCLUSIONS, TRIP_SERVICES
 # T3.11.22 — imported, not re-typed. This list used to be written out here as
 # well as in `schemas/cards.py`: two literal copies obliged to agree forever and
@@ -45,9 +45,9 @@ def _closed_list(
     return list(dict.fromkeys(value))
 
 
-class TripLegIn(BaseModel):
-    """T3.11.15 — one flight of the chain. `leg_order` is assigned on write, not
-    submitted: see `core.trip_legs.normalise_legs`."""
+class TripSegmentIn(BaseModel):
+    """T3.11.15 — one flight of the chain. `segment_order` is assigned on write, not
+    submitted: see `core.trip_segments.normalise_segments`."""
 
     origin: str = Field(min_length=1, max_length=100)
     destination: str = Field(min_length=1, max_length=100)
@@ -61,17 +61,17 @@ class TripLegIn(BaseModel):
     flown_by: Literal["self", "proxy"] = "self"
 
 
-class TripLegOut(BaseModel):
-    # The column is `leg_order` (`order` is reserved in SQL) but the wire word is
+class TripSegmentOut(BaseModel):
+    # The column is `segment_order` (`order` is reserved in SQL) but the wire word is
     # `order`: the client has no reason to inherit a database workaround.
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
-    order: int = Field(validation_alias=AliasChoices("leg_order", "order"))
+    order: int = Field(validation_alias=AliasChoices("segment_order", "order"))
     origin: str
     destination: str
     depart_at: datetime
     # T3.11.07 — when the carrier lands (owner's decision 2026-09-06). Asked for
-    # the **end of the route**, which is the leg that has one; `None` everywhere
+    # the **end of the route**, which is the segment that has one; `None` everywhere
     # else, and `None` on older trips, which is a real answer rather than a gap.
     arrive_at: datetime | None = None
     flown_by: str
@@ -168,10 +168,10 @@ class HandoverSide(BaseModel):
 class TripCreate(BaseModel):
     # T3.11.15 — the route arrives as a chain and only as a chain. The flat
     # `origin`/`destination`/`depart_at` trio is gone from the wire: keeping it
-    # alongside `legs` would mean two ways to say the same thing and a rule
+    # alongside `segments` would mean two ways to say the same thing and a rule
     # about which one wins. The columns of those names survive on the model as
-    # the denormalised head of the chain — see `core.trip_legs.head_and_tail`.
-    legs: list[TripLegIn] = Field(min_length=1, max_length=MAX_LEGS)
+    # the denormalised head of the chain — see `core.trip_segments.head_and_tail`.
+    segments: list[TripSegmentIn] = Field(min_length=1, max_length=MAX_SEGMENTS)
     # T3.11.07 — optional since the express path. The route is the only thing a
     # carrier must state to be findable; everything else is a detail they can
     # add later, and 31 % of this market publishes inside two days of the
@@ -373,7 +373,7 @@ class TripOut(BaseModel):
     size_hint: str | None = None
     handover_origin: dict | None = None
     handover_destination: dict | None = None
-    legs: list[TripLegOut] = Field(default_factory=list)
+    segments: list[TripSegmentOut] = Field(default_factory=list)
     excluded: list[str] | None = None
     services: list[str] | None = None
     payment_model: str | None = None
@@ -385,7 +385,7 @@ class TripOut(BaseModel):
     carriage_rules: str | None = None
     status: str
     # T3.11.16 — when the listing stops being one: the departure of its last
-    # leg. On the card because it changes what the reader should do with it — a
+    # segment. On the card because it changes what the reader should do with it — a
     # trip whose last flight leaves tonight is not worth writing to about a
     # parcel next week.
     expires_at: datetime | None = None

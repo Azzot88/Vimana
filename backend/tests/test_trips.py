@@ -7,7 +7,7 @@ async def test_create_trip_as_carrier(client, carrier_headers):
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "AAA",
                     "destination": "BBB",
@@ -31,7 +31,7 @@ async def test_create_trip_forbidden_for_sender(client, sender_headers):
         headers=sender_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "XXX",
                     "destination": "YYY",
@@ -71,7 +71,7 @@ async def test_trip_route_is_normalised_on_write(client, carrier_headers):
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": " nrm ",
                     "destination": "nrd",
@@ -129,7 +129,7 @@ async def test_list_trips_filter_by_departure_date(client, carrier_headers):
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": origin,
                     "destination": f"{origin}-DEST",
@@ -184,7 +184,7 @@ async def test_a_retired_carrier_is_marked_on_the_listing(client, carrier_header
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": origin,
                     "destination": f"{origin}-D",

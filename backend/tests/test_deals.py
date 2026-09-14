@@ -8,7 +8,7 @@ async def _create_open_trip(client, carrier_headers) -> str:
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "MTC",
                     "destination": "DXB",
@@ -245,7 +245,7 @@ async def test_order_cannot_ask_for_a_category_the_trip_does_not_carry(
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "AAA",
                     "destination": "BBB",
@@ -287,7 +287,7 @@ async def test_a_trip_that_named_no_categories_still_takes_a_deal(
         headers=carrier_headers,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": "CCC",
                     "destination": "DDD",

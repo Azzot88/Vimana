@@ -10,7 +10,7 @@ import { getKeypairStatus } from './keypair'
 import { getArbiterInfo } from './threshold'
 
 /** T3.11.17 — `pre_seal_photo` is the parcel photographed before it was
- *  sealed: the evidence the onward postal leg stands on. */
+ *  sealed: the evidence the onward postal stretch stands on. */
 export type AttachmentKind =
   | 'handoff_photo'
   | 'receipt_photo'

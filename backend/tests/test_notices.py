@@ -339,7 +339,7 @@ async def test_match_pins_route_note_when_corridor_flagged(client, session_maker
         headers=carrier_hdr,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": unique_origin,
                     "destination": unique_dest,
@@ -423,7 +423,7 @@ async def test_match_does_not_pin_when_corridor_standard(client, session_maker):
         headers=hdr_c,
         json={
             "payment_model": "cash_on_delivery",
-            "legs": [
+            "segments": [
                 {
                     "origin": origin,
                     "destination": dest,

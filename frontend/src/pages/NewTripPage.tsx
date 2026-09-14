@@ -52,10 +52,10 @@ import { usePrefs } from '../hooks/usePrefs'
 const TOTAL_STEPS = 4
 
 // T3.11.07 — bumped from v1 when the route became a chain, again when "who is
-// flying" moved from the leg to the trip, and again when the route became a
+// flying" moved from the segment to the trip, and again when the route became a
 // list of stops rather than a list of flights. Every time for the same reason:
 // a draft read under the wrong shape looks filled and is not. A v3 draft holds
-// `legs`, which nothing reads any more — it would open as an empty route with
+// `segments`, which nothing reads any more — it would open as an empty route with
 // every other answer still in place, which is the worst of the two states.
 const DRAFT_KEY = 'trips:draft:v4'
 
@@ -73,12 +73,12 @@ const DRAFT_KEY = 'trips:draft:v4'
  *  itself, because it is written once.
  *
  *  `departAt` is when this stop is **left**. The last stop has none — nobody
- *  departs their destination — and `nodesToLegs` never reads it.
+ *  departs their destination — and `nodesToSegments` never reads it.
  *
- *  Note what is *not* here: who is flying. The model keeps `flown_by` per leg,
+ *  Note what is *not* here: who is flying. The model keeps `flown_by` per segment,
  *  because a chain can genuinely be flown by two people, but the form asks it
  *  once for the whole trip (owner's decision 2026-09-06) — the answer is almost
- *  always the same for every leg, and asking it three times makes a real
+ *  always the same for every segment, and asking it three times makes a real
  *  question look like a formality. */
 interface NodeDraft {
   code: string
@@ -114,12 +114,12 @@ const EMPTY_NODE: NodeDraft = {
 /** The chain the API wants, derived from the stops the carrier named.
  *
  *  One direction only. The stops are the single source of the route: deriving
- *  legs on the way out and never storing them means the two cannot drift, which
+ *  segments on the way out and never storing them means the two cannot drift, which
  *  is the whole reason the form changed shape.
  *
  *  Called by: `validate`, `handleSubmit`, the preview, the preflight check.
  */
-function nodesToLegs(nodes: NodeDraft[]) {
+function nodesToSegments(nodes: NodeDraft[]) {
   return nodes.slice(0, -1).map((from, i) => ({
     origin: from.code,
     originCity: from.city,
@@ -128,7 +128,7 @@ function nodesToLegs(nodes: NodeDraft[]) {
     departAt: from.departAt,
     // The landing time belongs to the flight that ends at the next stop, so it
     // is read off *that* stop rather than off this one. Only the last stop is
-    // ever asked, so every earlier leg carries an empty string.
+    // ever asked, so every earlier segment carries an empty string.
     arriveAt: nodes[i + 1].arriveAt,
   }))
 }
@@ -140,11 +140,11 @@ function nodesToLegs(nodes: NodeDraft[]) {
 const isNodeComplete = (node: NodeDraft, isLast: boolean) =>
   Boolean(node.code && (isLast || node.departAt))
 
-// Matches `core.trip_legs.MAX_LEGS` on the server. Real posts top out at six
+// Matches `core.trip_segments.MAX_SEGMENTS` on the server. Real posts top out at six
 // cities; the limit exists so one listing cannot become a database. Stops are
 // one more than flights — two stops are one flight.
-const MAX_LEGS = 10
-const MAX_NODES = MAX_LEGS + 1
+const MAX_SEGMENTS = 10
+const MAX_NODES = MAX_SEGMENTS + 1
 
 /** T3.11.07 — one end of the handover. `points` is one text field rather than a
  *  repeater: carriers write "Tustin, Irvine or LAX" in one breath, and three
@@ -207,7 +207,7 @@ interface Draft {
   /** The stops, in order. Always at least two — an origin and a destination —
    *  and everything between them is a transfer. */
   nodes: NodeDraft[]
-  // T3.11.15 — asked once for the trip and written onto every leg. "Flying in
+  // T3.11.15 — asked once for the trip and written onto every segment. "Flying in
   // person" is the most valuable claim on this market and it appears in the
   // same posts as "(a friend is flying)", so silence is not allowed to answer
   // it — but one switch answers it, not one per flight.
@@ -389,30 +389,30 @@ function draftFromTrip(
   toUnit: (kg: number) => number,
   keepDates: boolean,
 ): Partial<Draft> {
-  const legs = trip.legs ?? []
+  const segments = trip.segments ?? []
   const nodes: NodeDraft[] =
-    legs.length > 0
+    segments.length > 0
       ? [
           {
             ...EMPTY_NODE,
-            code: legs[0].origin,
+            code: segments[0].origin,
             // The city comes back with the trip, so the preview reads the same
             // as it did on the original. The country does not — the API sends a
             // code, not an ISO pair — which is why that one still waits for the
             // airport to be re-picked.
-            city: legs[0].origin_city ?? '',
-            departAt: keepDates ? toLocalInput(legs[0].depart_at) : '',
+            city: segments[0].origin_city ?? '',
+            departAt: keepDates ? toLocalInput(segments[0].depart_at) : '',
           },
-          ...legs.map((leg, i) => ({
+          ...segments.map((segment, i) => ({
             ...EMPTY_NODE,
-            code: leg.destination,
-            city: leg.destination_city ?? '',
-            // A stop's departure is the *next* leg's, and the last stop has
-            // none — which is exactly what `nodesToLegs` reads back out.
+            code: segment.destination,
+            city: segment.destination_city ?? '',
+            // A stop's departure is the *next* segment's, and the last stop has
+            // none — which is exactly what `nodesToSegments` reads back out.
             departAt:
-              keepDates && legs[i + 1] ? toLocalInput(legs[i + 1].depart_at) : '',
+              keepDates && segments[i + 1] ? toLocalInput(segments[i + 1].depart_at) : '',
             arriveAt:
-              keepDates && !legs[i + 1] ? toLocalInput(leg.arrive_at) : '',
+              keepDates && !segments[i + 1] ? toLocalInput(segment.arrive_at) : '',
           })),
         ]
       : [
@@ -422,7 +422,7 @@ function draftFromTrip(
 
   return {
     nodes,
-    flownBy: legs[0]?.flown_by ?? 'self',
+    flownBy: segments[0]?.flown_by ?? 'self',
     // Stored metric, shown in the account's unit.
     capacity:
       trip.capacity != null ? String(Math.round(toUnit(trip.capacity) * 2) / 2) : '',
@@ -718,7 +718,7 @@ export default function NewTripPage() {
 
   // Postal services follow the **arrival** country: onward shipping happens
   // after landing. Refetched when that country changes and not before — a
-  // carrier editing the second leg has not changed where the parcel ends up.
+  // carrier editing the second segment has not changed where the parcel ends up.
   const arrivalIso = draft.nodes[draft.nodes.length - 1]?.country ?? ''
   useEffect(() => {
     if (!arrivalIso) {
@@ -824,23 +824,23 @@ export default function NewTripPage() {
 
     // T3.11.07 — checked as flights, because that is what the API stores and
     // what the rules are about ("a city cannot fly to itself", "the second
-    // departure is after the first"). The carrier typed stops; the legs are
+    // departure is after the first"). The carrier typed stops; the segments are
     // derived from them, so the two can never disagree here.
-    for (const [index, leg] of nodesToLegs(draft.nodes).entries()) {
+    for (const [index, segment] of nodesToSegments(draft.nodes).entries()) {
       const at = { n: index + 1 }
-      if (!leg.origin || !leg.destination) {
-        return t('trips.newTripValidation.legRoute', at) as string
+      if (!segment.origin || !segment.destination) {
+        return t('trips.newTripValidation.segmentRoute', at) as string
       }
-      if (leg.origin === leg.destination) {
-        return t('trips.newTripValidation.legSameRoute', at) as string
+      if (segment.origin === segment.destination) {
+        return t('trips.newTripValidation.segmentSameRoute', at) as string
       }
-      if (!leg.departAt) return t('trips.newTripValidation.legDate', at) as string
-      const departure = new Date(leg.departAt)
+      if (!segment.departAt) return t('trips.newTripValidation.segmentDate', at) as string
+      const departure = new Date(segment.departAt)
       if (Number.isNaN(departure.getTime())) {
-        return t('trips.newTripValidation.legDate', at) as string
+        return t('trips.newTripValidation.segmentDate', at) as string
       }
       // Only the first flight has to be ahead of now: a chain published on the
-      // day of departure is 11.8 % of this market, and the later legs are
+      // day of departure is 11.8 % of this market, and the later segments are
       // constrained by the one before them rather than by the clock.
       if (index === 0 && departure.getTime() < Date.now()) {
         return t('trips.newTripValidation.pastDate') as string
@@ -848,15 +848,15 @@ export default function NewTripPage() {
       // T3.11.07 — the landing, when it is stated. Checked here as well as on
       // the server so the carrier reads it in their own words rather than as a
       // 422 from the publish button.
-      if (leg.arriveAt) {
-        const arrival = new Date(leg.arriveAt)
+      if (segment.arriveAt) {
+        const arrival = new Date(segment.arriveAt)
         if (Number.isNaN(arrival.getTime()) || arrival < departure) {
           return t('trips.newTripValidation.arrivalBeforeDeparture', at) as string
         }
       }
-      const previous = nodesToLegs(draft.nodes)[index - 1]
+      const previous = nodesToSegments(draft.nodes)[index - 1]
       if (previous?.departAt && departure < new Date(previous.departAt)) {
-        return t('trips.newTripValidation.legOutOfOrder', at) as string
+        return t('trips.newTripValidation.segmentOutOfOrder', at) as string
       }
     }
     // T3.11.07 — weight is no longer required: the route is the whole of what a
@@ -969,22 +969,22 @@ export default function NewTripPage() {
     // through prompts.
     //
     // T_UX.2 pt.3 — pre-flight warning for complex/restricted corridors.
-    // T3.11.07 — asked for **every** leg, not just the endpoints. A chain
+    // T3.11.07 — asked for **every** segment, not just the endpoints. A chain
     // through Istanbul is subject to Turkish transit rules, and PRD §3.11.1 is
     // explicit that the transit node is present in the main corridor always
-    // rather than occasionally: checking only first-to-last would skip the leg
+    // rather than occasionally: checking only first-to-last would skip the segment
     // most likely to carry a restriction.
     if (!ackedPreflight) {
       try {
-        const perLeg = await Promise.all(
-          nodesToLegs(draft.nodes).map((leg) =>
-            listRouteNotes({ origin: leg.origin, destination: leg.destination }),
+        const perSegment = await Promise.all(
+          nodesToSegments(draft.nodes).map((segment) =>
+            listRouteNotes({ origin: segment.origin, destination: segment.destination }),
           ),
         )
         // A corridor flown twice (there and back) would otherwise warn twice
         // about the same thing, so the notes are collected by id.
         const byId = new Map<string, RouteNote>()
-        for (const note of perLeg.flatMap((r) => r.data)) {
+        for (const note of perSegment.flatMap((r) => r.data)) {
           if (note.status === 'complex' || note.status === 'restricted') {
             byId.set(note.id, note)
           }
@@ -1003,16 +1003,16 @@ export default function NewTripPage() {
       const payload: CreateTripPayload = {
         // T3.11.07 — the route travels as the chain the carrier typed. Order is
         // the array order; the server assigns it and derives the trip's
-        // origin, destination and date from the first and last leg.
-        legs: nodesToLegs(draft.nodes).map((leg) => ({
-          origin: leg.origin,
-          destination: leg.destination,
-          depart_at: leg.departAt,
+        // origin, destination and date from the first and last segment.
+        segments: nodesToSegments(draft.nodes).map((segment) => ({
+          origin: segment.origin,
+          destination: segment.destination,
+          depart_at: segment.departAt,
           // Empty stays null: a landing time nobody stated is not one to invent,
           // and the column keeps the two apart.
-          arrive_at: leg.arriveAt || null,
-          // One answer for the trip, written onto every leg. The model keeps it
-          // per leg so a chain flown by two people stays expressible later.
+          arrive_at: segment.arriveAt || null,
+          // One answer for the trip, written onto every segment. The model keeps it
+          // per segment so a chain flown by two people stays expressible later.
           flown_by: draft.flownBy,
         })),
         // Empty means "not stated" and travels as `null`: the express path made
@@ -1203,20 +1203,20 @@ export default function NewTripPage() {
       </summary>
       <div className="mt-3 bg-white rounded-card border border-navy/10 p-4">
         <div className="space-y-1">
-          {nodesToLegs(draft.nodes).map((leg, index) => (
+          {nodesToSegments(draft.nodes).map((segment, index) => (
             <div
               key={index}
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2"
             >
               <MonoText className="text-lg text-navy font-medium">
-                {routeNode(leg.origin || '???', leg.originCity)} →{' '}
-                {routeNode(leg.destination || '???', leg.destinationCity)}
+                {routeNode(segment.origin || '???', segment.originCity)} →{' '}
+                {routeNode(segment.destination || '???', segment.destinationCity)}
               </MonoText>
               <MonoText className="text-sm text-navy/60">
-                {formatDeparture(leg.departAt)}
+                {formatDeparture(segment.departAt)}
                 {/* The landing, when the carrier stated one. Only the last stop
                     is ever asked, so this shows on one row of the chain. */}
-                {leg.arriveAt && ` → ${formatDeparture(leg.arriveAt)}`}
+                {segment.arriveAt && ` → ${formatDeparture(segment.arriveAt)}`}
               </MonoText>
             </div>
           ))}

@@ -655,10 +655,10 @@
     },
     "newTripHookComingSoon": "{{feature}} — wkrótce",
     "newTripValidation": {
-      "legRoute": "Lot {{n}}: wskaż skąd i dokąd",
-      "legSameRoute": "Lot {{n}}: skąd i dokąd muszą się różnić",
-      "legDate": "Lot {{n}}: wskaż datę i czas wylotu",
-      "legOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
+      "segmentRoute": "Lot {{n}}: wskaż skąd i dokąd",
+      "segmentSameRoute": "Lot {{n}}: skąd i dokąd muszą się różnić",
+      "segmentDate": "Lot {{n}}: wskaż datę i czas wylotu",
+      "segmentOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
       "arrivalBeforeDeparture": "Lot {{n}}: przylot przed wylotem.",
       "pastDate": "Data musi być w przyszłości",
       "capacity": "Waga musi być co najmniej 0.5 kg"
