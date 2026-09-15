@@ -19,14 +19,25 @@ class ConnectionOut(BaseModel):
     connected_user_id: uuid.UUID
     connected_user: UserOut
     created_at: datetime
-    # T3.11.24 — `tier` is what **I** said about them; `state` is what is true of
-    # the pair. They differ exactly when I called someone close and they have
-    # not called me back: the tier is stored, and the state says `close_pending`
-    # rather than `close`, because one person does not get to decide they are
-    # trusted by another.
-    tier: str = "connection"
+    # T3.12.06 — what is true between us, from `close_pairs`: `connection`,
+    # `close_pending` (I asked), `close_requested` (they asked me) or `close`.
     state: str = "connection"
     model_config = ConfigDict(from_attributes=True)
+
+
+class ClosePairOut(BaseModel):
+    """T3.12.06 — one close person, or one request between two people, from the
+    caller's side. The other person by name only: closeness is what pt.2 opens
+    the profile to, and this list must not open it first."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    display_name: str | None
+    handle: str | None
+    #: `close` · `close_pending` · `close_requested` · `none` (declined/ended).
+    state: str
+    requested_at: datetime
+    accepted_at: datetime | None
 
 
 class MyInviteOut(BaseModel):

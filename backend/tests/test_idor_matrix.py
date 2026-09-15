@@ -264,10 +264,17 @@ MATRIX: dict[tuple[str, str], Case] = {
         "the path names a person, but the row deleted is always the caller's "
         "own — a stranger has none, so this is a 404 by construction",
     ),
-    ("PATCH", "/api/me/connections/{user_id}"): Case(
+    # T3.12.06 — closeness is asked and answered.
+    ("POST", "/api/me/close/{pair_id}/accept"): Case(
+        DENIED, "accepting a request made of somebody else"
+    ),
+    ("POST", "/api/me/close/{pair_id}/decline"): Case(
+        DENIED, "declining a request made of somebody else"
+    ),
+    ("DELETE", "/api/me/close/{user_id}"): Case(
         DENIED,
-        "closeness is set on my own row; without one there is nothing to set",
-        json={"tier": "close"},
+        "the path names a person, but the pair ended is always one the caller "
+        "is in — a stranger has none, so this is a 404 by construction",
     ),
     # ---- disputes / arbiter --------------------------------------------
     ("POST", "/api/deals/{deal_id}/dispute"): Case(
@@ -708,6 +715,9 @@ async def victim(client, carrier_headers, sender_headers, session_maker, seed_ca
         # it was made to, and the answer to anyone else is 404 before any row is
         # read, so a real offer would prove nothing the guard does not.
         "offer_id": str(uuidlib.uuid4()),
+        # T3.12.06 — random for the same reason: a request is answered only by
+        # the person it was made of, and anyone else is refused before a row is read.
+        "pair_id": str(uuidlib.uuid4()),
         "inquiry_id": inquiry_id,
         "badge_id": str(badge_id),
         "note_id": str(note_id),

@@ -227,12 +227,9 @@ async def _ensure_connection_tier(engine) -> None:
     which is what the next reader will compare this against.
     """
     async with engine.begin() as conn:
-        await conn.execute(
-            text(
-                "ALTER TABLE connections ADD COLUMN IF NOT EXISTS "
-                "tier VARCHAR(16) NOT NULL DEFAULT 'connection'"
-            )
-        )
+        # T3.12.06 — `connections.tier` is gone (`0095`); closeness is
+        # `close_pairs`, which `create_all` builds. A test database that still
+        # has the column keeps it harmlessly: it has a default and nothing reads it.
         await conn.execute(
             text(
                 "ALTER TABLE deal_participants ALTER COLUMN invite_token "

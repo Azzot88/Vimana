@@ -374,10 +374,15 @@
     "close": "Bliski",
     "contact": "Kontakt",
     "add": "Dodaj do kontaktów",
-    "makeClose": "Oznacz jako bliskiego",
+    "makeClose": "Zaproponuj bliskość",
     "closePending": "Czekamy na odpowiedź",
-    "stepBack": "Zwykły kontakt",
-    "remove": "Usuń z kontaktów"
+    "stepBack": "Już nie bliscy",
+    "remove": "Usuń z kontaktów",
+    "cancelRequest": "Wycofaj prośbę",
+    "requested": "Chce być bliskim",
+    "incomingTitle": "Prośby o bliskość",
+    "closeAccept": "Przyjmij",
+    "closeDecline": "Odrzuć"
   },
   "safe": {
     "title": "Moje pliki",

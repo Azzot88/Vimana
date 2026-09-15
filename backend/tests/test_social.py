@@ -192,83 +192,124 @@ async def test_cannot_add_yourself(client):
     assert r.status_code == 400
 
 
-async def test_close_requires_being_a_contact_first(client):
-    """The refusal lives in the API, not in a hidden button: a rule enforced by
-    a disabled control holds only for the client that draws it."""
+# ── T3.12.06 · close people: asked, and answered ───────────────────────────
+
+
+async def _contact(client, headers, user_id):
+    r = await client.post("/api/me/connections", headers=headers, json={"user_id": user_id})
+    assert r.status_code == 201, r.text
+
+
+async def _close_of(client, headers, user_id):
+    rows = (await client.get("/api/me/close", headers=headers)).json()
+    return next((p for p in rows if p["user_id"] == user_id), None)
+
+
+async def _contact_state(client, headers, user_id):
+    rows = (await client.get("/api/me/connections", headers=headers)).json()
+    return next(c["state"] for c in rows if c["connected_user_id"] == user_id)
+
+
+async def test_close_is_asked_only_of_a_contact(client):
+    """Owner, 2026-09-14: «только из друзей». The refusal lives in the API, not
+    in a hidden button."""
     mine, _ = await _account(client, "stranger-close")
     _, their_id = await _account(client, "unconnected")
-
-    r = await client.patch(
-        f"/api/me/connections/{their_id}", headers=mine, json={"tier": "close"}
-    )
+    r = await client.post("/api/me/close", headers=mine, json={"user_id": their_id})
     assert r.status_code == 404
 
 
-async def test_close_is_mutual_or_it_is_pending(client):
-    """T3.11.24 — «Близкие только двухсторонние».
-
-    One side calling the other close stores the tier and changes nothing about
-    the pair: the state reads `close_pending` until the answer comes back. One
-    person does not get to decide they are trusted by another.
-    """
+async def test_close_is_a_request_until_it_is_accepted(client):
+    """One person does not get to decide they are trusted by another: asking
+    changes nothing about the pair until the other side answers. The person
+    asked need not keep the asker in their own contacts to answer."""
     a_h, a_id = await _account(client, "close-a")
     b_h, b_id = await _account(client, "close-b")
-    await client.post("/api/me/connections", headers=a_h, json={"user_id": b_id})
-    await client.post("/api/me/connections", headers=b_h, json={"user_id": a_id})
+    await _contact(client, a_h, b_id)
 
-    said = await client.patch(
-        f"/api/me/connections/{b_id}", headers=a_h, json={"tier": "close"}
-    )
-    assert said.status_code == 200, said.text
-    assert said.json()["tier"] == "close"
-    assert said.json()["state"] == "close_pending"
+    asked = await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    assert asked.status_code == 201, asked.text
+    assert asked.json()["state"] == "close_pending"
+    assert await _contact_state(client, a_h, b_id) == "close_pending"
 
-    # And the other side does not see themselves as close either.
-    b_list = await client.get("/api/me/connections", headers=b_h)
-    row = next(c for c in b_list.json() if c["connected_user_id"] == a_id)
-    assert row["state"] == "connection"
+    incoming = await _close_of(client, b_h, a_id)
+    assert incoming["state"] == "close_requested"
 
-    answered = await client.patch(
-        f"/api/me/connections/{a_id}", headers=b_h, json={"tier": "close"}
-    )
+    accepted = await client.post(f"/api/me/close/{incoming['id']}/accept", headers=b_h)
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["state"] == "close"
+    assert await _contact_state(client, a_h, b_id) == "close"
+    assert (await _close_of(client, b_h, a_id))["state"] == "close"
+
+
+async def test_a_declined_request_leaves_them_contacts_and_can_be_asked_again(client):
+    a_h, a_id = await _account(client, "decl-a")
+    b_h, b_id = await _account(client, "decl-b")
+    await _contact(client, a_h, b_id)
+    await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    request_id = (await _close_of(client, b_h, a_id))["id"]
+
+    declined = await client.post(f"/api/me/close/{request_id}/decline", headers=b_h)
+    assert declined.status_code == 200, declined.text
+    assert await _contact_state(client, a_h, b_id) == "connection"
+    assert await _close_of(client, b_h, a_id) is None
+
+    again = await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    assert again.status_code == 201
+    assert again.json()["id"] != request_id
+
+
+async def test_asking_back_is_accepting(client):
+    a_h, a_id = await _account(client, "back-and-forth-a")
+    b_h, b_id = await _account(client, "back-and-forth-b")
+    await _contact(client, a_h, b_id)
+    await _contact(client, b_h, a_id)
+    await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+
+    answered = await client.post("/api/me/close", headers=b_h, json={"user_id": a_id})
     assert answered.json()["state"] == "close"
-    a_list = await client.get("/api/me/connections", headers=a_h)
-    row = next(c for c in a_list.json() if c["connected_user_id"] == b_id)
-    assert row["state"] == "close"
+    assert await _contact_state(client, a_h, b_id) == "close"
 
 
-async def test_stepping_back_from_close_breaks_it_for_both(client):
-    """Closeness needs both halves, so withdrawing one is enough to end it —
-    and the other side's own tier is left alone, because it is theirs."""
-    a_h, a_id = await _account(client, "back-a")
-    b_h, b_id = await _account(client, "back-b")
-    await client.post("/api/me/connections", headers=a_h, json={"user_id": b_id})
-    await client.post("/api/me/connections", headers=b_h, json={"user_id": a_id})
-    await client.patch(
-        f"/api/me/connections/{b_id}", headers=a_h, json={"tier": "close"}
+async def test_asking_twice_is_one_request(client):
+    a_h, _ = await _account(client, "twice-a")
+    _, b_id = await _account(client, "twice-b")
+    await _contact(client, a_h, b_id)
+    first = await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    second = await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    assert first.json()["id"] == second.json()["id"]
+
+
+async def test_either_side_ends_closeness(client):
+    a_h, a_id = await _account(client, "end-a")
+    b_h, b_id = await _account(client, "end-b")
+    await _contact(client, a_h, b_id)
+    await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    await client.post(
+        f"/api/me/close/{(await _close_of(client, b_h, a_id))['id']}/accept", headers=b_h
     )
-    await client.patch(
-        f"/api/me/connections/{a_id}", headers=b_h, json={"tier": "close"}
-    )
 
-    stepped = await client.patch(
-        f"/api/me/connections/{b_id}", headers=a_h, json={"tier": "connection"}
-    )
-    assert stepped.json()["state"] == "connection"
-    b_list = await client.get("/api/me/connections", headers=b_h)
-    row = next(c for c in b_list.json() if c["connected_user_id"] == a_id)
-    assert row["tier"] == "close"
-    assert row["state"] == "close_pending"
+    ended = await client.delete(f"/api/me/close/{a_id}", headers=b_h)
+    assert ended.status_code == 204
+    assert await _contact_state(client, a_h, b_id) == "connection"
+    assert await _close_of(client, a_h, b_id) is None
+    # Nothing left to end.
+    assert (await client.delete(f"/api/me/close/{b_id}", headers=a_h)).status_code == 404
 
 
-async def test_unknown_tier_is_refused(client):
-    mine, _ = await _account(client, "tier-typo")
-    _, their_id = await _account(client, "tier-target")
-    await client.post("/api/me/connections", headers=mine, json={"user_id": their_id})
-    r = await client.patch(
-        f"/api/me/connections/{their_id}", headers=mine, json={"tier": "family"}
-    )
-    assert r.status_code == 422
+async def test_only_the_person_asked_answers(client):
+    a_h, a_id = await _account(client, "ask-a")
+    b_h, b_id = await _account(client, "ask-b")
+    stranger, _ = await _account(client, "ask-stranger")
+    await _contact(client, a_h, b_id)
+    request_id = (
+        await client.post("/api/me/close", headers=a_h, json={"user_id": b_id})
+    ).json()["id"]
+
+    for hdr in (a_h, stranger):
+        r = await client.post(f"/api/me/close/{request_id}/accept", headers=hdr)
+        assert r.status_code == 404, r.text
+    assert (await _close_of(client, b_h, a_id))["state"] == "close_requested"
 
 
 async def test_contacts_are_searchable_by_name(client):

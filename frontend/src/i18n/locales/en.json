@@ -420,10 +420,15 @@
     "close": "Close",
     "contact": "Contact",
     "add": "Add to contacts",
-    "makeClose": "Mark as close",
+    "makeClose": "Offer to be close",
     "closePending": "Waiting for their answer",
-    "stepBack": "Back to contact",
-    "remove": "Remove from contacts"
+    "stepBack": "No longer close",
+    "remove": "Remove from contacts",
+    "cancelRequest": "Withdraw the request",
+    "requested": "Wants to be close",
+    "incomingTitle": "Asking to be close",
+    "closeAccept": "Accept",
+    "closeDecline": "Decline"
   },
   "safe": {
     "title": "My files",

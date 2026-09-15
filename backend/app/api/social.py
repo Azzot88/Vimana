@@ -15,16 +15,18 @@ from app.core.contacts import normalize
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.social import (
-    TIERS,
     add_connection as add_contact,
+    close_states,
     closeness,
-    pair_state,
+    open_pair,
+    open_pairs,
+    state_of,
 )
 from app.core.trust import add_invited
 from app.models.contact import UserContact
-from app.models.social import Connection, InviteLink
+from app.models.social import ClosePair, Connection, InviteLink
 from app.models.user import User
-from app.schemas.social import ConnectionOut, InviteLinkOut, MyInviteOut
+from app.schemas.social import ClosePairOut, ConnectionOut, InviteLinkOut, MyInviteOut
 
 router = APIRouter()
 
@@ -184,23 +186,10 @@ async def list_connections(
         )
     connections = list((await db.execute(stmt)).scalars().all())
 
-    # Their half of every row, in one query. Closeness is mutual, so a list that
-    # showed only my tier would call a one-sided declaration «close» — which is
-    # precisely the claim the model refuses to let one person make.
-    theirs: dict[uuid.UUID, str] = {}
-    if connections:
-        theirs = dict(
-            (
-                await db.execute(
-                    select(Connection.user_id, Connection.tier).where(
-                        Connection.connected_user_id == current_user.id,
-                        Connection.user_id.in_(
-                            [c.connected_user_id for c in connections]
-                        ),
-                    )
-                )
-            ).all()
-        )
+    # T3.12.06 — closeness of every row, in one query over `close_pairs`.
+    states = await close_states(
+        db, current_user.id, [c.connected_user_id for c in connections]
+    )
 
     return [
         ConnectionOut(
@@ -208,8 +197,7 @@ async def list_connections(
             connected_user_id=c.connected_user_id,
             connected_user=c.connected_user,
             created_at=c.created_at,
-            tier=c.tier,
-            state=pair_state(c.tier, theirs.get(c.connected_user_id)),
+            state=states.get(c.connected_user_id, "connection"),
         )
         for c in connections
     ]
@@ -250,7 +238,6 @@ async def add_connection(
         connected_user_id=row.connected_user_id,
         connected_user=row.connected_user,
         created_at=row.created_at,
-        tier=row.tier,
         state=await closeness(db, current_user.id, row.connected_user_id),
     )
 
@@ -276,57 +263,140 @@ async def remove_connection(
     await db.commit()
 
 
-class TierBody(BaseModel):
-    tier: str
+# ── T3.12.06 · close people: asked, and answered ───────────────────────────
 
 
-@router.patch("/me/connections/{user_id}", response_model=ConnectionOut)
-async def set_tier(
-    user_id: uuid.UUID,
-    body: TierBody,
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+async def _close_out(db: AsyncSession, pair: ClosePair, me: uuid.UUID) -> ClosePairOut:
+    other_id = pair.addressee_id if pair.requester_id == me else pair.requester_id
+    other = await db.get(User, other_id)
+    return ClosePairOut(
+        id=pair.id,
+        user_id=other_id,
+        display_name=other.display_name if other else None,
+        handle=other.handle if other else None,
+        state=state_of(pair, me),
+        requested_at=pair.requested_at,
+        accepted_at=pair.accepted_at,
+    )
+
+
+async def _request_for_me(db: AsyncSession, pair_id: uuid.UUID, me: uuid.UUID) -> ClosePair:
+    """A request is answered only by the person it was made to. Anybody else's
+    is not found rather than forbidden: its existence is not theirs to learn."""
+    pair = await db.get(ClosePair, pair_id)
+    if pair is None or pair.addressee_id != me:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if pair.accepted_at or pair.declined_at or pair.ended_at:
+        raise HTTPException(status_code=409, detail="This request is no longer open")
+    return pair
+
+
+class CloseBody(BaseModel):
+    user_id: uuid.UUID
+
+
+@router.get("/me/close", response_model=list[ClosePairOut])
+async def list_close(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """T3.11.24 — mark a contact close, or step back to an acquaintance.
+    """My close people, the requests I made, and the requests made of me."""
+    return [
+        await _close_out(db, pair, current_user.id)
+        for pair in await open_pairs(db, current_user.id)
+    ]
 
-    **Closeness is mutual or it is nothing**, and this endpoint is where that is
-    enforced rather than hinted at. Two refusals live here on purpose:
 
-    - a stranger cannot be made close, because closeness upgrades a
-      relationship that has to exist first (`404`);
-    - saying «close» about someone who has not said it back stores the tier but
-      **does not make the pair close** — the answer says `close_pending`, which
-      is what actually happened.
+@router.post("/me/close", response_model=ClosePairOut, status_code=201)
+async def request_close(
+    body: CloseBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Ask a contact to be close.
 
-    A hidden button would have been the wrong shape for both: the API is what a
-    second client, a script or a future mobile app talks to, and a rule that
-    lives in a disabled button is a rule that holds only for this frontend.
+    Only of somebody already in my contacts (owner, 2026-09-14) — refused by the
+    API, not by a hidden button. Asking somebody who has already asked me is the
+    answer to their request: both have said it. Asking twice is the same request.
     """
-    if body.tier not in TIERS:
-        raise HTTPException(status_code=422, detail=f"Unknown tier: {body.tier}")
-    row = (
+    if body.user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot be close to yourself")
+    contact = (
         await db.execute(
-            select(Connection).where(
+            select(Connection.id).where(
                 Connection.user_id == current_user.id,
-                Connection.connected_user_id == user_id,
+                Connection.connected_user_id == body.user_id,
             )
         )
-    ).scalar_one_or_none()
-    if row is None:
-        raise HTTPException(
-            status_code=404, detail="Add them to your contacts first"
-        )
-    row.tier = body.tier
+    ).first()
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Add them to your contacts first")
+
+    pair = await open_pair(db, current_user.id, body.user_id)
+    if pair is None:
+        pair = ClosePair(requester_id=current_user.id, addressee_id=body.user_id)
+        db.add(pair)
+        try:
+            await db.commit()
+        except IntegrityError:
+            # Both asked at once: the unique open-pair index let one through.
+            await db.rollback()
+            pair = await open_pair(db, current_user.id, body.user_id)
+    if pair is not None and pair.accepted_at is None and pair.addressee_id == current_user.id:
+        pair.accepted_at = _now()
+        await db.commit()
+    await db.refresh(pair)
+    return await _close_out(db, pair, current_user.id)
+
+
+@router.post("/me/close/{pair_id}/accept", response_model=ClosePairOut)
+async def accept_close(
+    pair_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    pair = await _request_for_me(db, pair_id, current_user.id)
+    pair.accepted_at = _now()
     await db.commit()
-    await db.refresh(row, ["connected_user"])
-    return ConnectionOut(
-        id=row.id,
-        connected_user_id=row.connected_user_id,
-        connected_user=row.connected_user,
-        created_at=row.created_at,
-        tier=row.tier,
-        state=await closeness(db, current_user.id, user_id),
-    )
+    await db.refresh(pair)
+    return await _close_out(db, pair, current_user.id)
+
+
+@router.post("/me/close/{pair_id}/decline", response_model=ClosePairOut)
+async def decline_close(
+    pair_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    pair = await _request_for_me(db, pair_id, current_user.id)
+    pair.declined_at = _now()
+    await db.commit()
+    await db.refresh(pair)
+    return await _close_out(db, pair, current_user.id)
+
+
+@router.delete("/me/close/{user_id}", status_code=204)
+async def end_close(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """End it from either side: stop being close, withdraw my request, or turn
+    down theirs. The path names a person; the row touched is always one the
+    caller is in, so a stranger gets 404 by construction."""
+    pair = await open_pair(db, current_user.id, user_id)
+    if pair is None:
+        raise HTTPException(status_code=404, detail="Nothing between you to end")
+    if pair.accepted_at is None and pair.addressee_id == current_user.id:
+        pair.declined_at = _now()
+    else:
+        pair.ended_at = _now()
+        pair.ended_by_id = current_user.id
+    await db.commit()
 
 
 class FoundUser(BaseModel):

@@ -373,10 +373,15 @@
     "close": "Cercano",
     "contact": "Contacto",
     "add": "Añadir a contactos",
-    "makeClose": "Marcar como cercano",
+    "makeClose": "Proponer ser cercanos",
     "closePending": "Esperando su respuesta",
-    "stepBack": "Contacto normal",
-    "remove": "Quitar de contactos"
+    "stepBack": "Ya no somos cercanos",
+    "remove": "Quitar de contactos",
+    "cancelRequest": "Retirar la solicitud",
+    "requested": "Quiere ser cercano",
+    "incomingTitle": "Te piden ser cercanos",
+    "closeAccept": "Aceptar",
+    "closeDecline": "Rechazar"
   },
   "safe": {
     "title": "Mis archivos",

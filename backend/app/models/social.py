@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -34,18 +34,9 @@ class Connection(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     connected_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     invite_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    # T3.11.24 — how close this person is, as *this* user sees it (owner's
-    # definition 2026-09-07): «Контакты — просто знакомые… Близкие — те, кому
-    # доверяешь».
-    #
-    # **The row is directed and the tier is directed with it.** A contact may be
-    # one-way — you can keep someone in your list who has not kept you in
-    # theirs, and that is the ordinary case for a carrier you liked. Closeness
-    # cannot: a pair is close only when *both* rows say `close`, so this column
-    # is one half of a claim and never the whole of it. `core.social.closeness`
-    # is the only place that reads both halves; nothing else should ask a single
-    # row whether two people are close, because a single row cannot know.
-    tier: Mapped[str] = mapped_column(String(16), default="connection")
+    # T3.12.06 — the row is a contact and nothing more: one-way, «просто
+    # знакомые». Closeness moved out to `ClosePair` (`0095`); the `tier` that
+    # used to live here is gone.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -53,3 +44,55 @@ class Connection(Base):
     connected_user: Mapped["User"] = relationship(
         "User", foreign_keys=[connected_user_id], lazy="raise"
     )
+
+
+class ClosePair(Base):
+    """T3.12.06 — two people close to each other, as a thing of its own.
+
+    Owner (`IMPLEMENTATIONPLAN §3.12.3` п. 6; answers 2026-09-14): contacts are a
+    one-way list, and closeness is a different mechanism — **asked and
+    accepted**. It used to be a `tier` on each directed contact row, the pair
+    close when both rows happened to say so: a coincidence of two settings
+    rather than an answer one person gave another. Now one asks, the other
+    accepts or declines, and either of them can end it.
+
+    Asked only of somebody already in the asker's contacts (owner, 2026-09-14).
+
+    One row per request. A pair has at most one **open** row — pending or
+    accepted — whoever asked (`uq_close_pairs_open`, over the unordered pair). A
+    declined or ended row stays as the record; asking again is a new row.
+    """
+
+    __tablename__ = "close_pairs"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    requester_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    addressee_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    declined_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    ended_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+Index(
+    "uq_close_pairs_open",
+    func.least(ClosePair.requester_id, ClosePair.addressee_id),
+    func.greatest(ClosePair.requester_id, ClosePair.addressee_id),
+    unique=True,
+    postgresql_where=text("declined_at IS NULL AND ended_at IS NULL"),
+)

@@ -36,8 +36,7 @@ export interface ConnectedUser {
  * the old shape anyway.
  */
 export interface Connection {
-  /** T3.11.24 — see `ConnectionTier` / `ConnectionState` below. */
-  tier?: ConnectionTier
+  /** T3.12.06 — see `ConnectionState` below. */
   state?: ConnectionState
   id: string
   connected_user_id: string
@@ -65,10 +64,9 @@ export const listMyInvites = () =>
 export const listConnections = () =>
   api.get<Connection[]>('/api/me/connections')
 
-/** T3.11.24 — `tier` is what I said about them, `state` is what is true of the
- *  pair. They differ while a close request is unanswered. */
-export type ConnectionTier = 'connection' | 'close'
-export type ConnectionState = 'none' | 'connection' | 'close_pending' | 'close'
+/** T3.12.06 — what is true between two people: a contact, a request one way or
+ *  the other, or close. Closeness is asked and accepted, never declared. */
+export type ConnectionState = 'connection' | 'close_pending' | 'close_requested' | 'close'
 
 export const addConnection = (userId: string) =>
   api.post<Connection>('/api/me/connections', { user_id: userId })
@@ -76,8 +74,31 @@ export const addConnection = (userId: string) =>
 export const removeConnection = (userId: string) =>
   api.delete<void>(`/api/me/connections/${userId}`)
 
-export const setConnectionTier = (userId: string, tier: ConnectionTier) =>
-  api.patch<Connection>(`/api/me/connections/${userId}`, { tier })
+/** T3.12.06 — one close person, or one request, from my side. */
+export interface ClosePair {
+  id: string
+  user_id: string
+  display_name: string | null
+  handle: string | null
+  state: 'close' | 'close_pending' | 'close_requested' | 'none'
+  requested_at: string
+  accepted_at: string | null
+}
+
+export const listClose = () => api.get<ClosePair[]>('/api/me/close')
+
+/** Ask a contact to be close. Asking somebody who asked me is accepting. */
+export const requestClose = (userId: string) =>
+  api.post<ClosePair>('/api/me/close', { user_id: userId })
+
+export const acceptClose = (pairId: string) =>
+  api.post<ClosePair>(`/api/me/close/${pairId}/accept`)
+
+export const declineClose = (pairId: string) =>
+  api.post<ClosePair>(`/api/me/close/${pairId}/decline`)
+
+/** End it from my side: no longer close, withdraw my request, or turn down theirs. */
+export const endClose = (userId: string) => api.delete<void>(`/api/me/close/${userId}`)
 
 /** Search matches the display name and the public key — the two things a person
  *  has to hand when looking somebody up. */
