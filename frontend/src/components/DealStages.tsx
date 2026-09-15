@@ -186,6 +186,13 @@ export default function DealStages({
         (s) => s.key === currentKey || s.statuses.includes(status),
       ).flatMap((s) => s.kinds),
     ),
+    /* T3.12.08 — «получено как должно» exists only for a posted parcel: at
+       `posted`, or `confirmed` when the carrier was paid first. Filtered here,
+       not below, so a closed or hand-delivered deal does not read as «ход
+       второй стороны» over a card nobody can raise. */
+  ).filter(
+    (kind) =>
+      kind !== 'received.as_expected' || status === 'posted' || status === 'confirmed',
   )
   /* T3.12.07 — on the receiving side the person at the door declares the
      handover. With a separate recipient that is not the sender, and the server
@@ -195,7 +202,9 @@ export default function DealStages({
   const stageKinds = liveKinds.filter(
     (kind) =>
       (kind !== 'payment.declared' || myRole === payer) &&
-      (kind !== 'delivery.declared' || myRole !== 'sender' || !separateRecipient),
+      (kind !== 'delivery.declared' || myRole !== 'sender' || !separateRecipient) &&
+      // T3.12.08 — the sender receives only when nobody else does.
+      (kind !== 'received.as_expected' || myRole !== 'sender' || !separateRecipient),
   )
   /* T3.11.27 (owner, 2026-09-12): «После того как нажата кнопка Передал
      перевозчику она должна пропадать сразу… Она должна появляться только если

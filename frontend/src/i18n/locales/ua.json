@@ -1494,7 +1494,8 @@
       "cancel_confirmed": "Скасування підтверджено",
       "terms_reconfirm_requested": "Умови потребують перепідтвердження",
       "cargo_photographed": "Фото вантажу",
-      "dispute_requested": "Прохання відкрити спір"
+      "dispute_requested": "Прохання відкрити спір",
+      "received_as_expected": "Отримано як слід"
     },
     "field": {
       "method": "Спосіб",
@@ -1503,6 +1504,12 @@
       "window_minutes": "Вікно, хв",
       "postal_service": "Служба доставки",
       "tracking_number": "Трек-номер",
+      "postage_cost": "Вартість пересилання",
+      "postage_currency": "Валюта пересилання",
+      "weight_kg": "Маса на пошті, кг",
+      "length_cm": "Довжина, см",
+      "width_cm": "Ширина, см",
+      "height_cm": "Висота, см",
       "packaging": "Пакування",
       "open_on_handover": "Відкривати при передачі",
       "photo_required": "Потрібне фото",

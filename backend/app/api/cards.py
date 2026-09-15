@@ -426,6 +426,22 @@ async def _raise_card(
                 detail=f"The agreement says the {payer} pays",
             )
 
+    if kind is CardKind.received_as_expected:
+        # T3.12.08 — only a posted parcel is received this way: `posted`, or
+        # `confirmed` when the carrier was paid first and the deal stayed open.
+        if deal.status not in (DealStatus.posted, DealStatus.confirmed):
+            raise HTTPException(
+                status_code=409, detail="Nothing was posted to receive yet"
+            )
+        if (
+            creator is CardAckRole.sender
+            and deal.recipient_id is not None
+            and deal.recipient_id != deal.sender_id
+        ):
+            raise HTTPException(
+                status_code=403, detail="The recipient says what they received"
+            )
+
     # T3.11.27 (owner, 2026-09-13) — **the last check before anything is
     # written, and the point of the whole endpoint split.**
     #
@@ -480,6 +496,8 @@ async def _raise_card(
         },
         author=current_user,
     )
+    if kind is CardKind.received_as_expected:
+        await _received_as_expected(db, deal, msg, current_user)
     return msg
 
 
@@ -786,6 +804,8 @@ async def apply_acceptance(
     spec = CATALOGUE.get(CardKind(card.card_kind))
     if spec is None:
         return
+    # T3.12.08 — where the deal stood before this answer moved it.
+    previous = deal.status
 
     if spec.requires_attachment is not None:
         has_evidence = any(
@@ -838,7 +858,12 @@ async def apply_acceptance(
         # a record that shows the second without the first cannot answer when
         # the payment was agreed.
         if spec.on_accept_status is DealStatus.confirmed:
-            await _close_deal(db, deal, card, actor)
+            # T3.12.08 — paid while the parcel is in the post is «расчёт есть,
+            # получения нет» (`IMPLEMENTATIONPLAN §3.12.5` п. 4): the deal stays
+            # `confirmed`, unsealed and open to a dispute, until the receiving
+            # side says it arrived as it should.
+            if previous is not DealStatus.posted:
+                await _close_deal(db, deal, card, actor)
         # T3.12.07 — the handover in hand is also the payment when the person
         # paying is the one receiving (`D-CARGO-MODEL` (5)): nothing is left to
         # settle, so the confirmation closes the deal on the same press.
@@ -880,6 +905,35 @@ async def _close_deal(
     # `deals.confirm_deal`, so a deal closed by the pair stayed open for appends
     # forever (found 2026-09-12).
     await seal_closed_deal(db, deal, actor)
+
+
+async def _received_as_expected(
+    db: AsyncSession, deal: Deal, card: DealVaultMessage, actor: User
+) -> None:
+    """T3.12.08 — «получено как должно» ends a posted deal.
+
+    Owner, 2026-09-14: the deal closes on whichever comes last, the confirmed
+    payment or this card. Already paid (`confirmed`) — it closes and seals now.
+    Not yet — the deal moves to `delivered`, and the payment confirmation closes
+    it the way it closes any delivered deal. The carrier is never closed out of
+    their money.
+
+    Called by: `_raise_card`, after the card is written.
+    """
+    settled = deal.status is DealStatus.confirmed
+    if not settled:
+        deal.status = DealStatus.delivered
+    await db.flush()
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.received,
+        actor_id=actor.id,
+        payload={"card_kind": card.card_kind, "message_id": str(card.id)},
+        author=actor,
+    )
+    if settled:
+        await _close_deal(db, deal, card, actor)
 
 
 async def _paid_at_the_door(

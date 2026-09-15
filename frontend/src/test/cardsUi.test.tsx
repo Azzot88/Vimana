@@ -335,6 +335,8 @@ describe('cardForms', () => {
     expect(kinds).toEqual([
       'dropoff.proposed',
       'delivery.declared',
+      // T3.12.08 — and closes a posted deal: «получено как должно».
+      'received.as_expected',
       'payment.declared',
       'issue.reported',
     ])
@@ -557,6 +559,28 @@ describe('DealStages · the late stages', () => {
     expect(
       screen.getByText(/payment made|Оплата произведена/i),
     ).toBeInTheDocument()
+  })
+
+  it('lets the receiving side close a posted deal, paid or not', () => {
+    // T3.12.08 — «получено как должно», at `posted` and at `confirmed`.
+    renderWithProviders(panel({ status: 'posted', myRole: 'sender' }))
+    expect(
+      screen.getByText(/received as expected|Получено как должно/i),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps it for a paid posted deal waiting for the parcel', () => {
+    renderWithProviders(panel({ status: 'confirmed', myRole: 'sender' }))
+    expect(
+      screen.getByText(/received as expected|Получено как должно/i),
+    ).toBeInTheDocument()
+  })
+
+  it('does not offer it for a parcel that was not posted', () => {
+    renderWithProviders(panel({ status: 'delivered', myRole: 'sender' }))
+    expect(
+      screen.queryByText(/received as expected|Получено как должно/i),
+    ).not.toBeInTheDocument()
   })
 
   it('does not offer it to the side that owes nothing', () => {

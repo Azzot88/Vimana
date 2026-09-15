@@ -520,6 +520,20 @@ async def _check_delivery_timers(limit: int, deal_ids: list | None = None) -> di
         deals = (await db.execute(query)).scalars().all()
 
         for deal in deals:
+            # T3.12.08 — the post has no timer (owner, 2026-09-14): a posted
+            # parcel moves at the postal service's pace, not the flight's.
+            posted = (
+                await db.execute(
+                    select(DealVaultMessage.id)
+                    .where(
+                        DealVaultMessage.deal_id == deal.id,
+                        DealVaultMessage.card_kind == CardKind.posted_confirmed.value,
+                    )
+                    .limit(1)
+                )
+            ).first()
+            if posted is not None:
+                continue
             arrival = await _delivery_arrival(db, deal)
             if arrival is None or arrival > now:
                 continue

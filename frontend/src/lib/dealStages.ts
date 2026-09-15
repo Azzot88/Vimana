@@ -120,7 +120,8 @@ export const DEAL_STAGES: DealStage[] = [
   {
     key: 'delivery',
     statuses: ['posted', 'delivered'],
-    kinds: [],
+    // T3.12.08 — the posted parcel is received with one card.
+    kinds: ['received.as_expected'],
   },
   {
     key: 'payment',
@@ -131,7 +132,9 @@ export const DEAL_STAGES: DealStage[] = [
     statuses: ['posted', 'delivered'],
     kinds: ['payment.declared'],
   },
-  { key: 'closed', statuses: ['confirmed', 'closed'], kinds: [] },
+  // T3.12.08 — `confirmed` stands still only for a posted deal paid before it
+  // arrived; it is closed by the receiving side's card.
+  { key: 'closed', statuses: ['confirmed', 'closed'], kinds: ['received.as_expected'] },
 ]
 
 /** Never gated by stage: a problem and a cancellation are needed exactly when

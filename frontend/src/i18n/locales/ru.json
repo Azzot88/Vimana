@@ -1639,7 +1639,8 @@
       "cancel_confirmed": "Отмена подтверждена",
       "terms_reconfirm_requested": "Условия требуют переподтверждения",
       "cargo_photographed": "Фото груза",
-      "dispute_requested": "Просьба открыть спор"
+      "dispute_requested": "Просьба открыть спор",
+      "received_as_expected": "Получено как должно"
     },
     "field": {
       "method": "Способ",
@@ -1648,6 +1649,12 @@
       "window_minutes": "Окно, мин",
       "postal_service": "Служба доставки",
       "tracking_number": "Трек-номер",
+      "postage_cost": "Стоимость пересылки",
+      "postage_currency": "Валюта пересылки",
+      "weight_kg": "Масса по почте, кг",
+      "length_cm": "Длина, см",
+      "width_cm": "Ширина, см",
+      "height_cm": "Высота, см",
       "packaging": "Упаковка",
       "open_on_handover": "Вскрывать при передаче",
       "photo_required": "Нужно фото",

@@ -1485,7 +1485,8 @@
       "cancel_confirmed": "Annulation confirmée",
       "terms_reconfirm_requested": "Conditions à reconfirmer",
       "cargo_photographed": "Photos du colis",
-      "dispute_requested": "Demande d’ouvrir un litige"
+      "dispute_requested": "Demande d’ouvrir un litige",
+      "received_as_expected": "Reçu comme prévu"
     },
     "field": {
       "method": "Méthode",
@@ -1494,6 +1495,12 @@
       "window_minutes": "Fenêtre, min",
       "postal_service": "Service postal",
       "tracking_number": "Numéro de suivi",
+      "postage_cost": "Frais d’envoi",
+      "postage_currency": "Devise de l’envoi",
+      "weight_kg": "Poids accepté, kg",
+      "length_cm": "Longueur, cm",
+      "width_cm": "Largeur, cm",
+      "height_cm": "Hauteur, cm",
       "packaging": "Emballage",
       "open_on_handover": "Ouvrir à la remise",
       "photo_required": "Photo obligatoire",

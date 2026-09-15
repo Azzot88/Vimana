@@ -1488,7 +1488,8 @@
       "cancel_confirmed": "Anulowanie potwierdzone",
       "terms_reconfirm_requested": "Warunki wymagają potwierdzenia",
       "cargo_photographed": "Zdjęcia ładunku",
-      "dispute_requested": "Prośba o otwarcie sporu"
+      "dispute_requested": "Prośba o otwarcie sporu",
+      "received_as_expected": "Odebrano zgodnie z umową"
     },
     "field": {
       "method": "Sposób",
@@ -1497,6 +1498,12 @@
       "window_minutes": "Okno, min",
       "postal_service": "Firma kurierska",
       "tracking_number": "Numer przesyłki",
+      "postage_cost": "Koszt przesyłki",
+      "postage_currency": "Waluta przesyłki",
+      "weight_kg": "Waga przyjęta, kg",
+      "length_cm": "Długość, cm",
+      "width_cm": "Szerokość, cm",
+      "height_cm": "Wysokość, cm",
       "packaging": "Opakowanie",
       "open_on_handover": "Otworzyć przy przekazaniu",
       "photo_required": "Wymagane zdjęcie",

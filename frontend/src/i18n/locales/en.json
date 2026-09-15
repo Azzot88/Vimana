@@ -1634,7 +1634,8 @@
       "cancel_confirmed": "Cancellation confirmed",
       "terms_reconfirm_requested": "Terms need reconfirming",
       "cargo_photographed": "Photos of the cargo",
-      "dispute_requested": "Asked to open a dispute"
+      "dispute_requested": "Asked to open a dispute",
+      "received_as_expected": "Received as expected"
     },
     "field": {
       "method": "Method",
@@ -1643,6 +1644,12 @@
       "window_minutes": "Window, min",
       "postal_service": "Postal service",
       "tracking_number": "Tracking number",
+      "postage_cost": "Postage",
+      "postage_currency": "Postage currency",
+      "weight_kg": "Weight accepted, kg",
+      "length_cm": "Length, cm",
+      "width_cm": "Width, cm",
+      "height_cm": "Height, cm",
       "packaging": "Packaging",
       "open_on_handover": "Open on handover",
       "photo_required": "Photo required",

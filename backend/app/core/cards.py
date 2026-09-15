@@ -79,6 +79,8 @@ class CardKind(str, enum.Enum):
     posted_confirmed = "posted.confirmed"
     delivery_declared = "delivery.declared"
     delivery_confirmed = "delivery.confirmed"
+    # T3.12.08 — the receiving side ends a posted deal: «получено как должно».
+    received_as_expected = "received.as_expected"
 
     # Group 4 — settlement (T3.38; escrow parts land in Phase 5)
     payment_method_agreed = "payment.method_agreed"
@@ -282,6 +284,16 @@ CATALOGUE: dict[CardKind, CardSpec] = {
            on_accept_emit=CardKind.delivery_confirmed,
            implemented=True),
         _s(CardKind.delivery_confirmed, "custody", implemented=True),
+        # T3.12.08 — «расчёт есть, получения нет» ends here (`IMPLEMENTATIONPLAN
+        # §3.12.5` п. 4). One card and nobody answers it (owner, 2026-09-14): it
+        # is the receiving side's word about their own parcel, and the carrier
+        # was not at the door to countersign it. The recipient raises it, or the
+        # sender when there is no separate recipient; the effect is applied at
+        # creation (`api.cards._received_as_expected`). No photo: a closing card
+        # seals the vault, and files attached after it would be refused.
+        _s(CardKind.received_as_expected, "custody",
+           creator_roles=frozenset({CardAckRole.recipient, CardAckRole.sender}),
+           implemented=True),
 
         # ── group 3a · buying to order (T3.11.17 part 2) ───────────────────
         #

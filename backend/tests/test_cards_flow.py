@@ -948,6 +948,129 @@ async def test_only_the_carrier_declares_the_posting(client, sender_headers, dea
     assert r.status_code == 403, r.text
 
 
+# ── T3.12.08 · the post: settled, not yet received ──────────────────────────────
+
+
+async def _posted(client, sender_headers, carrier_headers, deal):
+    declared = await _card_with_files(
+        client,
+        carrier_headers,
+        deal.id,
+        "posted.declared",
+        payload={"postal_service": "СДЭК", "tracking_number": "RU1234567890"},
+    )
+    assert declared.status_code == 201, declared.text
+    acked = await _ack(client, sender_headers, deal.id, declared.json()["id"])
+    assert acked.status_code == 200, acked.text
+
+
+async def _paid(client, sender_headers, carrier_headers, deal):
+    declared = await _card(
+        client, sender_headers, deal.id, "payment.declared",
+        {"amount": 120, "currency": "USD", "method": "cash_on_delivery"},
+    )
+    assert declared.status_code == 201, declared.text
+    acked = await _ack(client, carrier_headers, deal.id, declared.json()["id"])
+    assert acked.status_code == 200, acked.text
+
+
+async def test_posting_carries_what_the_post_accepted(client, carrier_headers, deal):
+    """`IMPLEMENTATIONPLAN §3.12.5` п. 2 — cost, weight and size as the post
+    office took them, all optional (owner, 2026-09-14)."""
+    accepted = {
+        "postal_service": "СДЭК",
+        "tracking_number": "RU1234567890",
+        "postage_cost": 12.5,
+        "postage_currency": "EUR",
+        "weight_kg": 1.2,
+        "length_cm": 30,
+        "width_cm": 20,
+        "height_cm": 10,
+    }
+    r = await _card_with_files(
+        client, carrier_headers, deal.id, "posted.declared", payload=accepted
+    )
+    assert r.status_code == 201, r.text
+    payload = r.json()["card_payload"]
+    assert payload["postage_cost"] == 12.5
+    assert payload["weight_kg"] == 1.2
+    assert payload["height_cm"] == 10
+
+    bad = await _card_with_files(
+        client, carrier_headers, deal.id, "posted.declared",
+        payload={**accepted, "weight_kg": -1},
+    )
+    assert bad.status_code == 422, bad.text
+
+
+async def test_settling_a_posted_deal_does_not_close_it(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """«Расчёт есть, получения нет»: the carrier is paid after the match is
+    confirmed, and the deal stays open — unsealed — for a dispute."""
+    from app.models.deal import Deal
+
+    await _posted(client, sender_headers, carrier_headers, deal)
+    await _paid(client, sender_headers, carrier_headers, deal)
+
+    assert await _status(client, sender_headers, deal.id) == "confirmed"
+    async with session_maker() as db:
+        assert (await db.get(Deal, deal.id)).sealed_at is None
+
+
+async def test_the_recipient_closes_a_paid_posted_deal(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    from app.models.deal import Deal
+
+    recipient = await _recipient_on(client, session_maker, deal, prefix="post-rcp")
+    await _posted(client, sender_headers, carrier_headers, deal)
+    await _paid(client, sender_headers, carrier_headers, deal)
+
+    r = await _card(client, recipient, deal.id, "received.as_expected")
+    assert r.status_code == 201, r.text
+    # Nobody answers it: it is the recipient's word about their own parcel.
+    assert r.json()["requires_ack_by"] is None
+
+    assert await _status(client, sender_headers, deal.id) == "closed"
+    async with session_maker() as db:
+        assert (await db.get(Deal, deal.id)).sealed_at is not None
+
+
+async def test_received_before_the_money_waits_for_it(
+    client, sender_headers, carrier_headers, deal
+):
+    """Owner, 2026-09-14: the deal closes on whichever comes last. Received first,
+    it waits for the carrier's money instead of closing them out of it."""
+    await _posted(client, sender_headers, carrier_headers, deal)
+
+    r = await _card(client, sender_headers, deal.id, "received.as_expected")
+    assert r.status_code == 201, r.text
+    assert await _status(client, sender_headers, deal.id) == "delivered"
+
+    await _paid(client, sender_headers, carrier_headers, deal)
+    assert await _status(client, sender_headers, deal.id) == "closed"
+
+
+async def test_the_sender_does_not_receive_for_a_separate_recipient(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    await _recipient_on(client, session_maker, deal, prefix="post-rcp2")
+    await _posted(client, sender_headers, carrier_headers, deal)
+
+    r = await _card(client, sender_headers, deal.id, "received.as_expected")
+    assert r.status_code == 403, r.text
+
+
+async def test_nothing_is_received_before_it_is_posted(
+    client, sender_headers, carrier_headers, deal
+):
+    r = await _card(client, sender_headers, deal.id, "received.as_expected")
+    assert r.status_code == 409, r.text
+    carrier = await _card(client, carrier_headers, deal.id, "received.as_expected")
+    assert carrier.status_code == 403, carrier.text
+
+
 async def test_deal_detail_carries_what_the_board_form_answered(
     client, sender_headers, deal
 ):

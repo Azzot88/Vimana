@@ -144,6 +144,14 @@ export const CARD_FORMS: CardFormSpec[] = [
     fields: [
       { name: 'postal_service', type: 'text', required: true },
       { name: 'tracking_number', type: 'text', required: true },
+      /* T3.12.08 — what the post office accepted, so the other side compares it
+         with the cargo before confirming. Optional (owner, 2026-09-14). */
+      { name: 'postage_cost', type: 'number' },
+      { name: 'postage_currency', type: 'text' },
+      { name: 'weight_kg', type: 'number' },
+      { name: 'length_cm', type: 'number' },
+      { name: 'width_cm', type: 'number' },
+      { name: 'height_cm', type: 'number' },
     ],
     needsPhoto: 'pre_seal_photo',
     hasText: true,
@@ -159,6 +167,15 @@ export const CARD_FORMS: CardFormSpec[] = [
       { name: 'method', type: 'select', options: HANDOVER_METHODS, required: true },
     ],
     optionalPhoto: 'receipt_photo',
+    hasText: true,
+  },
+  {
+    /* T3.12.08 — «получено как должно» ends a posted deal. The receiving side's
+       word, answered by nobody (owner, 2026-09-14); the sender raises it only
+       when there is no separate recipient — `DealStages` narrows that. */
+    kind: 'received.as_expected',
+    roles: ['recipient', 'sender'],
+    fields: [],
     hasText: true,
   },
   {

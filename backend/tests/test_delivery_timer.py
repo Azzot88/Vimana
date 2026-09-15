@@ -190,3 +190,20 @@ async def test_the_timer_is_a_setting_of_the_account(client, sender_headers):
         "/api/auth/me", headers=sender_headers, json={"delivery_timeout_hours": 1}
     )
     assert too_short.status_code == 422
+
+
+async def test_the_post_has_no_timer(client, carrier_headers, session_maker, deal):
+    """T3.12.08 — owner, 2026-09-14: a posted parcel moves at the postal
+    service's pace, and its silence is not sent to an arbiter."""
+    from app.models.deal import Deal, DealStatus, DealVaultMessage
+
+    await _landed(client, carrier_headers, session_maker, deal, hours_ago=200)
+    async with session_maker() as db:
+        db.add(
+            DealVaultMessage(
+                deal_id=deal.id, is_system=True, card_kind="posted.confirmed"
+            )
+        )
+        (await db.get(Deal, deal.id)).status = DealStatus.delivered
+        await db.commit()
+    assert await _sweep(deal) == {"reminded": 0, "opened": 0}

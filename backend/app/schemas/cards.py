@@ -128,6 +128,15 @@ class PostedDeclared(BaseModel):
 
     postal_service: str = Field(min_length=1, max_length=120)
     tracking_number: str = Field(min_length=1, max_length=64)
+    # T3.12.08 — what the post office accepted (`IMPLEMENTATIONPLAN §3.12.5`
+    # п. 2), so the other side can compare it with the cargo before confirming.
+    # All optional (owner, 2026-09-14): not every service prints them.
+    postage_cost: float | None = Field(default=None, gt=0, le=100000)
+    postage_currency: str | None = Field(default=None, min_length=3, max_length=4)
+    weight_kg: float | None = Field(default=None, gt=0, le=100)
+    length_cm: float | None = Field(default=None, gt=0, le=1000)
+    width_cm: float | None = Field(default=None, gt=0, le=1000)
+    height_cm: float | None = Field(default=None, gt=0, le=1000)
 
 
 class DeliveryDeclared(BaseModel):
