@@ -1,6 +1,7 @@
 """T1.23 — arbiter role, User Zero, invite-only DealVault access."""
 import uuid as uuidlib
 from datetime import datetime, timedelta, timezone
+from tests.conftest import take_dispute
 
 import pytest
 import pytest_asyncio
@@ -145,9 +146,7 @@ async def test_arbiter_reads_vault_after_claim_writes_audit(
     dispute_id = dispute_resp.json()["id"]
 
     # Arbiter claims it
-    claim = await client.post(
-        f"/api/disputes/{dispute_id}/claim", headers=arbiter_user["headers"]
-    )
+    claim = await take_dispute(client, dispute_id, arbiter_user["headers"])
     assert claim.status_code == 200
 
     # Arbiter reads DealVault — should succeed + write audit + system-message
@@ -185,9 +184,7 @@ async def test_arbiter_cannot_claim_own_deal(client, carrier_headers, sender_hea
             json={"reason": "other", "details": "self-dispute"},
         )
         dispute_id = dispute_resp.json()["id"]
-        claim = await client.post(
-            f"/api/disputes/{dispute_id}/claim", headers=sender_headers
-        )
+        claim = await take_dispute(client, dispute_id, sender_headers)
         assert claim.status_code == 403
     finally:
         async with session_maker() as db:

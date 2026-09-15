@@ -38,6 +38,9 @@
     "promoteError": "Nie udało się zaktualizować roli",
     "vaultError": "Nie udało się otworzyć czatu",
     "claim": "Przejmij",
+    "accept": "Przyjmij",
+    "decline": "Odmów",
+    "offeredToYou": "Zaproponowany tobie — przyjmij lub odmów",
     "resolve": "Rozstrzygnij",
     "submitVerdict": "Zapisz werdykt",
     "verdictPlaceholder": "Werdykt…",
@@ -1416,7 +1419,8 @@
       "fees": "Opłaty",
       "bond": "Kaucja przewoźnika",
       "premium": "Premium",
-      "deals": "Transakcje"
+      "deals": "Transakcje",
+      "arbitration": "Arbitraż"
     },
     "newValue": "Nowa wartość"
   },

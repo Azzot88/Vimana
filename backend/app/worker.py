@@ -82,6 +82,11 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.cleanup.check_delivery_timers",
         "schedule": 3600.0,
     },
+    # T3.12.09 — an arbiter's unanswered offer passes to the next one.
+    "reassign-arbiters-hourly": {
+        "task": "app.tasks.cleanup.reassign_arbiters",
+        "schedule": 3600.0,
+    },
     # T3.11.07 — checks the vendored payment catalogue and **reports**; writing
     # stays a human act (`app.cli.refresh_payment_systems --write`). Monthly,
     # because a list of payment services moves at the speed of the payments

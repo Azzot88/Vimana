@@ -54,6 +54,9 @@
     "promoteError": "Failed to update role",
     "vaultError": "Failed to open vault",
     "claim": "Claim",
+    "accept": "Accept",
+    "decline": "Decline",
+    "offeredToYou": "Offered to you — accept or decline",
     "resolve": "Resolve",
     "submitVerdict": "Save verdict",
     "verdictPlaceholder": "Verdict…",
@@ -1551,7 +1554,8 @@
       "fees": "Fees",
       "bond": "Carrier bond",
       "premium": "Premium",
-      "deals": "Deals"
+      "deals": "Deals",
+      "arbitration": "Arbitration"
     },
     "newValue": "New value"
   },

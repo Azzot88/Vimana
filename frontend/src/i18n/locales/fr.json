@@ -38,6 +38,9 @@
     "promoteError": "Impossible de mettre à jour le rôle",
     "vaultError": "Impossible d'ouvrir le chat",
     "claim": "Prendre",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "offeredToYou": "Proposé à vous — acceptez ou refusez",
     "resolve": "Trancher",
     "submitVerdict": "Enregistrer le verdict",
     "verdictPlaceholder": "Verdict…",
@@ -1414,7 +1417,8 @@
       "fees": "Frais",
       "bond": "Caution du transporteur",
       "premium": "Premium",
-      "deals": "Accords"
+      "deals": "Accords",
+      "arbitration": "Arbitrage"
     },
     "newValue": "Nouvelle valeur"
   },

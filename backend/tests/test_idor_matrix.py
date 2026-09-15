@@ -31,6 +31,7 @@ from __future__ import annotations
 import uuid as uuidlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from tests.conftest import take_dispute
 
 import pytest
 import pytest_asyncio
@@ -288,6 +289,13 @@ MATRIX: dict[tuple[str, str], Case] = {
     ),
     ("POST", "/api/disputes/{dispute_id}/claim"): Case(
         DENIED, "arbiter-only permission"
+    ),
+    # T3.12.09 — the pool's offer is answered only by the arbiter it was made to.
+    ("POST", "/api/disputes/{dispute_id}/accept"): Case(
+        DENIED, "arbiter-only permission, and only the arbiter offered it"
+    ),
+    ("POST", "/api/disputes/{dispute_id}/decline"): Case(
+        DENIED, "arbiter-only permission, and only the arbiter offered it"
     ),
     ("POST", "/api/disputes/{dispute_id}/resolve"): Case(
         DENIED, "arbiter-only permission", json={"verdict": "idor probe"}
@@ -1037,9 +1045,7 @@ async def test_arbiter_loses_vault_access_when_consent_is_revoked(
     otherwise "the arbiter sees the conversation only while a party keeps it
     open" is a sentence the product cannot back.
     """
-    claim = await client.post(
-        f"/api/disputes/{disputed_deal['dispute_id']}/claim", headers=arbiter["headers"]
-    )
+    claim = await take_dispute(client, disputed_deal['dispute_id'], arbiter["headers"])
     assert claim.status_code == 200, claim.text
 
     opened = await client.get(

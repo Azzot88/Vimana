@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { isSuperuser } from '../lib/permissions'
 import {
+  acceptDispute,
   claimDispute,
+  declineDispute,
   listDisputes,
   resolveDispute,
   type Dispute,
@@ -52,6 +54,17 @@ export default function ArbiterQueue() {
     setError('')
     try {
       await claimDispute(id)
+      await load()
+    } catch {
+      setError(t('admin.claimError'))
+    }
+  }
+
+  // T3.12.09 — the pool offers a dispute to one arbiter, who answers.
+  const handleAnswer = async (id: string, accept: boolean) => {
+    setError('')
+    try {
+      await (accept ? acceptDispute(id) : declineDispute(id))
       await load()
     } catch {
       setError(t('admin.claimError'))
@@ -109,7 +122,10 @@ export default function ArbiterQueue() {
         <div className="grid gap-4">
           {disputes.map((d) => {
             const mine = d.arbiter_id === user?.id
-            const canClaim = d.status === 'open'
+            // T3.12.09 — taking from the queue exists only in `requests` mode,
+            // and the server says so per dispute.
+            const canClaim = Boolean(d.claimable)
+            const offeredToMe = d.status === 'open' && d.offered_to_id === user?.id
             const canResolve = d.status === 'claimed' && (mine || isSuperuser(user))
             return (
               <div
@@ -149,6 +165,25 @@ export default function ArbiterQueue() {
                     >
                       {t('admin.viewVault')} →
                     </Link>
+                  )}
+                  {offeredToMe && (
+                    <>
+                      <span className="text-xs font-body text-navy/60 self-center">
+                        {t('admin.offeredToYou')}
+                      </span>
+                      <button
+                        onClick={() => handleAnswer(d.id, true)}
+                        className="text-xs font-display font-medium bg-navy text-ivory px-3 py-1 rounded-field hover:bg-navy-mid"
+                      >
+                        {t('admin.accept')}
+                      </button>
+                      <button
+                        onClick={() => handleAnswer(d.id, false)}
+                        className="text-xs font-display font-medium border border-navy/20 text-navy px-3 py-1 rounded-field hover:bg-navy/5"
+                      >
+                        {t('admin.decline')}
+                      </button>
+                    </>
                   )}
                   {canClaim && (
                     <button

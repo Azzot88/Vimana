@@ -79,6 +79,11 @@ class DisputeOut(BaseModel):
     verdict: str | None
     created_at: datetime
     resolved_at: datetime | None
+    # T3.12.09 — the pool's standing offer, while the arbiter has not answered.
+    offered_to_id: uuid.UUID | None = None
+    offered_at: datetime | None = None
+    # Whether a viewer may take it themselves: `requests` mode, still open.
+    claimable: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -198,6 +203,11 @@ async def open_dispute(
         payload={"dispute_id": str(dispute.id)},
     )
 
+    # T3.12.09 — and the pool offers it to an arbiter.
+    from app.core.arbitration import offer_next
+
+    await offer_next(db, dispute)
+
     await db.commit()
     await db.refresh(dispute)
     return dispute
@@ -283,18 +293,47 @@ async def list_disputes(
     after: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
 ):
+    from sqlalchemy import and_, or_
+
+    from app.core.arbitration import REQUESTS, mode
+
+    requests_mode = await mode(db) == REQUESTS
     base = select(Dispute)
-    # Non-superuser arbiter sees only unclaimed disputes and their own claimed ones
+    # T3.12.09 — an arbiter sees their own disputes and the ones offered to
+    # them. In `requests` mode, open disputes too — except those about a deal
+    # they are a party to, excluded in the query (`§3.12.6` п. 3).
     if not is_superuser(current_user):
-        from sqlalchemy import or_
-        base = base.where(
-            or_(
-                Dispute.status == DisputeStatus.open,
-                Dispute.arbiter_id == current_user.id,
-            )
+        mine = or_(
+            Dispute.arbiter_id == current_user.id,
+            Dispute.offered_to_id == current_user.id,
         )
+        if requests_mode:
+            own_deals = select(Deal.id).where(
+                or_(
+                    Deal.sender_id == current_user.id,
+                    Deal.carrier_id == current_user.id,
+                    Deal.recipient_id == current_user.id,
+                )
+            )
+            base = base.where(
+                or_(
+                    and_(
+                        Dispute.status == DisputeStatus.open,
+                        Dispute.deal_id.not_in(own_deals),
+                    ),
+                    mine,
+                )
+            )
+        else:
+            base = base.where(mine)
     items, next_cursor = await paginate_desc(db, base, Dispute, after, clamp_limit(limit))
-    return Page(items=items, next_cursor=next_cursor)
+    outs = [
+        DisputeOut.model_validate(d).model_copy(
+            update={"claimable": requests_mode and d.status is DisputeStatus.open}
+        )
+        for d in items
+    ]
+    return Page(items=outs, next_cursor=next_cursor)
 
 
 @router.post("/disputes/{dispute_id}/claim", response_model=DisputeOut)
@@ -307,6 +346,14 @@ async def claim_dispute(
     if not dispute:
         raise HTTPException(status_code=404, detail="Dispute not found")
 
+    # T3.12.09 — taking from the common queue exists only in `requests` mode.
+    from app.core.arbitration import POOL, mode
+
+    if await mode(db) == POOL:
+        raise HTTPException(
+            status_code=409, detail="Disputes are offered from the pool, not taken"
+        )
+
     # Arbiter cannot judge own deal. T3.12.01 — «own» includes being its
     # recipient: the check knew only the sender and the carrier.
     deal = await db.get(Deal, dispute.deal_id)
@@ -318,6 +365,61 @@ async def claim_dispute(
 
     dispute.arbiter_id = current_user.id
     dispute.status = DisputeStatus.claimed
+    await db.commit()
+    await db.refresh(dispute)
+    return dispute
+
+
+async def _offered_to_me(
+    db: AsyncSession, dispute_id: uuid.UUID, current_user: User
+) -> Dispute:
+    dispute = await db.get(Dispute, dispute_id)
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    if dispute.offered_to_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="This dispute was not offered to you"
+        )
+    return dispute
+
+
+@router.post("/disputes/{dispute_id}/accept", response_model=DisputeOut)
+async def accept_dispute(
+    dispute_id: uuid.UUID,
+    current_user: User = Depends(require_perm(Permission.DISPUTE_CLAIM)),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.12.09 — the arbiter the pool chose takes the dispute."""
+    dispute = await _offered_to_me(db, dispute_id, current_user)
+    # Checked again although the pool never offers a party their own deal: a
+    # role or a recipient can be added after the offer was made.
+    deal = await db.get(Deal, dispute.deal_id)
+    if deal and await party_role(db, deal, current_user.id) is not None:
+        raise HTTPException(status_code=403, detail="Cannot judge your own deal")
+    if dispute.status != DisputeStatus.open:
+        raise HTTPException(status_code=409, detail="Dispute is not open")
+
+    dispute.arbiter_id = current_user.id
+    dispute.status = DisputeStatus.claimed
+    dispute.offered_to_id = None
+    dispute.offered_at = None
+    await db.commit()
+    await db.refresh(dispute)
+    return dispute
+
+
+@router.post("/disputes/{dispute_id}/decline", response_model=DisputeOut)
+async def decline_dispute(
+    dispute_id: uuid.UUID,
+    current_user: User = Depends(require_perm(Permission.DISPUTE_CLAIM)),
+    db: AsyncSession = Depends(get_db),
+):
+    """T3.12.09 — the offer passes to the next arbiter; this one is not asked
+    about the dispute again."""
+    from app.core.arbitration import offer_next
+
+    dispute = await _offered_to_me(db, dispute_id, current_user)
+    await offer_next(db, dispute)
     await db.commit()
     await db.refresh(dispute)
     return dispute

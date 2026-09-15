@@ -109,6 +109,19 @@ REGISTRY: tuple[ParamSpec, ...] = (
         "delivery_reminder_hours", "24", ParamValueType.integer, "deals", True,
         "Как часто напоминать отправителю «груз доставлен?», часов.",
     ),
+    # T3.12.09 — the arbiter pool (`IMPLEMENTATIONPLAN §3.12.6`), owner 2026-09-14.
+    ParamSpec(
+        "arbiter_assignment_mode", "pool", ParamValueType.string, "arbitration", True,
+        "Режим назначения арбитра: `pool` — платформа предлагает спор арбитру из пула; `requests` — арбитры берут заявки сами.",
+    ),
+    ParamSpec(
+        "arbiter_handoff_hours", "24", ParamValueType.integer, "arbitration", True,
+        "Сколько часов ждать ответа арбитра, прежде чем предложить спор следующему.",
+    ),
+    ParamSpec(
+        "arbiter_max_open_disputes", "5", ParamValueType.integer, "arbitration", False,
+        "Сколько споров в работе может быть у одного арбитра, чтобы ему предлагали новые.",
+    ),
 )
 
 REGISTRY_BY_KEY: dict[str, ParamSpec] = {spec.key: spec for spec in REGISTRY}

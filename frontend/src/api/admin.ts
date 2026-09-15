@@ -17,6 +17,11 @@ export interface Dispute {
   verdict: string | null
   created_at: string
   resolved_at: string | null
+  /** T3.12.09 — the arbiter the pool offered it to, while unanswered. */
+  offered_to_id?: string | null
+  offered_at?: string | null
+  /** Whether this viewer may take it themselves (`requests` mode). */
+  claimable?: boolean
 }
 
 /** T3.11.27 — the reason is chosen from four, not typed (owner's decision
@@ -43,6 +48,14 @@ export const listDisputes = (params?: { after?: string; limit?: number }) =>
 
 export const claimDispute = (disputeId: string) =>
   api.post<Dispute>(`/api/disputes/${disputeId}/claim`)
+
+/** T3.12.09 — the answer to the pool's offer. A refusal passes the dispute to
+ *  the next arbiter, and this one is not asked about it again. */
+export const acceptDispute = (disputeId: string) =>
+  api.post<Dispute>(`/api/disputes/${disputeId}/accept`)
+
+export const declineDispute = (disputeId: string) =>
+  api.post<Dispute>(`/api/disputes/${disputeId}/decline`)
 
 /** T3.11.27 — the arbiter's ruling, optionally with a sum.
  *

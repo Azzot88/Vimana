@@ -9,6 +9,7 @@ chain alone cannot see.
 import hashlib
 import uuid as uuidlib
 from datetime import datetime, timedelta, timezone
+from tests.conftest import take_dispute
 
 import pytest_asyncio
 from sqlalchemy import select, text
@@ -337,9 +338,7 @@ async def test_dispute_unseals_and_closing_verdict_reseals(
     # Arbiter claims and resolves with a closing verdict → re-sealed.
     dispute_id = dispute.json()["id"]
     assert (
-        await client.post(
-            f"/api/disputes/{dispute_id}/claim", headers=arbiter_user["headers"]
-        )
+        await take_dispute(client, dispute_id, arbiter_user["headers"])
     ).status_code == 200
     resolve = await client.post(
         f"/api/disputes/{dispute_id}/resolve",
@@ -372,9 +371,7 @@ async def test_arbiter_read_of_sealed_vault_is_audited_without_content(
     )
     dispute_id = dispute.json()["id"]
     assert (
-        await client.post(
-            f"/api/disputes/{dispute_id}/claim", headers=arbiter_user["headers"]
-        )
+        await take_dispute(client, dispute_id, arbiter_user["headers"])
     ).status_code == 200
     assert (
         await client.post(
@@ -533,9 +530,7 @@ async def _disputed(client, carrier_headers, sender_headers, arbiter_user):
     )
     assert dispute.status_code == 201, dispute.text
     dispute_id = dispute.json()["id"]
-    claimed = await client.post(
-        f"/api/disputes/{dispute_id}/claim", headers=arbiter_user["headers"]
-    )
+    claimed = await take_dispute(client, dispute_id, arbiter_user["headers"])
     assert claimed.status_code == 200, claimed.text
     return deal_id, dispute_id
 

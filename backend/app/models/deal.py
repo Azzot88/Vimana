@@ -373,6 +373,18 @@ class Dispute(Base):
         ForeignKey("users.id"), nullable=True
     )
     arbiter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    # T3.12.09 — the pool's standing offer: the arbiter asked and when. Cleared
+    # on an answer; an arbiter who declined or kept silent goes into
+    # `passed_over` and is not asked about this dispute again.
+    offered_to_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    offered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    passed_over: Mapped[list] = mapped_column(
+        JSON, nullable=False, default=list, server_default="[]"
+    )
     reason: Mapped[str] = mapped_column(Text)
     status: Mapped[DisputeStatus] = mapped_column(SAEnum(DisputeStatus), default=DisputeStatus.open)
     verdict: Mapped[str | None] = mapped_column(Text, nullable=True)

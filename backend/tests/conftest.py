@@ -1100,6 +1100,13 @@ async def _add_delivery_timer_columns(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _add_arbiter_pool_columns(engine) -> None:
+    """T3.12.09 — `0097` on the test database, after `create_all`. Idempotent."""
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0097_arbiter_pool.py"):
+            await conn.execute(text(statement))
+
+
 async def _rename_operator_to_arbiter(engine) -> None:
     """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
@@ -2212,6 +2219,7 @@ async def test_engine():
     await _add_cargo_fields(engine)
     await _add_recipient_offer_columns(engine)
     await _add_delivery_timer_columns(engine)
+    await _add_arbiter_pool_columns(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
     await _ensure_role_column(engine)
@@ -2750,6 +2758,29 @@ async def _login(client: AsyncClient, email: str) -> str:
     )
     resp.raise_for_status()
     return resp.json()["access_token"]
+
+
+async def take_dispute(client: AsyncClient, dispute_id, headers: dict):
+    """T3.12.09 — how a test arbiter comes to hold a dispute.
+
+    `claim` from the common queue is gone in the default pool mode: the
+    platform offers a dispute to a random arbiter, and `vimana_test` holds every
+    arbiter any test ever made. So the offer is pointed at this one directly and
+    they accept it through the API — the acceptance, with its checks, is real.
+    Returns the response of `POST /disputes/{id}/accept`.
+    """
+    import uuid as _uuid
+    from datetime import datetime as _dt, timezone as _tz
+
+    from app.models.deal import Dispute
+
+    me = (await client.get("/api/auth/me", headers=headers)).json()["id"]
+    async with _MAKER() as db:
+        row = await db.get(Dispute, _uuid.UUID(str(dispute_id)))
+        row.offered_to_id = _uuid.UUID(me)
+        row.offered_at = _dt.now(_tz.utc)
+        await db.commit()
+    return await client.post(f"/api/disputes/{dispute_id}/accept", headers=headers)
 
 
 @pytest_asyncio.fixture

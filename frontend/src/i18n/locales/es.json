@@ -38,6 +38,9 @@
     "promoteError": "No se pudo actualizar el rol",
     "vaultError": "No se pudo abrir el chat",
     "claim": "Tomar",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "offeredToYou": "Te lo ofrecen: acepta o rechaza",
     "resolve": "Resolver",
     "submitVerdict": "Guardar veredicto",
     "verdictPlaceholder": "Veredicto…",
@@ -1414,7 +1417,8 @@
       "fees": "Tarifas",
       "bond": "Fianza del transportista",
       "premium": "Premium",
-      "deals": "Operaciones"
+      "deals": "Operaciones",
+      "arbitration": "Arbitraje"
     },
     "newValue": "Nuevo valor"
   },

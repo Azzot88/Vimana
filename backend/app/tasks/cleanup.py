@@ -236,6 +236,13 @@ def cleanup_e2e_users() -> dict:
             .where(Dispute.arbiter_id.in_(user_ids))
             .values(arbiter_id=None)
         )
+        # T3.12.09 — and a standing offer to them is withdrawn; the hourly
+        # sweep offers the dispute to somebody else.
+        db.execute(
+            update(Dispute)
+            .where(Dispute.offered_to_id.in_(user_ids))
+            .values(offered_to_id=None, offered_at=None)
+        )
         stray_disputes = [
             row[0]
             for row in db.execute(
@@ -570,6 +577,10 @@ async def _check_delivery_timers(limit: int, deal_ids: list | None = None) -> di
                     db, deal, CardKind.dispute_opened, None,
                     payload={"dispute_id": str(dispute.id), "by": "timer"},
                 )
+                # T3.12.09 — offered to an arbiter like any other dispute.
+                from app.core.arbitration import offer_next
+
+                await offer_next(db, dispute)
                 await db.commit()
                 opened += 1
                 continue
@@ -590,3 +601,58 @@ async def _check_delivery_timers(limit: int, deal_ids: list | None = None) -> di
 
     logger.info("check_delivery_timers reminded %d, opened %d", reminded, opened)
     return {"reminded": reminded, "opened": opened}
+
+
+@celery_app.task(name="app.tasks.cleanup.reassign_arbiters")
+def reassign_arbiters(limit: int = 200) -> dict:
+    """T3.12.09 — an offer nobody answered moves on; a dispute nobody could be
+    offered is offered again.
+
+    Owner, 2026-09-14: the arbiter has `arbiter_handoff_hours` (24) to accept or
+    decline; silence passes the dispute to the next one, and the silent arbiter
+    is not asked about it again. A dispute left with no offer — everybody busy,
+    or nobody in the pool yet — is retried here every hour. Pool mode only.
+
+    Called by: celery beat (`worker.beat_schedule`). Tests await
+    `_reassign_arbiters` directly.
+    """
+    return asyncio.run(_reassign_arbiters(limit))
+
+
+async def _reassign_arbiters(
+    limit: int, dispute_ids: list | None = None, pool: list | None = None
+) -> dict:
+    # `dispute_ids` and `pool` narrow the sweep for tests: `vimana_test` is never
+    # reset and holds other tests' disputes and arbiters.
+    from sqlalchemy import or_
+
+    from app.core.arbitration import POOL, mode, offer_next
+    from app.core.params import resolve
+    from app.models.deal import DisputeStatus
+
+    moved = offered = 0
+    async with AsyncSessionLocal() as db:
+        if await mode(db) != POOL:
+            return {"moved": 0, "offered": 0}
+        hours = int(await resolve(db, "arbiter_handoff_hours"))
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
+        query = (
+            select(Dispute)
+            .where(
+                Dispute.status == DisputeStatus.open,
+                or_(Dispute.offered_to_id.is_(None), Dispute.offered_at <= cutoff),
+            )
+            .order_by(Dispute.created_at)
+            .limit(limit)
+        )
+        if dispute_ids is not None:
+            query = query.where(Dispute.id.in_(dispute_ids))
+        for dispute in (await db.execute(query)).scalars().all():
+            if dispute.offered_to_id is not None:
+                moved += 1
+            if await offer_next(db, dispute, pool=pool) is not None:
+                offered += 1
+        await db.commit()
+
+    logger.info("reassign_arbiters moved %d, offered %d", moved, offered)
+    return {"moved": moved, "offered": offered}

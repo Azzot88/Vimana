@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from tests.conftest import take_dispute
 
 import pytest
 from tests.conftest import make_account
@@ -142,9 +143,7 @@ async def test_an_arbiter_who_is_the_recipient_cannot_take_the_dispute(
         row.recipient_id = d["arbiter_id"]
         await db.commit()
 
-    claim = await client.post(
-        f"/api/disputes/{d['dispute_id']}/claim", headers=d["arbiter_headers"]
-    )
+    claim = await take_dispute(client, d['dispute_id'], d["arbiter_headers"])
     assert claim.status_code == 403
 
 
@@ -238,9 +237,7 @@ async def test_arbiter_vault_read_blocked_when_all_grants_revoked(
 ):
     d = _open_dispute
     # Arbiter claims.
-    claim = await client.post(
-        f"/api/disputes/{d['dispute_id']}/claim", headers=d["arbiter_headers"]
-    )
+    claim = await take_dispute(client, d['dispute_id'], d["arbiter_headers"])
     assert claim.status_code == 200
 
     # Sender revokes their auto-grant. No other grants exist.
@@ -260,9 +257,7 @@ async def test_arbiter_vault_read_blocked_when_all_grants_revoked(
 
 async def test_arbiter_vault_read_ok_with_active_grant(client, _open_dispute):
     d = _open_dispute
-    await client.post(
-        f"/api/disputes/{d['dispute_id']}/claim", headers=d["arbiter_headers"]
-    )
+    await take_dispute(client, d['dispute_id'], d["arbiter_headers"])
     # Sender's auto-grant is still active.
     r = await client.get(
         f"/api/admin/deals/{d['deal_id']}/vault", headers=d["arbiter_headers"]
@@ -275,9 +270,7 @@ async def test_arbiter_vault_read_ok_when_only_counterparty_grants(
 ):
     """Sender revokes, but carrier grants — arbiter still reads."""
     d = _open_dispute
-    await client.post(
-        f"/api/disputes/{d['dispute_id']}/claim", headers=d["arbiter_headers"]
-    )
+    await take_dispute(client, d['dispute_id'], d["arbiter_headers"])
     # Sender revokes.
     await client.post(
         f"/api/disputes/{d['dispute_id']}/revoke-access",
