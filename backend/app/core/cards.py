@@ -173,6 +173,9 @@ class CardSpec:
     ack_by: object | None = None
     # Enforced at creation: a declaration without its evidence is a claim.
     requires_attachment: AttachmentKind | None = None
+    # T3.12.07 — evidence the card takes if there is any, and does not wait for
+    # (owner, 2026-09-13: «фото вручения желательно, но не обязательно»).
+    accepts_attachment: AttachmentKind | None = None
     # Deal status reached when the card is accepted.
     on_accept_status: DealStatus | None = None
     # Card the server emits in reply to an acceptance, so that the record shows
@@ -265,10 +268,16 @@ CATALOGUE: dict[CardKind, CardSpec] = {
            on_accept_emit=CardKind.posted_confirmed,
            implemented=True),
         _s(CardKind.posted_confirmed, "custody", implemented=True),
+        # T3.12.07 — the handover at the door is one act in two directions
+        # (`D-CARGO-MODEL` (5)): «перевозчик жмёт "передал" — значит, деньги у
+        # него; получатель жмёт "оплатил" — значит, груз у него». Either side
+        # declares and the other confirms; the photo is welcome and not waited
+        # for. When the person paying is the one receiving, the confirmation
+        # closes the deal (`api.cards.apply_acceptance`).
         _s(CardKind.delivery_declared, "custody",
-           creator_roles=frozenset({CardAckRole.carrier}),
-           ack_by=COUNTERPARTY,  # resolved to recipient when there is one
-           requires_attachment=AttachmentKind.receipt_photo,
+           creator_roles=ALL_PARTIES,
+           ack_by=COUNTERPARTY,  # resolved in `_addressee`
+           accepts_attachment=AttachmentKind.receipt_photo,
            on_accept_status=DealStatus.delivered,
            on_accept_emit=CardKind.delivery_confirmed,
            implemented=True),
@@ -305,7 +314,11 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         # it is not the sender. Both are listed here and the actual one is
         # resolved from the agreed card in `api.cards` — a static role cannot
         # know what two people wrote into their own terms.
+        # T3.12.07 — a sender paying from afar sends the transfer with its
+        # screenshot (`IMPLEMENTATIONPLAN §3.12.4` п. 4); cash at the door has
+        # nothing to photograph, so the screenshot is taken, not required.
         _s(CardKind.payment_declared, "settlement",
+           accepts_attachment=AttachmentKind.payment_receipt,
            creator_roles=frozenset({CardAckRole.sender, CardAckRole.recipient}),
            ack_by=CardAckRole.carrier,
            on_accept_status=DealStatus.confirmed,
@@ -387,7 +400,11 @@ def _addressee(spec: CardSpec, deal, creator: CardAckRole) -> CardAckRole | None
     if isinstance(spec.ack_by, CardAckRole):
         return spec.ack_by
     if spec.kind is CardKind.delivery_declared:
-        return CardAckRole.recipient if deal.recipient_id else CardAckRole.sender
+        # T3.12.07 — declared by the carrier, it is answered by whoever received
+        # the parcel; declared by the receiving side, by the carrier.
+        if creator is CardAckRole.carrier:
+            return CardAckRole.recipient if deal.recipient_id else CardAckRole.sender
+        return CardAckRole.carrier
     # T3.12.01 — the recipient's counterparty is the carrier. The recipient moves
     # the meeting on their own end (`dropoff.proposed`) and the person who has to
     # agree to be there is the one carrying the parcel; the fallthrough below

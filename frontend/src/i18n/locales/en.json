@@ -1605,6 +1605,7 @@
       "delivery_declared": "Photograph the parcel at the moment it changes hands."
     },
     "photoNeeded": "Attach the photo — the handover cannot be confirmed without one",
+    "photoOptional": "optional",
     "awaitingPhoto": "Waiting for the photo",
     "answerFailed": "Could not send the answer",
     "raiseFailed": "Could not raise the card",

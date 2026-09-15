@@ -187,8 +187,15 @@ export default function DealStages({
       ).flatMap((s) => s.kinds),
     ),
   )
+  /* T3.12.07 — on the receiving side the person at the door declares the
+     handover. With a separate recipient that is not the sender, and the server
+     refuses them; the button is not drawn for a refusal. */
+  const separateRecipient =
+    Boolean(deal?.recipient_id) && deal?.recipient_id !== deal?.sender_id
   const stageKinds = liveKinds.filter(
-    (kind) => kind !== 'payment.declared' || myRole === payer,
+    (kind) =>
+      (kind !== 'payment.declared' || myRole === payer) &&
+      (kind !== 'delivery.declared' || myRole !== 'sender' || !separateRecipient),
   )
   /* T3.11.27 (owner, 2026-09-12): «После того как нажата кнопка Передал
      перевозчику она должна пропадать сразу… Она должна появляться только если

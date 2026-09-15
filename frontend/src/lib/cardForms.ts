@@ -22,6 +22,9 @@ export interface CardFormSpec {
   /** T3.11.17 — `pre_seal_photo` joined when the postal stretch did: the parcel
    *  photographed before it was sealed is the evidence that stretch stands on. */
   needsPhoto?: 'handoff_photo' | 'receipt_photo' | 'pre_seal_photo'
+  /** T3.12.07 — evidence the card takes if there is any, and does not wait for:
+   *  the photo of a handover in hand, the screenshot of a remote transfer. */
+  optionalPhoto?: 'receipt_photo' | 'payment_receipt'
   /** Whether a free-text note is offered. It travels encrypted, not in payload. */
   hasText?: boolean
 }
@@ -146,12 +149,16 @@ export const CARD_FORMS: CardFormSpec[] = [
     hasText: true,
   },
   {
+    /* T3.12.07 — the handover in hand is one act in two directions: either side
+       declares, the other confirms, and the photo is welcome but not required
+       (owner, 2026-09-13). The sender is offered it only when they are the one
+       at the door — `DealStages` narrows that, the server refuses otherwise. */
     kind: 'delivery.declared',
-    roles: ['carrier'],
+    roles: ['sender', 'carrier', 'recipient'],
     fields: [
       { name: 'method', type: 'select', options: HANDOVER_METHODS, required: true },
     ],
-    needsPhoto: 'receipt_photo',
+    optionalPhoto: 'receipt_photo',
     hasText: true,
   },
   {
@@ -185,6 +192,8 @@ export const CARD_FORMS: CardFormSpec[] = [
         required: true,
       },
     ],
+    // T3.12.07 — a sender paying from afar attaches the transfer's screenshot.
+    optionalPhoto: 'payment_receipt',
     hasText: true,
   },
   {

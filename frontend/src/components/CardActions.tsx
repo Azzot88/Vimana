@@ -101,7 +101,7 @@ export default function CardActions({
     setError('')
     try {
       const payload = buildPayload(open, values)
-      if (open.needsPhoto) {
+      if (open.needsPhoto || (open.optionalPhoto && files.length > 0)) {
         await raiseCardWithFiles(
           dealId,
           open.kind,
@@ -220,7 +220,7 @@ export default function CardActions({
         </label>
       )}
 
-      {open.needsPhoto && (
+      {(open.needsPhoto || open.optionalPhoto) && (
         <div className="mt-2">
           {/* The photograph is part of the declaration, so it is asked for
               **here**, inside the form that makes it — not afterwards, in the
@@ -240,7 +240,9 @@ export default function CardActions({
           </p>
           <label className="block">
             <span className="block text-xs font-body text-navy/40 mb-1">
-              {t(`chat.kind.${open.needsPhoto}`)}
+              {t(`chat.kind.${open.needsPhoto ?? open.optionalPhoto}`)}
+              {/* T3.12.07 — said, so an empty input does not read as a fault. */}
+              {!open.needsPhoto && ` · ${t('cards.photoOptional')}`}
             </span>
             <input
               type="file"

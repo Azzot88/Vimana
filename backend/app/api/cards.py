@@ -381,6 +381,19 @@ async def _raise_card(
                 detail=f"Above this carrier's buyout limit ({ceiling})",
             )
 
+    # T3.12.07 — on the receiving side, the person at the door declares. With a
+    # separate recipient that is the recipient, not the sender who is elsewhere.
+    if (
+        kind is CardKind.delivery_declared
+        and creator is CardAckRole.sender
+        and deal.recipient_id is not None
+        and deal.recipient_id != deal.sender_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="The recipient declares what they received",
+        )
+
     if kind is CardKind.payment_declared:
 
         # T3.11.27 — «Деньги отдаются после получения груза: это и есть порядок,
@@ -557,7 +570,8 @@ async def create_card_with_files(
     except ValueError:
         raise HTTPException(status_code=422, detail="Unknown card type")
     spec = CATALOGUE[card_kind]
-    attachment_kind = spec.requires_attachment
+    # T3.12.07 — required evidence, or evidence the card merely accepts.
+    attachment_kind = spec.requires_attachment or spec.accepts_attachment
     if attachment_kind is None:
         raise HTTPException(
             status_code=422,
@@ -823,20 +837,68 @@ async def apply_acceptance(
         # a record that shows the second without the first cannot answer when
         # the payment was agreed.
         if spec.on_accept_status is DealStatus.confirmed:
-            deal.status = DealStatus.closed
+            await _close_deal(db, deal, card, actor)
+        # T3.12.07 — the handover in hand is also the payment when the person
+        # paying is the one receiving (`D-CARGO-MODEL` (5)): nothing is left to
+        # settle, so the confirmation closes the deal on the same press.
+        elif spec.kind is CardKind.delivery_declared and await _paid_at_the_door(
+            db, deal, card
+        ):
+            deal.status = DealStatus.confirmed
             await db.flush()
             await append_deal_event(
                 db,
                 deal_id=deal.id,
-                event_type=DealEventType.closed,
+                event_type=DealEventType.confirmed,
                 actor_id=actor.id,
                 payload={"card_kind": card.card_kind, "message_id": str(card.id)},
                 author=actor,
             )
-            # T3.7 — and the vault stops taking content. This used to happen
-            # only inside `deals.confirm_deal`, so a deal closed by the pair
-            # stayed open for appends forever (found 2026-09-12).
-            await seal_closed_deal(db, deal, actor)
+            await _close_deal(db, deal, card, actor)
+
+
+async def _close_deal(
+    db: AsyncSession, deal: Deal, card: DealVaultMessage, actor: User
+) -> None:
+    """`confirmed` → `closed`, in the chain, and the vault sealed.
+
+    Called by: `apply_acceptance` — for `payment.declared`, and for a handover in
+    hand that is also the payment.
+    """
+    deal.status = DealStatus.closed
+    await db.flush()
+    await append_deal_event(
+        db,
+        deal_id=deal.id,
+        event_type=DealEventType.closed,
+        actor_id=actor.id,
+        payload={"card_kind": card.card_kind, "message_id": str(card.id)},
+        author=actor,
+    )
+    # T3.7 — and the vault stops taking content. This used to happen only inside
+    # `deals.confirm_deal`, so a deal closed by the pair stayed open for appends
+    # forever (found 2026-09-12).
+    await seal_closed_deal(db, deal, actor)
+
+
+async def _paid_at_the_door(
+    db: AsyncSession, deal: Deal, card: DealVaultMessage
+) -> bool:
+    """T3.12.07 — does this handover settle the money as well?
+
+    In hand, and the payer is the person receiving: the recipient when the
+    agreement says the recipient pays, or the sender when they are the one at
+    the door (no separate recipient, or «Получатель — я»). A sender paying for
+    somebody else's parcel is not at the door — they settle remotely afterwards
+    with `payment.declared` (`IMPLEMENTATIONPLAN §3.12.4` п. 4).
+    """
+    if (card.card_payload or {}).get("method", "in_person") != "in_person":
+        return False
+    agreed = await _agreed_terms(db, deal.id)
+    payer = (agreed.card_payload or {}).get("payer", "sender") if agreed else "sender"
+    if payer == "recipient":
+        return True
+    return deal.recipient_id is None or deal.recipient_id == deal.sender_id
 
 
 async def record_card(

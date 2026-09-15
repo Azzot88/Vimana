@@ -311,6 +311,132 @@ async def test_delivery_is_confirmed_by_the_sender_when_there_is_no_recipient(
     assert declared.json()["requires_ack_by"] == "sender"
 
 
+# ── T3.12.07 · the handover in hand is one act ────────────────────────────
+
+
+async def _recipient_on(client, session_maker, deal, prefix="dl-rcp"):
+    """A separate recipient on the fixture's deal, set directly: how somebody
+    comes to hold the role is `test_recipient`'s subject, not this file's."""
+    from app.models.deal import Deal
+
+    email = unique_email(prefix)
+    await make_account({"email": email, "password": SEED_PASSWORD, "display_name": "Rcp"})
+    login = await client.post("/api/auth/login", json={"login": email, "password": SEED_PASSWORD})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    me = (await client.get("/api/auth/me", headers=headers)).json()["id"]
+    async with session_maker() as db:
+        row = await db.get(Deal, deal.id)
+        row.recipient_id = uuid.UUID(me)
+        await db.commit()
+    return headers
+
+
+async def _status(client, headers, deal_id):
+    return (await client.get(f"/api/deals/{deal_id}", headers=headers)).json()["status"]
+
+
+async def test_the_handover_needs_no_photo(client, carrier_headers, deal):
+    """«Фото вручения желательно, но не обязательно» (owner, 2026-09-13)."""
+    r = await _card(client, carrier_headers, deal.id, "delivery.declared", {"method": "in_person"})
+    assert r.status_code == 201, r.text
+    assert r.json()["requires_ack_by"] == "sender"
+
+
+async def test_either_side_starts_and_paid_at_the_door_it_closes(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """«Первой отмечает любая сторона, вторая подтверждает» — and with the
+    person receiving also the one paying, nothing is left to settle: the deal
+    closes on the confirmation, both entries in the chain, the vault sealed."""
+    from sqlalchemy import select
+
+    from app.models.deal import Deal, DealEvent, DealEventType
+
+    declared = await _card(
+        client, sender_headers, deal.id, "delivery.declared", {"method": "in_person"}
+    )
+    assert declared.status_code == 201, declared.text
+    assert declared.json()["requires_ack_by"] == "carrier"
+
+    r = await _ack(client, carrier_headers, deal.id, declared.json()["id"])
+    assert r.status_code == 200, r.text
+    assert await _status(client, sender_headers, deal.id) == "closed"
+
+    async with session_maker() as db:
+        kinds = (
+            await db.execute(select(DealEvent.event_type).where(DealEvent.deal_id == deal.id))
+        ).scalars().all()
+        sealed = (await db.get(Deal, deal.id)).sealed_at
+    assert DealEventType.confirmed in kinds and DealEventType.closed in kinds
+    assert sealed is not None
+
+
+async def test_a_sender_paying_from_afar_settles_after_the_handover(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    """The recipient takes the parcel, the sender pays remotely afterwards —
+    with the transfer's screenshot — and the carrier's confirmation closes."""
+    rcp = await _recipient_on(client, session_maker, deal)
+
+    declared = await _card(
+        client, carrier_headers, deal.id, "delivery.declared", {"method": "in_person"}
+    )
+    assert declared.json()["requires_ack_by"] == "recipient"
+    r = await _ack(client, rcp, deal.id, declared.json()["id"])
+    assert r.status_code == 200, r.text
+    assert await _status(client, sender_headers, deal.id) == "delivered"
+
+    paid = await _card_with_files(
+        client, sender_headers, deal.id, "payment.declared",
+        payload={"amount": 100, "currency": "USD", "method": "emoney_on_delivery"},
+    )
+    assert paid.status_code == 201, paid.text
+    r = await _ack(client, carrier_headers, deal.id, paid.json()["id"])
+    assert r.status_code == 200, r.text
+    assert await _status(client, sender_headers, deal.id) == "closed"
+
+
+async def test_a_recipient_who_pays_closes_it_at_the_door(
+    client, session_maker, sender_headers, carrier_headers, deal
+):
+    rcp = await _recipient_on(client, session_maker, deal, "dl-payer")
+    proposal = await client.post(
+        f"/api/deals/{deal.id}/terms",
+        headers=sender_headers,
+        json={"price_total": 100, "currency": "USD", "payer": "recipient"},
+    )
+    assert proposal.status_code == 201, proposal.text
+    assert (await _ack(client, carrier_headers, deal.id, proposal.json()["id"])).status_code == 200
+
+    declared = await _card(client, rcp, deal.id, "delivery.declared", {"method": "in_person"})
+    assert declared.status_code == 201, declared.text
+    assert declared.json()["requires_ack_by"] == "carrier"
+    r = await _ack(client, carrier_headers, deal.id, declared.json()["id"])
+    assert r.status_code == 200, r.text
+    assert await _status(client, sender_headers, deal.id) == "closed"
+
+
+async def test_the_sender_does_not_declare_for_a_separate_recipient(
+    client, session_maker, sender_headers, deal
+):
+    await _recipient_on(client, session_maker, deal, "dl-away")
+    r = await _card(client, sender_headers, deal.id, "delivery.declared", {"method": "in_person"})
+    assert r.status_code == 403, r.text
+
+
+async def test_a_handover_not_in_hand_does_not_settle(
+    client, sender_headers, carrier_headers, deal
+):
+    """Only money changing hands at the door settles: a courier handing over a
+    parcel took no payment for the carrier."""
+    declared = await _card(
+        client, carrier_headers, deal.id, "delivery.declared", {"method": "courier"}
+    )
+    r = await _ack(client, sender_headers, deal.id, declared.json()["id"])
+    assert r.status_code == 200, r.text
+    assert await _status(client, sender_headers, deal.id) == "delivered"
+
+
 # ── group 4 · settlement ──────────────────────────────────────────────────
 
 

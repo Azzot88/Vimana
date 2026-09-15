@@ -319,7 +319,9 @@ describe('cardForms', () => {
     expect(senderKinds).toContain('handoff.declared')
     expect(senderKinds).toContain('payment.declared')
     expect(senderKinds).not.toContain('transit.update')
-    expect(senderKinds).not.toContain('delivery.declared')
+    // T3.12.07 — the handover in hand is declared by either side; the sender is
+    // the receiving side when there is no separate recipient.
+    expect(senderKinds).toContain('delivery.declared')
   })
 
   it('gives the recipient only what concerns their end', () => {
