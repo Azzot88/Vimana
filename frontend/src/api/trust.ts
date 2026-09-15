@@ -56,6 +56,27 @@ export interface PublicIdentity {
    *  one is not a missing field: there is no record to close while the key
    *  still signs. */
   archive: ArchiveRecord | null
+  /** T3.12.06 pt.2 — only when the viewer is close to this identity: where to
+   *  send them a parcel and where they meet people. */
+  close?: CloseDetails | null
+}
+
+export interface CloseDetails {
+  addresses: {
+    label: string
+    country_iso: string
+    city: string | null
+    street: string | null
+    postal_code: string | null
+    note: string | null
+    is_default: boolean
+  }[]
+  meeting_places: {
+    description: string
+    country_iso: string | null
+    city: string | null
+    is_default: boolean
+  }[]
 }
 
 /**

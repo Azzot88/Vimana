@@ -89,7 +89,13 @@ async def user_trust_metrics(
         raise HTTPException(status_code=404, detail="User not found")
     # T3.18 — the same gate as the identity page. Without it `hidden` would hide
     # the page and leave the numbers on it readable one URL over.
-    require_visible(user, current_user)
+    from app.core.social import is_close
+
+    require_visible(
+        user,
+        current_user,
+        close=await is_close(db, current_user.id if current_user else None, user.id),
+    )
 
     distance: int | None = None
     if current_user is not None and current_user.id != user_id:
@@ -328,6 +334,32 @@ async def _archive_record(db: AsyncSession, subject: User) -> ArchiveRecord:
     )
 
 
+class CloseAddressOut(BaseModel):
+    label: str
+    country_iso: str
+    city: str | None = None
+    street: str | None = None
+    postal_code: str | None = None
+    note: str | None = None
+    is_default: bool = False
+
+
+class CloseMeetingPlaceOut(BaseModel):
+    description: str
+    country_iso: str | None = None
+    city: str | None = None
+    is_default: bool = False
+
+
+class CloseDetailsOut(BaseModel):
+    """T3.12.06 pt.2 — what only a close person sees: where to send a parcel to
+    this person, and where they meet people (owner, 2026-09-14: «близкие видят
+    полный профиль, включая адреса»)."""
+
+    addresses: list[CloseAddressOut]
+    meeting_places: list[CloseMeetingPlaceOut]
+
+
 class IdentityOut(BaseModel):
     """What a stranger may learn about an identity.
 
@@ -335,9 +367,12 @@ class IdentityOut(BaseModel):
     (`D-KEY-TIERS`), and the row id is an implementation detail that has no
     business in a shareable link.
 
-    Never here, at any visibility level: email, phone, receiving addresses,
-    anything from inside a vault. Those are not "private fields of a profile",
-    they are a different category of data.
+    Never here to a stranger, at any visibility level: email, phone, receiving
+    addresses, anything from inside a vault. Those are not "private fields of a
+    profile", they are a different category of data. T3.12.06 pt.2 — the one
+    exception is a close person (an accepted `ClosePair`): they see the profile
+    in full whatever it shows strangers, and the addresses and meeting places in
+    `close`. Email, phone and vaults stay out for them too.
     """
 
     npub: str
@@ -367,6 +402,51 @@ class IdentityOut(BaseModel):
     # live one is not a missing field: there is no record to close while the key
     # still signs.
     archive: ArchiveRecord | None = None
+    #: T3.12.06 pt.2 — present only when the viewer is close to this identity.
+    close: CloseDetailsOut | None = None
+
+
+async def _close_details(db: AsyncSession, subject: User) -> CloseDetailsOut:
+    """Addresses and meeting places, default first — the order the owner keeps."""
+    from app.models.address import MeetingPlace, ReceivingAddress
+
+    addresses = (
+        await db.execute(
+            select(ReceivingAddress)
+            .where(ReceivingAddress.user_id == subject.id)
+            .order_by(ReceivingAddress.is_default.desc(), ReceivingAddress.created_at)
+        )
+    ).scalars().all()
+    places = (
+        await db.execute(
+            select(MeetingPlace)
+            .where(MeetingPlace.user_id == subject.id)
+            .order_by(MeetingPlace.is_default.desc(), MeetingPlace.created_at)
+        )
+    ).scalars().all()
+    return CloseDetailsOut(
+        addresses=[
+            CloseAddressOut(
+                label=a.label,
+                country_iso=a.country_iso,
+                city=a.city,
+                street=a.street,
+                postal_code=a.postal_code,
+                note=a.note,
+                is_default=a.is_default,
+            )
+            for a in addresses
+        ],
+        meeting_places=[
+            CloseMeetingPlaceOut(
+                description=p.description,
+                country_iso=p.country_iso,
+                city=p.city,
+                is_default=p.is_default,
+            )
+            for p in places
+        ],
+    )
 
 
 @router.get("/identities/{npub}", response_model=IdentityOut)
@@ -401,7 +481,10 @@ async def public_identity(
     if subject is None:
         raise HTTPException(status_code=404, detail="No such identity")
 
-    level = require_visible(subject, viewer)
+    from app.core.social import is_close
+
+    close = await is_close(db, viewer.id if viewer else None, subject.id)
+    level = require_visible(subject, viewer, close=close)
 
     verified_at = await _verified_at(db, subject)
 
@@ -441,4 +524,5 @@ async def public_identity(
         identity_changed_at=subject.identity_changed_at,
         previous_npub=subject.previous_nostr_pubkey,
         archive=await _archive_record(db, subject) if subject.key_lost else None,
+        close=await _close_details(db, subject) if close else None,
     )

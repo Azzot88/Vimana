@@ -150,9 +150,21 @@ export default function ConnectionsSection() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-body text-navy">
-                        {conn.connected_user?.display_name}
-                      </p>
+                      {/* T3.12.06 pt.2 — a close person's name opens their
+                          profile, which shows them the addresses. */}
+                      {conn.state === 'close' && conn.connected_user?.nostr_pubkey ? (
+                        <Link
+                          to={`/i/${conn.connected_user.nostr_pubkey}`}
+                          title={t('contacts.openProfile')}
+                          className="text-sm font-body text-navy hover:text-cyan underline decoration-navy/20 underline-offset-2"
+                        >
+                          {conn.connected_user.display_name}
+                        </Link>
+                      ) : (
+                        <p className="text-sm font-body text-navy">
+                          {conn.connected_user?.display_name}
+                        </p>
+                      )}
                       {conn.state === 'close' && (
                         <span className="text-[10px] font-mono uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 rounded">
                           {t('contacts.close')}

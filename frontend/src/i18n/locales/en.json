@@ -181,6 +181,11 @@
     }
   },
   "identity": {
+    "closeTitle": "For close people",
+    "closeHint": "You see this because you are close. Nobody else does.",
+    "closeAddresses": "Addresses",
+    "closeMeetingPlaces": "Meeting places",
+    "closeNone": "Nothing added yet",
     "publicTitle": "Your public identity",
     "publicHint": "What a counterparty sees before deciding to deal with you. It is one page, addressed by your key.",
     "openPublic": "Open my public page",
@@ -428,7 +433,8 @@
     "requested": "Wants to be close",
     "incomingTitle": "Asking to be close",
     "closeAccept": "Accept",
-    "closeDecline": "Decline"
+    "closeDecline": "Decline",
+    "openProfile": "Open profile"
   },
   "safe": {
     "title": "My files",

@@ -16,6 +16,8 @@ export interface ConnectedUser {
   active_mode: string
   can_carry: boolean
   can_send: boolean
+  /** T3.12.06 pt.2 — the key their profile page is addressed by. */
+  nostr_pubkey?: string | null
 }
 
 /**

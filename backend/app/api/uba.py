@@ -129,7 +129,10 @@ async def get_user_uba(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     # T3.18 — one gate, called from every public slice (`core.permissions`).
-    require_visible(user, viewer)
+    # T3.12.06 pt.2 — and it opens to close people like the identity page does.
+    from app.core.social import is_close
+
+    require_visible(user, viewer, close=await is_close(db, viewer.id, user.id))
 
     components = await _compute_components_async(db, user_id)
     score = compute_uba(components)

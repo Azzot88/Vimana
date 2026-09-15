@@ -89,6 +89,18 @@ async def closeness(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> str:
     return "connection" if state == "none" else state
 
 
+async def is_close(db: AsyncSession, a: uuid.UUID | None, b: uuid.UUID) -> bool:
+    """T3.12.06 pt.2 — are these two people close, as an accepted pair?
+
+    `a` may be None (an anonymous viewer) and may be `b` (looking at oneself):
+    neither is closeness. Called by: `api.trust.public_identity`,
+    `api.trust.user_trust_metrics`, `api.uba.get_user_uba`.
+    """
+    if a is None or a == b:
+        return False
+    return state_of(await open_pair(db, a, b), a) == "close"
+
+
 async def close_states(
     db: AsyncSession, me: uuid.UUID, others: list[uuid.UUID]
 ) -> dict[uuid.UUID, str]:

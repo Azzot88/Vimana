@@ -207,7 +207,7 @@ def require_perm(*permissions: Permission):
 PUBLIC_PROFILE_VALUES = ("full", "minimal", "hidden")
 
 
-def visible_to(subject: User, viewer: User | None) -> str:
+def visible_to(subject: User, viewer: User | None, *, close: bool = False) -> str:
     """`full` | `minimal` | `hidden` for this pair.
 
     One function on purpose, called from every public slice. The alternative —
@@ -228,18 +228,25 @@ def visible_to(subject: User, viewer: User | None) -> str:
     # without knowing this feature exists.
     if (subject.archive_choice or "").lower() == "hide":
         return "hidden"
+    # T3.12.06 — a close person sees the whole profile (owner, 2026-09-14),
+    # whatever the account shows strangers. `close` is decided by the caller
+    # from `close_pairs` (`core.social.is_close`): this function stays free of
+    # the database. After the archive check on purpose — a retired identity
+    # whose owner closed it is closed to everybody.
+    if close:
+        return "full"
     level = (subject.public_profile or "full").lower()
     return level if level in PUBLIC_PROFILE_VALUES else "full"
 
 
-def require_visible(subject: User, viewer: User | None) -> str:
+def require_visible(subject: User, viewer: User | None, *, close: bool = False) -> str:
     """Same, but 404 for `hidden` — not 403.
 
     403 would confirm that the account exists, which is exactly what hiding is
     meant to stop. "No such identity" is the only answer that does not leak the
     thing it refuses to show.
     """
-    level = visible_to(subject, viewer)
+    level = visible_to(subject, viewer, close=close)
     if level == "hidden":
         raise HTTPException(status_code=404, detail="No such identity")
     return level

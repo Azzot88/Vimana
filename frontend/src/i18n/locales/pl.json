@@ -154,6 +154,11 @@
     }
   },
   "identity": {
+    "closeTitle": "Dla bliskich",
+    "closeHint": "Widzisz to, bo jesteście bliscy. Nikt inny tego nie widzi.",
+    "closeAddresses": "Adresy",
+    "closeMeetingPlaces": "Miejsca spotkań",
+    "closeNone": "Na razie nic",
     "publicTitle": "Twoja publiczna tożsamość",
     "publicHint": "To, co widzi druga strona, zanim zdecyduje się na transakcję. Jedna strona, której adresem jest Twój klucz.",
     "openPublic": "Otwórz moją publiczną stronę",
@@ -382,7 +387,8 @@
     "requested": "Chce być bliskim",
     "incomingTitle": "Prośby o bliskość",
     "closeAccept": "Przyjmij",
-    "closeDecline": "Odrzuć"
+    "closeDecline": "Odrzuć",
+    "openProfile": "Otwórz profil"
   },
   "safe": {
     "title": "Moje pliki",

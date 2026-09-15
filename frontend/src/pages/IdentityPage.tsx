@@ -190,6 +190,61 @@ export default function IdentityPage() {
           )}
         </div>
 
+        {/* T3.12.06 pt.2 — what only a close person sees (owner, 2026-09-14).
+            Said as such, so it does not read as what everybody sees. */}
+        {identity.close && (
+          <div
+            data-testid="identity-close"
+            className="bg-white rounded-card border border-cyan/30 p-6 space-y-3"
+          >
+            <div>
+              <h2 className="font-display font-semibold text-base text-navy">
+                {t('identity.closeTitle')}
+              </h2>
+              <p className="text-xs font-body text-navy/50 mt-0.5">{t('identity.closeHint')}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-body font-medium text-navy/50">
+                {t('identity.closeAddresses')}
+              </p>
+              {identity.close.addresses.length === 0 ? (
+                <p className="text-sm font-body text-navy/40">{t('identity.closeNone')}</p>
+              ) : (
+                identity.close.addresses.map((a, i) => (
+                  <p key={`a-${i}`} className="text-sm font-body text-navy">
+                    <span className="font-medium">{a.label}</span>
+                    {' — '}
+                    {[a.street, a.city, a.postal_code, a.country_iso]
+                      .filter(Boolean)
+                      .join(', ')}
+                    {a.note && <span className="block text-xs text-navy/50">{a.note}</span>}
+                  </p>
+                ))
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-body font-medium text-navy/50">
+                {t('identity.closeMeetingPlaces')}
+              </p>
+              {identity.close.meeting_places.length === 0 ? (
+                <p className="text-sm font-body text-navy/40">{t('identity.closeNone')}</p>
+              ) : (
+                identity.close.meeting_places.map((p, i) => (
+                  <p key={`m-${i}`} className="text-sm font-body text-navy">
+                    {p.description}
+                    {(p.city || p.country_iso) && (
+                      <span className="text-navy/50">
+                        {' — '}
+                        {[p.city, p.country_iso].filter(Boolean).join(', ')}
+                      </span>
+                    )}
+                  </p>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* T3.19 — a retired identity reads as a record, not as a profile with
             things missing. The placard goes below the header so the first thing
             a visitor sees is still who this was. */}

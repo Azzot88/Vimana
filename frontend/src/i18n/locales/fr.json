@@ -154,6 +154,11 @@
     }
   },
   "identity": {
+    "closeTitle": "Pour les proches",
+    "closeHint": "Vous le voyez parce que vous êtes proches. Personne d’autre ne le voit.",
+    "closeAddresses": "Adresses",
+    "closeMeetingPlaces": "Lieux de rencontre",
+    "closeNone": "Rien pour l’instant",
     "publicTitle": "Votre identité publique",
     "publicHint": "Ce que voit un correspondant avant de décider de traiter avec vous. Une page, dont l'adresse est votre clé.",
     "openPublic": "Ouvrir ma page publique",
@@ -381,7 +386,8 @@
     "requested": "Veut être proche",
     "incomingTitle": "Demandes pour être proches",
     "closeAccept": "Accepter",
-    "closeDecline": "Refuser"
+    "closeDecline": "Refuser",
+    "openProfile": "Ouvrir le profil"
   },
   "safe": {
     "title": "Mes fichiers",
