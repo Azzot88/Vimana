@@ -71,7 +71,7 @@ LEVELS: list[tuple[int, str]] = [
 @dataclass(frozen=True)
 class UBAComponents:
     f_count: int      # closed deals as carrier in window
-    q_count: int      # closed deals with both DealVault photos
+    q_count: int      # closed deals with the handoff photo in DealVault
     v_sum: float      # sum of Cargo.declared_value on closed deals
     d_peak: float     # peak active collateral (0 until T5.x Collateral model)
     verify_level: str | None  # highest_verification_level

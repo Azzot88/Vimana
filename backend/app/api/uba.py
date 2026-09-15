@@ -82,16 +82,8 @@ async def _compute_components_async(
         )
         .exists()
     )
-    receipt_exists = (
-        select(1)
-        .select_from(Attachment)
-        .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
-        .where(
-            DealVaultMessage.deal_id == Deal.id,
-            Attachment.kind == AttachmentKind.receipt_photo,
-        )
-        .exists()
-    )
+    # T3.12.07 pt.2 — the handoff photo alone, as in `core.uba`: the receipt
+    # photo is optional now.
     q_count = (
         await db.execute(
             select(func.count(Deal.id)).where(
@@ -99,7 +91,6 @@ async def _compute_components_async(
                 Deal.status == DealStatus.closed,
                 Deal.created_at >= since,
                 handoff_exists,
-                receipt_exists,
             )
         )
     ).scalar() or 0

@@ -331,8 +331,10 @@ describe('cardForms', () => {
     // the agreement, and `DealStages` reads `payer` to drop the button for the
     // one who owes nothing.
     const kinds = formsForRole('recipient').map((f) => f.kind)
+    // T3.12.07 — `delivery.declared` too: the recipient says what they received.
     expect(kinds).toEqual([
       'dropoff.proposed',
+      'delivery.declared',
       'payment.declared',
       'issue.reported',
     ])
