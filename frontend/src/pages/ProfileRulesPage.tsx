@@ -17,6 +17,11 @@ import { useAuthStore } from '../stores/auth'
  */
 const CANCEL_TIMEOUTS = [6, 12, 24, 48, 72, 168]
 
+/** T3.12.07 pt.2 — how long after the landing a silent deal waits for the
+ *  arbiter. The empty choice is the platform's default, so an account that never
+ *  opened this page follows the platform when the default changes. */
+const DELIVERY_TIMEOUTS = [24, 48, 72, 120, 168]
+
 /**
  * T_UX.21 — «Мои правила»: what a carrier writes once and sends in chat.
  *
@@ -68,6 +73,26 @@ export default function ProfileRulesPage() {
       // eight times sooner than they do.
       setHours(previous)
       setTimeoutError(t('prefs.saveFailed'))
+    }
+  }
+
+  // T3.12.07 pt.2 — owner, 2026-09-14: the delivery timer lives «в кабинете
+  // отправителя», next to the cancellation one and for the same reason.
+  const [deliveryHours, setDeliveryHours] = useState<number | null>(
+    user?.delivery_timeout_hours ?? null,
+  )
+  const [deliveryError, setDeliveryError] = useState('')
+
+  const saveDeliveryTimeout = async (next: number | null) => {
+    const previous = deliveryHours
+    setDeliveryHours(next)
+    setDeliveryError('')
+    try {
+      const { data } = await updateMe({ delivery_timeout_hours: next })
+      if (token) setAuth(data, token)
+    } catch {
+      setDeliveryHours(previous)
+      setDeliveryError(t('prefs.saveFailed'))
     }
   }
 
@@ -139,6 +164,38 @@ export default function ProfileRulesPage() {
         </label>
         {timeoutError && (
           <p className="text-xs font-body text-danger">{timeoutError}</p>
+        )}
+      </section>
+      <section className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
+        <div>
+          <h2 className="font-display font-semibold text-sm text-navy">
+            {t('rules.deliveryTimeout.title')}
+          </h2>
+          <p className="text-[11px] font-body text-navy/50 mt-0.5">
+            {t('rules.deliveryTimeout.hint')}
+          </p>
+        </div>
+        <label className="block max-w-xs">
+          <span className="block text-xs font-body text-navy/40 mb-1">
+            {t('rules.deliveryTimeout.label')}
+          </span>
+          <select
+            value={deliveryHours ?? ''}
+            onChange={(e) =>
+              void saveDeliveryTimeout(e.target.value ? Number(e.target.value) : null)
+            }
+            className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm"
+          >
+            <option value="">{t('rules.deliveryTimeout.platform')}</option>
+            {DELIVERY_TIMEOUTS.map((h) => (
+              <option key={h} value={h}>
+                {t('rules.cancelTimeout.hours', { count: h })}
+              </option>
+            ))}
+          </select>
+        </label>
+        {deliveryError && (
+          <p className="text-xs font-body text-danger">{deliveryError}</p>
         )}
       </section>
       <AddressesSection />

@@ -9,7 +9,8 @@ export type DisputeStatus = 'open' | 'claimed' | 'resolved'
 export interface Dispute {
   id: string
   deal_id: string
-  opened_by: string
+  /** T3.12.07 pt.2 — null when the delivery timer opened it. */
+  opened_by: string | null
   arbiter_id: string | null
   reason: string
   status: DisputeStatus

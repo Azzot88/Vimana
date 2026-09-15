@@ -439,3 +439,140 @@ async def _close_stale_cancellations(limit: int) -> dict:
 
     logger.info("close_stale_cancellations closed %d deals", closed)
     return {"closed": closed}
+
+
+@celery_app.task(name="app.tasks.cleanup.check_delivery_timers")
+def check_delivery_timers(limit: int = 500) -> dict:
+    """T3.12.07 pt.2 — silence after the landing goes to the arbiter.
+
+    Owner, 2026-09-14: the clock starts at the landing; the sender is asked once
+    a day whether the parcel arrived; when nobody confirms within the sender's
+    `delivery_timeout_hours` (or the platform's), a dispute opens by itself. The
+    timer never confirms anything — a handover the clock «confirmed» would be the
+    platform asserting a fact nobody witnessed.
+
+    Called by: celery beat (`worker.beat_schedule`). Tests await
+    `_check_delivery_timers` directly, as with `close_stale_cancellations`.
+    """
+    return asyncio.run(_check_delivery_timers(limit))
+
+
+async def _delivery_arrival(db, deal: Deal) -> datetime | None:
+    """When the carrier landed: their own «arrived» card, the earliest one, or
+    failing that the landing of the trip's last segment (its departure when no
+    arrival was given)."""
+    from sqlalchemy import func
+
+    from app.core.cards import CardKind
+    from app.models.marketplace import TripSegment
+
+    landed = (
+        await db.execute(
+            select(func.min(DealVaultMessage.created_at)).where(
+                DealVaultMessage.deal_id == deal.id,
+                DealVaultMessage.card_kind == CardKind.transit_update.value,
+                DealVaultMessage.card_payload["stage"].as_string() == "arrived",
+            )
+        )
+    ).scalar()
+    if landed is None:
+        segment = (
+            await db.execute(
+                select(TripSegment)
+                .where(TripSegment.trip_id == deal.trip_id)
+                .order_by(TripSegment.segment_order.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if segment is not None:
+            landed = segment.arrive_at or segment.depart_at
+        else:
+            trip = await db.get(Trip, deal.trip_id)
+            landed = trip.depart_at if trip else None
+    if landed is None:
+        return None
+    return landed if landed.tzinfo else landed.replace(tzinfo=timezone.utc)
+
+
+async def _check_delivery_timers(limit: int, deal_ids: list | None = None) -> dict:
+    # `deal_ids` narrows the sweep for tests: `vimana_test` is never reset, and a
+    # sweep over all of it would open disputes on other tests' deals.
+    from app.api.cards import record_card
+    from app.core.cards import CardKind
+    from app.core.deal_chain import append_deal_event
+    from app.core.params import resolve
+    from app.models.deal import DisputeStatus
+
+    now = datetime.now(tz=timezone.utc)
+    reminded = opened = 0
+    async with AsyncSessionLocal() as db:
+        default_timeout = int(await resolve(db, "delivery_timeout_hours"))
+        remind_every = timedelta(hours=int(await resolve(db, "delivery_reminder_hours")))
+
+        query = (
+            select(Deal)
+            .where(Deal.status.in_((DealStatus.in_transit, DealStatus.delivered)))
+            .order_by(Deal.created_at)
+            .limit(limit)
+        )
+        if deal_ids is not None:
+            query = query.where(Deal.id.in_(deal_ids))
+        deals = (await db.execute(query)).scalars().all()
+
+        for deal in deals:
+            arrival = await _delivery_arrival(db, deal)
+            if arrival is None or arrival > now:
+                continue
+            sender = await db.get(User, deal.sender_id)
+            hours = (sender.delivery_timeout_hours if sender else None) or default_timeout
+
+            if now >= arrival + timedelta(hours=hours):
+                existing = (
+                    await db.execute(select(Dispute.id).where(Dispute.deal_id == deal.id))
+                ).first()
+                if existing is not None:
+                    continue
+                # `opened_by` is NULL and no ArbiterAccessGrant is written: that
+                # grant is a person's consent, and nobody gave one.
+                dispute = Dispute(
+                    deal_id=deal.id,
+                    opened_by=None,
+                    reason="timeout",
+                    status=DisputeStatus.open,
+                )
+                db.add(dispute)
+                deal.status = DealStatus.disputed
+                deal.sealed_at = None
+                await db.flush()
+                await append_deal_event(
+                    db,
+                    deal_id=deal.id,
+                    event_type=DealEventType.dispute_opened,
+                    actor_id=None,
+                    payload={"reason": "timeout", "by": "timer"},
+                    author=None,
+                )
+                await record_card(
+                    db, deal, CardKind.dispute_opened, None,
+                    payload={"dispute_id": str(dispute.id), "by": "timer"},
+                )
+                await db.commit()
+                opened += 1
+                continue
+
+            if sender is None or now - (deal.delivery_reminded_at or arrival) < remind_every:
+                continue
+            deal.delivery_reminded_at = now
+            await db.commit()
+            reminded += 1
+            trip = await db.get(Trip, deal.trip_id)
+            route = f"{trip.origin} → {trip.destination}" if trip else ""
+            try:
+                from app.tasks.notifications import send_delivery_reminder
+
+                send_delivery_reminder.delay(str(sender.id), str(deal.id), route)
+            except Exception:  # noqa: BLE001 — a letter never blocks the timer
+                logger.warning("delivery reminder not queued for deal %s", deal.id)
+
+    logger.info("check_delivery_timers reminded %d, opened %d", reminded, opened)
+    return {"reminded": reminded, "opened": opened}

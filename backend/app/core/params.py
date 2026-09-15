@@ -98,6 +98,17 @@ REGISTRY: tuple[ParamSpec, ...] = (
         "premium_price_month", "0", ParamValueType.decimal, "premium", False,
         "Цена премиум-подписки в месяц, USD.",
     ),
+    # T3.12.07 pt.2 — owner, 2026-09-14: «таймер от прилёта, 72 часа, раз в сутки
+    # напоминание». The sender may set their own timer; this is what applies when
+    # they have not.
+    ParamSpec(
+        "delivery_timeout_hours", "72", ParamValueType.integer, "deals", True,
+        "Сколько часов после прилёта ждать подтверждения вручения, прежде чем сделка уйдёт арбитру.",
+    ),
+    ParamSpec(
+        "delivery_reminder_hours", "24", ParamValueType.integer, "deals", True,
+        "Как часто напоминать отправителю «груз доставлен?», часов.",
+    ),
 )
 
 REGISTRY_BY_KEY: dict[str, ParamSpec] = {spec.key: spec for spec in REGISTRY}

@@ -180,6 +180,17 @@
     "facts_offered_by": "de la part de",
     "cta": "Voir la proposition"
   },
+  "delivery_reminder": {
+    "subject": "Vimana · Le colis est-il arrivé ?",
+    "preheader": "Confirmez la remise, sinon l’accord ira à un arbitre",
+    "heading": "Le colis est-il arrivé ?",
+    "body": [
+      "Le transporteur a atterri et personne n’a encore confirmé la remise.",
+      "Si le colis a été remis, confirmez-le dans l’accord. Si quelque chose ne va pas, ouvrez un litige. Si personne ne répond avant la fin du délai, l’accord ira de lui-même à un arbitre."
+    ],
+    "facts_route": "trajet",
+    "cta": "Ouvrir l’accord"
+  },
   "role_granted": {
     "subject": "Vimana · Le rôle est entré en vigueur",
     "preheader": "Vous l'avez accepté, il s'applique désormais",

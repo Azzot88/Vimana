@@ -558,6 +558,7 @@ class DealEventOut(BaseModel):
     deal_id: uuid.UUID
     event_type: str
     payload: dict | None
-    actor_id: uuid.UUID
+    # T3.12.07 pt.2 — None when the platform acted (the delivery timer).
+    actor_id: uuid.UUID | None
     timestamp: datetime
     model_config = ConfigDict(from_attributes=True)

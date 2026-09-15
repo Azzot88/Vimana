@@ -71,7 +71,8 @@ class DisputeCreate(BaseModel):
 class DisputeOut(BaseModel):
     id: uuid.UUID
     deal_id: uuid.UUID
-    opened_by: uuid.UUID
+    # T3.12.07 pt.2 — None when the delivery timer opened it.
+    opened_by: uuid.UUID | None
     arbiter_id: uuid.UUID | None
     reason: str
     status: str

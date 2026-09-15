@@ -586,6 +586,35 @@ def send_recipient_offered(user_id: str, route: str, offered_by: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_delivery_reminder")
+def send_delivery_reminder(user_id: str, deal_id: str, route: str) -> None:
+    """T3.12.07 pt.2 — ask the sender whether the parcel arrived.
+
+    Once a day after the landing, until somebody confirms the handover or the
+    timer sends the deal to the arbiter (owner, 2026-09-14). The deal class: it
+    is news about a parcel, and the person may switch the letter off — the
+    timer runs either way.
+
+    Called by: `tasks.cleanup._check_delivery_timers`.
+    """
+    import os
+
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        _notify_user(
+            user,
+            "delivery_reminder",
+            route=route,
+            cta_url=f"{base}/deals/{deal_id}/vault",
+        )
+
+
 @celery_app.task(name="app.tasks.notifications.send_role_granted")
 def send_role_granted(user_id: str, role: str) -> None:
     """T3.42 — the role the person accepted has taken effect.

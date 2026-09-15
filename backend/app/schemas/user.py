@@ -118,6 +118,9 @@ class UserUpdate(BaseModel):
     cancel_timeout_hours: int | None = Field(default=None, ge=1, le=168)
     # T3.12.05 — «не предлагать мне роль получателя».
     refuses_recipient_offers: bool | None = None
+    # T3.12.07 pt.2 — hours after the landing before a silent deal goes to the
+    # arbiter; `null` returns to the platform's default.
+    delivery_timeout_hours: int | None = Field(default=None, ge=12, le=720)
     # T3.11.07 — the currencies new trips may start in, first one primary.
     # Validated against a closed list: a typo in a code is a price nobody can
     # compare, and this is the one field on a trip where free text buys nothing.
@@ -344,6 +347,8 @@ class MeOut(UserOut):
     # T3.12.05 — owner-only: who may name this person a recipient is their own
     # business, not something a counterparty reads on a profile.
     refuses_recipient_offers: bool = False
+    # T3.12.07 pt.2 — `None` is «as the platform decides».
+    delivery_timeout_hours: int | None = None
     default_currencies: list[str] = Field(default_factory=lambda: ["USD"])
     # T3.11.07 — owner-only, like the rest of `MeOut`. How the carrier can be
     # paid is theirs to send when they choose; putting it on the public

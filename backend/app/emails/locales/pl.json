@@ -180,6 +180,17 @@
     "facts_offered_by": "od",
     "cta": "Zobacz propozycję"
   },
+  "delivery_reminder": {
+    "subject": "Vimana · Czy paczka dotarła?",
+    "preheader": "Potwierdź przekazanie, inaczej transakcja trafi do arbitra",
+    "heading": "Czy paczka dotarła?",
+    "body": [
+      "Przewoźnik wylądował, a przekazania nikt jeszcze nie potwierdził.",
+      "Jeśli paczka została przekazana, potwierdź to w transakcji. Jeśli coś jest nie tak, otwórz spór. Jeśli nikt nie odpowie przed końcem terminu, transakcja sama trafi do arbitra."
+    ],
+    "facts_route": "trasa",
+    "cta": "Otwórz transakcję"
+  },
   "role_granted": {
     "subject": "Vimana · Rola weszła w życie",
     "preheader": "Przyjąłeś ją, więc zaczęła obowiązywać",

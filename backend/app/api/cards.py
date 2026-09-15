@@ -104,7 +104,7 @@ async def _emit(
     db: AsyncSession,
     deal: Deal,
     kind: CardKind,
-    actor: User,
+    actor: User | None,
     *,
     payload: dict | None = None,
     supersedes: uuid.UUID | None = None,
@@ -118,9 +118,10 @@ async def _emit(
     most important rows in a deal — so they get the same `message_added` entry
     as anything a person typed.
 
-    `actor` is whoever's action caused the emission. The chain has no notion of
-    "the platform did it", and inventing a null actor would mean loosening a
-    NOT NULL that exists to keep every entry attributable.
+    `actor` is whoever's action caused the emission. T3.12.07 pt.2 — `None` when
+    nobody's did: the delivery timer opening a dispute. The chain records an
+    absent actor as absent (`deal_chain.compute_entry_hash`), which is truer
+    than naming a party who pressed nothing.
     """
     msg = DealVaultMessage(
         deal_id=deal.id,
@@ -139,7 +140,7 @@ async def _emit(
         db,
         deal_id=deal.id,
         event_type=DealEventType.message_added,
-        actor_id=actor.id,
+        actor_id=actor.id if actor else None,
         payload={
             "message_id": str(msg.id),
             "content_hash": content_hash_of(msg.text_ciphertext, msg.text_nonce),
@@ -905,7 +906,7 @@ async def record_card(
     db: AsyncSession,
     deal: Deal,
     kind: CardKind,
-    actor: User,
+    actor: User | None,
     *,
     payload: dict | None = None,
 ) -> DealVaultMessage:

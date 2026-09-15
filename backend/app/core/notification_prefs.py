@@ -87,7 +87,10 @@ EVENT_CLASSES: tuple[EventClass, ...] = (
     # about their delivery, and a separate switch would ask them to reason about
     # our table layout.
     # T3.12.05 — an offer to be a recipient is news about a parcel too.
-    EventClass("deal", kinds=("deal_status", "trip_rescheduled", "recipient_offered")),
+    EventClass(
+        "deal",
+        kinds=("deal_status", "trip_rescheduled", "recipient_offered", "delivery_reminder"),
+    ),
     EventClass("deadline", kinds=("deadline_reminder",)),
     # T3.11.19 — «кто летит в ближайшие дни ЛА — Москва?» is 366 posts in the
     # dump. The sender does not scroll a board, they shout into a corridor and

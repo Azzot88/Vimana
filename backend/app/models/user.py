@@ -155,6 +155,10 @@ class User(Base):
     refuses_recipient_offers: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false"
     )
+    # T3.12.07 pt.2 — how long after the landing a silent deal waits before it
+    # goes to the arbiter, for this sender's deals (owner, 2026-09-14: «в кабинете
+    # отправителя»). NULL is the platform's `delivery_timeout_hours`.
+    delivery_timeout_hours: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # T3.11.07 — the currencies this account prices in. **Several** (owner's
     # decision 2026-09-06): a carrier on two corridors quotes in two, and one
     # who settles in a stablecoin quotes in that as well. The first is the one a

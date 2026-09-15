@@ -69,6 +69,8 @@ _LETTERS: dict[str, dict[str, Any]] = {
     # T3.12.05 — the recipient role, offered. The route and the sender are the
     # two facts somebody needs to recognise the parcel; the rest is in the offer.
     "recipient_offered": {"cta": True, "facts": ["route", "offered_by"]},
+    # T3.12.07 pt.2 — «груз доставлен?», once a day after the landing.
+    "delivery_reminder": {"cta": True, "facts": ["route"]},
     # T3.42 pt.2 — the two ends of the same lifecycle. `role_granted` goes out
     # when the person accepts: they just clicked it, but if it was not them,
     # this letter is the only thing that says access changed — the same
@@ -165,6 +167,10 @@ def sample_context(kind: str) -> dict[str, Any]:
             "role": "arbiter",
             "offered_by": "Alan Cherkasov — Дубай",
             "cta_url": "https://vimana.dealvault.club/profile/keys",
+        },
+        "delivery_reminder": {
+            "route": "DXB → JFK",
+            "cta_url": "https://vimana.dealvault.club/deals/00000000-0000-4000-8000-000000000000/vault",
         },
         "recipient_offered": {
             "route": "DXB → JFK",

@@ -1413,7 +1413,8 @@
     "group": {
       "fees": "Frais",
       "bond": "Caution du transporteur",
-      "premium": "Premium"
+      "premium": "Premium",
+      "deals": "Accords"
     },
     "newValue": "Nouvelle valeur"
   },

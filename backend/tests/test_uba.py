@@ -216,6 +216,28 @@ async def test_uba_scales_after_confirmed_deal(client, session_maker):
     assert body["components"]["q_count"] == 0
     assert body["uba"] == 0
 
+    # T3.12.07 pt.2 — the handoff photo alone is enough for Q: the receipt photo
+    # is optional now, and a Q that demanded it would stop counting honest deals.
+    import uuid as uuidlib
+
+    from app.models.deal import Attachment, AttachmentKind, DealVaultMessage
+
+    async with session_maker() as db:
+        msg = DealVaultMessage(deal_id=uuidlib.UUID(deal_id), is_system=True)
+        db.add(msg)
+        await db.flush()
+        db.add(
+            Attachment(
+                message_id=msg.id,
+                r2_key=f"test/{msg.id}",
+                file_hash="0" * 64,
+                kind=AttachmentKind.handoff_photo,
+            )
+        )
+        await db.commit()
+    resp = await client.get(f"/api/users/{carrier_id}/uba", headers=c_headers)
+    assert resp.json()["components"]["q_count"] == 1
+
 
 # ── T_TRUST.1 — evidence decays ──────────────────────────────────────────────
 

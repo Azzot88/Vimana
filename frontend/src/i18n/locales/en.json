@@ -1550,7 +1550,8 @@
     "group": {
       "fees": "Fees",
       "bond": "Carrier bond",
-      "premium": "Premium"
+      "premium": "Premium",
+      "deals": "Deals"
     },
     "newValue": "New value"
   },
@@ -1793,6 +1794,12 @@
       "label": "Wait for an answer",
       "hours_one": "{{count}} hour",
       "hours_other": "{{count}} hours"
+    },
+    "deliveryTimeout": {
+      "title": "Parcel nobody confirms",
+      "hint": "How long after the landing to wait for someone to confirm the handover. Once a day you are asked whether the parcel arrived; when nobody answers in time, the deal goes to an arbiter by itself. One setting for all your deals.",
+      "label": "Wait for confirmation",
+      "platform": "As the platform decides (72 hours)"
     },
     "work": {
       "title": "Working rules",

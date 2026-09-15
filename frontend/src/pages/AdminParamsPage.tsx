@@ -21,7 +21,7 @@ import MonoText from '../components/MonoText'
  *   - who last changed it and why.
  *  Everything else is a form.
  */
-const GROUP_ORDER = ['fees', 'bond', 'premium'] as const
+const GROUP_ORDER = ['fees', 'bond', 'premium', 'deals'] as const
 
 export default function AdminParamsPage() {
   const { t } = useTranslation()

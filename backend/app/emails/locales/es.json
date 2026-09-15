@@ -180,6 +180,17 @@
     "facts_offered_by": "de",
     "cta": "Ver la oferta"
   },
+  "delivery_reminder": {
+    "subject": "Vimana · ¿Ha llegado el paquete?",
+    "preheader": "Confirma la entrega o la operación pasará a un árbitro",
+    "heading": "¿Ha llegado el paquete?",
+    "body": [
+      "El transportista ha aterrizado y nadie ha confirmado todavía la entrega.",
+      "Si el paquete se entregó, confírmalo en la operación. Si algo va mal, abre una disputa. Si nadie responde antes de que acabe el plazo, la operación pasará sola a un árbitro."
+    ],
+    "facts_route": "ruta",
+    "cta": "Abrir la operación"
+  },
   "role_granted": {
     "subject": "Vimana · El rol ya está en vigor",
     "preheader": "Lo aceptaste, así que ha entrado en vigor",

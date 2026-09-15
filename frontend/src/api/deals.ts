@@ -126,7 +126,8 @@ export interface DealEvent {
   deal_id: string
   event_type: string
   payload: Record<string, unknown> | null
-  actor_id: string
+  /** T3.12.07 pt.2 — null when the platform acted (the delivery timer). */
+  actor_id: string | null
   timestamp: string
 }
 

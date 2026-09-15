@@ -1415,7 +1415,8 @@
     "group": {
       "fees": "Opłaty",
       "bond": "Kaucja przewoźnika",
-      "premium": "Premium"
+      "premium": "Premium",
+      "deals": "Transakcje"
     },
     "newValue": "Nowa wartość"
   },

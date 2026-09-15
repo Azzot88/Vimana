@@ -11,7 +11,9 @@ Pure computation of the trust score per IMPLEMENTATIONPLAN §6 §3.1:
     УБА = round(F_norm × Q_norm × V_norm × D_factor × V_verify_norm × 1000)
 
 Rolling 90-day window for F/Q/V. F is monthly rate (deals ÷ 3 months). Q counts
-only deals with **both** DealVault photos (handoff + receipt). D is the peak
+closed deals with the handoff photo in DealVault. T3.12.07 pt.2 — the receipt
+photo is no longer required: the handover in hand needs none (owner, 2026-09-14),
+and a Q that demanded it would stop counting honest deals. D is the peak
 active collateral — not implemented yet (Collateral model is Phase 5). Verification
 factor comes from T2.1 `User.highest_verification_level`.
 
@@ -108,9 +110,8 @@ def compute_components(db: Session, user_id: uuid.UUID) -> UBAComponents:
         )
     ).scalar() or 0.0
 
-    # Q — closed deals with BOTH handoff_photo AND receipt_photo attachments in
-    # DealVault. Two exists() sub-queries per deal are cheap enough for hourly
-    # cadence — no denormalisation yet.
+    # Q — closed deals with a handoff_photo attachment in DealVault. T3.12.07
+    # pt.2 dropped the receipt_photo condition: that photo is optional now.
     handoff_exists = (
         select(1)
         .select_from(Attachment)
@@ -121,23 +122,12 @@ def compute_components(db: Session, user_id: uuid.UUID) -> UBAComponents:
         )
         .exists()
     )
-    receipt_exists = (
-        select(1)
-        .select_from(Attachment)
-        .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
-        .where(
-            DealVaultMessage.deal_id == Deal.id,
-            Attachment.kind == AttachmentKind.receipt_photo,
-        )
-        .exists()
-    )
     q_count = db.execute(
         select(func.count(Deal.id)).where(
             Deal.carrier_id == user_id,
             Deal.status == DealStatus.closed,
             Deal.created_at >= since,
             handoff_exists,
-            receipt_exists,
         )
     ).scalar() or 0
 

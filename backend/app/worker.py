@@ -76,6 +76,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.cleanup.close_stale_cancellations",
         "schedule": 3600.0,
     },
+    # T3.12.07 pt.2 — silence after the landing. Hourly for the same reason as
+    # the cancellations: the deadline is a wall-clock moment.
+    "check-delivery-timers-hourly": {
+        "task": "app.tasks.cleanup.check_delivery_timers",
+        "schedule": 3600.0,
+    },
     # T3.11.07 — checks the vendored payment catalogue and **reports**; writing
     # stays a human act (`app.cli.refresh_payment_systems --write`). Monthly,
     # because a list of payment services moves at the speed of the payments

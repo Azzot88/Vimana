@@ -1092,6 +1092,14 @@ async def _add_recipient_offer_columns(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _add_delivery_timer_columns(engine) -> None:
+    """T3.12.07 pt.2 — `0096` on the test database, after `create_all`.
+    Idempotent (`DROP NOT NULL` and `ADD COLUMN IF NOT EXISTS`)."""
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0096_delivery_timer.py"):
+            await conn.execute(text(statement))
+
+
 async def _rename_operator_to_arbiter(engine) -> None:
     """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
@@ -2203,6 +2211,7 @@ async def test_engine():
         await conn.run_sync(Base.metadata.create_all)
     await _add_cargo_fields(engine)
     await _add_recipient_offer_columns(engine)
+    await _add_delivery_timer_columns(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
     await _ensure_role_column(engine)

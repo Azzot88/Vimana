@@ -180,6 +180,17 @@
     "facts_offered_by": "from",
     "cta": "See the offer"
   },
+  "delivery_reminder": {
+    "subject": "Vimana · Has the parcel arrived?",
+    "preheader": "Confirm the handover, or the deal goes to an arbiter",
+    "heading": "Has the parcel arrived?",
+    "body": [
+      "The carrier has landed and nobody has confirmed the handover yet.",
+      "If the parcel was handed over, confirm it in the deal. If something is wrong, open a dispute. When nobody answers before the timer runs out, the deal goes to an arbiter by itself."
+    ],
+    "facts_route": "route",
+    "cta": "Open the deal"
+  },
   "role_granted": {
     "subject": "Vimana · The role now applies to your account",
     "preheader": "You accepted it, so it has taken effect",

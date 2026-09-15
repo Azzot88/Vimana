@@ -190,6 +190,11 @@ class Deal(Base):
     edit_hold_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # T3.12.07 pt.2 — when the sender was last asked «груз доставлен?». Stored so
+    # the hourly sweep asks once a day rather than once an hour.
+    delivery_reminded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -214,7 +219,14 @@ class DealEvent(Base):
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
     event_type: Mapped[DealEventType] = mapped_column(SAEnum(DealEventType))
     payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    # T3.12.07 pt.2 — NULL is «the platform did it»: a dispute opened by the
+    # delivery timer, when nobody pressed anything (`IMPLEMENTATIONPLAN §3.12.4`
+    # п. 6: `opened_by` — система, а не человек). Attributing it to a party would
+    # put a false author into the one record an arbiter trusts. The hash already
+    # tells an absent actor from any real one (`deal_chain.compute_entry_hash`).
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
     nostr_sig: Mapped[str | None] = mapped_column(String(128), nullable=True)
     nostr_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nostr_created_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
@@ -355,7 +367,11 @@ class Dispute(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
-    opened_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    # T3.12.07 pt.2 — NULL when the delivery timer opened it: silence is not a
+    # person, and the dispute must not name one.
+    opened_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
     arbiter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     reason: Mapped[str] = mapped_column(Text)
     status: Mapped[DisputeStatus] = mapped_column(SAEnum(DisputeStatus), default=DisputeStatus.open)
