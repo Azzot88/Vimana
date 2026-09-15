@@ -31,7 +31,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,6 +64,24 @@ class ChecklistIn(BaseModel):
     #: no red lines — which is honest, not degraded: «когда-нибудь» has no
     #: deadline.
     depart_at: date | None = None
+
+    # The length is checked on the value as it will be stored. `max_length`
+    # counts what was sent, and changing case can lengthen a string — `ß`
+    # uppercases to `SS` — so sixteen characters in became seventeen in a
+    # `varchar(16)` and a 500 (found by the contract fuzzer, 2026-09-15).
+    @field_validator("origin", "destination")
+    @classmethod
+    def _code_fits_once_normalised(cls, v: str) -> str:
+        if len(v.strip().upper()) > 16:
+            raise ValueError("at most 16 characters")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def _category_fits_once_normalised(cls, v: str) -> str:
+        if len(v.strip().lower()) > 50:
+            raise ValueError("at most 50 characters")
+        return v
 
 
 class ChecklistItemOut(BaseModel):

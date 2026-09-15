@@ -323,6 +323,16 @@ async def test_without_a_departure_there_are_no_deadlines(client, corridor):
     assert all(i["start_by"] is None and i["too_late"] is False for i in body["items"])
 
 
+async def test_a_code_that_grows_when_uppercased_is_refused_not_a_500(client):
+    """`ß` uppercases to `SS`: sixteen characters sent were seventeen stored in a
+    `varchar(16)`. The length is checked on the normalised value."""
+    r = await client.post(
+        "/api/checklist/cases",
+        json={"origin": "ß" * 16, "destination": "US", "category": "document"},
+    )
+    assert r.status_code == 422, r.text
+
+
 async def test_a_saved_case_does_not_move_when_the_rule_does(
     client, session_maker, corridor
 ):
