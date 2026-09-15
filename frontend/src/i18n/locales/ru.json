@@ -888,7 +888,28 @@
       "luxury": "Люкс"
     }
   },
+  "cargoRoute": {
+    "title": "Маршрут груза",
+    "thisDeal": "ваша сделка",
+    "multihop": "Груз идёт через несколько сделок.",
+    "where": {
+      "awaiting_carrier": "ждёт перевозчика",
+      "in_transit": "в пути",
+      "with_postal_service": "в почтовой службе",
+      "delivered": "вручён"
+    }
+  },
   "agreement": {
+    "answer": {
+      "yourTurn": "Ваш ответ",
+      "waiting": "Ждём ответа: {{who}}",
+      "agreed": "Условия согласованы"
+    },
+    "role": {
+      "sender": "отправитель",
+      "carrier": "перевозчик",
+      "recipient": "получатель"
+    },
     "empty": "Условия ещё не предложены.",
     "locked": "закрыто перевозчиком",
     "lockIt": "закрыть от правок",

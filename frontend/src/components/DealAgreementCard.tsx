@@ -1,12 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import type { DealDetail } from '../api/deals'
 import type { Terms } from '../api/terms'
+import type { DealRole } from '../lib/cardForms'
 import { usePrefs } from '../hooks/usePrefs'
 import MonoText from './MonoText'
 
 interface Props {
   deal: DealDetail
   terms: Terms | null
+  /** T3.12.10 — who is reading, so the card can say whether the terms wait for
+   *  them or for the other side. */
+  myRole?: DealRole | null
   /** Open while the agreement is not confirmed by both — the first stage *is*
    *  agreeing it, and a collapsed card there would be an empty screen. */
   open: boolean
@@ -30,10 +34,33 @@ interface Props {
  *  - `DealAgreementCard({ deal, terms, open, onToggle })` — default export.
  *    Called by: `pages/DealVaultPage`.
  */
-export default function DealAgreementCard({ deal, terms, open, onToggle }: Props) {
+export default function DealAgreementCard({
+  deal,
+  terms,
+  myRole = null,
+  open,
+  onToggle,
+}: Props) {
   const { t } = useTranslation()
   const prefs = usePrefs()
   const p = terms?.payload ?? {}
+
+  /* T3.12.10 — whose move the agreement is on (`IMPLEMENTATIONPLAN §3.12.7`
+     п. 2). Owner, 2026-09-15: every field is open to both sides, so what the
+     card marks is not ownership of a field but the state of the answer — the
+     terms are agreed, or they are a proposal waiting for somebody, and that
+     somebody is named. Silence used to read as «nothing is happening» to the
+     very person the proposal was addressed to. */
+  const pending = terms?.card_state === 'pending' ? terms.requires_ack_by : null
+  const answer = terms
+    ? pending
+      ? pending === myRole
+        ? t('agreement.answer.yourTurn')
+        : t('agreement.answer.waiting', { who: t(`agreement.role.${pending}`) })
+      : terms.card_kind === 'terms.agreed'
+        ? t('agreement.answer.agreed')
+        : null
+    : null
 
   /** One line of a section, drawn only when there is something to say. A field
    *  nobody answered is left out rather than printed as a dash: «не сказал» and
@@ -109,6 +136,15 @@ export default function DealAgreementCard({ deal, terms, open, onToggle }: Props
             {deal.sender_name} → {deal.carrier_name} →{' '}
             {deal.recipient_name ?? t('agreement.noRecipient')}
           </span>
+          {answer && (
+            <span
+              className={`text-xs font-body ${
+                pending === myRole ? 'text-cyan font-medium' : 'text-navy/45'
+              }`}
+            >
+              {answer}
+            </span>
+          )}
         </div>
       </button>
 

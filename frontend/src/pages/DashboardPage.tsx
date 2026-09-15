@@ -174,6 +174,191 @@ export default function DashboardPage() {
     </Link>
   )
 
+  /* T3.12.10 — one panel for both modes (`IMPLEMENTATIONPLAN §3.12.2` п. 4).
+     The mode is not a role in any deal, so it decides nothing about what a
+     person may do here: it orders these blocks and picks the button. Both
+     branches already drew all of them — a carrier who also sends, and a sender
+     who also carries, are the normal case (T3.11.26) — but as two copies that
+     could drift. One map, two orders (owner, 2026-09-15). */
+  const tripsSection =
+    liveTrips.length === 0 && !isCarrier ? null : (
+      <section>
+        <h2 className="font-display font-semibold text-lg text-navy mb-3">
+          {t('dashboard.myTrips')}
+        </h2>
+        {liveTrips.length === 0 ? (
+          <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
+            <p className="text-sm font-body text-navy/40">{t('dashboard.noTrips')}</p>
+            {!user?.key_lost && (
+              <Link
+                to="/trips/new"
+                className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
+              >
+                {t('dashboard.publishFirst')}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {liveTrips.map((trip) => {
+              const askCount = inquiriesFor(trip.id)
+              return (
+                <div
+                  key={trip.id}
+                  className="bg-white rounded-card border border-navy/10 p-4 space-y-2"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <MonoText className="text-sm text-navy font-medium">
+                      {routeChain(trip)}
+                    </MonoText>
+                    <MonoText className="text-xs text-navy/50">
+                      {prefs.dateTime(trip.depart_at)}
+                    </MonoText>
+                    <DepartureChip trip={trip} />
+                    <span className="text-xs font-mono text-navy/40 ml-auto">
+                      {trip.status}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
+                    {/* T3.11.07 — see TripsPage: a missing weight is not
+                        rendered as a number. */}
+                    {trip.capacity !== null && (
+                      <span>
+                        {t('trips.capacity')}: {prefs.weight(trip.capacity)}
+                      </span>
+                    )}
+                    {trip.size_hint && (
+                      <span>{t(`trips.sizeHint.${trip.size_hint}`)}</span>
+                    )}
+                    <span>
+                      {t('trips.pricePerKg')}:{' '}
+                      {trip.price_per_kg
+                        ? `${trip.price_per_kg} ${trip.currency ?? 'USD'}`
+                        : t('trips.priceOnRequest')}
+                    </span>
+                    {/* Who is asking about this trip. A published trip with
+                        unanswered questions is the one thing on this screen
+                        that needs doing today. */}
+                    {askCount > 0 && (
+                      <span className="text-cyan font-medium">
+                        💬 {t('dashboard.inquiries', { count: askCount })}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <Link
+                      to={`/carriers/${trip.carrier_id}`}
+                      className="text-xs font-body text-navy/40 hover:text-navy"
+                    >
+                      {t('dashboard.viewAsSender')}
+                    </Link>
+                    {trip.status === 'open' && (
+                      <button
+                        type="button"
+                        disabled={busyTrip === trip.id}
+                        onClick={() => void withdraw(trip.id)}
+                        className="text-xs font-body text-danger hover:underline disabled:opacity-50 ml-auto"
+                      >
+                        {busyTrip === trip.id ? '...' : t('dashboard.withdraw')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+    )
+
+  /* T3.11.27 — the archive. One line per trip and nothing to press: what a
+     carrier wants from a flight that has left is confirmation that it happened
+     and where it went, and the deals it produced live on their own rows. */
+  const archiveSection =
+    flownTrips.length === 0 ? null : (
+      <section>
+        <h2 className="font-display font-semibold text-sm text-navy/45 mb-2">
+          {t('trips.archiveTitle')}
+        </h2>
+        <div className="bg-white rounded-card border border-navy/10 divide-y divide-navy/5">
+          {flownTrips.map((trip) => (
+            <div key={trip.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3">
+              <MonoText className="text-xs text-navy/50">{routeChain(trip)}</MonoText>
+              <MonoText className="text-xs text-navy/30">
+                {prefs.dateTime(trip.depart_at)}
+              </MonoText>
+              <span className="ml-auto">
+                <DepartureChip trip={trip} />
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+
+  const sendingSection =
+    sending.length === 0 && isCarrier ? null : (
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display font-semibold text-lg text-navy">
+            {t('dashboard.myShipments')}
+          </h2>
+          <Link to="/history" className="text-xs text-cyan hover:underline font-body">
+            {t('nav.history')}
+          </Link>
+        </div>
+        {sending.length === 0 ? (
+          <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
+            <p className="text-sm font-body text-navy/40">
+              {t('dashboard.noShipments')}
+            </p>
+            {/* T3.11.26 — «Найти рейс» is gone from the panel: `/send` is the
+                board now, so a button whose whole job was to get there is one
+                click of ceremony in front of the thing the person came for. */}
+            <Link
+              to="/send"
+              className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
+            >
+              {t('nav.trips')}
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-3">{sending.map(dealRow)}</div>
+        )}
+      </section>
+    )
+
+  const carryingSection =
+    carrying.length === 0 ? null : (
+      <section>
+        <h2 className="font-display font-semibold text-lg text-navy mb-3">
+          {t('dashboard.carryingNow')}
+        </h2>
+        <div className="grid gap-3">{carrying.map(dealRow)}</div>
+      </section>
+    )
+
+  const receivingSection =
+    receiving.length === 0 ? null : (
+      <section>
+        <h2 className="font-display font-semibold text-lg text-navy mb-3">
+          {t('dashboard.receivingNow')}
+        </h2>
+        <div className="grid gap-3">{receiving.map(dealRow)}</div>
+      </section>
+    )
+
+  const sections = {
+    trips: tripsSection,
+    archive: archiveSection,
+    sending: sendingSection,
+    carrying: carryingSection,
+    receiving: receivingSection,
+  }
+  const order = isCarrier
+    ? (['trips', 'archive', 'carrying', 'sending', 'receiving'] as const)
+    : (['sending', 'receiving', 'carrying', 'trips', 'archive'] as const)
+
   return (
     <div className="space-y-8">
       <div className={`h-1.5 rounded-full ${accentBar}`} />
@@ -201,207 +386,7 @@ export default function DashboardPage() {
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
-      {isCarrier ? (
-        <>
-          <section>
-            <h2 className="font-display font-semibold text-lg text-navy mb-3">
-              {t('dashboard.myTrips')}
-            </h2>
-            {liveTrips.length === 0 ? (
-              <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
-                <p className="text-sm font-body text-navy/40">
-                  {t('dashboard.noTrips')}
-                </p>
-                {!user?.key_lost && (
-                  <Link
-                    to="/trips/new"
-                    className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
-                  >
-                    {t('dashboard.publishFirst')}
-                  </Link>
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {liveTrips.map((trip) => {
-                  const askCount = inquiriesFor(trip.id)
-                  return (
-                    <div
-                      key={trip.id}
-                      className="bg-white rounded-card border border-navy/10 p-4 space-y-2"
-                    >
-                      <div className="flex flex-wrap items-center gap-3">
-                        <MonoText className="text-sm text-navy font-medium">
-                          {routeChain(trip)}
-                        </MonoText>
-                        <MonoText className="text-xs text-navy/50">
-                          {prefs.dateTime(trip.depart_at)}
-                        </MonoText>
-                        <DepartureChip trip={trip} />
-                        <span className="text-xs font-mono text-navy/40 ml-auto">
-                          {trip.status}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body text-navy/50">
-                        {/* T3.11.07 — see TripsPage: a missing weight is not
-                            rendered as a number. */}
-                        {trip.capacity !== null && (
-                          <span>
-                            {t('trips.capacity')}: {prefs.weight(trip.capacity)}
-                          </span>
-                        )}
-                        {trip.size_hint && (
-                          <span>{t(`trips.sizeHint.${trip.size_hint}`)}</span>
-                        )}
-                        <span>
-                          {t('trips.pricePerKg')}:{' '}
-                          {trip.price_per_kg
-                            ? `${trip.price_per_kg} ${trip.currency ?? 'USD'}`
-                            : t('trips.priceOnRequest')}
-                        </span>
-                        {/* Who is asking about this trip. A published trip with
-                            unanswered questions is the one thing on this screen
-                            that needs doing today. */}
-                        {askCount > 0 && (
-                          <span className="text-cyan font-medium">
-                            💬 {t('dashboard.inquiries', { count: askCount })}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-3 pt-1">
-                        <Link
-                          to={`/carriers/${trip.carrier_id}`}
-                          className="text-xs font-body text-navy/40 hover:text-navy"
-                        >
-                          {t('dashboard.viewAsSender')}
-                        </Link>
-                        {trip.status === 'open' && (
-                          <button
-                            type="button"
-                            disabled={busyTrip === trip.id}
-                            onClick={() => void withdraw(trip.id)}
-                            className="text-xs font-body text-danger hover:underline disabled:opacity-50 ml-auto"
-                          >
-                            {busyTrip === trip.id ? '...' : t('dashboard.withdraw')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* T3.11.27 — the archive. One line per trip and nothing to press:
-              what a carrier wants from a flight that has left is confirmation
-              that it happened and where it went, and the deals it produced live
-              on their own rows below. */}
-          {flownTrips.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-sm text-navy/45 mb-2">
-                {t('trips.archiveTitle')}
-              </h2>
-              <div className="bg-white rounded-card border border-navy/10 divide-y divide-navy/5">
-                {flownTrips.map((trip) => (
-                  <div
-                    key={trip.id}
-                    className="px-4 py-2.5 flex flex-wrap items-center gap-3"
-                  >
-                    <MonoText className="text-xs text-navy/50">
-                      {routeChain(trip)}
-                    </MonoText>
-                    <MonoText className="text-xs text-navy/30">
-                      {prefs.dateTime(trip.depart_at)}
-                    </MonoText>
-                    <span className="ml-auto">
-                      <DepartureChip trip={trip} />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {carrying.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-lg text-navy mb-3">
-                {t('dashboard.carryingNow')}
-              </h2>
-              <div className="grid gap-3">{carrying.map(dealRow)}</div>
-            </section>
-          )}
-          {/* T3.11.26 — a carrier who is also sending something sees it here.
-              The panel used to show one side or the other by mode, which hid
-              real work from anybody who does both — and both is the normal
-              case on this market. */}
-          {sending.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-lg text-navy mb-3">
-                {t('dashboard.myShipments')}
-              </h2>
-              <div className="grid gap-3">{sending.map(dealRow)}</div>
-            </section>
-          )}
-          {receiving.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-lg text-navy mb-3">
-                {t('dashboard.receivingNow')}
-              </h2>
-              <div className="grid gap-3">{receiving.map(dealRow)}</div>
-            </section>
-          )}
-        </>
-      ) : (
-        <>
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display font-semibold text-lg text-navy">
-              {t('dashboard.myShipments')}
-            </h2>
-            <Link to="/history" className="text-xs text-cyan hover:underline font-body">
-              {t('nav.history')}
-            </Link>
-          </div>
-          {sending.length === 0 ? (
-            <div className="bg-white rounded-card border border-navy/10 p-6 text-center">
-              <p className="text-sm font-body text-navy/40">
-                {t('dashboard.noShipments')}
-              </p>
-              {/* T3.11.26 — «Найти рейс» is gone from the panel: `/send` is the
-                  board now, so a button whose whole job was to get there is one
-                  click of ceremony in front of the thing the person came for. */}
-              <Link
-                to="/send"
-                className="inline-block mt-3 text-sm text-cyan hover:underline font-body"
-              >
-                {t('nav.trips')}
-              </Link>
-            </div>
-          ) : (
-            <div className="grid gap-3">{sending.map(dealRow)}</div>
-          )}
-        </section>
-        {/* Same reason as above, the other way round: somebody in sender mode
-            who is also carrying a parcel sees it without switching. */}
-        {carrying.length > 0 && (
-          <section>
-            <h2 className="font-display font-semibold text-lg text-navy mb-3">
-              {t('dashboard.carryingNow')}
-            </h2>
-            <div className="grid gap-3">{carrying.map(dealRow)}</div>
-          </section>
-        )}
-        {receiving.length > 0 && (
-          <section>
-            <h2 className="font-display font-semibold text-lg text-navy mb-3">
-              {t('dashboard.receivingNow')}
-            </h2>
-            <div className="grid gap-3">{receiving.map(dealRow)}</div>
-          </section>
-        )}
-        </>
-      )}
+      {order.map((key) => sections[key] && <div key={key}>{sections[key]}</div>)}
     </div>
   )
 }

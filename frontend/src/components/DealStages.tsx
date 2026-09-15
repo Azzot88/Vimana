@@ -104,7 +104,10 @@ export default function DealStages({
       m.card_kind === 'transit.update' &&
       (m.card_payload as { stage?: string } | null)?.stage === 'arrived',
   )
-  const currentKey: DealStageKey = stageOf(status, { arrived })
+  // T3.12.08 — and whether it went by post, which is what keeps a paid-but-not
+  // -received deal standing on delivery instead of reading as closed.
+  const posted = messages.some((m) => m.card_kind === 'posted.confirmed')
+  const currentKey: DealStageKey = stageOf(status, { arrived, posted })
   const currentIndex = stageIndex(currentKey)
 
   const raiseDispute = async () => {

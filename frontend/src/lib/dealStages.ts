@@ -155,6 +155,8 @@ export const TERMINAL_STATUSES: DealStatus[] = ['confirmed', 'closed', 'cancelle
  *  maps a status to a stage and that is all it has ever done. */
 export interface StageMarks {
   arrived?: boolean
+  /** T3.12.08 — the parcel went by post: a `posted.confirmed` card exists. */
+  posted?: boolean
 }
 
 export function stageOf(
@@ -162,6 +164,10 @@ export function stageOf(
   marks: StageMarks = {},
 ): DealStageKey {
   if (status === 'disputed') return 'delivery'
+  // T3.12.08 — a posted deal paid before it arrived sits at `confirmed` with
+  // the parcel still in the post. Drawing it as «closed» told the recipient the
+  // deal was over while the one card that ends it was still theirs to press.
+  if (status === 'confirmed' && marks.posted) return 'delivery'
   // T3.11.27 — a cancelled deal stands at the end of the ladder without having
   // walked it. Not a stage of its own: the strip shows how far a delivery got,
   // and a stage nobody can ever be on would be a rung nobody climbs.

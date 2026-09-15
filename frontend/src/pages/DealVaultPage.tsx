@@ -22,6 +22,7 @@ import { roleIn } from '../lib/dealRole'
 import { useAuthStore } from '../stores/auth'
 import AddressCard, { isAddressCard } from '../components/AddressCard'
 import TermsCard from '../components/TermsCard'
+import CargoRouteCard from '../components/CargoRouteCard'
 import DealAgreementCard from '../components/DealAgreementCard'
 import DealStages from '../components/DealStages'
 import DealCard from '../components/DealCard'
@@ -452,11 +453,20 @@ export default function DealVaultPage() {
           What was left of the old boarding pass — the verification request and
           the dispute button — moved under it rather than disappearing: they
           belong to the deal as a whole rather than to any one stage. */}
+      {/* T3.12.10 — the cargo's route stands above the deal: the number people
+          say out loud, both ends, and this deal named on the line. */}
+      {deal && (
+        <div className="mb-2 shrink-0">
+          <CargoRouteCard deal={deal} />
+        </div>
+      )}
+
       {deal && (
         <div className="mb-3 sm:mb-4 shrink-0">
           <DealAgreementCard
             deal={deal}
             terms={terms}
+            myRole={dealRole}
             open={cardOpen}
             onToggle={() => setCardOpen((v) => !v)}
           />

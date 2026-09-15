@@ -886,7 +886,28 @@
       "luxury": "Luxury goods"
     }
   },
+  "cargoRoute": {
+    "title": "Cargo route",
+    "thisDeal": "this deal",
+    "multihop": "The cargo travels through more than one deal.",
+    "where": {
+      "awaiting_carrier": "waiting for the carrier",
+      "in_transit": "in transit",
+      "with_postal_service": "with the postal service",
+      "delivered": "delivered"
+    }
+  },
   "agreement": {
+    "answer": {
+      "yourTurn": "Your answer",
+      "waiting": "Waiting for {{who}}",
+      "agreed": "Terms agreed"
+    },
+    "role": {
+      "sender": "the sender",
+      "carrier": "the carrier",
+      "recipient": "the recipient"
+    },
     "empty": "No terms proposed yet.",
     "locked": "locked by the carrier",
     "lockIt": "lock this",
