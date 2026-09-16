@@ -38,6 +38,7 @@ const ProfileLayout = lazy(() => import('./pages/ProfileLayout'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const ProfileRulesPage = lazy(() => import('./pages/ProfileRulesPage'))
 const ProfileCargoTemplatesPage = lazy(() => import('./pages/ProfileCargoTemplatesPage'))
+const ProfileVaultPage = lazy(() => import('./pages/ProfileVaultPage'))
 const ProfileHistoryPage = lazy(() => import('./pages/ProfileHistoryPage'))
 const ProfileTrustPage = lazy(() => import('./pages/ProfileTrustPage'))
 const ProfilePrefsPage = lazy(() => import('./pages/ProfilePrefsPage'))
@@ -201,6 +202,7 @@ export default function App() {
                 <Route index element={<ProfilePage />} />
                 <Route path="rules" element={<ProfileRulesPage />} />
                 <Route path="cargo-templates" element={<ProfileCargoTemplatesPage />} />
+                <Route path="vault" element={<ProfileVaultPage />} />
                 {/* T_UX.21 — «Уровень активности» folded into the account, so
                     the address retires rather than disappears. Cheap to keep:
                     nothing outside the app links here (the section existed for

@@ -6,7 +6,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -408,6 +408,13 @@ async def delete_meeting_place(
 # ── T3.11.25 — the personal file safe ────────────────────────────────────────
 
 
+class DealRefOut(BaseModel):
+    """T_UX.27 — a deal named the way people say it out loud."""
+
+    deal_id: uuid.UUID
+    deal_no: str | None = None
+
+
 class UserFileOut(BaseModel):
     """T3.11.25 — one file in the person's own safe."""
 
@@ -421,6 +428,11 @@ class UserFileOut(BaseModel):
     #: «впервые предоставлен» — the day these bytes first reached the platform.
     #: It never moves; re-attaching writes an event, not a new first time.
     first_provided_at: datetime
+    #: T_UX.27 — the deals these bytes were attached to, by number. The safe
+    #: without it is a pile of files: «паспорт» three times over tells nobody
+    #: which parcel each copy went with, and that is the question people open
+    #: the safe with.
+    attached_to: list[DealRefOut] = []
 
 
 @router.get("/me/files", response_model=list[UserFileOut])
@@ -447,6 +459,42 @@ async def list_my_files(
             .limit(200)
         )
     ).scalars().all()
+
+    # T_UX.27 — where each file went, in one batched pass rather than a query
+    # per row. Only deals this person is a party to are named: a file of theirs
+    # can sit in a deal they later left, and the safe is not the place to learn
+    # about a deal you may no longer read.
+    from app.core.cargo import deal_no as deal_number
+    from app.models.deal import Attachment, Deal, DealVaultMessage
+    from app.models.marketplace import Cargo
+
+    placements: dict[uuid.UUID, list[DealRefOut]] = {}
+    file_ids = [f.id for f in rows]
+    if file_ids:
+        pairs = (
+            await db.execute(
+                select(Attachment.user_file_id, Deal.id, Cargo.shipment_no, Deal.position)
+                .join(DealVaultMessage, Attachment.message_id == DealVaultMessage.id)
+                .join(Deal, Deal.id == DealVaultMessage.deal_id)
+                .join(Cargo, Cargo.id == Deal.cargo_id, isouter=True)
+                .where(
+                    Attachment.user_file_id.in_(file_ids),
+                    or_(
+                        Deal.sender_id == current_user.id,
+                        Deal.carrier_id == current_user.id,
+                        Deal.recipient_id == current_user.id,
+                    ),
+                )
+            )
+        ).all()
+        for file_id, deal_id, shipment_no, position in pairs:
+            refs = placements.setdefault(file_id, [])
+            if any(r.deal_id == deal_id for r in refs):
+                continue
+            refs.append(
+                DealRefOut(deal_id=deal_id, deal_no=deal_number(shipment_no, position))
+            )
+
     return [
         UserFileOut(
             id=f.id,
@@ -457,6 +505,7 @@ async def list_my_files(
             scan_status=f.scan_status,
             url=get_presigned_url(f.r2_key, expires=presign_ttl_for_kind(f.kind.value)),
             first_provided_at=f.created_at,
+            attached_to=placements.get(f.id, []),
         )
         for f in rows
     ]

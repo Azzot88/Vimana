@@ -925,6 +925,7 @@
       "account": "Compte",
       "rules": "Mes règles",
       "cargoTemplates": "Modèles de colis",
+      "vault": "Coffre",
       "trust": "Cercles de confiance",
       "keys": "Accès et données",
       "history": "Historique et litiges",
@@ -1977,6 +1978,21 @@
       "with_postal_service": "chez le service postal",
       "delivered": "remis"
     }
+  },
+  "vault": {
+    "title": "Coffre",
+    "lead": "Vos fichiers et les coffres des accords auxquels vous avez pris part — actifs comme clos.",
+    "dealsTitle": "Coffres des accords",
+    "active": "Actifs",
+    "closed": "Clos",
+    "open": "Ouvrir",
+    "noDeals": "Aucun accord pour l’instant.",
+    "filesTitle": "Mes fichiers",
+    "noFiles": "Rien pour l’instant — les fichiers arrivent dans le coffre quand vous les joignez à un accord.",
+    "first": "fourni pour la première fois le {{date}}",
+    "attached": "Dans les accords :",
+    "notAttached": "joint à aucun accord",
+    "openFile": "Ouvrir le fichier"
   },
   "agreement": {
     "answer": {

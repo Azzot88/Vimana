@@ -87,6 +87,19 @@ async def test_0093_fills_a_cargo_from_the_terms_of_its_deal(
         cargo_id = cargo.id
 
     async with session_maker() as db:
+        # Said first, so a failure names the half that broke: the payload has to
+        # reach Postgres as a JSON array before the move can read one out of it.
+        kind = (
+            await db.execute(
+                text(
+                    "SELECT jsonb_typeof(card_payload::jsonb->'dimensions_cm') "
+                    "FROM deal_vault_messages WHERE deal_id = :deal"
+                ),
+                {"deal": str(deal_id)},
+            )
+        ).scalar()
+        assert kind == "array", f"the terms card stored dimensions as {kind}"
+
         for statement in _migration_statements("0093_cargo_out_of_terms.py", "BACKFILL"):
             await db.execute(text(statement))
         await db.commit()

@@ -897,6 +897,21 @@
       "delivered": "delivered"
     }
   },
+  "vault": {
+    "title": "Vault",
+    "lead": "Your files and the deal vaults you took part in — open and closed alike.",
+    "dealsTitle": "Deal vaults",
+    "active": "Active",
+    "closed": "Closed",
+    "open": "Open",
+    "noDeals": "No deals yet.",
+    "filesTitle": "My files",
+    "noFiles": "Nothing here yet — files land in the safe as you attach them to deals.",
+    "first": "first provided {{date}}",
+    "attached": "In deals:",
+    "notAttached": "not attached to a deal",
+    "openFile": "Open file"
+  },
   "agreement": {
     "answer": {
       "yourTurn": "Your answer",
@@ -1037,6 +1052,7 @@
       "account": "Account",
       "rules": "My rules",
       "cargoTemplates": "Cargo templates",
+      "vault": "Vault",
       "trust": "Trust circles",
       "keys": "Access and data",
       "history": "History and disputes",

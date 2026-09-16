@@ -929,6 +929,7 @@
       "account": "Konto",
       "rules": "Moje zasady",
       "cargoTemplates": "Szablony ładunku",
+      "vault": "Sejf",
       "trust": "Kręgi zaufania",
       "keys": "Dostęp i dane",
       "history": "Historia i spory",
@@ -1995,6 +1996,21 @@
       "with_postal_service": "w firmie pocztowej",
       "delivered": "doręczona"
     }
+  },
+  "vault": {
+    "title": "Sejf",
+    "lead": "Twoje pliki i sejfy transakcji, w których brałeś udział — aktywne i zamknięte.",
+    "dealsTitle": "Sejfy transakcji",
+    "active": "Aktywne",
+    "closed": "Zamknięte",
+    "open": "Otwórz",
+    "noDeals": "Nie ma jeszcze transakcji.",
+    "filesTitle": "Moje pliki",
+    "noFiles": "Na razie pusto — pliki trafiają do sejfu, gdy dołączasz je do transakcji.",
+    "first": "pierwszy raz {{date}}",
+    "attached": "W transakcjach:",
+    "notAttached": "nie dołączony do transakcji",
+    "openFile": "Otwórz plik"
   },
   "agreement": {
     "answer": {

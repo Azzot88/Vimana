@@ -44,7 +44,11 @@ BACKFILL = [
         dimensions_cm = COALESCE(
             c.dimensions_cm,
             CASE WHEN jsonb_typeof(s.p->'dimensions_cm') = 'array'
-                 THEN (s.p->'dimensions_cm')::json END
+                 -- Through text, not jsonb → json. The direct cast is what the
+                 -- first version did, and it left every migrated cargo without
+                 -- its size (found 2026-09-15, when the move finally got a
+                 -- test). `0098` repairs databases that already ran this.
+                 THEN (s.p->>'dimensions_cm')::json END
         ),
         fragile = c.fragile OR COALESCE((s.p->>'cargo_fragile')::boolean, false),
         open_on_handover = c.open_on_handover

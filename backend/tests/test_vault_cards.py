@@ -80,6 +80,10 @@ def test_implemented_kinds_are_reachable():
     dedicated = {CardKind.address_shared} | {
         k for k in CardKind if k.value.startswith("terms.")
     }
+    # T3.12.09 — and the ones the server writes from its own code: a dispute
+    # opened, claimed or ruled on, a vault sealed. They are producible, just not
+    # by a role — which is what this test is really asking.
+    dedicated |= {CardKind[name] for name in _kinds_referenced_in_app()}
 
     for kind, spec in CATALOGUE.items():
         if not spec.implemented:
@@ -99,6 +103,31 @@ def test_unimplemented_kinds_cannot_be_raised():
             assert spec.implemented, f"{kind} is creatable but not marked implemented"
 
 
+def _kinds_referenced_in_app() -> set[str]:
+    """Card kinds named anywhere in `app/` outside the catalogue itself.
+
+    Source text rather than a hand-kept list, for the reason `test_idor_matrix`
+    gives: a card emitted from a new place is covered without anybody
+    remembering to add it here. Full-line comments are skipped so prose about a
+    card is not mistaken for code that writes one.
+    """
+    import re
+    from pathlib import Path
+
+    from app.core.cards import CardKind
+
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    used: set[str] = set()
+    for path in app_dir.rglob("*.py"):
+        if path.name == "cards.py" and path.parent.name == "core":
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.lstrip().startswith("#"):
+                continue
+            used.update(re.findall(r"CardKind\.([a-z_][a-z_0-9]*)", line))
+    return {name for name in used if name in CardKind.__members__}
+
+
 def test_kinds_the_code_emits_are_marked_implemented():
     """The direction that was missing, and the one that drifted.
 
@@ -113,24 +142,9 @@ def test_kinds_the_code_emits_are_marked_implemented():
     gives: the next card emitted from a new place is covered without anybody
     remembering to add it here.
     """
-    import re
-    from pathlib import Path
-
     from app.core.cards import CATALOGUE, CardKind
 
-    app_dir = Path(__file__).resolve().parents[1] / "app"
-    used: set[str] = set()
-    for path in app_dir.rglob("*.py"):
-        if path.name == "cards.py" and path.parent.name == "core":
-            continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.lstrip().startswith("#"):
-                continue
-            used.update(re.findall(r"CardKind\.([a-z_][a-z_0-9]*)", line))
-
-    for name in sorted(used):
-        if name not in CardKind.__members__:
-            continue
+    for name in sorted(_kinds_referenced_in_app()):
         spec = CATALOGUE[CardKind[name]]
         assert spec.implemented, f"{name} is emitted by the code but marked unbuilt"
 

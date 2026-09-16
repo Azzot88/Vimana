@@ -225,6 +225,9 @@ export interface SafeFile {
   /** «впервые предоставлен» — never moves. Re-attaching writes an event, not a
    *  new first time. */
   first_provided_at: string
+  /** T_UX.27 — the deals these bytes were attached to, by number. Only deals
+   *  the reader is still a party to. */
+  attached_to?: { deal_id: string; deal_no: string | null }[]
 }
 
 export const listMyFiles = () => api.get<SafeFile[]>('/api/me/files')

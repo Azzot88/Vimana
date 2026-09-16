@@ -925,6 +925,7 @@
       "account": "Cuenta",
       "rules": "Mis reglas",
       "cargoTemplates": "Plantillas de carga",
+      "vault": "Caja fuerte",
       "trust": "Círculos de confianza",
       "keys": "Acceso y datos",
       "history": "Historial y disputas",
@@ -1977,6 +1978,21 @@
       "with_postal_service": "en la empresa postal",
       "delivered": "entregado"
     }
+  },
+  "vault": {
+    "title": "Caja fuerte",
+    "lead": "Tus archivos y las cajas de las operaciones en las que participaste, activas y cerradas.",
+    "dealsTitle": "Cajas de las operaciones",
+    "active": "Activas",
+    "closed": "Cerradas",
+    "open": "Abrir",
+    "noDeals": "Aún no hay operaciones.",
+    "filesTitle": "Mis archivos",
+    "noFiles": "Aún no hay nada: los archivos llegan a la caja cuando los adjuntas a una operación.",
+    "first": "primera vez el {{date}}",
+    "attached": "En operaciones:",
+    "notAttached": "sin operación",
+    "openFile": "Abrir archivo"
   },
   "agreement": {
     "answer": {

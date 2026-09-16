@@ -41,6 +41,10 @@ const SECTIONS: Section[] = [
   // T3.12.03 pt.2 — beside the rules, for the same reason they are second: a
   // working sender reopens it, and a response to a trip links straight here.
   { to: '/profile/cargo-templates', labelKey: 'profile.nav.cargoTemplates' },
+  // T_UX.27 — the safe and the deals' vaults, the place where what happened is
+  // read back. Above trust and keys because it is opened to look something up,
+  // and those are opened once.
+  { to: '/profile/vault', labelKey: 'profile.nav.vault' },
   { to: '/profile/trust', labelKey: 'profile.nav.trust' },
   { to: '/profile/keys', labelKey: 'profile.nav.keys', testId: 'profile-keys-link' },
   // T_UX.22 — right after access, before the settings: what already happened,

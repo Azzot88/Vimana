@@ -233,6 +233,20 @@ async def test_uploaded_file_lands_in_my_safe(client, sender_headers, seed_deal)
     assert mine["first_provided_at"]
 
 
+async def test_the_safe_says_which_deals_a_file_went_to(
+    client, sender_headers, seed_deal
+):
+    """T_UX.27 — «паспорт» three times over tells nobody which parcel each copy
+    went with, and that is the question people open the safe with."""
+    png = _make_png(b"\x77\x88\x99\xff")
+    body = await _upload(client, sender_headers, seed_deal.id, png)
+
+    safe = await client.get("/api/me/files", headers=sender_headers)
+    mine = next(f for f in safe.json() if f["file_hash"] == body["file_hash"])
+    deals = [d["deal_id"] for d in mine["attached_to"]]
+    assert str(seed_deal.id) in deals
+
+
 async def test_the_same_bytes_are_one_file_in_the_safe(client, sender_headers, seed_deal):
     """Sending the same passport twice is one document. Two rows would give
     «впервые предоставлен» two answers."""
