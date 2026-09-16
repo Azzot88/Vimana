@@ -85,6 +85,7 @@ async def test_0093_fills_a_cargo_from_the_terms_of_its_deal(
         )
         await db.commit()
         cargo_id = cargo.id
+        deal_id = deal.id
 
     async with session_maker() as db:
         # Said first, so a failure names the half that broke: the payload has to

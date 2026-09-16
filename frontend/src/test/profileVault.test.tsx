@@ -76,7 +76,11 @@ describe('ProfileVaultPage', () => {
     renderWithProviders(<ProfileVaultPage />)
 
     expect(await screen.findByText(t('vault.active'))).toBeInTheDocument()
-    expect(screen.getByText(t('vault.closed'))).toBeInTheDocument()
+    // By role, not by text: a closed deal's status badge says «Closed» too, and
+    // both saying it is the page working, not a duplicate.
+    expect(
+      screen.getByRole('heading', { name: t('vault.closed') as string }),
+    ).toBeInTheDocument()
     const links = screen.getAllByRole('link')
     const targets = links.map((a) => a.getAttribute('href'))
     expect(targets).toContain('/deals/deal-live/vault')
