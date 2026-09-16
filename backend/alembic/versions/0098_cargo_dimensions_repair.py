@@ -25,7 +25,7 @@ depends_on = None
 BACKFILL = [
     """
     UPDATE cargos c SET
-        dimensions_cm = COALESCE(c.dimensions_cm, (s.p->>'dimensions_cm')::json)
+        dimensions_cm = (s.p->>'dimensions_cm')::json
     FROM (
         SELECT DISTINCT ON (d.cargo_id) d.cargo_id, m.card_payload::jsonb AS p
         FROM deal_vault_messages m
@@ -35,7 +35,12 @@ BACKFILL = [
         ORDER BY d.cargo_id, (m.card_kind = 'terms.agreed') DESC, m.created_at DESC
     ) s
     WHERE s.cargo_id = c.id
-      AND c.dimensions_cm IS NULL
+      -- Two kinds of «empty» live in this column and only one of them is SQL
+      -- NULL. A cargo created through the API with no size written gets **JSON
+      -- null** (SQLAlchemy writes an explicit `None` that way on a JSON
+      -- column), and `0093` skipped exactly those rows: its `COALESCE` read a
+      -- JSON null as a value already there. Both are repaired here.
+      AND (c.dimensions_cm IS NULL OR c.dimensions_cm::text = 'null')
       AND jsonb_typeof(s.p->'dimensions_cm') = 'array'
     """,
 ]

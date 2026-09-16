@@ -51,11 +51,13 @@ async def test_0093_fills_a_cargo_from_the_terms_of_its_deal(
             currency="USD",
             final_destination="RAT",
             # The «before» shape: everything the terms used to carry is empty.
+            # `dimensions_cm` is left unset rather than passed as `None`: on a
+            # JSON column SQLAlchemy writes an explicit `None` as **JSON null**,
+            # which is not SQL NULL — and the difference is the whole subject of
+            # `0098` below.
             weight_kg=None,
-            dimensions_cm=None,
             fragile=False,
             open_on_handover=False,
-            cargo_url=None,
         )
         db.add(cargo)
         await db.flush()
@@ -113,6 +115,83 @@ async def test_0093_fills_a_cargo_from_the_terms_of_its_deal(
         assert moved.open_on_handover is True
         assert moved.cargo_url == "https://example.test/item"
         assert moved.description == "a box of papers"
+
+
+async def test_0098_repairs_a_size_that_reads_as_json_null(
+    session_maker, seed_sender, seed_carrier
+):
+    """The repair exists because «empty» has two spellings in a JSON column.
+
+    A cargo written through the API with no size holds **JSON null**, not SQL
+    NULL, and `0093` read that as a value already present — so the very rows the
+    move was for kept no size at all. `0098` treats both spellings as empty.
+    """
+    from app.models.deal import Deal, DealStatus, DealVaultMessage
+    from app.models.marketplace import Cargo, Trip, TripStatus
+
+    async with session_maker() as db:
+        trip = Trip(
+            carrier_id=seed_carrier.id,
+            origin="MIG",
+            destination="FIX",
+            depart_at=datetime.now(timezone.utc) + timedelta(days=7),
+            capacity=3.0,
+            allowed_categories=["document"],
+            status=TripStatus.open,
+            currency="USD",
+        )
+        db.add(trip)
+        await db.flush()
+        cargo = Cargo(
+            created_by_id=seed_sender.id,
+            category="document",
+            declared_value=60.0,
+            currency="USD",
+            final_destination="FIX",
+            weight_kg=1.0,
+            # Written the way the API writes it: an explicit `None`, which lands
+            # as JSON null rather than SQL NULL.
+            dimensions_cm=None,
+        )
+        db.add(cargo)
+        await db.flush()
+        deal = Deal(
+            cargo_id=cargo.id,
+            trip_id=trip.id,
+            sender_id=seed_sender.id,
+            carrier_id=seed_carrier.id,
+            status=DealStatus.accepted,
+        )
+        db.add(deal)
+        await db.flush()
+        db.add(
+            DealVaultMessage(
+                deal_id=deal.id,
+                is_system=True,
+                card_kind="terms.agreed",
+                card_payload={"dimensions_cm": [40, 30, 20]},
+            )
+        )
+        await db.commit()
+        cargo_id = cargo.id
+
+    async with session_maker() as db:
+        spelling = (
+            await db.execute(
+                text("SELECT dimensions_cm::text FROM cargos WHERE id = :id"),
+                {"id": str(cargo_id)},
+            )
+        ).scalar()
+        assert spelling == "null", f"the fixture holds {spelling!r}, not JSON null"
+
+        for statement in _migration_statements(
+            "0098_cargo_dimensions_repair.py", "BACKFILL"
+        ):
+            await db.execute(text(statement))
+        await db.commit()
+
+    async with session_maker() as db:
+        assert (await db.get(Cargo, cargo_id)).dimensions_cm == [40, 30, 20]
 
 
 async def test_0095_moves_close_marks_into_pairs(client, session_maker):
