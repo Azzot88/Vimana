@@ -218,7 +218,7 @@ class DealEvent(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("deals.id"))
     event_type: Mapped[DealEventType] = mapped_column(SAEnum(DealEventType))
-    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    payload: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.12.07 pt.2 — NULL is «the platform did it»: a dispute opened by the
     # delivery timer, when nobody pressed anything (`IMPLEMENTATIONPLAN §3.12.4`
     # п. 6: `opened_by` — система, а не человек). Attributing it to a party would
@@ -274,7 +274,7 @@ class DealChainAnchor(Base):
         String(16), nullable=False, default="nostr", server_default="nostr"
     )
     # {relay_url: accepted} as reported by the relays at publish time.
-    relays: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    relays: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -306,7 +306,7 @@ class DealVaultMessage(Base):
     # turn each new card type into a migration. Validation lives in
     # `app.core.cards.CardKind`, where adding a member costs nothing.
     card_kind: Mapped[str | None] = mapped_column(String(48), nullable=True, index=True)
-    card_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    card_payload: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     card_state: Mapped[CardState | None] = mapped_column(
         SAEnum(CardState), nullable=True
     )
@@ -330,8 +330,8 @@ class DealVaultMessage(Base):
     # cannot decrypt; `text` property returns None and callers ship the blob
     # straight to the client.
     is_e2e: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    wrapped_shares: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    read_packages: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    wrapped_shares: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    read_packages: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -287,7 +287,7 @@ class DocumentRequirement(Base):
     )
     # Validated by `core.rule_conditions.validate_condition` before it is stored.
     # Null means unconditional.
-    condition: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    condition: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     valid_for_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cost_estimate: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -434,7 +434,7 @@ class ComplianceCase(Base):
     # Jurisdiction codes the route passes through. A list rather than a column
     # per hop: on the founding corridor there is always at least one, and there
     # is no ceiling that would not be arbitrary.
-    transit: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    transit: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     category_key: Mapped[str] = mapped_column(String(50))
     attrs: Mapped[dict] = mapped_column(JSON, default=dict)
     checklist: Mapped[dict] = mapped_column(JSON, default=dict)

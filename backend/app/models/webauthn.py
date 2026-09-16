@@ -43,7 +43,7 @@ class WebAuthnCredential(Base):
     # forever, so the check only applies once a non-zero count has been seen.
     sign_count: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
 
-    transports: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    transports: Mapped[list | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     aaguid: Mapped[str | None] = mapped_column(String(36), nullable=True)
     device_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # False + usb/nfc transport means a hardware key that lives on one device

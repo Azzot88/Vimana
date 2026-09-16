@@ -1106,6 +1106,16 @@ async def _add_delivery_timer_columns(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _normalise_json_nulls(engine) -> None:
+    """T_DATA.1 — `0099` on the test database: JSON `null` → SQL NULL.
+
+    The models refuse to write the old spelling now, but `vimana_test` is never
+    reset and still holds rows from before they did. Idempotent."""
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0099_json_null_to_sql_null.py", "BACKFILL"):
+            await conn.execute(text(statement))
+
+
 async def _add_arbiter_pool_columns(engine) -> None:
     """T3.12.09 — `0097` on the test database, after `create_all`. Idempotent."""
     async with engine.begin() as conn:
@@ -2226,6 +2236,7 @@ async def test_engine():
     await _add_recipient_offer_columns(engine)
     await _add_delivery_timer_columns(engine)
     await _add_arbiter_pool_columns(engine)
+    await _normalise_json_nulls(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)
     await _ensure_role_column(engine)

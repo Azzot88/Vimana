@@ -135,7 +135,7 @@ class Trip(Base):
     # kilograms at all. NULL means "not stated", which `size_hint` often
     # answers better anyway.
     capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
-    allowed_categories: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    allowed_categories: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.35 — the carrier's baseline terms. Before this the model carried no
     # price at all, so every deal had to invent one in chat and nothing was
     # comparable between trips.
@@ -182,17 +182,17 @@ class Trip(Base):
     # two replace the single `allowed_handover_methods` list, which could not
     # say that and, once both ends existed, was a second way to state the same
     # thing. Shape: {"methods": [...], "points": ["Tustin", "Irvine"]}.
-    handover_origin: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    handover_destination: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    handover_origin: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    handover_destination: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.11.07 — what this carrier will not take, from a closed list. Only
     # 5.9 % of real posts state exclusions at all, and when they do the wording
     # is nearly always one of five things: cigarettes, alcohol, tobacco, food,
     # luxury goods. A free-text field for that produces five spellings of
     # "сигареты" and nothing a filter can read; the free text below stays for
     # everything the list does not cover.
-    excluded: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    excluded: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.11.07 — what the carrier does around the flight. See `TRIP_SERVICES`.
-    services: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    services: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.11.07 — the settlement model, which the market states far more often
     # than it states a price. NULL is "did not say", and that is not the same
     # as `on_delivery`, however common that answer is.
@@ -202,7 +202,7 @@ class Trip(Base):
     # people transfer through is local and changes faster than any vocabulary
     # we could ship, and a carrier naming one we had not heard of would
     # otherwise be told they are wrong.
-    payment_systems: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    payment_systems: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.11.18 — the two answers `purchase_on_request` cannot be offered
     # without. Nullable because most trips do not offer the service at all;
     # required **together with it** by `TripCreate`, which is where the pairing
@@ -436,7 +436,7 @@ class Cargo(Base):
         ForeignKey("users.id"), nullable=True
     )
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
-    dimensions_cm: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    dimensions_cm: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     fragile: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     # T3.12.04 — «вскрыть при передаче» is the sender's consent, given with the
     # cargo and not negotiated afterwards (owner, 2026-09-14).
@@ -480,7 +480,7 @@ class CargoTemplate(Base):
     # T3.12.04 — the rest of what the response form asks, so a template fills
     # all of it. No photograph: a picture is of one parcel, not of a kind of one.
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
-    dimensions_cm: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    dimensions_cm: Mapped[list | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     fragile: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     open_on_handover: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false"
