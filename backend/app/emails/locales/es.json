@@ -191,6 +191,17 @@
     "facts_route": "ruta",
     "cta": "Abrir la operación"
   },
+  "dispute_offered": {
+    "subject": "Vimana · Te ofrecen una disputa",
+    "preheader": "Acéptala o pásala — la oferta caduca",
+    "heading": "Te ofrecen una disputa",
+    "body": [
+      "Has sido elegido del grupo de árbitros para una disputa de esta operación.",
+      "Abre el panel y acepta la disputa, o recházala para que pase a otro árbitro. Si no respondes a tiempo, la disputa pasará sola. El contenido de la disputa se abre solo cuando una parte te da acceso a la operación."
+    ],
+    "facts_deal": "operación",
+    "cta": "Abrir el panel"
+  },
   "role_granted": {
     "subject": "Vimana · El rol ya está en vigor",
     "preheader": "Lo aceptaste, así que ha entrado en vigor",

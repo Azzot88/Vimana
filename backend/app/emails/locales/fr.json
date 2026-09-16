@@ -191,6 +191,17 @@
     "facts_route": "trajet",
     "cta": "Ouvrir l’accord"
   },
+  "dispute_offered": {
+    "subject": "Vimana · Un litige vous est proposé",
+    "preheader": "Acceptez-le ou passez la main — l’offre expire",
+    "heading": "Un litige vous est proposé",
+    "body": [
+      "Vous avez été choisi parmi les arbitres pour un litige sur cet accord.",
+      "Ouvrez le panneau et acceptez le litige, ou refusez-le pour qu’il passe à un autre arbitre. Sans réponse à temps, le litige passe de lui-même. Le fond du litige ne s’ouvre qu’avec l’accord d’une partie."
+    ],
+    "facts_deal": "accord",
+    "cta": "Ouvrir le panneau"
+  },
   "role_granted": {
     "subject": "Vimana · Le rôle est entré en vigueur",
     "preheader": "Vous l'avez accepté, il s'applique désormais",

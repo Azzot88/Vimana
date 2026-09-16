@@ -28,6 +28,7 @@ Functions (PROJECT §6.2a):
 """
 from __future__ import annotations
 
+import logging
 import secrets
 import uuid
 from datetime import datetime, timezone
@@ -39,8 +40,43 @@ from app.core.params import resolve
 from app.models.deal import Deal, Dispute, DisputeStatus
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
+
 POOL = "pool"
 REQUESTS = "requests"
+
+
+async def offer_label(db: AsyncSession, dispute: Dispute) -> str:
+    """The deal's number, for the letter. Empty when the deal or its cargo is
+    gone — a letter with no number is still better than no letter."""
+    from app.core.cargo import deal_no
+    from app.models.marketplace import Cargo
+
+    deal = await db.get(Deal, dispute.deal_id)
+    if deal is None:
+        return ""
+    cargo = await db.get(Cargo, deal.cargo_id)
+    return deal_no(cargo.shipment_no if cargo else None, deal.position) or ""
+
+
+def announce_offer(arbiter_id: uuid.UUID | None, label: str) -> None:
+    """Tell the arbiter they were picked. **Call after the commit.**
+
+    Queued before it, the letter would announce a dispute a rollback took back.
+    A failure to queue is logged and nothing else: the offer stands either way,
+    and the hourly sweep passes it on if the arbiter never answers.
+
+    Called by: `api.admin.open_dispute`, `api.admin.decline_dispute`,
+    `tasks.cleanup._check_delivery_timers`, `tasks.cleanup._reassign_arbiters`.
+    """
+    if arbiter_id is None:
+        return
+    try:
+        from app.tasks.notifications import send_dispute_offered
+
+        send_dispute_offered.delay(str(arbiter_id), label)
+    except Exception:  # noqa: BLE001 — a letter never blocks an assignment
+        logger.warning("dispute offer letter not queued for %s", arbiter_id)
 
 
 async def mode(db: AsyncSession) -> str:

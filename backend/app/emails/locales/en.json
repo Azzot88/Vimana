@@ -191,6 +191,17 @@
     "facts_route": "route",
     "cta": "Open the deal"
   },
+  "dispute_offered": {
+    "subject": "Vimana · A dispute is offered to you",
+    "preheader": "Accept it or pass it on — the offer expires",
+    "heading": "A dispute is offered to you",
+    "body": [
+      "You were picked from the arbiters’ pool for a dispute on this deal.",
+      "Open the panel and accept it, or decline so it goes to another arbiter. If you do not answer in time, the dispute passes on by itself. What the dispute is about opens only once a party lets you read the deal."
+    ],
+    "facts_deal": "deal",
+    "cta": "Open the panel"
+  },
   "role_granted": {
     "subject": "Vimana · The role now applies to your account",
     "preheader": "You accepted it, so it has taken effect",

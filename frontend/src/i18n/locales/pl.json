@@ -10,7 +10,9 @@
     "logout": "Wyloguj",
     "params": "Parametry",
     "history": "Historia",
-    "arbitration": "Arbitraż"
+    "arbitration": "Arbitraż",
+    "requests": "Szukam lotu",
+    "notices": "Ogłoszenia"
   },
   "dispute": {
     "openButton": "Otwórz spór",
@@ -18,7 +20,13 @@
     "modalHint": "Opisz, co poszło nie tak. Druga strona zobaczy powód, arbiter będzie mógł otworzyć czat.",
     "reasonPlaceholder": "Powód…",
     "submit": "Otwórz spór",
-    "openError": "Nie udało się otworzyć sporu"
+    "openError": "Nie udało się otworzyć sporu",
+    "reason": {
+      "unpaid": "Nie zapłacono",
+      "undelivered": "Nie dostarczono",
+      "damaged": "Uszkodzone",
+      "other": "Inne"
+    }
   },
   "admin": {
     "scanQueue": {
@@ -76,7 +84,21 @@
     "email": "Poczta",
     "emailDesc": "Obwody i podgląd listów",
     "params": "Parametry",
-    "paramsDesc": "Stawki i progi, wersjonowane"
+    "paramsDesc": "Stawki i progi, wersjonowane",
+    "panelTitle": "Administracja",
+    "panelHint": "Tylko dla arbitrów i właściciela platformy.",
+    "disputes": "Spory",
+    "disputesDesc": "Przeglądaj otwarte spory i decyzje o depozytach.",
+    "users": "Użytkownicy",
+    "usersDesc": "Zarządzaj użytkownikami, rolami i akcjami zbiorczymi.",
+    "notices": "Notatki o trasie",
+    "noticesDesc": "Ostrzeżenia korytarzowe i komunikaty platformy.",
+    "chargeTo": "Obciąż",
+    "chargeNobody": "Nikogo",
+    "chargeCarrier": "Przewoźnika",
+    "chargeSender": "Nadawcę",
+    "chargeAmount": "Kwota",
+    "chargeNotSettled": "Depozyty jeszcze nie istnieją: orzeczenie zapisuje się w łańcuchu transakcji, a pieniądze ruszą, gdy pojawią się depozyty."
   },
   "auth": {
     "title": "Vimana",
@@ -128,7 +150,12 @@
     "noAccountHint": "Nie masz konta? Wystarczy podać adres — powstanie, gdy kod się zgodzi.",
     "enter": "Zaloguj / Załóż konto",
     "passwordLater": "Zostaw puste — wyślemy kod. Hasło można ustawić później.",
-    "phoneNotALogin": "Logowanie działa przez e-mail. Telefon można dodać w profilu jako kontakt — nie mamy czym potwierdzić numeru, więc nie jest sposobem logowania."
+    "phoneNotALogin": "Logowanie działa przez e-mail. Telefon można dodać w profilu jako kontakt — nie mamy czym potwierdzić numeru, więc nie jest sposobem logowania.",
+    "inactivityWarningTitle": "Zaraz zostaniesz wylogowany",
+    "inactivityWarningBody": "Od dłuższej chwili nic nie robisz. Kliknij «Zostań zalogowany», aby zachować sesję, albo «Wyloguj teraz», aby ją zakończyć.",
+    "inactivityLoggedOut": "Wylogowano z powodu bezczynności. Zaloguj się ponownie.",
+    "stayLoggedIn": "Zostań zalogowany",
+    "logoutNow": "Wyloguj teraz"
   },
   "passkey": {
     "loginCta": "Zaloguj się kluczem passkey",
@@ -359,7 +386,8 @@
     "notSet": "Jeszcze nie wypełnione",
     "delete": "Usuń",
     "yes": "Tak",
-    "no": "Nie"
+    "no": "Nie",
+    "errorGeneric": "Coś poszło nie tak. Spróbuj ponownie."
   },
   "mode": {
     "switchToSend": "Przełącz na wysyłanie",
@@ -376,7 +404,8 @@
     "hopLabel_one": "{{count}} osoba",
     "hopLabel_few": "{{count}} osoby",
     "hopLabel_many": "{{count}} osób",
-    "empty": "Brak kręgów — zaproś znajomych i zamknij transakcję, żeby zacząć budować sieć."
+    "empty": "Brak kręgów — zaproś znajomych i zamknij transakcję, żeby zacząć budować sieć.",
+    "hopLabel_other": "{{count}} osoby"
   },
   "contacts": {
     "close": "Bliski",
@@ -507,7 +536,15 @@
       "driver_license": "Prawo jazdy",
       "national_id": "Dowód osobisty",
       "other": "Inny dokument"
-    }
+    },
+    "declinedPolite": {
+      "senderCopy": "Przewoźnik wolał pozostać anonimowy. Możesz poprosić o większy depozyt, jeśli martwisz się o swoją przesyłkę.",
+      "requestCollateralCTA": "Poproś o większy depozyt",
+      "comingSoonTitle": "Zabezpieczenie w Fazie 5",
+      "comingSoonBody": "Escrow i zabezpieczenie pojawią się w Fazie 5 (BTC/USDT bez powiernictwa, 2 z 3). Na razie porozmawiaj z przewoźnikiem i ustalcie to bezpośrednio."
+    },
+    "chooseAndSend": "Wybierz dokument i wyślij",
+    "pickCountryFirst": "Najpierw wybierz kraj wydania — dokument wyśle się, gdy wskażesz plik."
   },
   "chat": {
     "immutable": "Niezmienne · SHA-256",
@@ -528,7 +565,8 @@
       "doc": "Dokument",
       "payment_receipt": "Potwierdzenie zapłaty",
       "identity_doc": "Dokument tożsamości",
-      "pre_seal_photo": "Zdjęcie przed zaklejeniem"
+      "pre_seal_photo": "Zdjęcie przed zaklejeniem",
+      "cargo_photo": "Zdjęcie przesyłki"
     },
     "shareAddress": {
       "button": "Udostępnij adres",
@@ -677,7 +715,8 @@
       "soon_one": "{{count}} dzień do wylotu",
       "soon_few": "{{count}} dni do wylotu",
       "soon_many": "{{count}} dni do wylotu",
-      "flown": "Odleciał"
+      "flown": "Odleciał",
+      "soon_other": "zostało {{count}} dni"
     },
     "newTrip": "Nowy lot",
     "departureDate": "Data wylotu",
@@ -736,7 +775,8 @@
       "segmentOutOfOrder": "Lot {{n}} wylatuje przed poprzednim",
       "arrivalBeforeDeparture": "Lot {{n}}: przylot przed wylotem.",
       "pastDate": "Data musi być w przyszłości",
-      "capacity": "Waga musi być co najmniej 0.5 kg"
+      "capacity": "Waga musi być co najmniej 0.5 kg",
+      "paymentModel": "Wybierz, jak otrzymasz zapłatę — to krok «Warunki i płatność»"
     },
     "pricePerKg": "Cena za kg",
     "minDealPrice": "Minimalna transakcja",
@@ -822,7 +862,14 @@
       "alcohol": "Alkohol",
       "food": "Jedzenie",
       "luxury": "Towary luksusowe"
-    }
+    },
+    "paymentModel": {
+      "cash_on_delivery": "Gotówka przy odbiorze",
+      "emoney_on_delivery": "Pieniądz elektroniczny przy odbiorze",
+      "platform_wallet": "Z portfela na platformie"
+    },
+    "noMeetingPlacesAdd": "Nie masz jeszcze miejsc spotkań. Dodaj jedno i wróć →",
+    "noAddressesAdd": "Nie masz jeszcze adresów. Dodaj jeden i wróć →"
   },
   "deals": {
     "title": "Transakcje",
@@ -853,9 +900,13 @@
       "delivered": "Dostarczono",
       "confirmed": "Potwierdzono",
       "closed": "Zamknięto",
-      "disputed": "Spór"
+      "disputed": "Spór",
+      "cancelled": "Anulowana"
     },
-    "carriageRules": "Zasady przewozu"
+    "carriageRules": "Zasady przewozu",
+    "proposeTerms": "Zaproponuj warunki",
+    "editTerms": "Edytuj",
+    "moreAboutDeal": "Więcej o transakcji"
   },
   "profile": {
     "handle": "Nazwa użytkownika",
@@ -1085,7 +1136,11 @@
       "submit": "Dalej",
       "stepUpBody": "Potwierdź, że to Ty — kod pójdzie wtedy na nowy adres.",
       "failed": "Nie udało się dodać adresu."
-    }
+    },
+    "editButton": "Edytuj",
+    "editTitle": "Edycja profilu",
+    "avatarUpload": "Wgraj zdjęcie",
+    "avatarRemove": "Usuń zdjęcie"
   },
   "audience": {
     "carrier": {
@@ -1367,7 +1422,14 @@
     "empty": "Brak adresów. Dodaj jeden, by było wiadomo, gdzie dostarczyć.",
     "addAndReturn": "Dodaj adres i wróć",
     "returnHint": "Dodaj adres, a potem wróć do rozmowy.",
-    "backToChat": "Wróć do czatu"
+    "backToChat": "Wróć do czatu",
+    "add": "Dodaj adres",
+    "label": "Etykieta",
+    "labelPlaceholder": "Dom, biuro, u mamy…",
+    "default": "Domyślny",
+    "makeDefault": "Ustaw jako domyślny",
+    "confirmDelete": "Usunąć adres «{{label}}»?",
+    "pickerTitle": "Który adres udostępnić?"
   },
   "error": {
     "title": "Coś się zepsuło na tym ekranie",
@@ -1457,7 +1519,8 @@
     "superseded": "zastąpione",
     "declined": "odrzucone",
     "answerFailed": "Nie udało się wysłać odpowiedzi",
-    "proposeFailed": "Nie udało się wysłać propozycji"
+    "proposeFailed": "Nie udało się wysłać propozycji",
+    "photosChosen_other": "dołączono {{count}} zdjęcia"
   },
   "cards": {
     "accept": "Akceptuj",
@@ -1493,7 +1556,8 @@
       "terms_reconfirm_requested": "Warunki wymagają potwierdzenia",
       "cargo_photographed": "Zdjęcia ładunku",
       "dispute_requested": "Prośba o otwarcie sporu",
-      "received_as_expected": "Odebrano zgodnie z umową"
+      "received_as_expected": "Odebrano zgodnie z umową",
+      "handoff_received": "Odebrałem paczkę"
     },
     "field": {
       "method": "Sposób",
@@ -1557,7 +1621,18 @@
       "declined": "odrzucone",
       "expired": "wygasłe",
       "superseded": "zastąpione"
-    }
+    },
+    "photoWithIt": "Zdjęcie idzie razem z kartą — bez niego druga strona nie potwierdzi przekazania.",
+    "shoot": {
+      "default": "Sfotografuj to, co deklarujesz — zdjęcie jest zapisem i idzie razem z kartą.",
+      "handoff_declared": "Otwórz paczkę i sfotografuj zawartość, potem zapakowaną paczkę. Kilka zdjęć jest lepsze niż jedno.",
+      "handoff_received": "Otwórz paczkę i sfotografuj zawartość przy nadawcy, potem zapakowaną paczkę. Kilka zdjęć jest lepsze niż jedno.",
+      "posted_declared": "Sfotografuj otwartą paczkę przed zaklejeniem — to ostatni moment, gdy widać zawartość.",
+      "delivery_declared": "Sfotografuj paczkę w chwili przekazania."
+    },
+    "photoNeeded": "Dołącz zdjęcie — bez niego przekazania nie da się potwierdzić",
+    "photoOptional": "opcjonalnie",
+    "cancelDeadline": "Jeśli nikt nie odpowie do {{at}}, transakcja anuluje się sama"
   },
   "rules": {
     "work": {
@@ -1580,6 +1655,21 @@
       "methodsPlaceholder": "Gotówka przy przekazaniu",
       "methodsLimit": "Można dodać najwyżej {{max}}.",
       "methodsAnywhere": "Wszędzie"
+    },
+    "cancelTimeout": {
+      "title": "Anulowanie bez odpowiedzi",
+      "hint": "Ile czekać na drugą stronę po prośbie o anulowanie. Jedno ustawienie dla wszystkich twoich transakcji. Zadziała wcześniej, jeśli lot wylatuje wcześniej.",
+      "label": "Czekaj na odpowiedź",
+      "hours_one": "{{count}} godzina",
+      "hours_few": "{{count}} godziny",
+      "hours_many": "{{count}} godzin",
+      "hours_other": "{{count}} godziny"
+    },
+    "deliveryTimeout": {
+      "title": "Przesyłka bez potwierdzenia",
+      "hint": "Ile czekać po wylądowaniu na potwierdzenie przekazania. Raz dziennie zapytamy, czy paczka dotarła; jeśli nikt nie odpowie w terminie, transakcja sama trafi do arbitra. Jedno ustawienie dla wszystkich twoich transakcji.",
+      "label": "Czekaj na potwierdzenie",
+      "platform": "Jak zdecyduje platforma (72 godziny)"
     }
   },
   "calendar": {
@@ -1717,7 +1807,11 @@
     "scaleCorridors_many": "{{count}} korytarzy",
     "scaleQuestions_one": "{{count}} pytanie z odpowiedzią",
     "scaleQuestions_few": "{{count}} pytania z odpowiedziami",
-    "scaleQuestions_many": "{{count}} pytań z odpowiedziami"
+    "scaleQuestions_many": "{{count}} pytań z odpowiedziami",
+    "checkedAgo_other": "Sprawdzono {{count}} dni temu",
+    "openWithRest_other": "Otwórz korytarz, jeszcze {{count}} pytania",
+    "scaleCorridors_other": "{{count}} korytarze",
+    "scaleQuestions_other": "{{count}} odpowiedzi na pytania"
   },
   "rulesPage": {
     "missingTitle": "Dla tego korytarza nie opublikowano jeszcze zasad",
@@ -1757,7 +1851,8 @@
     "missingCrumb": "Nie znaleziono korytarza",
     "packetTitle": "Zebranie tego samemu zajmuje tygodnie",
     "packetBody": "Budujemy usługę, która zbierze ten komplet na twoją datę wylotu. Jeszcze nie działa. Zostaw adres, napiszemy, gdy ruszy.",
-    "packetCta": "Zostaw adres"
+    "packetCta": "Zostaw adres",
+    "checkedAgo_other": "Sprawdzono ze źródłem {{count}} dni temu"
   },
   "adminRules": {
     "title": "Zasady korytarza",
@@ -1883,6 +1978,212 @@
     "what": {
       "arbiter": "Rozstrzyga spory i — gdy strona otworzy dostęp — czyta sejf tej transakcji. Każdy taki odczyt trafia do łańcucha transakcji i jest ogłaszany na jej czacie.",
       "compliance_editor": "Pisze zasady korytarza i kieruje je do przeglądu. Publikacja zasady to osobne uprawnienie i nie jest tu zawarta."
+    }
+  },
+  "routeNote": {
+    "preflightTitle": "Trasa wymaga uwagi",
+    "preflightBody": "Ten korytarz ma znane osobliwości. Przeczytaj je i potwierdź przed publikacją.",
+    "iUnderstand": "Rozumiem — publikuj mimo to"
+  },
+  "cargoRoute": {
+    "title": "Trasa przesyłki",
+    "thisDeal": "ta transakcja",
+    "multihop": "Przesyłka idzie przez kilka transakcji.",
+    "where": {
+      "awaiting_carrier": "czeka na przewoźnika",
+      "in_transit": "w drodze",
+      "with_postal_service": "w firmie pocztowej",
+      "delivered": "doręczona"
+    }
+  },
+  "agreement": {
+    "answer": {
+      "yourTurn": "Twoja odpowiedź",
+      "waiting": "Czekamy na: {{who}}",
+      "agreed": "Warunki uzgodnione"
+    },
+    "role": {
+      "sender": "nadawca",
+      "carrier": "przewoźnik",
+      "recipient": "odbiorca"
+    },
+    "empty": "Nie zaproponowano jeszcze warunków.",
+    "locked": "zablokowane przez przewoźnika",
+    "lockIt": "zablokuj",
+    "noRecipient": "odbiorca jeszcze nie wskazany",
+    "section": {
+      "cargo": "Przesyłka",
+      "handover": "Przekazanie",
+      "delivery": "Doręczenie",
+      "payment": "Płatność"
+    },
+    "payer": {
+      "sender": "Nadawca",
+      "recipient": "Odbiorca"
+    },
+    "field": {
+      "what": "Co wieziemy",
+      "weight": "Waga",
+      "dimensions": "Wymiary",
+      "declared": "Wartość deklarowana",
+      "packaging": "Opakowanie",
+      "fragile": "Delikatne",
+      "openOnHandover": "Otworzyć przy przekazaniu",
+      "url": "Link do towaru",
+      "method": "Sposób",
+      "place": "Miejsce",
+      "at": "Kiedy",
+      "price": "Cena",
+      "paymentMethod": "Jak rozliczyć",
+      "payer": "Kto płaci"
+    }
+  },
+  "meeting": {
+    "title": {
+      "handover": "Gdzie i kiedy się spotykacie",
+      "delivery": "Gdzie i kiedy przesyłka trafia do odbiorcy"
+    },
+    "noTime": "Godzina nie jest jeszcze ustalona — ustalcie ją w «Przenieś spotkanie».",
+    "hours_one": "za {{count}} godzinę",
+    "hours_few": "za {{count}} godziny",
+    "hours_many": "za {{count}} godzin",
+    "hours_other": "za {{count}} godziny",
+    "minutes_one": "za {{count}} minutę",
+    "minutes_few": "za {{count}} minuty",
+    "minutes_many": "za {{count}} minut",
+    "minutes_other": "za {{count}} minuty",
+    "passed": "czas minął",
+    "memo": {
+      "weigh": "Zważ paczkę — waga w umowie jest tą, na której ustalono cenę, a nadwyżkę pokrywasz ty.",
+      "compare": "Porównaj zawartość z opisem w umowie. Różnicę łatwiej wyjaśnić tu niż na odprawie.",
+      "photo": "Sfotografuj otwartą paczkę i jej zawartość i dołącz zdjęcia do «Odebrałem paczkę»."
+    }
+  },
+  "stages": {
+    "terms": "Warunki",
+    "handover": "Przekazanie",
+    "transit": "W drodze",
+    "arrived": "Wylądował",
+    "delivery": "Doręczenie",
+    "payment": "Płatność",
+    "closed": "Zamknięta",
+    "cancelled": "Anulowana",
+    "more": "więcej",
+    "unpaidHint": "Przekazane, ale nie rozliczone? Zaproś arbitra — widzi rozmowę i stan transakcji.",
+    "theirTurn": "Teraz ruch drugiej strony — powiadomimy cię, a ten ekran odświeży się sam.",
+    "hint": {
+      "terms": "Ustalcie cenę i sposób przekazania. Nic się nie zacznie, dopóki warunki nie są ustalone.",
+      "handover": "Warunki ustalone. Ustalcie gdzie i kiedy, a potem oznaczcie przekazanie ze zdjęciem.",
+      "transit": "Przewoźnik ma paczkę. Publikuj informacje, a na koniec: nadane pocztą albo przekazane.",
+      "arrived": "Samolot wylądował. Ustalcie, gdzie i kiedy przekazać paczkę — albo nadajcie ją pocztą.",
+      "delivery": "Zostało tylko potwierdzić odbiór.",
+      "payment": "Rozliczenie.",
+      "closed": "Transakcja zamknięta. Zapis zostaje bez zmian.",
+      "cancelled": "Odwołana przed przekazaniem. Zapis zostaje bez zmian."
+    }
+  },
+  "corridor": {
+    "summary_one": "{{corridor}} · {{category}}: {{count}} wymagany dokument",
+    "summary_few": "{{corridor}} · {{category}}: {{count}} wymagane dokumenty",
+    "summary_many": "{{corridor}} · {{category}}: {{count}} wymaganych dokumentów",
+    "summary_other": "{{corridor}} · {{category}}: {{count}} wymagane dokumenty",
+    "notBlocking": "To nie blokuje publikacji — platforma odnotowuje, że cię uprzedziła, a nie rozstrzyga za urząd."
+  },
+  "requests": {
+    "title": "Szukam kogoś, kto leci",
+    "lead": "Lotu, którego potrzebujesz, może jeszcze nie być: połowa pojawia się na kilka dni przed wylotem. Powiedz, jaki korytarz i kiedy, a napiszemy, gdy ktoś nim poleci.",
+    "from": "Skąd",
+    "to": "Dokąd",
+    "windowFrom": "Od daty",
+    "windowTo": "Do",
+    "what": "Co wysyłasz",
+    "whatPlaceholder": "Dokumenty, małe pudełko…",
+    "whatHint": "Dowolny tekst. Waga, kategoria i wartość są dla przewoźnika — teraz pytanie brzmi, czy ktoś w ogóle tam leci.",
+    "notify": "Napisz do mnie, gdy pojawi się lot",
+    "submit": "Opublikuj prośbę",
+    "failed": "Nie udało się opublikować prośby",
+    "mine": "Moje prośby",
+    "mute": "Przestań do mnie pisać",
+    "unmute": "Pisz ponownie",
+    "close": "Zamknij",
+    "reopen": "Otwórz ponownie",
+    "demand": "Gdzie ludzie czekają",
+    "demandHint": "Ilu czeka na lot w każdym korytarzu. Bez nazwisk — kto pytał, to sprawa nadawców.",
+    "waiting_one": "{{count}} czeka",
+    "waiting_few": "{{count}} czekają",
+    "waiting_many": "{{count}} czeka",
+    "waiting_other": "{{count}} czeka"
+  },
+  "checklist": {
+    "title": "Co trzeba zebrać",
+    "lead": "Zbieramy dokumenty wymagane w twoim korytarzu z opublikowanych reguł i liczymy, co trzeba zacząć już teraz. Konto nie jest potrzebne.",
+    "category": "Co wysyłasz",
+    "from": "Skąd",
+    "to": "Dokąd",
+    "departAt": "Data wylotu",
+    "departHint": "Opcjonalnie. Bez niej dostaniesz listę, ale bez terminów.",
+    "build": "Zbuduj listę",
+    "rebuild": "Przebuduj z odpowiedziami",
+    "questions": "Pytania, które zadają reguły",
+    "questionsHint": "Pochodzą z reguł samego korytarza. Dopóki nie ma odpowiedzi, dokument zostaje na liście — bezpieczniej niż usunąć go po cichu.",
+    "result_one": "{{count}} dokument",
+    "result_few": "{{count}} dokumenty",
+    "result_many": "{{count}} dokumentów",
+    "result_other": "{{count}} dokumenty",
+    "empty": "Opublikowane reguły nie wymagają w tym korytarzu żadnych dokumentów.",
+    "noCorpus": "Nie opublikowano jeszcze żadnego zbioru reguł.",
+    "mandatory": "wymagany",
+    "optional": "zależy",
+    "undecided": "potrzebna odpowiedź — to zależy",
+    "leadTime_one": "zajmuje {{count}} dzień",
+    "leadTime_few": "zajmuje {{count}} dni",
+    "leadTime_many": "zajmuje {{count}} dni",
+    "leadTime_other": "zajmuje {{count}} dni",
+    "validFor_one": "ważny {{count}} dzień",
+    "validFor_few": "ważny {{count}} dni",
+    "validFor_many": "ważny {{count}} dni",
+    "validFor_other": "ważny {{count}} dni",
+    "startBy": "zacznij do {{date}}",
+    "tooLate": "za późno: trzeba było zacząć do {{date}}",
+    "keep": "Zapisz listę",
+    "saved": "Zapisano. Numer:",
+    "disclaimer": "To wyciąg z opublikowanych wymagań, a nie rozstrzygnięcie. Decyduje urząd, nie platforma.",
+    "buildFailed": "Nie udało się zbudować listy",
+    "saveFailed": "Nie udało się zapisać listy",
+    "attr": {
+      "age_years": "Wiek przedmiotu, lata",
+      "declared_value": "Wartość deklarowana",
+      "author_known": "Autor znany",
+      "species": "Gatunek",
+      "breed": "Rasa",
+      "generation": "Pokolenie mieszańca",
+      "purpose": "Dla siebie czy na sprzedaż",
+      "count": "Ile sztuk"
+    },
+    "attrEffect": {
+      "age_years": "Powyżej progu potrzebne jest pozwolenie na wywóz",
+      "declared_value": "Od niej liczy się cło i kwota wolna",
+      "author_known": "Decyduje, czy potrzebna jest ekspertyza dobra kultury",
+      "species": "Inny gatunek, inne wymagania weterynaryjne",
+      "breed": "Zakazy rasowe działają poniżej poziomu kraju — w stanie albo mieście",
+      "generation": "Pokolenia mieszańców F1–F4 są ograniczane osobno od rasy",
+      "purpose": "Własne zwierzę i import na sprzedaż to dwa różne reżimy",
+      "count": "Liczba sztuk decyduje, czy to przesyłka handlowa"
+    },
+    "warnNamed_one": "Za późno: «{{title}}» przygotowuje się {{count}} dzień",
+    "warnNamed_few": "Za późno: «{{title}}» przygotowuje się {{count}} dni",
+    "warnNamed_many": "Za późno: «{{title}}» przygotowuje się {{count}} dni",
+    "warnNamed_other": "Za późno: «{{title}}» przygotowuje się {{count}} dni",
+    "warnCount_one": "Za późno: {{count}} wymaganego dokumentu nie da się już przygotować przed wylotem",
+    "warnCount_few": "Za późno: {{count}} wymaganych dokumentów nie da się już przygotować przed wylotem",
+    "warnCount_many": "Za późno: {{count}} wymaganych dokumentów nie da się już przygotować przed wylotem",
+    "warnCount_other": "Za późno: {{count}} wymaganych dokumentów nie da się już przygotować przed wylotem",
+    "warnNotBlocking": "To ostrzeżenie, a nie odmowa — nadal możesz opublikować i się umówić.",
+    "warnSeeList": "Zobacz listę",
+    "attrHint": {
+      "author_known": "tak albo nie",
+      "purpose": "dla siebie albo na sprzedaż",
+      "generation": "F1 … F5"
     }
   }
 }

@@ -578,10 +578,12 @@ async def _check_delivery_timers(limit: int, deal_ids: list | None = None) -> di
                     payload={"dispute_id": str(dispute.id), "by": "timer"},
                 )
                 # T3.12.09 — offered to an arbiter like any other dispute.
-                from app.core.arbitration import offer_next
+                from app.core.arbitration import announce_offer, offer_label, offer_next
 
-                await offer_next(db, dispute)
+                chosen = await offer_next(db, dispute)
+                label = await offer_label(db, dispute)
                 await db.commit()
+                announce_offer(chosen, label)
                 opened += 1
                 continue
 
@@ -626,7 +628,7 @@ async def _reassign_arbiters(
     # reset and holds other tests' disputes and arbiters.
     from sqlalchemy import or_
 
-    from app.core.arbitration import POOL, mode, offer_next
+    from app.core.arbitration import POOL, announce_offer, mode, offer_label, offer_next
     from app.core.params import resolve
     from app.models.deal import DisputeStatus
 
@@ -647,12 +649,19 @@ async def _reassign_arbiters(
         )
         if dispute_ids is not None:
             query = query.where(Dispute.id.in_(dispute_ids))
+        # Letters go out after the commit, so a rollback cannot announce an
+        # offer that was never made.
+        announcements: list[tuple] = []
         for dispute in (await db.execute(query)).scalars().all():
             if dispute.offered_to_id is not None:
                 moved += 1
-            if await offer_next(db, dispute, pool=pool) is not None:
+            chosen = await offer_next(db, dispute, pool=pool)
+            if chosen is not None:
                 offered += 1
+                announcements.append((chosen, await offer_label(db, dispute)))
         await db.commit()
+        for arbiter_id, label in announcements:
+            announce_offer(arbiter_id, label)
 
     logger.info("reassign_arbiters moved %d, offered %d", moved, offered)
     return {"moved": moved, "offered": offered}

@@ -586,6 +586,36 @@ def send_recipient_offered(user_id: str, route: str, offered_by: str) -> None:
         )
 
 
+@celery_app.task(name="app.tasks.notifications.send_dispute_offered")
+def send_dispute_offered(user_id: str, deal_no: str) -> None:
+    """T3.12.09 — the pool picked this arbiter for a dispute.
+
+    Without it the offer existed only inside the queue screen, and the 24-hour
+    handoff ran against somebody who was never told. The letter names the deal
+    number and nothing else: what the quarrel is about lives behind the parties'
+    consent (`ArbiterAccessGrant`), and a subject line is not the place to leak
+    it.
+
+    Called by: `core.arbitration.announce_offer`.
+    """
+    import os
+
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        _notify_user(
+            user,
+            "dispute_offered",
+            deal=deal_no,
+            cta_url=f"{base}/admin",
+        )
+
+
 @celery_app.task(name="app.tasks.notifications.send_delivery_reminder")
 def send_delivery_reminder(user_id: str, deal_id: str, route: str) -> None:
     """T3.12.07 pt.2 — ask the sender whether the parcel arrived.

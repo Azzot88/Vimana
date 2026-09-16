@@ -256,6 +256,34 @@ async def test_opening_a_dispute_offers_it_to_the_pool(
     assert r.json()["offered_to_id"] not in (str(seed_sender.id), str(seed_carrier.id))
 
 
+async def test_the_chosen_arbiter_is_told_by_letter(
+    client, session_maker, monkeypatch, sender_headers, seed_sender, seed_carrier
+):
+    """Without the letter the offer lived only inside the queue screen, and the
+    24-hour handoff ran against somebody who was never told."""
+    from app.models.deal import Dispute
+    from app.tasks import notifications
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(
+        notifications.send_dispute_offered, "delay", lambda *args: sent.append(args)
+    )
+
+    await _arbiter(client, session_maker, "pool-letter")
+    deal_id = await _deal(session_maker, seed_sender, seed_carrier)
+    r = await client.post(
+        f"/api/deals/{deal_id}/dispute",
+        headers=sender_headers,
+        json={"reason": "other", "details": "letter"},
+    )
+    assert r.status_code == 201, r.text
+
+    async with session_maker() as db:
+        row = await db.get(Dispute, uuid.UUID(r.json()["id"]))
+        assert row.offered_to_id is not None
+        assert sent and sent[0][0] == str(row.offered_to_id)
+
+
 async def test_the_common_queue_is_closed_in_the_pool(
     client, session_maker, seed_sender, seed_carrier
 ):

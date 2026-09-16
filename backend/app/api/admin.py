@@ -203,12 +203,14 @@ async def open_dispute(
         payload={"dispute_id": str(dispute.id)},
     )
 
-    # T3.12.09 — and the pool offers it to an arbiter.
-    from app.core.arbitration import offer_next
+    # T3.12.09 — and the pool offers it to an arbiter, who is told by letter.
+    from app.core.arbitration import announce_offer, offer_label, offer_next
 
-    await offer_next(db, dispute)
+    chosen = await offer_next(db, dispute)
+    label = await offer_label(db, dispute)
 
     await db.commit()
+    announce_offer(chosen, label)
     await db.refresh(dispute)
     return dispute
 
@@ -416,11 +418,13 @@ async def decline_dispute(
 ):
     """T3.12.09 — the offer passes to the next arbiter; this one is not asked
     about the dispute again."""
-    from app.core.arbitration import offer_next
+    from app.core.arbitration import announce_offer, offer_label, offer_next
 
     dispute = await _offered_to_me(db, dispute_id, current_user)
-    await offer_next(db, dispute)
+    chosen = await offer_next(db, dispute)
+    label = await offer_label(db, dispute)
     await db.commit()
+    announce_offer(chosen, label)
     await db.refresh(dispute)
     return dispute
 
@@ -727,6 +731,18 @@ async def delete_user(
     from app.models.trust import TrustEdge
 
     ids = [user_id]
+    # T3.12.09 — disputes of other people's deals keep existing; this account's
+    # references to them go. Without it, deleting an arbiter who was judging or
+    # had just been offered a dispute failed on the foreign key — the same
+    # clearing `tasks.cleanup.cleanup_e2e_users` has always done.
+    await db.execute(
+        update(Dispute).where(Dispute.arbiter_id.in_(ids)).values(arbiter_id=None)
+    )
+    await db.execute(
+        update(Dispute)
+        .where(Dispute.offered_to_id.in_(ids))
+        .values(offered_to_id=None, offered_at=None)
+    )
     trip_ids = [
         r[0] for r in (await db.execute(select(Trip.id).where(Trip.carrier_id.in_(ids)))).all()
     ]

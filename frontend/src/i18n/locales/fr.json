@@ -10,7 +10,9 @@
     "logout": "Déconnexion",
     "params": "Paramètres",
     "history": "Historique",
-    "arbitration": "Arbitrage"
+    "arbitration": "Arbitrage",
+    "requests": "Je cherche un trajet",
+    "notices": "Avis"
   },
   "dispute": {
     "openButton": "Ouvrir un litige",
@@ -18,7 +20,13 @@
     "modalHint": "Décrivez ce qui s'est mal passé. L'autre partie verra la raison et un arbitre pourra consulter le chat.",
     "reasonPlaceholder": "Raison…",
     "submit": "Ouvrir un litige",
-    "openError": "Impossible d'ouvrir le litige"
+    "openError": "Impossible d'ouvrir le litige",
+    "reason": {
+      "unpaid": "Non payé",
+      "undelivered": "Non livré",
+      "damaged": "Endommagé",
+      "other": "Autre"
+    }
   },
   "admin": {
     "scanQueue": {
@@ -76,7 +84,21 @@
     "email": "Courrier",
     "emailDesc": "Circuits et aperçu des messages",
     "params": "Paramètres",
-    "paramsDesc": "Taux et seuils, versionnés"
+    "paramsDesc": "Taux et seuils, versionnés",
+    "panelTitle": "Administration",
+    "panelHint": "Réservé aux arbitres et au propriétaire de la plateforme.",
+    "disputes": "Litiges",
+    "disputesDesc": "Examinez les litiges ouverts et les décisions sur les dépôts.",
+    "users": "Utilisateurs",
+    "usersDesc": "Gérez les utilisateurs, les rôles et les actions groupées.",
+    "notices": "Notes d’itinéraire",
+    "noticesDesc": "Avis de corridor et bannières de la plateforme.",
+    "chargeTo": "À la charge de",
+    "chargeNobody": "Personne",
+    "chargeCarrier": "Le transporteur",
+    "chargeSender": "L’expéditeur",
+    "chargeAmount": "Montant",
+    "chargeNotSettled": "Les dépôts n’existent pas encore : la décision est inscrite dans la chaîne de l’accord, et l’argent bougera quand les dépôts arriveront."
   },
   "auth": {
     "title": "Vimana",
@@ -128,7 +150,12 @@
     "noAccountHint": "Pas encore de compte ? Il suffit d'entrer une adresse — il est créé quand le code est validé.",
     "enter": "Se connecter / Créer un compte",
     "passwordLater": "Laissez vide et nous enverrons un code. Le mot de passe peut être défini plus tard.",
-    "phoneNotALogin": "La connexion se fait par e-mail. Le téléphone s'ajoute au profil comme contact : rien chez nous ne peut confirmer un numéro, il ne sert donc pas à se connecter."
+    "phoneNotALogin": "La connexion se fait par e-mail. Le téléphone s'ajoute au profil comme contact : rien chez nous ne peut confirmer un numéro, il ne sert donc pas à se connecter.",
+    "inactivityWarningTitle": "Vous allez être déconnecté",
+    "inactivityWarningBody": "Vous êtes inactif depuis un moment. Cliquez sur « Rester connecté » pour garder la session, ou « Se déconnecter » pour la fermer.",
+    "inactivityLoggedOut": "Déconnecté pour inactivité. Reconnectez-vous.",
+    "stayLoggedIn": "Rester connecté",
+    "logoutNow": "Se déconnecter"
   },
   "passkey": {
     "loginCta": "Se connecter avec une passkey",
@@ -359,7 +386,8 @@
     "notSet": "Pas encore rempli",
     "delete": "Supprimer",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "errorGeneric": "Une erreur est survenue. Réessayez."
   },
   "mode": {
     "switchToSend": "Passer à l'envoi",
@@ -506,7 +534,15 @@
       "driver_license": "Permis de conduire",
       "national_id": "Carte d'identité",
       "other": "Autre document"
-    }
+    },
+    "declinedPolite": {
+      "senderCopy": "Le transporteur a choisi de rester anonyme. Vous pouvez demander un dépôt plus important si vous vous inquiétez pour votre colis.",
+      "requestCollateralCTA": "Demander un dépôt plus important",
+      "comingSoonTitle": "La garantie arrive en Phase 5",
+      "comingSoonBody": "L’entiercement et la garantie arrivent avec la Phase 5 (BTC/USDT non dépositaire, 2 sur 3). Pour l’instant, discutez avec le transporteur et négociez directement."
+    },
+    "chooseAndSend": "Choisissez le document et envoyez",
+    "pickCountryFirst": "Choisissez d’abord le pays émetteur — le document part dès que vous choisissez le fichier."
   },
   "chat": {
     "immutable": "Immuable · SHA-256",
@@ -527,7 +563,8 @@
       "doc": "Document",
       "payment_receipt": "Reçu de paiement",
       "identity_doc": "Pièce d'identité",
-      "pre_seal_photo": "Photo avant fermeture"
+      "pre_seal_photo": "Photo avant fermeture",
+      "cargo_photo": "Photo du colis"
     },
     "shareAddress": {
       "button": "Partager mon adresse",
@@ -734,7 +771,8 @@
       "segmentOutOfOrder": "Le vol {{n}} part avant celui qui le précède",
       "arrivalBeforeDeparture": "Vol {{n}} : il arrive avant de partir.",
       "pastDate": "La date doit être dans le futur",
-      "capacity": "Le poids doit être d'au moins 0.5 kg"
+      "capacity": "Le poids doit être d'au moins 0.5 kg",
+      "paymentModel": "Choisissez comment vous êtes payé — c’est à l’étape « Conditions et paiement »"
     },
     "pricePerKg": "Prix par kg",
     "minDealPrice": "Transaction minimale",
@@ -820,7 +858,14 @@
       "alcohol": "Alcool",
       "food": "Nourriture",
       "luxury": "Produits de luxe"
-    }
+    },
+    "paymentModel": {
+      "cash_on_delivery": "Espèces à la remise",
+      "emoney_on_delivery": "Monnaie électronique à la remise",
+      "platform_wallet": "Depuis le portefeuille de la plateforme"
+    },
+    "noMeetingPlacesAdd": "Aucun lieu de rendez-vous. Ajoutez-en un et revenez →",
+    "noAddressesAdd": "Aucune adresse. Ajoutez-en une et revenez →"
   },
   "deals": {
     "title": "Transactions",
@@ -851,9 +896,13 @@
       "delivered": "Livré",
       "confirmed": "Confirmé",
       "closed": "Clôturé",
-      "disputed": "Litige"
+      "disputed": "Litige",
+      "cancelled": "Annulé"
     },
-    "carriageRules": "Règles de transport"
+    "carriageRules": "Règles de transport",
+    "proposeTerms": "Proposer des conditions",
+    "editTerms": "Modifier",
+    "moreAboutDeal": "En savoir plus sur l’accord"
   },
   "profile": {
     "handle": "Identifiant",
@@ -1083,7 +1132,11 @@
       "submit": "Continuer",
       "stepUpBody": "Confirmez que c'est bien vous — le code partira ensuite vers la nouvelle adresse.",
       "failed": "Impossible d'ajouter l'adresse."
-    }
+    },
+    "editButton": "Modifier",
+    "editTitle": "Modifier le profil",
+    "avatarUpload": "Téléverser une photo",
+    "avatarRemove": "Retirer la photo"
   },
   "audience": {
     "carrier": {
@@ -1365,7 +1418,14 @@
     "empty": "Aucune adresse pour l'instant. Ajoutez-en une pour indiquer où livrer.",
     "addAndReturn": "Ajouter une adresse et revenir",
     "returnHint": "Ajoutez une adresse, puis revenez à la conversation.",
-    "backToChat": "Retour au chat"
+    "backToChat": "Retour au chat",
+    "add": "Ajouter une adresse",
+    "label": "Libellé",
+    "labelPlaceholder": "Maison, bureau, chez maman…",
+    "default": "Par défaut",
+    "makeDefault": "Définir par défaut",
+    "confirmDelete": "Supprimer l’adresse « {{label}} » ?",
+    "pickerTitle": "Quelle adresse partager ?"
   },
   "error": {
     "title": "Quelque chose a cassé sur cet écran",
@@ -1490,7 +1550,8 @@
       "terms_reconfirm_requested": "Conditions à reconfirmer",
       "cargo_photographed": "Photos du colis",
       "dispute_requested": "Demande d’ouvrir un litige",
-      "received_as_expected": "Reçu comme prévu"
+      "received_as_expected": "Reçu comme prévu",
+      "handoff_received": "Reçu le colis"
     },
     "field": {
       "method": "Méthode",
@@ -1554,7 +1615,18 @@
       "declined": "refusé",
       "expired": "expiré",
       "superseded": "remplacé"
-    }
+    },
+    "photoWithIt": "La photo part avec la carte — sans elle, l’autre partie ne peut pas confirmer la remise.",
+    "shoot": {
+      "default": "Photographiez ce que vous déclarez — la photo est le registre, et elle part avec la carte.",
+      "handoff_declared": "Ouvrez le colis et photographiez le contenu, puis le colis emballé. Plusieurs photos valent mieux qu’une.",
+      "handoff_received": "Ouvrez le colis et photographiez le contenu devant l’expéditeur, puis le colis emballé. Plusieurs photos valent mieux qu’une.",
+      "posted_declared": "Photographiez le colis ouvert, avant de le sceller — c’est le dernier moment où le contenu est visible.",
+      "delivery_declared": "Photographiez le colis au moment où il change de mains."
+    },
+    "photoNeeded": "Joignez la photo — la remise ne peut pas être confirmée sans elle",
+    "photoOptional": "facultatif",
+    "cancelDeadline": "Si personne ne répond avant {{at}}, l’accord s’annule de lui-même"
   },
   "rules": {
     "work": {
@@ -1577,6 +1649,19 @@
       "methodsPlaceholder": "Espèces à la remise",
       "methodsLimit": "Vous pouvez en ajouter {{max}} au maximum.",
       "methodsAnywhere": "Partout"
+    },
+    "cancelTimeout": {
+      "title": "Annulation sans réponse",
+      "hint": "Combien de temps attendre l’autre partie après avoir demandé l’annulation. Un réglage pour tous vos accords. Cela arrive plus tôt si le vol part plus tôt.",
+      "label": "Attendre une réponse",
+      "hours_one": "{{count}} heure",
+      "hours_other": "{{count}} heures"
+    },
+    "deliveryTimeout": {
+      "title": "Colis que personne ne confirme",
+      "hint": "Combien de temps attendre après l’atterrissage qu’on confirme la remise. Une fois par jour nous demandons si le colis est arrivé ; sans réponse dans le délai, l’accord part de lui-même chez un arbitre. Un réglage pour tous vos accords.",
+      "label": "Attendre la confirmation",
+      "platform": "Comme décide la plateforme (72 heures)"
     }
   },
   "calendar": {
@@ -1875,6 +1960,194 @@
     "what": {
       "arbiter": "Tranche les litiges et, lorsqu'une partie y donne accès, lit le coffre de cette transaction. Chaque lecture est inscrite dans la chaîne de la transaction et annoncée dans son fil de discussion.",
       "compliance_editor": "Rédige les règles du corridor et les envoie en relecture. Publier une règle est un pouvoir distinct, non inclus ici."
+    }
+  },
+  "routeNote": {
+    "preflightTitle": "L’itinéraire demande de l’attention",
+    "preflightBody": "Ce corridor a des particularités connues. Lisez-les et confirmez avant de publier.",
+    "iUnderstand": "J’ai compris — publier quand même"
+  },
+  "cargoRoute": {
+    "title": "Itinéraire du colis",
+    "thisDeal": "cet accord",
+    "multihop": "Le colis passe par plusieurs accords.",
+    "where": {
+      "awaiting_carrier": "attend le transporteur",
+      "in_transit": "en transit",
+      "with_postal_service": "chez le service postal",
+      "delivered": "remis"
+    }
+  },
+  "agreement": {
+    "answer": {
+      "yourTurn": "Votre réponse",
+      "waiting": "En attente de {{who}}",
+      "agreed": "Conditions acceptées"
+    },
+    "role": {
+      "sender": "l’expéditeur",
+      "carrier": "le transporteur",
+      "recipient": "le destinataire"
+    },
+    "empty": "Aucune condition proposée pour l’instant.",
+    "locked": "verrouillé par le transporteur",
+    "lockIt": "verrouiller",
+    "noRecipient": "destinataire pas encore nommé",
+    "section": {
+      "cargo": "Colis",
+      "handover": "Remise au transporteur",
+      "delivery": "Remise finale",
+      "payment": "Paiement"
+    },
+    "payer": {
+      "sender": "Expéditeur",
+      "recipient": "Destinataire"
+    },
+    "field": {
+      "what": "Ce que nous transportons",
+      "weight": "Poids",
+      "dimensions": "Dimensions",
+      "declared": "Valeur déclarée",
+      "packaging": "Emballage",
+      "fragile": "Fragile",
+      "openOnHandover": "Ouvrir à la remise",
+      "url": "Lien de l’article",
+      "method": "Méthode",
+      "place": "Lieu",
+      "at": "Quand",
+      "price": "Prix",
+      "paymentMethod": "Comment régler",
+      "payer": "Qui paie"
+    }
+  },
+  "meeting": {
+    "title": {
+      "handover": "Où et quand vous vous retrouvez",
+      "delivery": "Où et quand le colis est remis"
+    },
+    "noTime": "L’heure n’est pas encore fixée — convenez-en dans « Déplacer le rendez-vous ».",
+    "hours_one": "dans {{count}} heure",
+    "hours_other": "dans {{count}} heures",
+    "minutes_one": "dans {{count}} minute",
+    "minutes_other": "dans {{count}} minutes",
+    "passed": "l’heure est passée",
+    "memo": {
+      "weigh": "Pesez le colis — le poids de l’accord est celui sur lequel le prix a été fixé, et l’excédent est à votre charge.",
+      "compare": "Comparez le contenu avec la description de l’accord. Un écart se règle mieux ici qu’à la douane.",
+      "photo": "Photographiez le colis ouvert et son contenu, et joignez les photos à « Reçu le colis »."
+    }
+  },
+  "stages": {
+    "terms": "Conditions",
+    "handover": "Remise",
+    "transit": "En transit",
+    "arrived": "Atterri",
+    "delivery": "Remise finale",
+    "payment": "Paiement",
+    "closed": "Clôturé",
+    "cancelled": "Annulé",
+    "more": "plus",
+    "unpaidHint": "Remis mais pas payé ? Appelez un arbitre — il voit la conversation et l’état de l’accord.",
+    "theirTurn": "C’est au tour de l’autre partie — vous serez prévenu, et cet écran se met à jour tout seul.",
+    "hint": {
+      "terms": "Convenez du prix et de la façon dont le colis change de mains. Rien ne commence tant que les conditions ne sont pas fixées.",
+      "handover": "Les conditions sont fixées. Convenez du lieu et de l’heure, puis marquez la remise avec une photo.",
+      "transit": "Le transporteur a le colis. Publiez des nouvelles et, à la fin : posté ou remis en main.",
+      "arrived": "Le vol a atterri. Convenez du lieu et de l’heure de la remise — ou postez le colis.",
+      "delivery": "Il ne reste qu’à confirmer la réception.",
+      "payment": "On solde.",
+      "closed": "L’accord est clos. Le registre reste tel quel.",
+      "cancelled": "Annulé avant la remise. Le registre reste tel quel."
+    }
+  },
+  "corridor": {
+    "summary_one": "{{corridor}} · {{category}} : {{count}} document obligatoire",
+    "summary_other": "{{corridor}} · {{category}} : {{count}} documents obligatoires",
+    "notBlocking": "Cela ne vous empêche pas de publier — la plateforme note qu’elle vous a prévenu, elle ne décide pas à la place de l’autorité."
+  },
+  "requests": {
+    "title": "Je cherche quelqu’un qui vole",
+    "lead": "Le trajet qu’il vous faut n’existe peut-être pas encore : la moitié sont publiés quelques jours avant le départ. Dites quel corridor et quand, et nous vous écrirons dès que quelqu’un le fera.",
+    "from": "De",
+    "to": "Vers",
+    "windowFrom": "À partir du",
+    "windowTo": "Jusqu’au",
+    "what": "Ce que vous envoyez",
+    "whatPlaceholder": "Des documents, un petit colis…",
+    "whatHint": "Texte libre. Le poids, la catégorie et la valeur sont pour le transporteur — pour l’instant la question est de savoir si quelqu’un fait ce trajet.",
+    "notify": "Écrivez-moi quand un trajet apparaît",
+    "submit": "Publier la demande",
+    "failed": "Impossible de publier la demande",
+    "mine": "Mes demandes",
+    "mute": "Ne plus m’écrire",
+    "unmute": "M’écrire à nouveau",
+    "close": "Fermer",
+    "reopen": "Rouvrir",
+    "demand": "Où les gens attendent",
+    "demandHint": "Combien attendent un trajet sur chaque corridor. Sans noms — qui a demandé regarde les expéditeurs.",
+    "waiting_one": "{{count}} en attente",
+    "waiting_other": "{{count}} en attente"
+  },
+  "checklist": {
+    "title": "Ce qu’il faut réunir",
+    "lead": "Nous rassemblons les documents exigés par votre corridor à partir des règles publiées et calculons ce qu’il faut déjà commencer. Sans compte.",
+    "category": "Ce que vous envoyez",
+    "from": "De",
+    "to": "Vers",
+    "departAt": "Date de départ",
+    "departHint": "Facultatif. Sans elle, vous avez la liste mais pas les délais.",
+    "build": "Construire la liste",
+    "rebuild": "Refaire avec les réponses",
+    "questions": "Questions posées par les règles",
+    "questionsHint": "Elles viennent des règles du corridor. Tant qu’une réponse manque, le document reste dans la liste — plus sûr que de le retirer en silence.",
+    "result_one": "{{count}} document",
+    "result_other": "{{count}} documents",
+    "empty": "Les règles publiées n’exigent aucun document sur ce corridor.",
+    "noCorpus": "Aucun corpus de règles n’a encore été publié.",
+    "mandatory": "obligatoire",
+    "optional": "selon le cas",
+    "undecided": "réponse nécessaire — cela dépend",
+    "leadTime_one": "prend {{count}} jour",
+    "leadTime_other": "prend {{count}} jours",
+    "validFor_one": "valable {{count}} jour",
+    "validFor_other": "valable {{count}} jours",
+    "startBy": "à commencer avant le {{date}}",
+    "tooLate": "trop tard : il fallait commencer avant le {{date}}",
+    "keep": "Enregistrer la liste",
+    "saved": "Enregistrée. Référence :",
+    "disclaimer": "Ceci est un extrait d’exigences publiées, pas une décision. C’est l’autorité qui tranche, pas la plateforme.",
+    "buildFailed": "Impossible de construire la liste",
+    "saveFailed": "Impossible d’enregistrer la liste",
+    "attr": {
+      "age_years": "Âge de l’objet, années",
+      "declared_value": "Valeur déclarée",
+      "author_known": "Auteur connu",
+      "species": "Espèce",
+      "breed": "Race",
+      "generation": "Génération hybride",
+      "purpose": "Pour vous ou pour la revente",
+      "count": "Combien"
+    },
+    "attrEffect": {
+      "age_years": "Au-dessus du seuil, un permis d’exportation est exigé",
+      "declared_value": "Les droits et la franchise se calculent dessus",
+      "author_known": "Décide si une expertise de bien culturel est nécessaire",
+      "species": "À chaque espèce ses exigences vétérinaires",
+      "breed": "Les interdictions de race vivent sous le niveau du pays, dans un État ou une ville",
+      "generation": "Les générations hybrides F1–F4 sont restreintes séparément de la race",
+      "purpose": "Un animal personnel et une importation pour revente sont deux régimes",
+      "count": "La quantité décide si cela compte comme un envoi commercial"
+    },
+    "warnNamed_one": "Trop tard : « {{title}} » demande {{count}} jour de préparation",
+    "warnNamed_other": "Trop tard : « {{title}} » demande {{count}} jours de préparation",
+    "warnCount_one": "Trop tard : {{count}} document obligatoire ne peut plus être préparé avant le départ",
+    "warnCount_other": "Trop tard : {{count}} documents obligatoires ne peuvent plus être préparés avant le départ",
+    "warnNotBlocking": "C’est un avertissement, pas un refus — vous pouvez toujours publier et convenir.",
+    "warnSeeList": "Voir la liste",
+    "attrHint": {
+      "author_known": "oui ou non",
+      "purpose": "personnel ou revente",
+      "generation": "F1 … F5"
     }
   }
 }

@@ -103,7 +103,10 @@ EVENT_CLASSES: tuple[EventClass, ...] = (
     # appears is a one-word change here rather than a migration.
     EventClass("vault", kinds=(), emitted=False),
     EventClass("trust", kinds=(), emitted=False),
-    EventClass("dispute", kinds=(), emitted=False),
+    # T3.12.09 — the first letter of this class: a dispute offered to an arbiter.
+    # Switchable like any other, because the timer passes the dispute on when
+    # nobody answers — a silenced letter costs 24 hours, not a stuck dispute.
+    EventClass("dispute", kinds=("dispute_offered",)),
     EventClass(
         "security",
         kinds=(

@@ -191,6 +191,17 @@
     "facts_route": "trasa",
     "cta": "Otwórz transakcję"
   },
+  "dispute_offered": {
+    "subject": "Vimana · Zaproponowano ci spór",
+    "preheader": "Przyjmij albo przekaż dalej — oferta wygasa",
+    "heading": "Zaproponowano ci spór",
+    "body": [
+      "Wybrano cię z puli arbitrów do sporu w tej transakcji.",
+      "Otwórz panel i przyjmij spór albo odmów, wtedy trafi do innego arbitra. Bez odpowiedzi w terminie spór sam przejdzie dalej. Treść sporu otworzy się dopiero za zgodą strony na dostęp do transakcji."
+    ],
+    "facts_deal": "transakcja",
+    "cta": "Otwórz panel"
+  },
   "role_granted": {
     "subject": "Vimana · Rola weszła w życie",
     "preheader": "Przyjąłeś ją, więc zaczęła obowiązywać",

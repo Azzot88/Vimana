@@ -987,8 +987,14 @@ async def _ensure_trip_nostr_columns(engine) -> None:
                 await conn.execute(text(f"ALTER TABLE trips ADD COLUMN {col} {ddl}"))
 
 
-def _migration_statements(filename: str) -> list[str]:
-    """The `UPGRADE` list of a migration file, read with `ast` and never imported.
+def _migration_statements(filename: str, name: str = "UPGRADE") -> list[str]:
+    """A statement list of a migration file, read with `ast` and never imported.
+
+    `name` is the list to read — `UPGRADE` by default, and `BACKFILL` or `MOVE`
+    for the data moves, which `tests/test_migrations.py` runs against rows it
+    builds itself. Those statements never ran in a test before: the test
+    database was created by `create_all`, so there was nothing to move, and the
+    SQL that rewrites real data was the one part nothing checked.
 
     Tests run from `/app`, where the migrations directory `alembic/` shadows the
     installed package: importing a migration makes its `from alembic import op`
@@ -1006,7 +1012,7 @@ def _migration_statements(filename: str) -> list[str]:
         ast.literal_eval(node.value)
         for node in tree.body
         if isinstance(node, ast.Assign)
-        and any(isinstance(t, ast.Name) and t.id == "UPGRADE" for t in node.targets)
+        and any(isinstance(t, ast.Name) and t.id == name for t in node.targets)
     )
 
 
