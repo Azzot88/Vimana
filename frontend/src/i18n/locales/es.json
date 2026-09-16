@@ -1925,6 +1925,26 @@
     "publishedLive": "La página está publicada para lectores y buscadores: se renderiza a petición.",
     "openPublicPage": "Abrir la página"
   },
+  "adminJournal": {
+    "title": "Historial de roles",
+    "lead": "De dónde salió cada rol de esta cuenta y a dónde fue. Lo escribe la plataforma y no se edita.",
+    "back": "Usuarios",
+    "link": "Historial",
+    "when": "Cuándo",
+    "event": "Qué pasó",
+    "role": "Rol",
+    "actor": "Quién",
+    "reason": "Por qué",
+    "empty": "A esta cuenta nunca se le ofreció nada.",
+    "loadFailed": "No se pudo cargar el historial",
+    "platform": "la plataforma",
+    "events": {
+      "offered": "ofrecido",
+      "accepted": "aceptado",
+      "declined": "rechazado",
+      "revoked": "retirado"
+    }
+  },
   "adminRoles": {
     "title": "Roles y propuestas",
     "description": "Propuestas pendientes de respuesta. Las respondidas y retiradas están en el diario de cada cuenta, no aquí.",

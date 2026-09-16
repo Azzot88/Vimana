@@ -39,6 +39,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const ProfileRulesPage = lazy(() => import('./pages/ProfileRulesPage'))
 const ProfileCargoTemplatesPage = lazy(() => import('./pages/ProfileCargoTemplatesPage'))
 const ProfileVaultPage = lazy(() => import('./pages/ProfileVaultPage'))
+const AdminRoleJournalPage = lazy(() => import('./pages/AdminRoleJournalPage'))
 const ProfileHistoryPage = lazy(() => import('./pages/ProfileHistoryPage'))
 const ProfileTrustPage = lazy(() => import('./pages/ProfileTrustPage'))
 const ProfilePrefsPage = lazy(() => import('./pages/ProfilePrefsPage'))
@@ -225,6 +226,12 @@ export default function App() {
               <Route path="/admin/disputes" element={<Navigate to="/disputes" replace />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/role-offers" element={<AdminRolesPage />} />
+              {/* T_UX.25 — where one account's roles came from, and where they
+                  went. Read-only: the journal is evidence, not a control. */}
+              <Route
+                path="/admin/users/:userId/roles"
+                element={<AdminRoleJournalPage />}
+              />
               <Route path="/admin/rules" element={<AdminRulesPage />} />
               <Route path="/admin/notices" element={<AdminNoticesPage />} />
               <Route path="/admin/email" element={<AdminEmailPage />} />

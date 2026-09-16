@@ -2131,6 +2131,26 @@
     "publishedLive": "The page is live for readers and for search engines: it is rendered on request.",
     "openPublicPage": "Open the page"
   },
+  "adminJournal": {
+    "title": "Role journal",
+    "lead": "Where every role of this account came from, and where it went. Written by the platform, not editable.",
+    "back": "Users",
+    "link": "Journal",
+    "when": "When",
+    "event": "What happened",
+    "role": "Role",
+    "actor": "Who",
+    "reason": "Why",
+    "empty": "Nothing has ever been proposed to this account.",
+    "loadFailed": "Could not load the journal",
+    "platform": "the platform",
+    "events": {
+      "offered": "offered",
+      "accepted": "accepted",
+      "declined": "declined",
+      "revoked": "withdrawn"
+    }
+  },
   "adminRoles": {
     "title": "Roles and offers",
     "description": "Offers waiting for an answer. Answered and withdrawn ones live in each account's journal, not here.",

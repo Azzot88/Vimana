@@ -1925,6 +1925,26 @@
     "publishedLive": "La page est en ligne pour les lecteurs comme pour les moteurs de recherche : elle est rendue à la demande.",
     "openPublicPage": "Ouvrir la page"
   },
+  "adminJournal": {
+    "title": "Journal des rôles",
+    "lead": "D’où vient chaque rôle de ce compte et où il est passé. Écrit par la plateforme, non modifiable.",
+    "back": "Utilisateurs",
+    "link": "Journal",
+    "when": "Quand",
+    "event": "Ce qui s’est passé",
+    "role": "Rôle",
+    "actor": "Qui",
+    "reason": "Pourquoi",
+    "empty": "Rien n’a jamais été proposé à ce compte.",
+    "loadFailed": "Impossible de charger le journal",
+    "platform": "la plateforme",
+    "events": {
+      "offered": "proposé",
+      "accepted": "accepté",
+      "declined": "refusé",
+      "revoked": "retiré"
+    }
+  },
   "adminRoles": {
     "title": "Rôles et propositions",
     "description": "Propositions en attente de réponse. Celles qui ont reçu une réponse ou ont été retirées figurent dans le journal de chaque compte, pas ici.",

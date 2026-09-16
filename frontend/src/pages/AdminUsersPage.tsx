@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 import { deleteUser, listAllUsers, offerRole, revokeRole } from '../api/admin'
 import type { User, UserRole } from '../api/auth'
@@ -282,7 +282,17 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="inline-flex gap-2">
+                      <div className="inline-flex gap-2 items-center">
+                        {/* T_UX.25 — the journal of this one account: who
+                            proposed each role, who answered, what was taken
+                            back. Offered to every row, including superusers:
+                            reading where power came from is the point. */}
+                        <Link
+                          to={`/admin/users/${u.id}/roles`}
+                          className="text-xs font-body text-cyan hover:underline"
+                        >
+                          {t('adminJournal.link')}
+                        </Link>
                         {/* One button per offerable role, because they are
                             independent: offering the second must not take the
                             first away, and a single toggle cannot say that. */}

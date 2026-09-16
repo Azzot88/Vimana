@@ -1943,6 +1943,26 @@
     "publishedLive": "Strona jest dostępna dla czytelników i dla wyszukiwarek: renderuje się na żądanie.",
     "openPublicPage": "Otwórz stronę"
   },
+  "adminJournal": {
+    "title": "Dziennik ról",
+    "lead": "Skąd wzięła się każda rola tego konta i gdzie się podziała. Pisze go platforma, nie da się go edytować.",
+    "back": "Użytkownicy",
+    "link": "Dziennik",
+    "when": "Kiedy",
+    "event": "Co się stało",
+    "role": "Rola",
+    "actor": "Kto",
+    "reason": "Dlaczego",
+    "empty": "Temu kontu nigdy niczego nie proponowano.",
+    "loadFailed": "Nie udało się wczytać dziennika",
+    "platform": "platforma",
+    "events": {
+      "offered": "zaproponowana",
+      "accepted": "przyjęta",
+      "declined": "odrzucona",
+      "revoked": "odebrana"
+    }
+  },
   "adminRoles": {
     "title": "Role i propozycje",
     "description": "Propozycje czekające na odpowiedź. Odpowiedziane i cofnięte są w dzienniku każdego konta, nie tutaj.",
