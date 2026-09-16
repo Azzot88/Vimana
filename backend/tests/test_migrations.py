@@ -149,9 +149,6 @@ async def test_0098_repairs_a_size_that_reads_as_json_null(
             currency="USD",
             final_destination="FIX",
             weight_kg=1.0,
-            # Written the way the API writes it: an explicit `None`, which lands
-            # as JSON null rather than SQL NULL.
-            dimensions_cm=None,
         )
         db.add(cargo)
         await db.flush()
@@ -174,6 +171,18 @@ async def test_0098_repairs_a_size_that_reads_as_json_null(
         )
         await db.commit()
         cargo_id = cargo.id
+
+    async with session_maker() as db:
+        # The «before» shape is written in SQL because the application can no
+        # longer produce it: T_DATA.1 gave every nullable JSON column
+        # `none_as_null=True`, so an explicit `None` now lands as SQL NULL. The
+        # rows this repair is for were written before that, and this is what
+        # they look like.
+        await db.execute(
+            text("UPDATE cargos SET dimensions_cm = 'null'::json WHERE id = :id"),
+            {"id": str(cargo_id)},
+        )
+        await db.commit()
 
     async with session_maker() as db:
         spelling = (

@@ -516,7 +516,13 @@ async def test_payment_methods_do_not_reach_the_public_listing(
         assert published.status_code == 201, published.text
         listing = await client.get("/api/trips", headers=sender_headers)
         assert listing.status_code == 200, listing.text
-        assert "4400" not in listing.text
+        # The needle is the name itself, not a four-digit fragment of it: on
+        # 2026-09-16 «4400» turned up inside a microsecond field
+        # (`04:18:44.984400Z`) and failed a run that had leaked nothing. A
+        # listing is full of timestamps and uuids, so any short run of digits
+        # will eventually appear in it by chance.
+        assert "Каспи" not in listing.text
+        assert "4400 0000" not in listing.text
         assert "payment_methods" not in listing.text
     finally:
         await client.patch(
