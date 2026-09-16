@@ -222,7 +222,7 @@ export default function ArbiterQueue() {
                     </label>
 
                     {/* T3.11.27 — «арбитр может списать с залога перевозчика».
-                        Deposits are Фаза 5, so this writes the ruling into the
+                        Deposits are Фаза 4, so this writes the ruling into the
                         deal's chain rather than moving anything; the note under
                         it says so, because an arbiter who thinks money moved
                         today would stop following it up. The server bounds the

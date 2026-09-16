@@ -286,7 +286,7 @@ TRIP_SERVICES = (
 # for the goods**, because a form that offers the service without those two
 # fields reproduces the scheme above with a logo on it.
 #
-# Until Фаза 5 there is no money on the platform, so this is a **declared limit
+# Until Фаза 4 there is no money on the platform, so this is a **declared limit
 # and a record**, not a guarantee. `§9.1`: no screen calls it protection.
 BUYOUT_PAID_BY = ("sender_prepaid", "carrier_credit")
 

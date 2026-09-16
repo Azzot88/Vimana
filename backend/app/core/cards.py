@@ -82,7 +82,7 @@ class CardKind(str, enum.Enum):
     # T3.12.08 — the receiving side ends a posted deal: «получено как должно».
     received_as_expected = "received.as_expected"
 
-    # Group 4 — settlement (T3.38; escrow parts land in Phase 5)
+    # Group 4 — settlement (T3.38; escrow parts land in Phase 4)
     payment_method_agreed = "payment.method_agreed"
     payment_declared = "payment.declared"
     payment_confirmed = "payment.confirmed"
@@ -152,7 +152,7 @@ CANCELLABLE_STATUSES: tuple[DealStatus, ...] = (
 #:
 #: Owner's rule 2026-09-07: «Деньги отдаются после получения груза — это и есть
 #: порядок, который закрывает сделку». The sequence is the protection: nothing
-#: on this platform holds the money until Фаза 5, so «cargo first» is the only
+#: on this platform holds the money until Фаза 4, so «cargo first» is the only
 #: thing between a sender and a stranger holding both their cash and their
 #: parcel.
 #:
@@ -200,7 +200,7 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         _s(CardKind.terms_countered, "terms", ack_by=COUNTERPARTY, implemented=True),
         _s(CardKind.terms_agreed, "terms", implemented=True),
         _s(CardKind.terms_declined, "terms"),
-        _s(CardKind.terms_amended, "terms", ack_by=COUNTERPARTY),
+        _s(CardKind.terms_amended, "terms", ack_by=COUNTERPARTY, implemented=True),
         _s(CardKind.terms_reconfirm_requested, "terms", ack_by=COUNTERPARTY, implemented=True),
 
         # ── group 1a · the cargo (T3.12.04) ────────────────────────────────
@@ -359,12 +359,16 @@ CATALOGUE: dict[CardKind, CardSpec] = {
            ack_by=COUNTERPARTY, on_accept_status=DealStatus.cancelled,
            on_accept_emit=CardKind.cancel_confirmed, implemented=True),
         _s(CardKind.cancel_confirmed, "exceptions", implemented=True),
-        _s(CardKind.dispute_opened, "exceptions"),
-        _s(CardKind.arbiter_joined, "exceptions"),
-        _s(CardKind.dispute_resolved, "exceptions"),
+        # Emitted by the server, not raised by a role: `api.admin` for a dispute
+        # opened, claimed and ruled on, and `tasks.cleanup` for one the delivery
+        # timer opens. Marked implemented 2026-09-15 — they were built in T3.39
+        # and T3.12.07 while the catalogue still called them wishes.
+        _s(CardKind.dispute_opened, "exceptions", implemented=True),
+        _s(CardKind.arbiter_joined, "exceptions", implemented=True),
+        _s(CardKind.dispute_resolved, "exceptions", implemented=True),
 
         # ── group 6 · closing ──────────────────────────────────────────────
-        _s(CardKind.deal_sealed, "closing"),
+        _s(CardKind.deal_sealed, "closing", implemented=True),
         _s(CardKind.feedback_left, "closing"),
 
         # ── group 7 · B2B ──────────────────────────────────────────────────

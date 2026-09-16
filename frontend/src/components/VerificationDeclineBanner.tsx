@@ -12,7 +12,7 @@ interface Props {
  *  intentional privacy choice by the carrier and offers an escalation path
  *  (larger deposit) instead of walking away.
  *
- *  Collateral CTA is a stub — real implementation lands with T5.x escrow.
+ *  Collateral CTA is a stub — real implementation lands with T4.x escrow.
  */
 export default function VerificationDeclineBanner({ onRequestCollateral }: Props) {
   const { t } = useTranslation()

@@ -14,7 +14,7 @@ Rolling 90-day window for F/Q/V. F is monthly rate (deals ÷ 3 months). Q counts
 closed deals with the handoff photo in DealVault. T3.12.07 pt.2 — the receipt
 photo is no longer required: the handover in hand needs none (owner, 2026-09-14),
 and a Q that demanded it would stop counting honest deals. D is the peak
-active collateral — not implemented yet (Collateral model is Phase 5). Verification
+active collateral — not implemented yet (Collateral model is Phase 4). Verification
 factor comes from T2.1 `User.highest_verification_level`.
 
 Public API:
@@ -73,7 +73,7 @@ class UBAComponents:
     f_count: int      # closed deals as carrier in window
     q_count: int      # closed deals with the handoff photo in DealVault
     v_sum: float      # sum of Cargo.declared_value on closed deals
-    d_peak: float     # peak active collateral (0 until T5.x Collateral model)
+    d_peak: float     # peak active collateral (0 until T4.x Collateral model)
     verify_level: str | None  # highest_verification_level
     # T_TRUST.1 — when the badge behind that level was issued. None means either
     # no verification at all or one with no date, and `freshness_factor` treats
@@ -131,7 +131,7 @@ def compute_components(db: Session, user_id: uuid.UUID) -> UBAComponents:
         )
     ).scalar() or 0
 
-    # D — peak collateral. Phase 5 (T5.x). Zero for now.
+    # D — peak collateral. Phase 4 (T4.x). Zero for now.
     d_peak = 0.0
 
     verify_level = db.execute(

@@ -99,6 +99,42 @@ def test_unimplemented_kinds_cannot_be_raised():
             assert spec.implemented, f"{kind} is creatable but not marked implemented"
 
 
+def test_kinds_the_code_emits_are_marked_implemented():
+    """The direction that was missing, and the one that drifted.
+
+    `implemented` was asserted only for kinds a **role** may raise, so five cards
+    the server itself emits — `dispute.opened`, `arbiter.joined`,
+    `dispute.resolved`, `deal.sealed`, `terms.amended` — sat in the catalogue as
+    wishes while the code had been writing them since T3.39 (found 2026-09-15,
+    reconciling the PRD against the code). A catalogue that calls a live card
+    unbuilt is worse than no catalogue: it is read as a plan.
+
+    Source text rather than a hand-kept list, for the reason `test_idor_matrix`
+    gives: the next card emitted from a new place is covered without anybody
+    remembering to add it here.
+    """
+    import re
+    from pathlib import Path
+
+    from app.core.cards import CATALOGUE, CardKind
+
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    used: set[str] = set()
+    for path in app_dir.rglob("*.py"):
+        if path.name == "cards.py" and path.parent.name == "core":
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.lstrip().startswith("#"):
+                continue
+            used.update(re.findall(r"CardKind\.([a-z_][a-z_0-9]*)", line))
+
+    for name in sorted(used):
+        if name not in CardKind.__members__:
+            continue
+        spec = CATALOGUE[CardKind[name]]
+        assert spec.implemented, f"{name} is emitted by the code but marked unbuilt"
+
+
 # ── the type is a field now ───────────────────────────────────────────────
 
 

@@ -34,7 +34,7 @@ const DELIVERY_TIMEOUTS = [24, 48, 72, 120, 168]
  *
  * **Payment is text and only text for now.** The method catalogue (HodlHodl's
  * model: a table of methods plus the carrier's selection) was deferred by the
- * owner — the platform moves no money yet, cards are Фаза 4 and escrow Фаза 5.
+ * owner — the platform moves no money yet, cards are Фаза 5 and escrow Фаза 4.
  * So the copy says how to settle with this person and never implies the
  * platform is party to it (DESIGNGUIDELINES §9.1).
  */

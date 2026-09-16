@@ -93,9 +93,9 @@ class ResolveBody(BaseModel):
     #: T3.11.27 — «Груз потерян при объявленной стоимости → спор, и арбитр может
     #: списать с залога перевозчика» (owner, 2026-09-07).
     #:
-    #: **Deposits do not exist before Фаза 5**, so nothing is moved: this is the
+    #: **Deposits do not exist before Фаза 4**, so nothing is moved: this is the
     #: arbiter's decision written down, in the hash chain and in the card the two
-    #: parties read. When deposits arrive (`T5.x`) they will execute rulings that
+    #: parties read. When deposits arrive (`T4.x`) they will execute rulings that
     #: were already recorded rather than start a ledger from the day they ship —
     #: a verdict a year old that named no amount cannot be executed later, and
     #: asking the arbiter to remember it is not a record.
@@ -454,7 +454,7 @@ async def resolve_dispute(
     # T3.11.27 — a charge is only a charge against something the deal declared.
     # Owner's rule 2026-09-07: «Груз потерян **при объявленной стоимости**». An
     # amount pulled out of the air, or one above what the two of them agreed the
-    # parcel was worth, is not a ruling on this deal — it is a number, and Фаза 5
+    # parcel was worth, is not a ruling on this deal — it is a number, and Фаза 4
     # would execute it years later with nobody left to question it.
     charge: dict | None = None
     if body.charge_amount is not None or body.charge_to is not None:
@@ -480,7 +480,7 @@ async def resolve_dispute(
             "currency": currency,
             "declared_value": declared,
             # Stated in the record itself, because the record outlives this
-            # comment: nothing moves money today, and Фаза 5 must be able to see
+            # comment: nothing moves money today, and Фаза 4 must be able to see
             # that this ruling was written before deposits existed.
             "settled": False,
         }

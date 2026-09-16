@@ -402,7 +402,7 @@ async def _raise_card(
         #
         # The order is the protection. Paid before the parcel arrives, the money
         # is gone and the leverage with it — and this platform moves no money of
-        # its own until Фаза 5, so the sequence is the only thing standing
+        # its own until Фаза 4, so the sequence is the only thing standing
         # between a sender and a stranger with their cash and their cargo.
         #
         # `posted` counts: the carrier's part ends at the tracking code

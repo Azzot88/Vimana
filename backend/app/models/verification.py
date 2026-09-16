@@ -29,7 +29,7 @@ from app.core.database import Base
 class VerificationLevel(str, enum.Enum):
     auto = "auto"  # local OCR + public sanctions CSV
     peer = "peer"  # another user visually / photographically confirmed
-    kyc = "kyc"  # regulatory provider (Phase 4)
+    kyc = "kyc"  # regulatory provider (Phase 5)
 
 
 class VerificationRequestStatus(str, enum.Enum):

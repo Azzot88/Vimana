@@ -3,7 +3,7 @@
 **The measurement this exists for.** A load run started immediately after
 `up -d --force-recreate backend` answered 1.8 % of requests with an error; the
 same run on a warmed container answered 0 %. Every deploy drops whatever is in
-flight. Today that costs somebody a reloaded list of trips. After Phase 4 the
+flight. Today that costs somebody a reloaded list of trips. After Phase 5 the
 same second lands on a payment confirmation.
 
 **Liveness and readiness are different questions, and one endpoint cannot

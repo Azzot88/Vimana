@@ -11,7 +11,7 @@ import AudienceLanding from '../components/landing/AudienceLanding'
  * `MASTERPLAN §4.1` поток C: per-kilo pricing with a volumetric floor, a pool of
  * bonded carriers, the platform's share — but **none of it is built**. No
  * business account, no invoices, no tracking, no API, no volume pricing, no
- * recurring shipments; cards are Фаза 4 and escrow Фаза 5, neither started.
+ * recurring shipments; cards are Фаза 5 and escrow Фаза 4, neither started.
  *
  * Therefore the page sells the *route*, which is true today (people already fly
  * these corridors and carry things), and asks for a conversation. It does not

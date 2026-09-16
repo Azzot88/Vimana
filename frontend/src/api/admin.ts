@@ -60,7 +60,7 @@ export const declineDispute = (disputeId: string) =>
 /** T3.11.27 — the arbiter's ruling, optionally with a sum.
  *
  *  «Груз потерян при объявленной стоимости → арбитр может списать с залога
- *  перевозчика» (owner, 2026-09-07). Deposits arrive in Фаза 5, so nothing
+ *  перевозчика» (owner, 2026-09-07). Deposits arrive in Фаза 4, so nothing
  *  moves: the amount is recorded in the deal's hash chain now so it can be
  *  executed then. The server bounds it by the declared value and refuses half
  *  a charge — an amount owed by nobody is not a ruling. */
