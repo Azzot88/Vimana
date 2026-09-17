@@ -1538,6 +1538,8 @@
     "kind": {
       "handover_conditions": "Умови передачі",
       "pickup_proposed": "Запропонувати передачу",
+      "pickup_assign": "Призначити зустріч",
+      "dropoff_assign": "Призначити вручення",
       "pickup_confirmed": "Передачу узгоджено",
       "dropoff_proposed": "Запропонувати вручення",
       "dropoff_confirmed": "Вручення узгоджено",
@@ -2031,6 +2033,19 @@
     "attached": "В угодах:",
     "notAttached": "не додано до угоди",
     "openFile": "Відкрити файл"
+  },
+  "time": {
+    "justNow": "щойно",
+    "minutes_one": "{{count}} хвилину тому",
+    "minutes_few": "{{count}} хвилини тому",
+    "minutes_many": "{{count}} хвилин тому",
+    "minutes_other": "{{count}} хвилини тому",
+    "hour": "годину тому",
+    "hourHalf": "півтори години тому",
+    "hours_one": "{{count}} годину тому",
+    "hours_few": "{{count}} години тому",
+    "hours_many": "{{count}} годин тому",
+    "hours_other": "{{count}} години тому"
   },
   "agreement": {
     "answer": {

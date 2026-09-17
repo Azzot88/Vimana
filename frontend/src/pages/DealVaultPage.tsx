@@ -429,7 +429,17 @@ export default function DealVaultPage() {
             three ways a sender knows their recipient: from contacts, by public
             key, or — for somebody not on the platform — by a link. The picker
             holds all three and keeps them distinct. */}
-        {user && parties.senderId === user.id && dealId && (
+        {/* T_UX.28 — offered only while there is somebody to invite and a deal
+            to invite them into. The server already refuses an invitation to a
+            finished deal and to one that has a recipient; the button stayed
+            regardless, so the refusal was the first thing a sender heard.
+            Changing the recipient is an amendment of the terms, not a control
+            on the deal's header (owner, 2026-09-16). */}
+        {user &&
+          parties.senderId === user.id &&
+          dealId &&
+          !deal?.recipient_id &&
+          !['closed', 'cancelled'].includes(dealStatus) && (
           <button
             type="button"
             onClick={() => setRecipientOpen(true)}

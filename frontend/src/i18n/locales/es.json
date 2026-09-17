@@ -1532,6 +1532,8 @@
     "kind": {
       "handover_conditions": "Condiciones de entrega",
       "pickup_proposed": "Proponer recogida",
+      "pickup_assign": "Fijar el encuentro",
+      "dropoff_assign": "Fijar la entrega",
       "pickup_confirmed": "Recogida confirmada",
       "dropoff_proposed": "Proponer entrega",
       "dropoff_confirmed": "Entrega confirmada",
@@ -2013,6 +2015,15 @@
     "attached": "En operaciones:",
     "notAttached": "sin operación",
     "openFile": "Abrir archivo"
+  },
+  "time": {
+    "justNow": "justo ahora",
+    "minutes_one": "hace {{count}} minuto",
+    "minutes_other": "hace {{count}} minutos",
+    "hour": "hace una hora",
+    "hourHalf": "hace hora y media",
+    "hours_one": "hace {{count}} hora",
+    "hours_other": "hace {{count}} horas"
   },
   "agreement": {
     "answer": {

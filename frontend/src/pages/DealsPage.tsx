@@ -65,8 +65,14 @@ export default function DealsPage() {
                     <div className="flex items-center gap-3 text-xs font-body text-navy/50">
                       <span className="bg-navy/5 px-2 py-0.5 rounded font-mono">{role}</span>
                     </div>
-                    <MonoText className="text-xs text-navy/40">
-                      {prefs.dateTime(deal.created_at)}
+                    {/* T_UX.28 — how long ago it was matched, with the exact
+                        stamp on hover: «11 минут назад» is a thing to answer,
+                        «16.09.2026 14:12» is a thing to decode. */}
+                    <MonoText
+                      className="text-xs text-navy/40"
+                      title={prefs.dateTime(deal.created_at)}
+                    >
+                      {prefs.since(deal.created_at)}
                     </MonoText>
                   </div>
                   <div className="flex flex-col items-end gap-2">

@@ -29,6 +29,11 @@ interface Props {
    *  needed when something has gone wrong and should not compete with the step
    *  somebody is trying to take. */
   muted?: boolean
+  /** T_UX.28 — a caption this stage wants instead of the card's own name, by
+   *  kind. «Перенести вручение» is the right words only when there is something
+   *  to move; the first time it is «Назначить вручение», and the stage is what
+   *  knows which of the two it is (owner, 2026-09-16). */
+  labels?: Record<string, string>
 }
 
 export default function CardActions({
@@ -37,6 +42,7 @@ export default function CardActions({
   onDone,
   only,
   muted = false,
+  labels,
 }: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState<CardFormSpec | null>(null)
@@ -190,7 +196,7 @@ export default function CardActions({
                 : 'px-3 py-2 rounded-field border border-navy/15 text-sm font-body text-navy/80 hover:border-cyan hover:text-cyan'
             }
           >
-            {t(kindKey(spec.kind), spec.kind)}
+            {labels?.[spec.kind] ?? t(kindKey(spec.kind), spec.kind)}
           </button>
         ))}
       </div>
@@ -203,7 +209,7 @@ export default function CardActions({
       className="rounded-2xl border border-navy/10 bg-surface p-4 mb-3"
     >
       <p className="text-sm font-display font-semibold text-navy mb-3">
-        {t(kindKey(open.kind), open.kind)}
+        {labels?.[open.kind] ?? t(kindKey(open.kind), open.kind)}
       </p>
       <div className="flex flex-wrap gap-3">{open.fields.map(field)}</div>
 

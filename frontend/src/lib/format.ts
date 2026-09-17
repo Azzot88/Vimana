@@ -73,6 +73,40 @@ export function formatDateTime(
   })
 }
 
+/** T_UX.28 — how long ago, while that still means something.
+ *
+ *  Owner, 2026-09-16: «до пяти минут — только что, дальше точное время до часа,
+ *  до двух часов — получасами, дальше часами». A deal matched eleven minutes ago
+ *  and one matched yesterday print the same absolute stamp, and only one of them
+ *  is a thing to answer now — which is the whole reason this exists.
+ *
+ *  Past a day the relative form stops helping («27 часов назад» is read twice),
+ *  so the caller falls back to the date. Returns `null` there rather than
+ *  deciding for the caller, because the absolute format is a display preference
+ *  and belongs to `usePrefs`.
+ *
+ *  Called by: `hooks/usePrefs.since`.
+ */
+export function relativeParts(
+  iso: string | null | undefined,
+  now: number = Date.now(),
+): { key: string; count?: number } | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const ms = now - d.getTime()
+  // A stamp from the future is somebody's clock, not a moment to describe.
+  if (ms < 0) return null
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 5) return { key: 'time.justNow' }
+  if (minutes < 60) return { key: 'time.minutes', count: minutes }
+  if (minutes < 90) return { key: 'time.hour' }
+  if (minutes < 120) return { key: 'time.hourHalf' }
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return { key: 'time.hours', count: hours }
+  return null
+}
+
 export function formatDate(
   iso: string | null | undefined,
   style: DateStyle,

@@ -15,7 +15,7 @@ import {
 import type { Terms } from '../api/terms'
 import { formsForRole, type DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
-import MeetingNote from './MeetingNote'
+import MeetingNote, { meetingOf } from './MeetingNote'
 import TermsProposeForm from './TermsProposeForm'
 
 interface Props {
@@ -230,6 +230,24 @@ export default function DealStages({
       .filter((m) => m.card_state === 'pending' && m.card_kind)
       .map((m) => m.card_kind as string),
   )
+  /* T_UX.28 (owner, 2026-09-16) — «Перенести вручение» is the right words only
+     when there is something to move. The first time nothing has been arranged,
+     and a button offering to move it reads as though somebody already had. The
+     same arrangement the meeting card shows decides which caption it is:
+     a place or a time already agreed means moving, nothing means setting. */
+  const meetingLabels: Record<string, string> = {}
+  for (const [kind, stageOfMeeting] of [
+    ['pickup.proposed', 'handover'],
+    ['dropoff.proposed', 'delivery'],
+  ] as const) {
+    const arranged = meetingOf(terms, messages, stageOfMeeting)
+    if (!arranged.place && !arranged.at) {
+      meetingLabels[kind] = t(
+        `cards.kind.${stageOfMeeting === 'handover' ? 'pickup' : 'dropoff'}_assign`,
+      )
+    }
+  }
+
   const mineNow = myRole
     ? stageKinds.filter(
         (kind) =>
@@ -365,6 +383,7 @@ export default function DealStages({
             dealId={dealId}
             myRole={myRole}
             only={mineNow}
+            labels={meetingLabels}
             onDone={onDone}
           />
         )}

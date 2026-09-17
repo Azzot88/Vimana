@@ -4,6 +4,7 @@ import {
   formatDate,
   formatDateTime,
   formatWeight,
+  relativeParts,
   toDisplayWeight,
   toKilograms,
   type DateStyle,
@@ -52,6 +53,16 @@ export function usePrefs() {
     date: (iso: string | null | undefined) => formatDate(iso, style, i18n.language),
     dateTime: (iso: string | null | undefined) =>
       formatDateTime(iso, style, i18n.language),
+    /** T_UX.28 — «15 минут назад» while that is the useful answer, the date
+     *  once it stops being one. The threshold is a day: past it the relative
+     *  form has to be converted back in the reader's head, which is the work
+     *  the absolute date was already doing. */
+    since: (iso: string | null | undefined) => {
+      const parts = relativeParts(iso)
+      return parts
+        ? (i18n.t(parts.key, { count: parts.count }) as string)
+        : formatDateTime(iso, style, i18n.language)
+    },
     time: (iso: string | null | undefined) => {
       if (!iso) return '—'
       const d = new Date(iso)

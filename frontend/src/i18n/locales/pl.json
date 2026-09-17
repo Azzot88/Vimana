@@ -1538,6 +1538,8 @@
     "kind": {
       "handover_conditions": "Warunki przekazania",
       "pickup_proposed": "Zaproponuj odbiór",
+      "pickup_assign": "Ustal spotkanie",
+      "dropoff_assign": "Ustal doręczenie",
       "pickup_confirmed": "Odbiór potwierdzony",
       "dropoff_proposed": "Zaproponuj doręczenie",
       "dropoff_confirmed": "Doręczenie potwierdzone",
@@ -2031,6 +2033,19 @@
     "attached": "W transakcjach:",
     "notAttached": "nie dołączony do transakcji",
     "openFile": "Otwórz plik"
+  },
+  "time": {
+    "justNow": "przed chwilą",
+    "minutes_one": "{{count}} minutę temu",
+    "minutes_few": "{{count}} minuty temu",
+    "minutes_many": "{{count}} minut temu",
+    "minutes_other": "{{count}} minuty temu",
+    "hour": "godzinę temu",
+    "hourHalf": "półtorej godziny temu",
+    "hours_one": "{{count}} godzinę temu",
+    "hours_few": "{{count}} godziny temu",
+    "hours_many": "{{count}} godzin temu",
+    "hours_other": "{{count}} godziny temu"
   },
   "agreement": {
     "answer": {

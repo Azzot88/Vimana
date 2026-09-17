@@ -58,8 +58,12 @@ export default function DealSummaryCard({ deal }: { deal: Deal }) {
                 {deal.price_total} {deal.currency ?? prefs.currency}
               </MonoText>
             )}
-            <MonoText className="text-xs text-navy/40">
-              {prefs.dateTime(deal.created_at)}
+            {/* T_UX.28 — the relative form up to a day, the stamp on hover. */}
+            <MonoText
+              className="text-xs text-navy/40"
+              title={prefs.dateTime(deal.created_at)}
+            >
+              {prefs.since(deal.created_at)}
             </MonoText>
           </div>
         </div>

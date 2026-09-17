@@ -912,6 +912,15 @@
     "notAttached": "not attached to a deal",
     "openFile": "Open file"
   },
+  "time": {
+    "justNow": "just now",
+    "minutes_one": "{{count}} minute ago",
+    "minutes_other": "{{count}} minutes ago",
+    "hour": "an hour ago",
+    "hourHalf": "an hour and a half ago",
+    "hours_one": "{{count}} hour ago",
+    "hours_other": "{{count}} hours ago"
+  },
   "agreement": {
     "answer": {
       "yourTurn": "Your answer",
@@ -1656,6 +1665,8 @@
     "kind": {
       "handover_conditions": "Handover conditions",
       "pickup_proposed": "Move the meeting",
+      "pickup_assign": "Set the meeting",
+      "dropoff_assign": "Set the delivery",
       "pickup_confirmed": "Meeting moved",
       "dropoff_proposed": "Move the delivery",
       "dropoff_confirmed": "Delivery moved",

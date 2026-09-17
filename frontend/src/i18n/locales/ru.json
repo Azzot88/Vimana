@@ -916,6 +916,19 @@
     "notAttached": "не приложен к сделке",
     "openFile": "Открыть файл"
   },
+  "time": {
+    "justNow": "только что",
+    "minutes_one": "{{count}} минуту назад",
+    "minutes_few": "{{count}} минуты назад",
+    "minutes_many": "{{count}} минут назад",
+    "minutes_other": "{{count}} минуты назад",
+    "hour": "час назад",
+    "hourHalf": "полтора часа назад",
+    "hours_one": "{{count}} час назад",
+    "hours_few": "{{count}} часа назад",
+    "hours_many": "{{count}} часов назад",
+    "hours_other": "{{count}} часа назад"
+  },
   "agreement": {
     "answer": {
       "yourTurn": "Ваш ответ",
@@ -1666,6 +1679,8 @@
     "kind": {
       "handover_conditions": "Условия передачи",
       "pickup_proposed": "Перенести встречу",
+      "pickup_assign": "Назначить встречу",
+      "dropoff_assign": "Назначить вручение",
       "pickup_confirmed": "Встреча перенесена",
       "dropoff_proposed": "Перенести вручение",
       "dropoff_confirmed": "Вручение перенесено",

@@ -124,7 +124,19 @@ export default function DashboardPage() {
   const published = trips.filter(
     (tr) => tr.status === 'open' || tr.status === 'matched',
   )
-  const liveTrips = published.filter((tr) => departureState(tr) !== 'flown')
+  /* T_UX.28 (owner, 2026-09-16) — a trip somebody has already responded to is
+     work waiting on the carrier; a published one is a shop window. So `matched`
+     rises above `open`, and inside each group the nearest departure comes
+     first: a flight tomorrow needs answering before one published yesterday for
+     December. The listing itself arrives newest-created first (`paginate_desc`),
+     which is the order of publishing, not the order of urgency. */
+  const liveTrips = published
+    .filter((tr) => departureState(tr) !== 'flown')
+    .sort((a, b) => {
+      const byWork = Number(b.status === 'matched') - Number(a.status === 'matched')
+      if (byWork !== 0) return byWork
+      return new Date(a.depart_at).getTime() - new Date(b.depart_at).getTime()
+    })
   const flownTrips = published.filter((tr) => departureState(tr) === 'flown')
   const carrying = deals.filter(
     (d) => d.carrier_id === user?.id && ACTIVE.includes(d.status),
