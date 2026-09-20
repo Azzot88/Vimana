@@ -37,6 +37,7 @@ from app.api.cargo_templates import TemplateName
 from app.models.marketplace import Cargo, CargoTemplate, Category, Trip, TripStatus
 from app.models.user import User
 from app.core.cargo import cargo_location, deal_no, multihop_deal_count
+from app.core.deal_storage import state_for_deal
 from app.schemas.marketplace import CargoCreate, DealDetailOut, DealEventOut, DealOut
 
 router = APIRouter()
@@ -362,6 +363,27 @@ def _methods_of(side: dict | None) -> list[str]:
     return [m for m in methods if isinstance(m, str)]
 
 
+async def _agreed_payload(db: AsyncSession, deal_id: uuid.UUID) -> dict | None:
+    """The agreement in force, as a payload — or `None` if none was struck.
+
+    T_DEAL.1. The storage tariff is frozen into the agreement, so the deal
+    screen has to read it from there rather than from the trip: the trip may
+    have been edited since, and this deal was struck under the older number.
+    """
+    row = (
+        await db.execute(
+            select(DealVaultMessage)
+            .where(
+                DealVaultMessage.deal_id == deal_id,
+                DealVaultMessage.card_kind == "terms.agreed",
+            )
+            .order_by(DealVaultMessage.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return row.card_payload if row else None
+
+
 @router.get("/{deal_id}", response_model=DealDetailOut)
 async def get_deal(
     deal_id: uuid.UUID,
@@ -433,6 +455,16 @@ async def get_deal(
             trip.handover_destination if trip else None
         ),
         trip_payment_model=trip.payment_model if trip else None,
+        # T_DEAL.1 — «ожидание, иногда платное», with its counter. Computed from
+        # the timeline every time it is asked rather than stored: the number
+        # changes with the clock, and a stored one would be wrong between two
+        # requests.
+        storage=await state_for_deal(
+            db,
+            deal.id,
+            agreed_payload=await _agreed_payload(db, deal.id),
+            weight_kg=cargo.weight_kg if cargo else None,
+        ),
     )
 
 

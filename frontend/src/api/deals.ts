@@ -95,6 +95,30 @@ export interface DealDetail extends Deal {
   /** The settlement model the trip was published with — what «Способ расчёта»
    *  opens on instead of a guess. */
   trip_payment_model?: string | null
+  /** T_DEAL.1 — the storage the parcel is in right now, computed server-side
+   *  from the timeline. `null` when it is not in one. `paid_days` is what the
+   *  counter says and `charged` is what the carrier actually billed: the
+   *  owner's rule allows the two to differ, so the screen shows both. */
+  storage?: {
+    started_at: string
+    free_days: number
+    free_until: string
+    days_begun: number
+    paid_days: number
+    price: number
+    unit: 'kg' | 'place'
+    units: number | null
+    currency: string
+    amount: number | null
+    max_paid_days: number
+    capped: boolean
+    charged: {
+      days: number | null
+      amount: number | null
+      currency: string
+      state: string | null
+    } | null
+  } | null
 }
 
 /** T3.12.03 — a response to a trip: the cargo, and the deadline of this

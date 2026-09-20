@@ -126,12 +126,34 @@ export const CARD_FORMS: CardFormSpec[] = [
     roles: ['carrier'],
     fields: [
       {
+        /* T_DEAL.1 — `storage` joined the four (owner, 2026-09-20): «посылка
+           прилетела и не может быть вручена, или ожидает стыковочного рейса».
+           A state of the journey, not a rung of the ladder — it can come round
+           twice, before the carriage and before the delivery. */
         name: 'stage',
         type: 'select',
-        options: ['departed', 'arrived', 'delayed', 'customs'],
+        options: ['departed', 'arrived', 'delayed', 'customs', 'storage'],
         required: true,
       },
       { name: 'eta', type: 'datetime' },
+    ],
+    hasText: true,
+  },
+  {
+    /* T_DEAL.1 — the storage bill (owner, 2026-09-20): «у перевозчика есть
+       возможность добавить в сделку количество суток хранения по факту,
+       отличающееся от счётчика. Счётчик уведомительный, и сумма за хранение
+       может быть изменена.»
+
+       So the days are typed rather than taken from the meter, and the other
+       side answers: this is money, and a charge the payer cannot refuse would
+       make the seller the author of the buyer's bill. */
+    kind: 'storage.charged',
+    roles: ['carrier'],
+    fields: [
+      { name: 'days', type: 'number', required: true },
+      { name: 'amount', type: 'number' },
+      { name: 'currency', type: 'text' },
     ],
     hasText: true,
   },

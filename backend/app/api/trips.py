@@ -127,6 +127,13 @@ def _apply_terms(trip: Trip, body: TripCreate, carriage_fallback: str | None) ->
         if body.handover_destination
         else None
     )
+    # T_DEAL.1 — хранение перед вручением: сколько суток бесплатно и почём
+    # дальше. Один объект, потому что это один ответ: половина тарифа — не
+    # условия, и отправителю её нельзя показать. `None` — «не храню или не
+    # сказал», и `core.deal_storage` не достраивает это до бесплатного.
+    trip.storage_terms = (
+        body.storage_terms.model_dump(mode="json") if body.storage_terms else None
+    )
     trip.excluded = body.excluded
     trip.services = _services_with_derived(body)
     trip.payment_model = body.payment_model
@@ -572,6 +579,10 @@ async def _trip_outs(db: AsyncSession, items: list[Trip]) -> list[TripOut]:
                 size_hint=t.size_hint,
                 handover_origin=t.handover_origin,
                 handover_destination=t.handover_destination,
+                # T_DEAL.1 — в списке, а не только в карточке рейса: тариф
+                # хранения меняет цену перевозки для всех, кому посылку могут не
+                # вручить с первого раза, и узнавать о нём после отклика поздно.
+                storage_terms=t.storage_terms,
                 segments=[TripSegmentOut.model_validate(segment) for segment in t.segments],
                 excluded=t.excluded,
                 services=t.services,

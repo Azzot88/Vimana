@@ -752,6 +752,20 @@
       "discardDraft": "Supprimer"
     },
     "paymentHint": "Comment vous êtes payé. Affiché sur la fiche ; le montant est facultatif.",
+    "storage": {
+      "title": "Stockage",
+      "hint": "Si le colis ne peut pas être remis tout de suite, il attend. Dites combien de jours il attend gratuitement et ce que coûte un jour ensuite. Ne choisissez rien si vous ne stockez pas.",
+      "unit": {
+        "kg": "Au kilo",
+        "place": "Au colis"
+      },
+      "unitShort": {
+        "kg": "kg",
+        "place": "colis"
+      },
+      "freeDays": "Jours gratuits",
+      "price": "{{currency}} par {{unit}} et par jour"
+    },
     "servicesHint": "Facultatif. Chacun est cherchable : ceux qui en ont besoin vous trouvent.",
     "services": {
       "domestic_shipping": "Je réexpédie par la poste dans le pays",
@@ -1541,6 +1555,7 @@
       "handoff_declared": "Déclarer la remise",
       "handoff_confirmed": "Remise confirmée",
       "transit_update": "Suivi en transit",
+      "storage_charged": "Frais de stockage",
       "posted_declared": "Déclarer l'envoi postal",
       "posted_confirmed": "Envoi confirmé",
       "delivery_declared": "Déclarer la livraison",
@@ -1578,6 +1593,7 @@
       "stage": "Étape",
       "eta": "ETA",
       "amount": "Montant",
+      "days": "Jours",
       "currency": "Devise",
       "category": "Catégorie",
       "costs_borne_by": "Frais à la charge de",
@@ -1597,6 +1613,7 @@
       "arrived": "Arrivé",
       "delayed": "Retard",
       "customs": "Douane",
+      "storage": "Stockage",
       "cash": "Espèces",
       "platform": "Sur la plateforme",
       "escrow": "Séquestre",
@@ -2067,6 +2084,26 @@
       "paymentMethod": "Comment régler",
       "payer": "Qui paie"
     }
+  },
+  "storage": {
+    "title": "Stockage",
+    "stateFree": "gratuit",
+    "statePaid": "payant",
+    "freeUntil": "Gratuit jusqu’au {{when}}",
+    "freeOver": "Le stockage gratuit a pris fin le {{when}}",
+    "paidDays": "Jours facturés",
+    "accrued": "Cumulé",
+    "unknownSum": "poids non indiqué",
+    "tariff": "{{free}} jours gratuits, puis {{price}} {{currency}} par {{unit}} et par jour",
+    "unit": {
+      "kg": "kg",
+      "place": "colis"
+    },
+    "capped": "Le plafond de {{days}} jours est atteint : la somme n’augmente plus, et poursuivre relève d’un accord séparé.",
+    "chargedPending": "Facturé par le transporteur, en attente de votre réponse",
+    "chargedAgreed": "Convenu pour le stockage",
+    "chargedDays": "{{days}} jours",
+    "advisory": "Le compteur est indicatif : le transporteur annonce la somme finale et vous la confirmez."
   },
   "meeting": {
     "title": {

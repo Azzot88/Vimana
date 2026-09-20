@@ -752,6 +752,20 @@
       "discardDraft": "Descartar"
     },
     "paymentHint": "Cómo cobras. Se ve en la ficha; el importe es opcional.",
+    "storage": {
+      "title": "Almacenaje",
+      "hint": "Si el envío no se puede entregar enseguida, espera. Indica cuántos días espera gratis y cuánto cuesta un día después. Si no almacenas, no elijas nada.",
+      "unit": {
+        "kg": "Por kilo",
+        "place": "Por bulto"
+      },
+      "unitShort": {
+        "kg": "kg",
+        "place": "bulto"
+      },
+      "freeDays": "Días gratis",
+      "price": "{{currency}} por {{unit}} al día"
+    },
     "servicesHint": "Opcional. Cada uno se puede buscar: quien lo necesita te encuentra.",
     "services": {
       "domestic_shipping": "Lo reenvío por correo dentro del país",
@@ -1541,6 +1555,7 @@
       "handoff_declared": "Declarar entrega",
       "handoff_confirmed": "Entrega confirmada",
       "transit_update": "Estado en tránsito",
+      "storage_charged": "Cargo por almacenaje",
       "posted_declared": "Declarar el envío postal",
       "posted_confirmed": "Envío confirmado",
       "delivery_declared": "Declarar recepción",
@@ -1578,6 +1593,7 @@
       "stage": "Etapa",
       "eta": "ETA",
       "amount": "Importe",
+      "days": "Días",
       "currency": "Moneda",
       "category": "Categoría",
       "costs_borne_by": "Costes a cargo de",
@@ -1597,6 +1613,7 @@
       "arrived": "Llegó",
       "delayed": "Retraso",
       "customs": "Aduana",
+      "storage": "Almacenaje",
       "cash": "Efectivo",
       "platform": "En la plataforma",
       "escrow": "Depósito",
@@ -2067,6 +2084,26 @@
       "paymentMethod": "Cómo se paga",
       "payer": "Quién paga"
     }
+  },
+  "storage": {
+    "title": "Almacenaje",
+    "stateFree": "gratis",
+    "statePaid": "de pago",
+    "freeUntil": "Gratis hasta {{when}}",
+    "freeOver": "El almacenaje gratuito terminó el {{when}}",
+    "paidDays": "Días cobrados",
+    "accrued": "Acumulado",
+    "unknownSum": "peso no indicado",
+    "tariff": "{{free}} días gratis, después {{price}} {{currency}} por {{unit}} al día",
+    "unit": {
+      "kg": "kg",
+      "place": "bulto"
+    },
+    "capped": "Se alcanzó el límite de {{days}} días: la suma deja de crecer y continuar es un acuerdo aparte.",
+    "chargedPending": "El transportista lo ha cobrado, espera tu respuesta",
+    "chargedAgreed": "Acordado por el almacenaje",
+    "chargedDays": "{{days}} días",
+    "advisory": "El contador es informativo: el transportista dice el importe final y tú lo confirmas."
   },
   "meeting": {
     "title": {

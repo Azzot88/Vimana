@@ -16,6 +16,7 @@ import type { Terms } from '../api/terms'
 import { formsForRole, type DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
 import MeetingNote, { meetingOf } from './MeetingNote'
+import StorageNote from './StorageNote'
 import TermsProposeForm from './TermsProposeForm'
 
 interface Props {
@@ -345,6 +346,12 @@ export default function DealStages({
             2026-09-12). Drawn above the buttons, because it is what the buttons
             are about; at the far end it describes the delivery instead, which
             is the same arrangement read from the other side of the flight. */}
+        {/* T_DEAL.1 — «ожидание, иногда платное» (owner, 2026-09-20). Above
+            the meeting, because while the parcel is in storage the question
+            «когда встречаемся» has a price attached to its answer. Drawn only
+            when the deal is actually in one; the server decides that. */}
+        {deal?.storage && <StorageNote storage={deal.storage} />}
+
         {(currentKey === 'handover' ||
           currentKey === 'arrived' ||
           currentKey === 'delivery') && (

@@ -184,6 +184,15 @@ class Trip(Base):
     # thing. Shape: {"methods": [...], "points": ["Tustin", "Irvine"]}.
     handover_origin: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     handover_destination: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    # T_DEAL.1 — хранение перед вручением (owner, 2026-09-20). Посылка прилетела
+    # и лежит: ждёт стыковки, ждёт, пока получателя можно будет застать. Это не
+    # способ выдачи и не адрес — это пауза, за которую перевозчик вправе брать
+    # деньги, и оба числа его: сколько суток бесплатно и почём дальше.
+    #
+    # NULL — «не храню» или «не сказал», и это не то же самое, что бесплатно:
+    # см. `core.deal_storage.terms_of`, который отказывается достраивать тариф.
+    # Shape: {"free_days": 2, "price": 1.0, "unit": "kg"|"place", "currency": "USD"}.
+    storage_terms: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     # T3.11.07 — what this carrier will not take, from a closed list. Only
     # 5.9 % of real posts state exclusions at all, and when they do the wording
     # is nearly always one of five things: cigarettes, alcohol, tobacco, food,

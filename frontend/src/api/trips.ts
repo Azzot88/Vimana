@@ -127,6 +127,15 @@ export interface Trip {
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
   handover_destination?: HandoverSide | null
+  /** T_DEAL.1 — что стоит ожидание перед вручением. Целиком или никак:
+   *  цена без бесплатного периода — половина условий. `null` — «не храню или
+   *  не сказал», и это не то же самое, что бесплатно. */
+  storage_terms?: {
+    free_days: number
+    price: number
+    unit: 'kg' | 'place'
+    currency: string
+  } | null
   /** T3.11.07 — null means the carrier said nothing about exclusions, which is
    *  what 94 % of this market does. An empty array would claim otherwise. */
   excluded?: Exclusion[] | null
@@ -213,6 +222,15 @@ export interface CreateTripPayload {
   size_hint?: SizeHint | null
   handover_origin?: HandoverSide | null
   handover_destination?: HandoverSide | null
+  /** T_DEAL.1 — что стоит ожидание перед вручением. Целиком или никак:
+   *  цена без бесплатного периода — половина условий. `null` — «не храню или
+   *  не сказал», и это не то же самое, что бесплатно. */
+  storage_terms?: {
+    free_days: number
+    price: number
+    unit: 'kg' | 'place'
+    currency: string
+  } | null
   excluded?: Exclusion[] | null
   services?: TripService[] | null
   payment_model?: PaymentModel | null

@@ -230,6 +230,12 @@ interface Draft {
   // as `null` — not as the commonest answer.
   services: TripService[]
   paymentModel: '' | PaymentModel
+  // T_DEAL.1 — что стоит ожидание, если посылку не получится вручить сразу.
+  // Строки, как и остальные числовые поля черновика; пустая единица означает
+  // «про хранение ничего не сказал», и тариф тогда не отправляется вовсе.
+  storageFreeDays: string
+  storagePrice: string
+  storageUnit: '' | 'kg' | 'place'
   // Typed as one comma-separated line and shown as chips: what people transfer
   // through is local and changes faster than any list we could ship.
   paymentSystems: string
@@ -259,6 +265,9 @@ const EMPTY: Draft = {
   excluded: [],
   services: [],
   paymentModel: '',
+  storageFreeDays: '',
+  storagePrice: '',
+  storageUnit: '',
   paymentSystems: '',
   categories: [],
   alsoOnNostr: true,
@@ -433,6 +442,13 @@ function draftFromTrip(
     excluded: trip.excluded ?? [],
     services: trip.services ?? [],
     paymentModel: trip.payment_model ?? '',
+    storageFreeDays:
+      trip.storage_terms?.free_days != null
+        ? String(trip.storage_terms.free_days)
+        : '',
+    storagePrice:
+      trip.storage_terms?.price != null ? String(trip.storage_terms.price) : '',
+    storageUnit: trip.storage_terms?.unit ?? '',
     paymentSystems: (trip.payment_systems ?? []).join(', '),
     categories: trip.allowed_categories ?? [],
     pricePerKg: trip.price_per_kg != null ? String(trip.price_per_kg) : '',
@@ -1051,6 +1067,19 @@ export default function NewTripPage() {
         // rather than a cast, because a `!` here would turn a guard somebody
         // later loosens into a 422 nobody can read.
         payment_model: draft.paymentModel || null,
+        // T_DEAL.1 — тариф хранения уходит только целиком: единица и цена без
+        // друг друга — половина условий, а половину условий отправителю
+        // показать нельзя. Валюта — та же, в которой объявлен рейс: вторая
+        // валюта в одном объявлении это вопрос, которого никто не задавал.
+        storage_terms:
+          draft.storageUnit && draft.storagePrice !== ''
+            ? {
+                free_days: Number(draft.storageFreeDays || 0),
+                price: Number(draft.storagePrice),
+                unit: draft.storageUnit,
+                currency: draft.currency || 'USD',
+              }
+            : null,
         // Only meaningful beside e-money: cash has no system to name and the
         // wallet is the system, so the server refuses one sent with either.
         payment_systems:
@@ -2100,6 +2129,75 @@ export default function NewTripPage() {
                 </fieldset>
               ))}
             </div>
+          </div>
+
+          {/* T_DEAL.1 — хранение перед вручением (owner, 2026-09-20). Стоит
+              рядом с расчётом, а не с передачей: это цена, а не логистика, и
+              отправитель читает её там же, где остальные деньги рейса.
+
+              Единица выбирается первой и может быть снята: пока она не выбрана,
+              полей нет вовсе — «я не храню» должно стоить ноля движений, иначе
+              форма учит пропускать блок целиком. */}
+          <div className="space-y-3 border-t border-navy/10 pt-4">
+            <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
+              {t('trips.storage.title')}
+            </p>
+            <p className="text-[11px] font-body text-navy/40 -mt-1">
+              {t('trips.storage.hint')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(['kg', 'place'] as const).map((unit) => (
+                <button
+                  key={unit}
+                  type="button"
+                  aria-pressed={draft.storageUnit === unit}
+                  onClick={() =>
+                    patch({ storageUnit: draft.storageUnit === unit ? '' : unit })
+                  }
+                  className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                    draft.storageUnit === unit
+                      ? 'border-cyan bg-cyan/10 text-navy'
+                      : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                  }`}
+                >
+                  {t(`trips.storage.unit.${unit}`)}
+                </button>
+              ))}
+            </div>
+            {draft.storageUnit && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-[11px] font-body text-navy/40 mb-1">
+                    {t('trips.storage.freeDays')}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={draft.storageFreeDays}
+                    onChange={(e) => patch({ storageFreeDays: e.target.value })}
+                    className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+                  />
+                </label>
+                <label className="block">
+                  <span className="block text-[11px] font-body text-navy/40 mb-1">
+                    {t('trips.storage.price', {
+                      currency: draft.currency || 'USD',
+                      unit: t(`trips.storage.unitShort.${draft.storageUnit}`),
+                    })}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    value={draft.storagePrice}
+                    onChange={(e) => patch({ storagePrice: e.target.value })}
+                    className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="space-y-3 border-t border-navy/10 pt-4">

@@ -92,6 +92,10 @@ export const DEAL_STAGES: DealStage[] = [
     statuses: ['in_transit'],
     kinds: [
       'transit.update',
+      /* T_DEAL.1 — the storage bill belongs wherever the storage can happen,
+         and it can happen on both sides of the flight: a parcel waits for a
+         connection before it flies and for a recipient after it lands. */
+      'storage.charged',
       'dropoff.proposed',
       'posted.declared',
       'delivery.declared',
@@ -115,7 +119,7 @@ export const DEAL_STAGES: DealStage[] = [
        answer and a second record of where the parcel is. */
     key: 'arrived',
     statuses: ['in_transit'],
-    kinds: ['dropoff.proposed', 'delivery.declared'],
+    kinds: ['dropoff.proposed', 'storage.charged', 'delivery.declared'],
   },
   {
     key: 'delivery',

@@ -106,8 +106,22 @@ class HandoffDeclared(BaseModel):
 
 
 class TransitUpdate(BaseModel):
-    stage: Literal["departed", "arrived", "delayed", "customs"]
+    # T_DEAL.1 — `storage` joined the four (owner, 2026-09-20): «посылка
+    # прилетела и не может быть вручена, или ожидает стыковочного рейса… это
+    # просто хранение перед этапом вручения». A state of the journey, declared
+    # by the carrier like every other one here, rather than a rung of the
+    # ladder — it can happen before the carriage as well as before the
+    # delivery, and a step that comes round twice is not a step.
+    stage: Literal["departed", "arrived", "delayed", "customs", "storage"]
     eta: datetime | None = None
+    #: T_DEAL.1 — the storage place's offset from UTC, in minutes, as the
+    #: carrier's own device reports it. The free period ends at a morning
+    #: (`core.deal_storage`), and a morning in Dubai is not a morning in UTC; without
+    #: this the boundary would land at nine or at two, depending on where the
+    #: parcel happens to be lying. Defaults to UTC because an older client
+    #: sends nothing, and a wrong-by-hours boundary is still better than a
+    #: refused declaration about where the parcel is.
+    tz_offset_minutes: int = Field(default=0, ge=-840, le=840)
 
 
 class PostedDeclared(BaseModel):
@@ -248,6 +262,29 @@ class CancelRequested(BaseModel):
     expires_at: datetime | None = None
 
 
+class StorageCharged(BaseModel):
+    """T_DEAL.1 — what the storage actually cost, said by the carrier.
+
+    Owner, 2026-09-20: «У перевозчика есть возможность добавить в сделку
+    количество суток хранения по факту, отличающееся от счётчика. Счётчик
+    уведомительный, и сумма за хранение может быть изменена.»
+
+    So the days are typed, not taken: the computed number is a starting point
+    the carrier may lower (a handover at seven in the morning by arrangement) or
+    raise (a day the counter never learned about). The paying side confirms it,
+    because this is money — a card the other party cannot answer would make one
+    of them the author of the other's bill.
+
+    `amount` is optional: with a tariff and a weight the two sides can both
+    compute it, and a carrier who waives the charge says so by sending nought
+    rather than by leaving the field out.
+    """
+
+    days: int = Field(ge=0, le=366)
+    amount: float | None = Field(default=None, ge=0, le=1_000_000)
+    currency: str | None = Field(default=None, min_length=3, max_length=4)
+
+
 PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.handover_conditions: HandoverConditions,
     CardKind.pickup_proposed: MeetingPoint,
@@ -255,6 +292,7 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.handoff_declared: HandoffDeclared,
     CardKind.handoff_received: HandoffDeclared,
     CardKind.transit_update: TransitUpdate,
+    CardKind.storage_charged: StorageCharged,
     CardKind.posted_declared: PostedDeclared,
     CardKind.delivery_declared: DeliveryDeclared,
     CardKind.payment_method_agreed: PaymentMethodAgreed,

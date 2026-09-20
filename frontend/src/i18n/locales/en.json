@@ -771,6 +771,20 @@
       "discardDraft": "Discard"
     },
     "paymentHint": "How you expect to be paid. Shown on the card; the amount is optional.",
+    "storage": {
+      "title": "Storage",
+      "hint": "If the parcel cannot be handed over at once, it waits. Say how many days it waits free and what a day costs after that. Choose nothing if you do not store.",
+      "unit": {
+        "kg": "Per kilogram",
+        "place": "Per item"
+      },
+      "unitShort": {
+        "kg": "kg",
+        "place": "item"
+      },
+      "freeDays": "Free days",
+      "price": "{{currency}} per {{unit}} per day"
+    },
     "paymentModel": {
       "cash_on_delivery": "Cash on delivery",
       "emoney_on_delivery": "E-money on delivery",
@@ -963,6 +977,26 @@
       "paymentMethod": "How to settle",
       "payer": "Who pays"
     }
+  },
+  "storage": {
+    "title": "Storage",
+    "stateFree": "free",
+    "statePaid": "charged",
+    "freeUntil": "Free until {{when}}",
+    "freeOver": "Free storage ended {{when}}",
+    "paidDays": "Days charged",
+    "accrued": "Accrued",
+    "unknownSum": "weight not stated",
+    "tariff": "{{free}} days free, then {{price}} {{currency}} per {{unit}} per day",
+    "unit": {
+      "kg": "kg",
+      "place": "item"
+    },
+    "capped": "The {{days}}-day ceiling is reached: the sum stops here, and going on is a separate arrangement.",
+    "chargedPending": "Charged by the carrier, awaiting your answer",
+    "chargedAgreed": "Agreed for storage",
+    "chargedDays": "{{days}} days",
+    "advisory": "The counter is a notice: the carrier names the final sum and you confirm it."
   },
   "meeting": {
     "title": {
@@ -1675,6 +1709,7 @@
       "handoff_received": "Received the parcel",
       "handoff_confirmed": "Handover confirmed",
       "transit_update": "Transit update",
+      "storage_charged": "Storage charge",
       "posted_declared": "Posted by mail",
       "posted_confirmed": "Posting confirmed",
       "delivery_declared": "Handed to delivery",
@@ -1711,6 +1746,7 @@
       "stage": "Stage",
       "eta": "ETA",
       "amount": "Amount",
+      "days": "Days",
       "currency": "Currency",
       "category": "Category",
       "costs_borne_by": "Costs borne by",
@@ -1730,6 +1766,7 @@
       "arrived": "Arrived",
       "delayed": "Delayed",
       "customs": "Customs",
+      "storage": "Storage",
       "cash": "Cash",
       "platform": "On platform",
       "escrow": "Escrow",

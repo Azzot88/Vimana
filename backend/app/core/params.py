@@ -122,6 +122,18 @@ REGISTRY: tuple[ParamSpec, ...] = (
         "arbiter_max_open_disputes", "5", ParamValueType.integer, "arbitration", False,
         "Сколько споров в работе может быть у одного арбитра, чтобы ему предлагали новые.",
     ),
+    # T_DEAL.1 — хранение перед вручением (owner, 2026-09-20). Тариф и бесплатный
+    # период назначает перевозчик в рейсе; платформенными остаются две вещи,
+    # которые нельзя отдавать продавцу услуги: где проходит граница суток и до
+    # какого предела счётчик вообще растёт.
+    ParamSpec(
+        "storage_day_start_hour", "6", ParamValueType.integer, "deals", True,
+        "Во сколько по местному времени места хранения начинается новые сутки хранения.",
+    ),
+    ParamSpec(
+        "storage_max_paid_days", "14", ParamValueType.integer, "deals", True,
+        "Предел платного хранения: дальше сумма не растёт, продолжение — отдельная договорённость.",
+    ),
 )
 
 REGISTRY_BY_KEY: dict[str, ParamSpec] = {spec.key: spec for spec in REGISTRY}

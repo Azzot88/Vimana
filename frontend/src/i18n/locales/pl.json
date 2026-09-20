@@ -756,6 +756,20 @@
       "discardDraft": "Usuń"
     },
     "paymentHint": "Jak się rozliczasz. Widoczne na karcie; kwota jest opcjonalna.",
+    "storage": {
+      "title": "Przechowanie",
+      "hint": "Jeśli przesyłki nie da się wydać od razu, czeka. Podaj, ile dób czeka bezpłatnie i ile kosztuje doba później. Nie przechowujesz — nic nie wybieraj.",
+      "unit": {
+        "kg": "Za kilogram",
+        "place": "Za sztukę"
+      },
+      "unitShort": {
+        "kg": "kg",
+        "place": "sztukę"
+      },
+      "freeDays": "Dób bezpłatnie",
+      "price": "{{currency}} za {{unit}} na dobę"
+    },
     "servicesHint": "Opcjonalne. Po każdej można wyszukiwać — znajdą Cię ci, którzy jej szukają.",
     "services": {
       "domestic_shipping": "Wyślę pocztą po kraju",
@@ -1547,6 +1561,7 @@
       "handoff_declared": "Zgłoś przekazanie",
       "handoff_confirmed": "Przekazanie potwierdzone",
       "transit_update": "Status w drodze",
+      "storage_charged": "Opłata za przechowanie",
       "posted_declared": "Zgłoś nadanie",
       "posted_confirmed": "Nadanie potwierdzone",
       "delivery_declared": "Zgłoś doręczenie",
@@ -1584,6 +1599,7 @@
       "stage": "Etap",
       "eta": "ETA",
       "amount": "Kwota",
+      "days": "Doby",
       "currency": "Waluta",
       "category": "Kategoria",
       "costs_borne_by": "Koszty ponosi",
@@ -1603,6 +1619,7 @@
       "arrived": "Przyleciał",
       "delayed": "Opóźnienie",
       "customs": "Odprawa",
+      "storage": "Przechowanie",
       "cash": "Gotówka",
       "platform": "Na platformie",
       "escrow": "Escrow",
@@ -2089,6 +2106,26 @@
       "paymentMethod": "Jak rozliczyć",
       "payer": "Kto płaci"
     }
+  },
+  "storage": {
+    "title": "Przechowanie",
+    "stateFree": "bezpłatnie",
+    "statePaid": "płatnie",
+    "freeUntil": "Bezpłatnie do {{when}}",
+    "freeOver": "Bezpłatne przechowanie skończyło się {{when}}",
+    "paidDays": "Dób płatnych",
+    "accrued": "Naliczono",
+    "unknownSum": "waga nie podana",
+    "tariff": "{{free}} dób bezpłatnie, potem {{price}} {{currency}} za {{unit}} na dobę",
+    "unit": {
+      "kg": "kg",
+      "place": "sztukę"
+    },
+    "capped": "Osiągnięto limit {{days}} dób: kwota przestaje rosnąć, a dalsze przechowanie to osobna umowa.",
+    "chargedPending": "Przewoźnik wystawił, czeka na potwierdzenie",
+    "chargedAgreed": "Uzgodnione za przechowanie",
+    "chargedDays": "{{days}} dób",
+    "advisory": "Licznik jest informacyjny: ostateczną kwotę podaje przewoźnik, a Ty ją potwierdzasz."
   },
   "meeting": {
     "title": {

@@ -81,6 +81,11 @@ class CardKind(str, enum.Enum):
     delivery_confirmed = "delivery.confirmed"
     # T3.12.08 — the receiving side ends a posted deal: «получено как должно».
     received_as_expected = "received.as_expected"
+    # T_DEAL.1 — what the storage came to (owner, 2026-09-20). The waiting
+    # itself is a `transit.update` with `stage: storage`; this is the bill for
+    # it, and it is a separate card because it is the only part of the waiting
+    # that costs money and therefore the only part the other side must answer.
+    storage_charged = "storage.charged"
 
     # Group 4 — settlement (T3.38; escrow parts land in Phase 4)
     payment_method_agreed = "payment.method_agreed"
@@ -293,6 +298,18 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         # seals the vault, and files attached after it would be refused.
         _s(CardKind.received_as_expected, "custody",
            creator_roles=frozenset({CardAckRole.recipient, CardAckRole.sender}),
+           implemented=True),
+        # T_DEAL.1 — the storage bill (owner, 2026-09-20: «счётчик
+        # уведомительный, и сумма за хранение может быть изменена»). Raised by
+        # the carrier, who is the one storing, and answered by the other side,
+        # who is the one paying: a charge the payer cannot refuse would make the
+        # seller of the service the author of the buyer's bill. No status moves
+        # on it — the parcel is exactly where it was — and no photo: what is
+        # asserted here is a number of days, and a picture proves nothing about
+        # a duration.
+        _s(CardKind.storage_charged, "custody",
+           creator_roles=frozenset({CardAckRole.carrier}),
+           ack_by=COUNTERPARTY,
            implemented=True),
 
         # ── group 3a · buying to order (T3.11.17 part 2) ───────────────────

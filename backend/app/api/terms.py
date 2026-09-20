@@ -93,6 +93,13 @@ async def _build_payload(
         "locked": body.locked,
         "normalized": normalized.as_dict(),
         "below_carrier_minimum": below_carrier_minimum(trip, body.price_total),
+        # T_DEAL.1 — the storage tariff as it stood when these terms were
+        # written. Copied, not referenced: a carrier who edits the tariff in
+        # their listing must not change the price of a storage already running,
+        # and the sender agreed to this number, not to whatever replaces it.
+        # `None` when the carrier offers no storage — the counter then has
+        # nothing to count, which is the correct answer rather than free.
+        "storage_terms": trip.storage_terms if isinstance(trip.storage_terms, dict) else None,
     }
 
 

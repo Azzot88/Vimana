@@ -165,6 +165,35 @@ class HandoverSide(BaseModel):
         return self
 
 
+class StorageTermsIn(BaseModel):
+    """T_DEAL.1 — хранение перед вручением, объявленное перевозчиком.
+
+    Owner, 2026-09-20: «Должно быть бесплатное хранение и платное. Оба параметра
+    регулируются перевозчиком и им же устанавливается стоимость.»
+
+    Both fields are required together: a price with no free period, or a free
+    period with no price, is half a tariff, and a sender cannot agree to half a
+    tariff. Silence about storage is the absent column, not an empty object.
+
+    `free_days` may be nought — «плачу с первого утра» is a legitimate answer —
+    and `price` may be nought, which is the carrier saying «храню бесплатно
+    сколько понадобится» in a form the счётчик can read.
+    """
+
+    free_days: int = Field(ge=0, le=60)
+    price: float = Field(ge=0, le=10_000)
+    unit: Literal["kg", "place"]
+    currency: str = Field(min_length=3, max_length=4)
+
+    @field_validator("currency")
+    @classmethod
+    def _known_currency(cls, v: str) -> str:
+        code = v.strip().upper()
+        if code not in CURRENCIES:
+            raise ValueError(f"unknown currency: {code}")
+        return code
+
+
 class TripCreate(BaseModel):
     # T3.11.15 — the route arrives as a chain and only as a chain. The flat
     # `origin`/`destination`/`depart_at` trio is gone from the wire: keeping it
@@ -238,6 +267,9 @@ class TripCreate(BaseModel):
     # combined list is a second way to say the same thing.
     handover_origin: HandoverSide | None = None
     handover_destination: HandoverSide | None = None
+    # T_DEAL.1 — что стоит ожидание, если посылке придётся полежать. `None` —
+    # перевозчик про хранение ничего не сказал; это не «бесплатно».
+    storage_terms: StorageTermsIn | None = None
 
     @field_validator("max_declared_value_currency")
     @classmethod
@@ -373,6 +405,9 @@ class TripOut(BaseModel):
     size_hint: str | None = None
     handover_origin: dict | None = None
     handover_destination: dict | None = None
+    # T_DEAL.1 — публикуется вместе с рейсом: искать по тарифу хранения никто не
+    # будет, а прочитать его до отклика отправитель должен.
+    storage_terms: dict | None = None
     segments: list[TripSegmentOut] = Field(default_factory=list)
     excluded: list[str] | None = None
     services: list[str] | None = None
@@ -549,6 +584,11 @@ class DealDetailOut(BaseModel):
     #: The settlement model the trip was published with. The agreement's own
     #: «Способ расчёта» opens on it rather than on a guess.
     trip_payment_model: str | None = None
+    #: T_DEAL.1 — the storage the parcel is in right now, computed from the
+    #: timeline (`core.deal_storage.state_for_deal`), or `None` when it is not in
+    #: one. Carries both numbers on purpose: what the счётчик says and what the
+    #: carrier has actually charged, which the owner's rule allows to differ.
+    storage: dict | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
