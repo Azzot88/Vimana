@@ -196,6 +196,21 @@ export default function RespondPage() {
           <MonoText className="text-xs">{prefs.dateTime(trip.depart_at)}</MonoText>
           <DepartureChip trip={trip} />
         </div>
+        {/* T_DEAL.1 (owner, 2026-09-20): на доске тарифа хранения нет — там
+            выбирают между рейсами, и цена того, что может не случиться, только
+            мешает. Здесь рейс открыт целиком, и прочитать её надо **до**
+            отклика: хранение оплачивает та же сторона, что и перевозку. */}
+        {trip.storage_terms && (
+          <p data-testid="trip-storage" className="text-xs font-body text-navy/50">
+            {t('storage.title')}:{' '}
+            {t('storage.tariff', {
+              free: trip.storage_terms.free_days,
+              price: trip.storage_terms.price,
+              currency: trip.storage_terms.currency,
+              unit: t(`storage.unit.${trip.storage_terms.unit}`),
+            })}
+          </p>
+        )}
       </section>
 
       {refusal ? (

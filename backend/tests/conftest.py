@@ -1123,6 +1123,17 @@ async def _add_arbiter_pool_columns(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _add_storage_terms_column(engine) -> None:
+    """T_DEAL.1 — `0100` on the test database, after `create_all`. Idempotent.
+
+    `trips` exists long before this column does, and `create_all` builds tables
+    it cannot find rather than altering ones it can — so without this the whole
+    trips suite fails on a column the models already declare."""
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0100_trip_storage_terms.py"):
+            await conn.execute(text(statement))
+
+
 async def _rename_operator_to_arbiter(engine) -> None:
     """T3.12.02 — the `0089` rename, applied to `vimana_test`. Idempotent.
 
@@ -2236,6 +2247,7 @@ async def test_engine():
     await _add_recipient_offer_columns(engine)
     await _add_delivery_timer_columns(engine)
     await _add_arbiter_pool_columns(engine)
+    await _add_storage_terms_column(engine)
     await _normalise_json_nulls(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)

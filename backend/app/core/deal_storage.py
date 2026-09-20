@@ -9,8 +9,9 @@ the carrier declares on the timeline instead.
 
 What this module owns:
   - `terms_of(payload)` — the storage terms frozen into the agreement.
-  - `day_starts_between(...)` — the boundary rule (owner: «Новый день начинается
-    утром например в 6 утра»), counted on the storage place's own clock.
+  - `days_of_storage(...)` — the boundary rule (owner: «Новый день начинается
+    утром например в 6 утра»), counted on the storage place's own clock, with
+    the day of arrival counted as the first.
   - `accrue(...)` — what the counter shows: until when it is free, how many paid
     days have started, how much that is, and whether the platform's ceiling has
     been reached.
@@ -111,25 +112,31 @@ def _local(moment: datetime, tz_offset_minutes: int) -> datetime:
     )
 
 
-def day_starts_between(
+def days_of_storage(
     start: datetime,
     now: datetime,
     *,
     day_start_hour: int,
     tz_offset_minutes: int = 0,
 ) -> int:
-    """How many storage days have begun since the parcel was put away.
+    """Which storage day the parcel is on.
 
     Owner's rule, 2026-09-20: «Округление по границам суток — новый день
     начинается утром например в 6 утра, позднее вручение по договорённости.»
 
-    So a day is not 24 hours from whenever the carrier pressed the button: it
-    is a morning. A parcel stored at midday and collected the next afternoon
-    has crossed one morning and counts as one day — and one collected at half
-    past six, having crossed the same morning, counts as one day too, which is
-    what «позднее вручение по договорённости» is there to forgive. The
-    forgiving is the carrier's to do on the card; the clock does not do it
-    silently.
+    A day is not 24 hours from whenever the carrier pressed the button: it is a
+    morning. **The day the parcel is put away is day one**, afternoon or not,
+    and every six o'clock after that starts the next — so «два дня бесплатно»
+    means two calendar days, which is what somebody reading the listing thinks
+    it means. The alternative, counting only whole days, would make a free
+    period quietly longer than it says and put the carrier's own storage on the
+    wrong side of the arithmetic.
+
+    The edge it creates — a parcel left at eleven at night and collected at
+    seven — is exactly what «позднее вручение по договорённости» forgives, and
+    the forgiving is the carrier's to do on the card. The clock does not do it
+    silently, because a clock that rounds in somebody's favour is a clock
+    nobody can check.
     """
     if now <= start:
         return 0
@@ -141,8 +148,8 @@ def day_starts_between(
     if first <= local_start:
         first += timedelta(days=1)
     if local_now < first:
-        return 0
-    return (local_now - first).days + 1
+        return 1
+    return (local_now - first).days + 2
 
 
 def free_until(
@@ -152,18 +159,28 @@ def free_until(
     day_start_hour: int,
     tz_offset_minutes: int = 0,
 ) -> datetime:
-    """The moment storage stops being free — the (free_days + 1)-th morning.
+    """The moment storage stops being free — the morning day `free_days + 1`
+    begins on.
+
+    With the arrival day counted as day one, two free days end on the second
+    morning after the parcel arrived, not the third. `free_days = 0` — «плачу с
+    первой минуты» — has no free morning at all, and the answer is the moment
+    it was put away.
 
     Returned in UTC so the screen can render it in the reader's own settings:
     the boundary is local to the parcel, the display is local to the person.
     """
+    if free_days <= 0:
+        return start.astimezone(timezone.utc) if start.tzinfo else start.replace(
+            tzinfo=timezone.utc
+        )
     local_start = _local(start, tz_offset_minutes)
     first = local_start.replace(
         hour=day_start_hour, minute=0, second=0, microsecond=0
     )
     if first <= local_start:
         first += timedelta(days=1)
-    local_boundary = first + timedelta(days=free_days)
+    local_boundary = first + timedelta(days=free_days - 1)
     return (local_boundary - timedelta(minutes=tz_offset_minutes)).replace(
         tzinfo=timezone.utc
     )
@@ -194,7 +211,7 @@ def accrue(
     this deal. What happens next is a decision two people take, not one the
     clock takes for them.
     """
-    days_begun = day_starts_between(
+    days_begun = days_of_storage(
         started_at,
         now,
         day_start_hour=day_start_hour,

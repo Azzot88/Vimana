@@ -143,6 +143,33 @@ beforeEach(() => {
 })
 
 describe('RespondPage', () => {
+  it('shows the storage tariff on the trip opened in full', async () => {
+    /* T_DEAL.1 (owner, 2026-09-20): «Тариф за хранение должен быть убран из
+       описания рейса, которое видно при выборе… видно при открывании рейса в
+       полном формате.» This is that full format, and the tariff has to be
+       readable **before** the response: storage is paid by the same side that
+       pays for the carriage. */
+    vi.mocked(getTrip).mockResolvedValue({
+      data: {
+        ...trip,
+        storage_terms: { free_days: 2, price: 1, unit: 'kg', currency: 'USD' },
+      },
+    } as never)
+    renderRespond()
+
+    const line = await screen.findByTestId('trip-storage')
+    expect(line).toHaveTextContent('2')
+    expect(line).toHaveTextContent('USD')
+  })
+
+  it('says nothing about storage when the carrier did not offer it', async () => {
+    // Silence is not free storage, and an empty label would read as a field
+    // somebody failed to fill rather than a service nobody sells.
+    renderRespond()
+    await screen.findByRole('button', { name: 'Lisbon papers' })
+    expect(screen.queryByTestId('trip-storage')).not.toBeInTheDocument()
+  })
+
   it('fills the form from a template', async () => {
     renderRespond()
     fireEvent.click(await screen.findByRole('button', { name: 'Lisbon papers' }))

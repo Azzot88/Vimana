@@ -518,7 +518,13 @@ async def get_trip(
     )
     if not (own or listed):
         raise HTTPException(status_code=404, detail="Trip not found")
-    return (await _trip_outs(db, [trip]))[0]
+    out = (await _trip_outs(db, [trip]))[0]
+    # T_DEAL.1 — тариф хранения живёт здесь, а не в списке (решение владельца
+    # 2026-09-20): на доске он лишний, а открывший рейс целиком читает его до
+    # отклика. `_trip_outs` общий для доски и для одного рейса, поэтому
+    # добавляется именно тут, а не внутри него.
+    out.storage_terms = trip.storage_terms
+    return out
 
 
 async def _trip_outs(db: AsyncSession, items: list[Trip]) -> list[TripOut]:
@@ -579,10 +585,11 @@ async def _trip_outs(db: AsyncSession, items: list[Trip]) -> list[TripOut]:
                 size_hint=t.size_hint,
                 handover_origin=t.handover_origin,
                 handover_destination=t.handover_destination,
-                # T_DEAL.1 — в списке, а не только в карточке рейса: тариф
-                # хранения меняет цену перевозки для всех, кому посылку могут не
-                # вручить с первого раза, и узнавать о нём после отклика поздно.
-                storage_terms=t.storage_terms,
+                # T_DEAL.1 — тарифа хранения здесь **нет** намеренно (решение
+                # владельца 2026-09-20). Доска — это выбор между рейсами, и цена
+                # того, что может и не случиться, на этом шаге лишняя: она
+                # оттягивает внимание от маршрута, даты и цены перевозки.
+                # Открывший рейс целиком видит её в его карточке.
                 segments=[TripSegmentOut.model_validate(segment) for segment in t.segments],
                 excluded=t.excluded,
                 services=t.services,
