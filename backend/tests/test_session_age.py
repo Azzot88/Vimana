@@ -40,7 +40,11 @@ async def test_a_day_old_session_is_refused_with_its_own_reason(client, seed_sen
     different screens, and the client has to tell them apart."""
     stale = _aged(create_access_token(str(seed_sender.id)), 25 * 3600)
 
-    r = await client.get("/api/trips", headers={"Authorization": f"Bearer {stale}"})
+    # `/api/deals` rather than the trip listing: that one is a page a stranger
+    # may read, so it takes the optional dependency and answers a session it
+    # cannot vouch for as it answers anybody with no session at all — publicly,
+    # and with nothing of the account in it. This door is the account's own.
+    r = await client.get("/api/deals", headers={"Authorization": f"Bearer {stale}"})
     assert r.status_code == 401, r.text
     assert r.json()["detail"] == "reauth_required"
 
@@ -65,7 +69,9 @@ async def test_signing_in_again_restores_the_day(client, seed_sender):
     assert login.status_code == 200, login.text
     token = login.json()["access_token"]
 
-    r = await client.get("/api/trips", headers={"Authorization": f"Bearer {token}"})
+    # The same account-only door the stale session was refused at, so this
+    # answers «the sign-in restored it» and not «that page is public anyway».
+    r = await client.get("/api/deals", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200, r.text
 
 
