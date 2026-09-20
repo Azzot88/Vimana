@@ -475,6 +475,10 @@ describe('CardActions with evidence', () => {
         [front, inside],
         {},
         undefined,
+        // T_UX.28 п.4 — the selfie pile, empty here and still its own argument:
+        // it travels in its own part so the server can file it under its own
+        // kind.
+        [],
       ),
     )
     // Never the plain endpoint for a card that stands on evidence.

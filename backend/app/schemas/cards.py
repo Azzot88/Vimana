@@ -290,7 +290,10 @@ PAYLOAD_MODELS: dict[CardKind, type[BaseModel]] = {
     CardKind.pickup_proposed: MeetingPoint,
     CardKind.dropoff_proposed: MeetingPoint,
     CardKind.handoff_declared: HandoffDeclared,
-    CardKind.handoff_received: HandoffDeclared,
+    # T_UX.28 п.5 — `handoff.received` is history, not a form: nothing raises
+    # it any more, so it has no payload to validate. Naming it here would also
+    # tell `test_kinds_the_code_emits_are_marked_implemented` that the code
+    # still produces it, which is exactly what stopped being true.
     CardKind.transit_update: TransitUpdate,
     CardKind.storage_charged: StorageCharged,
     CardKind.posted_declared: PostedDeclared,

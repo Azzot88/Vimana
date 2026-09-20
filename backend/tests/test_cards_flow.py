@@ -159,11 +159,19 @@ async def test_handover_conditions_are_two_sided(
 # ── group 3 · custody ─────────────────────────────────────────────────────
 
 
-async def test_only_the_sender_declares_handoff(client, carrier_headers, deal):
-    """The cargo leaves the sender's hands — the carrier cannot announce that
-    on their behalf."""
+async def test_the_handover_is_declared_with_its_evidence_by_either_side(
+    client, carrier_headers, deal
+):
+    """T_UX.28 п.5 — the role is no longer the gate; the photograph is.
+
+    This used to assert that a carrier may not declare the handover, because
+    the card was the sender's. Now one card covers the act from either side,
+    and what the carrier is refused here is raising it **bare** — the evidence
+    and the declaration are one request (`/cards/with-files`).
+    """
     r = await _card(client, carrier_headers, deal.id, "handoff.declared")
-    assert r.status_code == 403, r.text
+    assert r.status_code == 422, r.text
+    assert "with-files" in r.json()["detail"]
 
 
 async def test_a_declaration_cannot_be_raised_without_its_evidence(

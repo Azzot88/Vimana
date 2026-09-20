@@ -324,7 +324,10 @@ async def _raise_card(
     # T3.35 — the fixation window closes when the flight leaves, whichever side
     # declares the handover: the rule is about the parcel and the clock, not
     # about who reached for the button.
-    if kind in (CardKind.handoff_declared, CardKind.handoff_received):
+    # T_UX.28 п.5 — one kind now, raised by whichever side is holding the
+    # parcel. The rule is unchanged and was never about the role: the fixation
+    # window closes when the flight leaves.
+    if kind is CardKind.handoff_declared:
         await _guard_departure(db, deal, current_user)
 
     # T3.11.27 — a cancellation is a thing you do *before* the parcel moves.

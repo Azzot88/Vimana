@@ -49,7 +49,14 @@ describe('the recipient and a dispute', () => {
     expect(screen.queryByText(t('dispute.openButton'))).toBeNull()
 
     fireEvent.click(screen.getByText(t('disputeRequest.button')))
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'the box is wet' } })
+    /* T_UX.28 п.3 — named by its placeholder, not by being the only text box
+       on screen. Since the stage opens its first form automatically, the page
+       behind this dialog now has fields of its own, and «the only textbox»
+       stopped being a way to point at anything. */
+    fireEvent.change(
+      screen.getByPlaceholderText(t('dispute.reasonPlaceholder') as string),
+      { target: { value: 'the box is wet' } },
+    )
     fireEvent.click(screen.getByText(t('disputeRequest.submit')))
 
     await waitFor(() =>
