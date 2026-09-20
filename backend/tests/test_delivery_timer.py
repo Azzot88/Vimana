@@ -61,18 +61,47 @@ async def deal(session_maker, seed_carrier, seed_sender):
 
 
 async def _landed(client, carrier_headers, session_maker, deal, hours_ago: float):
-    from app.models.deal import DealVaultMessage
+    """The carrier declares the landing, and the declaration is aged.
 
+    T_UX.28 п.6 — a landing is declared **once** (the server refuses a second
+    one with 409), so a test that needs the same landing to be older reaches
+    for `_age_landing` rather than declaring it again. Before that rule these
+    were the same call, and «состарить» was spelled «объявить ещё раз».
+    """
     r = await client.post(
         f"/api/deals/{deal.id}/cards",
         headers=carrier_headers,
         json={"kind": "transit.update", "payload": {"stage": "arrived"}},
     )
     assert r.status_code == 201, r.text
+    await _age_landing(session_maker, uuid.UUID(r.json()["id"]), hours_ago)
+
+
+async def _age_landing(session_maker, message_id, hours_ago: float):
+    """Move an existing landing back in time. The sweep reads `created_at`, so
+    this is what «прилетел тридцать часов назад» means to it."""
+    from app.models.deal import DealVaultMessage
+
     async with session_maker() as db:
-        msg = await db.get(DealVaultMessage, uuid.UUID(r.json()["id"]))
+        msg = await db.get(DealVaultMessage, message_id)
         msg.created_at = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
         await db.commit()
+
+
+async def _landing_id(session_maker, deal):
+    from sqlalchemy import select
+
+    from app.models.deal import DealVaultMessage
+
+    async with session_maker() as db:
+        return (
+            await db.execute(
+                select(DealVaultMessage.id).where(
+                    DealVaultMessage.deal_id == deal.id,
+                    DealVaultMessage.card_kind == "transit.update",
+                )
+            )
+        ).scalars().first()
 
 
 async def _sweep(deal):
@@ -97,7 +126,9 @@ async def test_the_sender_is_asked_once_a_day(client, carrier_headers, session_m
     await _landed(client, carrier_headers, session_maker, deal, hours_ago=2)
     assert (await _sweep(deal))["reminded"] == 0
 
-    await _landed(client, carrier_headers, session_maker, deal, hours_ago=30)
+    # The same landing, a day older — not a second landing: the parcel lands
+    # once, and since T_UX.28 п.6 the server says so.
+    await _age_landing(session_maker, await _landing_id(session_maker, deal), 30)
     first = await _sweep(deal)
     assert first == {"reminded": 1, "opened": 0}
     asked_at = (await _deal(session_maker, deal)).delivery_reminded_at
