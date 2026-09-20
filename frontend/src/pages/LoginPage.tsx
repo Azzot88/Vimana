@@ -49,6 +49,12 @@ export default function LoginPage() {
   const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
   const inactivityLogout = searchParams.get('reason') === 'inactivity'
+  /* T_SEC.7 (owner, 2026-09-20) — a day since the last proof of identity. The
+     account is still the account and the person is not being thrown out for
+     anything they did: the page says which of the two situations this is,
+     because «вас выкинуло» and «подтвердите, что это вы» are read differently
+     and only one of them is about trust. */
+  const reauthNeeded = searchParams.get('reason') === 'reauth'
   const returnUrl = safeReturnUrl(searchParams.get('returnUrl'))
   const setAuth = useAuthStore((s) => s.setAuth)
   const [loginVal, setLoginVal] = usePersistedState<string>('login:login', '')
@@ -286,10 +292,12 @@ export default function LoginPage() {
           {t('auth.title')}
         </h1>
         <p className="text-center text-navy/50 text-sm font-body mb-8">{t('auth.subtitle')}</p>
-        {inactivityLogout && (
+        {(inactivityLogout || reauthNeeded) && (
           <div className="bg-amber/10 border border-amber/40 rounded-field px-4 py-3 mb-4">
             <p className="text-sm font-body text-navy">
-              {t('auth.inactivityLoggedOut')}
+              {reauthNeeded
+                ? t('auth.reauthRequired')
+                : t('auth.inactivityLoggedOut')}
             </p>
           </div>
         )}

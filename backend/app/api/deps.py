@@ -1,5 +1,5 @@
 import uuid
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -41,7 +41,30 @@ async def get_recovery_or_current_user(
     return await _resolve_user(token, db, allow_scope=RECOVERY_SCOPE)
 
 
-async def _resolve_user(token: str, db: AsyncSession, *, allow_scope: str | None) -> User:
+async def get_current_user_stale_ok(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """T_SEC.7 — the two screens a session past its day still needs.
+
+    A session older than `REAUTH_AFTER` is refused everywhere else, so the
+    person has to prove who they are again. But the screen asking them to do it
+    has to know **whose** account it is asking about, and `/auth/me` is the only
+    place that says. Refusing it too would leave the dialog naming nobody.
+
+    Nothing private is decided by this dependency that is not already decided by
+    the token: it is the same session, read for identity rather than for work.
+    """
+    return await _resolve_user(token, db, allow_scope=None, allow_stale=True)
+
+
+async def _resolve_user(
+    token: str,
+    db: AsyncSession,
+    *,
+    allow_scope: str | None,
+    allow_stale: bool = False,
+) -> User:
     payload = decode_access_token(token)
     scope = payload.get("scope")
     if scope is not None and scope != allow_scope:
@@ -54,7 +77,38 @@ async def _resolve_user(token: str, db: AsyncSession, *, allow_scope: str | None
         raise HTTPException(status_code=401, detail="User not found")
     if not _issued_after_cutoff(user, payload.get("iat")):
         raise HTTPException(status_code=401, detail="Session ended")
+    if not allow_stale and not _proved_recently(payload.get("iat")):
+        # T_SEC.7 (owner, 2026-09-20) — «24h+ → reauth». Its own detail string,
+        # not a bare 401: the client must tell «prove who you are again, you are
+        # still you» from «this token is not yours», and the two lead to
+        # different screens. A scoped token is exempt by construction — it never
+        # reaches here with `allow_scope=None`.
+        raise HTTPException(status_code=401, detail=REAUTH_REQUIRED)
     return user
+
+
+#: T_SEC.7 — how long a proof of identity is trusted for. The clock starts at
+#: the moment it was given (`iat`) and is pushed forward by any new proof: a
+#: sign-in, or a confirmed critical operation (`api.step_up.step_up_verify`
+#: mints a fresh session token on success).
+REAUTH_AFTER = timedelta(hours=24)
+
+#: The one string the client matches on. Kept here so the API and the screen
+#: that answers it cannot drift apart silently.
+REAUTH_REQUIRED = "reauth_required"
+
+
+def _proved_recently(iat) -> bool:
+    """Was identity proved within the last day?
+
+    A token with no `iat` predates the claim entirely (nothing has minted one
+    without it since T3.15) and is treated as old — the same fail-closed
+    reading `_issued_after_cutoff` gives it.
+    """
+    if iat is None:
+        return False
+    age = datetime.now(timezone.utc).timestamp() - float(iat)
+    return age <= REAUTH_AFTER.total_seconds()
 
 
 def _issued_after_cutoff(user: User, iat) -> bool:

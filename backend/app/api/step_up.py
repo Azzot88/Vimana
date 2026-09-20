@@ -36,7 +36,7 @@ from app.core.challenge import (
 from app.core.database import get_db
 from app.core.identity_proof import step_up_purpose, verify_proof
 from app.core.rate_limit import limiter
-from app.core.security import verify_password
+from app.core.security import create_access_token, verify_password
 from app.core.step_up import (
     STEP_UP_TTL_SECONDS,
     StepUpScope,
@@ -94,6 +94,13 @@ class VerifyOut(BaseModel):
     step_up_token: str
     scope: StepUpScope
     expires_in: int = STEP_UP_TTL_SECONDS
+    #: T_SEC.7 (owner, 2026-09-20) — «продлевает любой тип авторизации и
+    #: подтверждённых действий». A step-up is a fresh proof of identity, so the
+    #: day starts over: the session token is re-minted here and the client
+    #: replaces the one it holds. Without this, confirming an operation at hour
+    #: 23 would still throw the person out an hour later.
+    access_token: str
+    token_type: str = "bearer"
 
 
 async def _credential_count(db: AsyncSession, user_id) -> int:
@@ -250,7 +257,12 @@ async def step_up_verify(
         await _verify_webauthn(db, current_user, body)
 
     token = await grant(str(current_user.id), body.scope)
-    return VerifyOut(step_up_token=token, scope=body.scope)
+    return VerifyOut(
+        step_up_token=token,
+        scope=body.scope,
+        # Minted after the proof, so its `iat` is the moment identity was shown.
+        access_token=create_access_token(str(current_user.id)),
+    )
 
 
 async def _verify_nostr(user: User, body: VerifyIn) -> None:

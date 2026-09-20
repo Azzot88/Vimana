@@ -154,6 +154,7 @@
     "inactivityWarningTitle": "Zaraz zostaniesz wylogowany",
     "inactivityWarningBody": "Od dłuższej chwili nic nie robisz. Kliknij «Zostań zalogowany», aby zachować sesję, albo «Wyloguj teraz», aby ją zakończyć.",
     "inactivityLoggedOut": "Wylogowano z powodu bezczynności. Zaloguj się ponownie.",
+    "reauthRequired": "Od ostatniego logowania minęła doba. Potwierdź, że to ty — wystarczy dowolny twój sposób logowania.",
     "stayLoggedIn": "Zostań zalogowany",
     "logoutNow": "Wyloguj teraz"
   },

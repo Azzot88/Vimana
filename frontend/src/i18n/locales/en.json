@@ -131,6 +131,7 @@
     "inactivityWarningTitle": "You'll be logged out soon",
     "inactivityWarningBody": "You've been inactive for a while. Click Stay signed in to keep your session, or Log out now to end it.",
     "inactivityLoggedOut": "Signed out due to inactivity. Please sign in again.",
+    "reauthRequired": "A day has passed since you last signed in. Confirm it is you — any way you usually sign in will do.",
     "stayLoggedIn": "Stay signed in",
     "logoutNow": "Log out now",
     "forgotPassword": "Forgot your password?",

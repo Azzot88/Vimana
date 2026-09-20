@@ -154,6 +154,7 @@
     "inactivityWarningTitle": "Vas a salir de la sesión pronto",
     "inactivityWarningBody": "Llevas un rato sin actividad. Pulsa «Seguir conectado» para mantener la sesión, o «Salir ahora» para cerrarla.",
     "inactivityLoggedOut": "Sesión cerrada por inactividad. Vuelve a entrar.",
+    "reauthRequired": "Ha pasado un día desde tu último inicio de sesión. Confirma que eres tú: sirve cualquiera de tus métodos.",
     "stayLoggedIn": "Seguir conectado",
     "logoutNow": "Salir ahora"
   },

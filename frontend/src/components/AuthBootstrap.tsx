@@ -15,10 +15,22 @@ import { useAuthStore } from '../stores/auth'
  * deferred to pt.4 follow-up.
  */
 
-const INACTIVITY_MS = Number(
+/** T_SEC.7 (owner, 2026-09-20) — «30 days inactive → logout». The session is no
+ *  longer the thing that expires quickly: identity is re-proved every 24 hours
+ *  (the server asks), and this timer answers a different question — when a
+ *  device stops being remembered at all.
+ *
+ *  Parsed defensively: `Number('')` is `0`, and `??` does not catch an empty
+ *  string, so a `VITE_INACTIVITY_MS=` left in an env file used to mean «log
+ *  everybody out on the first check, thirty seconds in».
+ */
+const DEFAULT_INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000
+const _configured = Number(
   (import.meta as unknown as { env?: { VITE_INACTIVITY_MS?: string } }).env
-    ?.VITE_INACTIVITY_MS ?? 30 * 60 * 1000,
+    ?.VITE_INACTIVITY_MS,
 )
+const INACTIVITY_MS =
+  Number.isFinite(_configured) && _configured > 0 ? _configured : DEFAULT_INACTIVITY_MS
 /** When the «вы ещё здесь?» panel appears: at 25 minutes of inactivity, five
  *  before the 30-minute logout (owner's request 2026-09-12).
  *
@@ -31,8 +43,10 @@ const INACTIVITY_MS = Number(
  *  Clamped below so a short `VITE_INACTIVITY_MS` cannot make the warning arrive
  *  after the logout it is warning about: at that point it would be an apology,
  *  not a warning. */
-const WARN_AT_MS = 25 * 60 * 1000
-const WARN_BEFORE_MS = Math.max(INACTIVITY_MS - WARN_AT_MS, 30 * 1000)
+/** T_SEC.7 — the warning comes five minutes before the end, whatever the end
+ *  is. Clamped to half the window so a deliberately short setting (tests, a
+ *  demo) cannot put the warning before the session even starts. */
+const WARN_BEFORE_MS = Math.min(5 * 60 * 1000, Math.floor(INACTIVITY_MS / 2))
 const CHECK_INTERVAL_MS = 30 * 1000
 const ACTIVITY_DEBOUNCE_MS = 10 * 1000
 
@@ -86,13 +100,23 @@ export default function AuthBootstrap({ children }: Props) {
       if (warningOpen) setWarningOpen(false)
     }
 
+    /* T_SEC.7 (found 2026-09-16) — **captured, not bubbled.** `scroll` does not
+       bubble, and the deal's conversation scrolls inside its own container, so
+       reading a long chat with the wheel counted as doing nothing. `wheel` is
+       here for the same reason from the other side, and `api-activity` is the
+       honest one: a screen that is talking to the server is not idle, whatever
+       the pointer is doing. */
     const events: Array<keyof WindowEventMap> = [
       'mousemove',
       'keydown',
       'scroll',
+      'wheel',
       'touchstart',
+      'api-activity' as keyof WindowEventMap,
     ]
-    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
+    events.forEach((e) =>
+      window.addEventListener(e, onActivity, { passive: true, capture: true }),
+    )
 
     const timer = window.setInterval(() => {
       const idle = Date.now() - useAuthStore.getState().lastActivityAt
@@ -104,7 +128,10 @@ export default function AuthBootstrap({ children }: Props) {
     }, CHECK_INTERVAL_MS)
 
     return () => {
-      events.forEach((e) => window.removeEventListener(e, onActivity))
+      // The same `capture` flag, or the listener is never removed.
+      events.forEach((e) =>
+        window.removeEventListener(e, onActivity, { capture: true }),
+      )
       window.clearInterval(timer)
     }
   }, [authState, warningOpen, logout, bumpActivity])

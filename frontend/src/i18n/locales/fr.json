@@ -154,6 +154,7 @@
     "inactivityWarningTitle": "Vous allez être déconnecté",
     "inactivityWarningBody": "Vous êtes inactif depuis un moment. Cliquez sur « Rester connecté » pour garder la session, ou « Se déconnecter » pour la fermer.",
     "inactivityLoggedOut": "Déconnecté pour inactivité. Reconnectez-vous.",
+    "reauthRequired": "Un jour s’est écoulé depuis votre dernière connexion. Confirmez que c’est bien vous — n’importe laquelle de vos méthodes convient.",
     "stayLoggedIn": "Rester connecté",
     "logoutNow": "Se déconnecter"
   },

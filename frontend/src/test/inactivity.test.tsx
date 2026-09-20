@@ -5,17 +5,18 @@ import { useAuthStore } from '../stores/auth'
 import { renderWithProviders } from './render'
 
 /**
- * T3.11.27 — «сделай предупреждение о неактивности не через две минуты, а через
- * 25» (owner, 2026-09-12).
+ * T_SEC.7 (owner, 2026-09-20) — «30 days inactive → logout».
  *
- * The number itself is the whole feature, which is why it is worth a test: a
- * panel that interrupts somebody four minutes into reading a deal is indistin-
- * guishable, from the outside, from the app logging them out at random — and
- * that is what the owner met. Nothing fails when a constant drifts; the modal
- * simply starts arriving earlier.
+ * The timer answers one question now: when does a device stop being remembered.
+ * Identity is a separate clock the server keeps — a session older than a day is
+ * asked to prove itself again — so throwing somebody out mid-afternoon protects
+ * nothing and was the complaint that started this.
  *
- * The old value was expressed as a *distance from the end* («two minutes
- * before»), so it moved with `INACTIVITY_MS`. These tests pin it as a moment.
+ * Two of these tests pin the *old* behaviour as gone: twenty-five minutes of
+ * reading must be silent. The rest pin what activity means, because the defect
+ * behind the report was there — `scroll` does not bubble, so reading a deal's
+ * conversation with the wheel counted as idleness, and a screen polling the
+ * server counted as nothing at all.
  */
 vi.mock('../api/auth', async () => {
   const actual = await vi.importActual<typeof import('../api/auth')>('../api/auth')
@@ -27,6 +28,9 @@ vi.mock('../api/auth', async () => {
 })
 
 const MINUTE = 60 * 1000
+const DAY = 24 * 60 * MINUTE
+/** The default in `AuthBootstrap`, restated so a drift shows up here. */
+const LIMIT = 30 * DAY
 
 /** Signed in, and idle for exactly this long. */
 async function signedInIdleFor(ms: number) {
@@ -61,23 +65,28 @@ afterEach(() => {
 })
 
 describe('the inactivity warning', () => {
-  it('stays out of the way at twenty-four minutes', async () => {
-    await signedInIdleFor(24 * MINUTE)
+  it('says nothing after half an hour of reading — that limit is gone', async () => {
+    await signedInIdleFor(25 * MINUTE)
     expect(warning()).not.toBeInTheDocument()
   })
 
-  it('arrives at twenty-five, five minutes before the logout', async () => {
-    await signedInIdleFor(25 * MINUTE)
+  it('says nothing after a day, because a day is the server’s question', async () => {
+    await signedInIdleFor(DAY + MINUTE)
+    expect(warning()).not.toBeInTheDocument()
+  })
+
+  it('arrives five minutes before the thirty days are up', async () => {
+    await signedInIdleFor(LIMIT - 4 * MINUTE)
     expect(warning()).toBeInTheDocument()
   })
 
-  it('does not arrive at two, which is where it used to', async () => {
-    await signedInIdleFor(2 * MINUTE)
+  it('has not arrived six minutes before that', async () => {
+    await signedInIdleFor(LIMIT - 6 * MINUTE)
     expect(warning()).not.toBeInTheDocument()
   })
 
   it('goes away the moment somebody moves, and the clock starts over', async () => {
-    await signedInIdleFor(25 * MINUTE)
+    await signedInIdleFor(LIMIT - 4 * MINUTE)
     expect(warning()).toBeInTheDocument()
 
     fireEvent.mouseMove(window)
@@ -85,6 +94,33 @@ describe('the inactivity warning', () => {
 
     act(() => {
       vi.advanceTimersByTime(30 * 1000)
+    })
+    expect(warning()).not.toBeInTheDocument()
+  })
+
+  it('counts a request to the server as activity', async () => {
+    // The defect this fixes: a deal screen polls on its own, and the person
+    // reading it was «idle» because the pointer had not moved.
+    await signedInIdleFor(LIMIT - 4 * MINUTE)
+    expect(warning()).toBeInTheDocument()
+
+    act(() => {
+      window.dispatchEvent(new Event('api-activity'))
+    })
+    expect(warning()).not.toBeInTheDocument()
+  })
+
+  it('counts scrolling inside the page, which does not reach the window', async () => {
+    await signedInIdleFor(LIMIT - 4 * MINUTE)
+    expect(warning()).toBeInTheDocument()
+
+    // Dispatched on an element, not on `window`: `scroll` does not bubble, so
+    // only a capturing listener sees it — which is the fix.
+    act(() => {
+      const inner = document.createElement('div')
+      document.body.appendChild(inner)
+      inner.dispatchEvent(new Event('scroll'))
+      inner.remove()
     })
     expect(warning()).not.toBeInTheDocument()
   })
@@ -98,7 +134,7 @@ describe('the inactivity warning', () => {
     )
     await act(async () => {})
     act(() => {
-      useAuthStore.setState({ lastActivityAt: Date.now() - 40 * MINUTE })
+      useAuthStore.setState({ lastActivityAt: Date.now() - LIMIT })
       vi.advanceTimersByTime(60 * 1000)
     })
     expect(warning()).not.toBeInTheDocument()

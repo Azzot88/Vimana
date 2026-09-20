@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import (
     RECOVERY_SCOPE,
     get_current_user,
+    get_current_user_stale_ok,
     get_recovery_or_current_user,
 )
 from app.core.avatar_url import me_out_with_avatar
@@ -1045,7 +1046,10 @@ async def logout(token: str = Depends(_oauth2_scheme)):
 
 @router.get("/me", response_model=MeOut)
 async def me(
-    current_user: User = Depends(get_current_user),
+    # T_SEC.7 — readable by a session past its day, and only this one is: the
+    # screen that asks somebody to prove themselves again has to name the
+    # account it is asking about.
+    current_user: User = Depends(get_current_user_stale_ok),
     db: AsyncSession = Depends(get_db),
 ):
     """Owner view — includes private `receiving_*` fields + presigned avatar URL."""

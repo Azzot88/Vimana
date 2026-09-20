@@ -48,6 +48,20 @@ class StepUpScope(str, enum.Enum):
     # for the same thing.
     CHANGE_PASSWORD = "change_password"
     ADD_AUTH_METHOD = "add_auth_method"
+    # T_SEC.7 (owner, 2026-09-20) — the rest of «важная транзакция». Declared in
+    # one place even where the operation does not exist yet: a scope costs
+    # nothing until an endpoint asks for it, and the list is what the next
+    # author reads to find out whether their new endpoint belongs on it.
+    #
+    # `WITHDRAW_MONEY` and `CHANGE_PAYOUT` wait for Фазу 4 — the platform moves
+    # no money yet (`§9.1`); `EXPORT_VAULT` waits for an export of a deal's
+    # vault, which does not exist (only the identity `.dvlt` does).
+    ACCOUNT_PROPERTIES = "account_properties"
+    EXPORT_VAULT = "export_vault"
+    WITHDRAW_MONEY = "withdraw_money"
+    CHANGE_PAYOUT = "change_payout"
+    CLOSE_DEAL = "close_deal"
+    PAY = "pay"
 
 
 def _key(user_id: str, scope: StepUpScope) -> str:
