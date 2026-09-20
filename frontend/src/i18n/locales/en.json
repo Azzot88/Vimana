@@ -969,7 +969,7 @@
       "handover": "Where and when you meet",
       "delivery": "Where and when the parcel is handed over"
     },
-    "noTime": "The time is not set yet — agree it in «Move the meeting».",
+    "noTime": "The time is not set yet — agree it with the button below.",
     "hours_one": "in {{count}} hour",
     "hours_other": "in {{count}} hours",
     "minutes_one": "in {{count}} minute",

@@ -795,8 +795,12 @@ describe('DealStages · a card already raised', () => {
        this person's to press, so the stage has not gone quiet — it has one
        fewer button. The two silences this panel distinguishes are «нечего
        нажимать» and «не твой ход»; a standing declaration is neither. */
+    /* The meeting button, under whichever of its two names applies: since
+       T_UX.28 it reads «Назначить встречу» until one is arranged and «Перенести»
+       after. Nothing is arranged in this fixture, so it is the first — and the
+       assertion is about the button being there, not about its wording. */
     expect(
-      screen.getByText(/move the meeting|Перенести встречу/i),
+      screen.getByText(/set the meeting|move the meeting|Назначить встречу|Перенести встречу/i),
     ).toBeInTheDocument()
     expect(
       screen.queryByText(/other side's turn|ход второй стороны/i),

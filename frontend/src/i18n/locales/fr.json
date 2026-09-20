@@ -2073,7 +2073,7 @@
       "handover": "Où et quand vous vous retrouvez",
       "delivery": "Où et quand le colis est remis"
     },
-    "noTime": "L’heure n’est pas encore fixée — convenez-en dans « Déplacer le rendez-vous ».",
+    "noTime": "L’heure n’est pas encore fixée — convenez-en avec le bouton ci-dessous.",
     "hours_one": "dans {{count}} heure",
     "hours_other": "dans {{count}} heures",
     "minutes_one": "dans {{count}} minute",

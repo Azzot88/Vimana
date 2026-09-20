@@ -2095,7 +2095,7 @@
       "handover": "Gdzie i kiedy się spotykacie",
       "delivery": "Gdzie i kiedy przesyłka trafia do odbiorcy"
     },
-    "noTime": "Godzina nie jest jeszcze ustalona — ustalcie ją w «Przenieś spotkanie».",
+    "noTime": "Godzina nie jest jeszcze ustalona — ustalcie ją przyciskiem poniżej.",
     "hours_one": "za {{count}} godzinę",
     "hours_few": "za {{count}} godziny",
     "hours_many": "za {{count}} godzin",
