@@ -1006,6 +1006,33 @@ describe('MeetingNote', () => {
     expect(still.place).toBe('Dubai Mall, by the fountain')
   })
 
+  it('shows a standing proposal where nothing has been arranged', () => {
+    /* T_UX.28 п.9 — the other half of the same rule. Nothing agreed and
+       nothing in the terms: the card is the only thing that knows a place was
+       named at all, and silence here leaves the person who proposed it with no
+       trace of their own request. */
+    renderWithProviders(
+      <MeetingNote
+        terms={null}
+        messages={[
+          msg({
+            card_kind: 'pickup.proposed',
+            card_state: 'pending',
+            card_payload: { method: 'in_person', city: 'Marina', at: at(2) },
+          }),
+        ]}
+        stage="handover"
+        myRole="sender"
+        now={NOW}
+      />,
+    )
+    expect(screen.getByText(/Marina/)).toBeInTheDocument()
+    // And said to be a question, not an arrangement.
+    expect(
+      screen.getByText(/^proposed$|^предложено$/i),
+    ).toBeInTheDocument()
+  })
+
   it('says how long is left, not only when it is', () => {
     // «Указатель сколько часов до неё осталось» (owner, 2026-09-12). A date
     // agreed three days ago reads as an arrangement; «через 2 часа» reads as

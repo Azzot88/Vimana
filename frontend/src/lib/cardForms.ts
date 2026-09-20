@@ -135,9 +135,20 @@ export const CARD_FORMS: CardFormSpec[] = [
            прилетела и не может быть вручена, или ожидает стыковочного рейса».
            A state of the journey, not a rung of the ladder — it can come round
            twice, before the carriage and before the delivery. */
+        /* T_UX.28 п.6 — `layover` is on the list here too, and not only in the
+           backend's `TransitUpdate`: the chip that cannot be offered is the
+           step the carrier cannot declare. Which of them may be pressed is
+           decided in `CardActions`, off the stages already declared. */
         name: 'stage',
         type: 'select',
-        options: ['departed', 'arrived', 'delayed', 'customs', 'storage'],
+        options: [
+          'departed',
+          'layover',
+          'arrived',
+          'delayed',
+          'customs',
+          'storage',
+        ],
         required: true,
       },
       { name: 'eta', type: 'datetime' },

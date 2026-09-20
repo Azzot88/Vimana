@@ -81,23 +81,6 @@ export function meetingOf(
       at: typeof p.at === 'string' ? p.at : undefined,
     }
   }
-  /* T_UX.28 п.9 — a standing proposal is shown, and shown **as** a proposal.
-     It used to be invisible until somebody answered it, so the screen said
-     «время не назначено» while a card two lines below named a time — and the
-     person who had already proposed it saw no trace of their own request. */
-  const pending = [...messages]
-    .reverse()
-    .find((m) => m.card_kind === kind && m.card_state === 'pending')
-  if (pending) {
-    const p = (pending.card_payload ?? {}) as Record<string, unknown>
-    return {
-      method: typeof p.method === 'string' ? p.method : undefined,
-      place: typeof p.city === 'string' ? p.city : undefined,
-      at: typeof p.at === 'string' ? p.at : undefined,
-      proposed: true,
-    }
-  }
-
   const p = terms?.payload
   if (!p) return {}
   /* Spelled out rather than indexed by `${stage}_place`: the payload is a named
@@ -117,6 +100,31 @@ export function meetingOf(
       }
 }
 
+/** The standing request: the last meeting card nobody has answered yet.
+ *
+ *  T_UX.28 п.9 — it used to be invisible until answered, so the screen said
+ *  «время не назначено» while a card two lines below named a time, and the
+ *  person who had proposed it saw no trace of their own request. It is read
+ *  apart from `meetingOf` on purpose: the arrangement is what the rest of the
+ *  screen plans around, and a request is not an arrangement. */
+function proposedMeeting(
+  messages: VaultMessage[],
+  stage: 'handover' | 'delivery',
+): Meeting {
+  const kind = CARD_OF[stage]
+  const card = [...messages]
+    .reverse()
+    .find((m) => m.card_kind === kind && m.card_state === 'pending')
+  if (!card) return {}
+  const p = (card.card_payload ?? {}) as Record<string, unknown>
+  return {
+    method: typeof p.method === 'string' ? p.method : undefined,
+    place: typeof p.city === 'string' ? p.city : undefined,
+    at: typeof p.at === 'string' ? p.at : undefined,
+    proposed: true,
+  }
+}
+
 export default function MeetingNote({
   terms,
   messages,
@@ -126,7 +134,15 @@ export default function MeetingNote({
 }: Props) {
   const { t } = useTranslation()
   const prefs = usePrefs()
-  const meeting = meetingOf(terms, messages, stage)
+  const arranged = meetingOf(terms, messages, stage)
+  /* An unanswered request speaks only where nothing has been arranged at all.
+     Where something has, that something is what the two of them are going by,
+     and overwriting it with one side's request would tell both of them they
+     had agreed on something one of them has not read. */
+  const meeting =
+    arranged.place || arranged.at || arranged.method
+      ? arranged
+      : proposedMeeting(messages, stage)
 
   // Nothing agreed and nothing proposed: there is no arrangement to describe,
   // and a card saying «место не назначено» over an empty line would be one more
