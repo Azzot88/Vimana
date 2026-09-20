@@ -241,23 +241,30 @@ CATALOGUE: dict[CardKind, CardSpec] = {
         # ── group 3 · custody ──────────────────────────────────────────────
         # The sender declares the handover and the carrier confirms taking it:
         # the cargo changes hands, so both hands have to say so.
+        # T_UX.28 п.5 (owner, 2026-09-19): «фотографии передачи делает любой
+        # участник и добавляет в чат, второй участник независимо от роли просто
+        # соглашается. Если фото добавил один из участников, дублировать тот же
+        # функционал у второго не нужно.»
+        #
+        # One card, raised by whichever of the two is holding the parcel. It
+        # used to be two — «Передал» for the sender and «Получил» for the
+        # carrier — and both required a photograph of the same handover, so two
+        # people photographed one event and then each confirmed the other's
+        # picture of it. The record was not richer for it: it held two
+        # declarations about a single act that could disagree.
         _s(CardKind.handoff_declared, "custody",
-           creator_roles=frozenset({CardAckRole.sender}),
-           ack_by=CardAckRole.carrier,
+           creator_roles=PARTIES,
+           ack_by=COUNTERPARTY,
            requires_attachment=AttachmentKind.handoff_photo,
            on_accept_status=DealStatus.in_transit,
            on_accept_emit=CardKind.handoff_confirmed,
            implemented=True),
-        # The carrier's half. Declared by whoever is holding the parcel, confirmed
-        # by the other: either way the deal moves on two people saying so, which
-        # is the rule the whole custody group is built on.
-        _s(CardKind.handoff_received, "custody",
-           creator_roles=frozenset({CardAckRole.carrier}),
-           ack_by=CardAckRole.sender,
-           requires_attachment=AttachmentKind.handoff_photo,
-           on_accept_status=DealStatus.in_transit,
-           on_accept_emit=CardKind.handoff_confirmed,
-           implemented=True),
+        # T_UX.28 п.5 — **history, not a button.** Deals struck before the two
+        # cards became one still carry this kind, so the catalogue must be able
+        # to name it for an arbiter reading them. Nobody raises it any more:
+        # no `creator_roles`, and `implemented` is off, which is what
+        # `test_unimplemented_kinds_cannot_be_raised` checks the two halves of.
+        _s(CardKind.handoff_received, "custody"),
         _s(CardKind.handoff_confirmed, "custody", implemented=True),
         _s(CardKind.transit_update, "custody",
            creator_roles=frozenset({CardAckRole.carrier}), implemented=True),

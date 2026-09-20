@@ -125,6 +125,16 @@ class AttachmentKind(str, enum.Enum):
     # is evidence of what the parcel was *before* anybody packed or carried it —
     # the only picture in the record taken while the deal could still be refused.
     cargo_photo = "cargo_photo"
+    # T_UX.28 п.4 (owner, 2026-09-19): «селфи с отправителем, фото передачи,
+    # фото отправки на почте и др.»
+    #
+    # Its own kind rather than `handoff_photo` reused, for the reason every
+    # other kind here exists: an arbiter reads these labels, and the two
+    # pictures answer different questions. «Фото передачи» shows what changed
+    # hands; a selfie shows **who was standing there** — the one piece of
+    # evidence in the record that ties a face to the meeting, and mislabelling
+    # it as a photo of the parcel would lose exactly that.
+    selfie = "selfie"
 
 
 class Deal(Base):

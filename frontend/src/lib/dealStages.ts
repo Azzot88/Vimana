@@ -85,7 +85,10 @@ export const DEAL_STAGES: DealStage[] = [
        is a fact about the timeline, not about the screen. */
     key: 'handover',
     statuses: ['accepted'],
-    kinds: ['handoff.declared', 'handoff.received', 'pickup.proposed'],
+    /* T_UX.28 п.5 (owner, 2026-09-19) — one card for the handover, not two.
+       «Фотографии передачи делает любой участник… если фото добавил один из
+       участников, дублировать тот же функционал у второго не нужно.» */
+    kinds: ['handoff.declared', 'pickup.proposed'],
   },
   {
     key: 'transit',

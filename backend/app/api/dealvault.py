@@ -74,6 +74,9 @@ ALLOWED_MIME_BY_KIND: dict[AttachmentKind, set[str]] = {
     # T3.11.27 — «вот что я отправляю». Images only, for the same reason: this
     # is a picture of a thing, and a PDF of a thing is not one.
     AttachmentKind.cargo_photo: _PHOTO_MIME,
+    # T_UX.28 п.4 — «селфи с отправителем». Images only: this is a photograph of
+    # two people in a place, and there is no document form of that.
+    AttachmentKind.selfie: _PHOTO_MIME,
 }
 
 MIME_TO_EXT: dict[str, str] = {

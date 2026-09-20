@@ -1254,17 +1254,20 @@ async def test_the_purchase_moves_no_status(
 # ── T3.11.27 · both sides can declare the handover ────────────────────────
 
 
-async def test_the_carrier_can_declare_that_they_took_it(
+async def test_the_carrier_can_declare_the_handover_too(
     client, sender_headers, carrier_headers, deal
 ):
-    """Owner, 2026-09-12: «перевозчик должен подтверждать что получил посылку».
+    """T_UX.28 п.5 (owner, 2026-09-19): «фотографии передачи делает любой
+    участник и добавляет в чат, второй участник независимо от роли просто
+    соглашается».
 
-    Whoever is holding the parcel declares; the other confirms. Its own kind
-    rather than one shared by both roles, because an arbiter reads these labels
-    and «отдал» and «взял» are different claims about who was standing there.
+    One card, raised by whichever of the two is holding the parcel — here the
+    carrier — and answered by the other. It used to be two cards requiring a
+    photograph each, so one handover was photographed twice and confirmed
+    twice.
     """
     declared = await _card_with_files(
-        client, carrier_headers, deal.id, "handoff.received"
+        client, carrier_headers, deal.id, "handoff.declared"
     )
     assert declared.status_code == 201, declared.text
     assert declared.json()["requires_ack_by"] == "sender"
@@ -1277,10 +1280,24 @@ async def test_the_carrier_can_declare_that_they_took_it(
     assert detail.json()["status"] == "in_transit"
 
 
-async def test_the_sender_does_not_declare_receipt(client, sender_headers, deal):
-    """The parcel is not in their hands, and a claim about somebody else's
-    hands is the one thing this record must never carry."""
-    r = await _card(client, sender_headers, deal.id, "handoff.received")
+async def test_the_sender_declares_the_same_card(
+    client, sender_headers, carrier_headers, deal
+):
+    """The other direction of the same act, and it is the same kind: the
+    declaration says the parcel changed hands, not who felt responsible for
+    saying so."""
+    declared = await _card_with_files(
+        client, sender_headers, deal.id, "handoff.declared"
+    )
+    assert declared.status_code == 201, declared.text
+    assert declared.json()["requires_ack_by"] == "carrier"
+
+
+async def test_the_retired_receipt_card_cannot_be_raised(client, carrier_headers, deal):
+    """`handoff.received` stays in the catalogue so an arbiter can read deals
+    struck before the two cards became one — and stays unraisable, so no new
+    deal grows a second account of one handover."""
+    r = await _card(client, carrier_headers, deal.id, "handoff.received")
     assert r.status_code == 403, r.text
 
 

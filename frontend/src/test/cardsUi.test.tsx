@@ -281,8 +281,15 @@ describe('CardActions', () => {
     renderWithProviders(<CardActions dealId="d1" myRole="carrier" onDone={() => {}} />)
     // The carrier moves the cargo, so transit updates are theirs…
     expect(screen.getByText(/transit update|Статус в пути/i)).toBeInTheDocument()
-    // …but the parcel leaves the sender's hands, so declaring that is not.
-    expect(screen.queryByText(/declare handover|Заявить передачу/i)).not.toBeInTheDocument()
+    /* …and since T_UX.28 п.5 the handover is theirs to record as well: one
+       card, raised by whichever side is holding the parcel. What a carrier
+       still may not do is speak for the sender's own cargo photograph. */
+    expect(
+      screen.getByText(/record the handover|Зафиксировать передачу/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/what I am sending|Вот что я отправляю/i),
+    ).not.toBeInTheDocument()
   })
 
   it('offers nothing to somebody who is not a party', () => {
@@ -451,7 +458,7 @@ describe('CardActions with evidence', () => {
        добавляться не должна» (owner, 2026-09-12) — so it is one request, and
        the server writes nothing until every file is accepted. */
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
-    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    fireEvent.click(screen.getByText(/record the handover|Зафиксировать передачу/i))
 
     const front = new File(['x'], 'front.png', { type: 'image/png' })
     const inside = new File(['y'], 'inside.png', { type: 'image/png' })
@@ -476,7 +483,7 @@ describe('CardActions with evidence', () => {
 
   it('takes several photographs, because one side of a box proves nothing', () => {
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
-    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    fireEvent.click(screen.getByText(/record the handover|Зафиксировать передачу/i))
     const input = document.querySelector(
       'input[type="file"]',
     ) as HTMLInputElement
@@ -487,7 +494,7 @@ describe('CardActions with evidence', () => {
     // «Надо открыть посылку и снять содержимое» (owner, 2026-09-12). The one
     // line on this form an arbiter will later wish somebody had read.
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
-    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    fireEvent.click(screen.getByText(/record the handover|Зафиксировать передачу/i))
     expect(
       screen.getByText(/open the parcel|Откройте посылку/i),
     ).toBeInTheDocument()
@@ -498,7 +505,7 @@ describe('CardActions with evidence', () => {
     // A number somebody types about their own parcel proves nothing an arbiter
     // can use, and it asked for it in a doorway with one hand free.
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
-    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    fireEvent.click(screen.getByText(/record the handover|Зафиксировать передачу/i))
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
 
@@ -506,7 +513,7 @@ describe('CardActions with evidence', () => {
     /* Refused before anything is sent. The server would refuse it too — this is
        the same rule stated where it costs nothing. */
     renderWithProviders(<CardActions dealId="d1" myRole="sender" onDone={() => {}} />)
-    fireEvent.click(screen.getByText(/handed to the carrier|Передал перевозчику/i))
+    fireEvent.click(screen.getByText(/record the handover|Зафиксировать передачу/i))
     fireEvent.click(screen.getByText(/^send$|^Отправить$/i))
 
     await waitFor(() =>
@@ -518,13 +525,21 @@ describe('CardActions with evidence', () => {
     expect(raiseCardWithFiles).not.toHaveBeenCalled()
   })
 
-  it('gives the carrier their own way to say they took it', () => {
-    /* Owner, 2026-09-12. Whoever holds the parcel declares; the other confirms.
-       Two kinds rather than one shared, because «отдал» and «взял» are
-       different claims about who was standing there. */
-    const kinds = formsForRole('carrier').map((f) => f.kind)
-    expect(kinds).toContain('handoff.received')
-    expect(kinds).not.toContain('handoff.declared')
+  it('gives both sides the same handover card', () => {
+    /* T_UX.28 п.5 (owner, 2026-09-19): «фотографии передачи делает любой
+       участник… если фото добавил один из участников, дублировать тот же
+       функционал у второго не нужно.»
+
+       This replaces the pair: the carrier used to have `handoff.received` and
+       the sender `handoff.declared`, both requiring a photograph of the same
+       moment. The retired kind is gone from the forms — it stays in the
+       catalogue only so old deals can still be read. */
+    const carrierKinds = formsForRole('carrier').map((f) => f.kind)
+    const senderKinds = formsForRole('sender').map((f) => f.kind)
+    expect(carrierKinds).toContain('handoff.declared')
+    expect(senderKinds).toContain('handoff.declared')
+    expect(carrierKinds).not.toContain('handoff.received')
+    expect(senderKinds).not.toContain('handoff.received')
   })
 })
 
@@ -606,7 +621,7 @@ describe('DealStages · the late stages', () => {
       screen.queryByText(/other side's turn|ход второй стороны/i),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByText(/handed to the carrier|Передал перевозчику/i),
+      screen.getByText(/record the handover|Зафиксировать передачу/i),
     ).toBeInTheDocument()
   })
 
@@ -619,10 +634,13 @@ describe('DealStages · the late stages', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('gives the carrier their side of the handover', () => {
+  it('gives the carrier the same handover card as the sender', () => {
+    /* T_UX.28 п.5 — one card, raised by whoever is holding the parcel. The
+       carrier used to have a card of their own («Получил посылку») requiring a
+       photograph of the same moment the sender was photographing. */
     renderWithProviders(panel({ status: 'accepted', myRole: 'carrier' }))
     expect(
-      screen.getByText(/received the parcel|Получил посылку/i),
+      screen.getByText(/record the handover|Зафиксировать передачу/i),
     ).toBeInTheDocument()
   })
 })
@@ -789,7 +807,7 @@ describe('DealStages · a card already raised', () => {
       }),
     )
     expect(
-      screen.queryByText(/handed to the carrier|Передал перевозчику/i),
+      screen.queryByText(/record the handover|Зафиксировать передачу/i),
     ).not.toBeInTheDocument()
     /* And **not** «сейчас ход второй стороны»: moving the meeting is still
        this person's to press, so the stage has not gone quiet — it has one
@@ -816,7 +834,7 @@ describe('DealStages · a card already raised', () => {
         myRole: 'carrier',
         messages: [
           msg({
-            card_kind: 'handoff.received',
+            card_kind: 'handoff.declared',
             card_state: 'pending',
             requires_ack_by: 'sender',
           }),
@@ -830,7 +848,7 @@ describe('DealStages · a card already raised', () => {
       }),
     )
     expect(
-      screen.queryByText(/received the parcel|Получил посылку/i),
+      screen.queryByText(/record the handover|Зафиксировать передачу/i),
     ).not.toBeInTheDocument()
     expect(
       screen.getByText(/other side's turn|ход второй стороны/i),
@@ -848,7 +866,7 @@ describe('DealStages · a card already raised', () => {
       }),
     )
     expect(
-      screen.getByText(/handed to the carrier|Передал перевозчику/i),
+      screen.getByText(/record the handover|Зафиксировать передачу/i),
     ).toBeInTheDocument()
   })
 
@@ -861,7 +879,7 @@ describe('DealStages · a card already raised', () => {
       }),
     )
     expect(
-      screen.getByText(/handed to the carrier|Передал перевозчику/i),
+      screen.getByText(/record the handover|Зафиксировать передачу/i),
     ).toBeInTheDocument()
   })
 })

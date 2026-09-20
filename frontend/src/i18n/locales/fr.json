@@ -561,6 +561,7 @@
     "kind": {
       "handoff_photo": "Photo de la remise",
       "receipt_photo": "Photo de la réception",
+      "selfie": "Selfie avec l’autre partie",
       "doc": "Document",
       "payment_receipt": "Reçu de paiement",
       "identity_doc": "Pièce d'identité",
@@ -1552,7 +1553,7 @@
       "pickup_confirmed": "Remise confirmée",
       "dropoff_proposed": "Proposer la livraison",
       "dropoff_confirmed": "Livraison confirmée",
-      "handoff_declared": "Déclarer la remise",
+      "handoff_declared": "Enregistrer la remise",
       "handoff_confirmed": "Remise confirmée",
       "transit_update": "Suivi en transit",
       "storage_charged": "Frais de stockage",
@@ -1640,13 +1641,17 @@
     "photoWithIt": "La photo part avec la carte — sans elle, l’autre partie ne peut pas confirmer la remise.",
     "shoot": {
       "default": "Photographiez ce que vous déclarez — la photo est le registre, et elle part avec la carte.",
-      "handoff_declared": "Ouvrez le colis et photographiez le contenu, puis le colis emballé. Plusieurs photos valent mieux qu’une.",
+      "handoff_declared": "Ouvrez le colis et photographiez le contenu, puis le colis emballé. C’est celui qui l’a en main qui photographie ; l’autre ne recommence pas.",
       "handoff_received": "Ouvrez le colis et photographiez le contenu devant l’expéditeur, puis le colis emballé. Plusieurs photos valent mieux qu’une.",
       "posted_declared": "Photographiez le colis ouvert, avant de le sceller — c’est le dernier moment où le contenu est visible.",
       "delivery_declared": "Photographiez le colis au moment où il change de mains."
     },
     "photoNeeded": "Joignez la photo — la remise ne peut pas être confirmée sans elle",
     "photoOptional": "facultatif",
+    "addPhotos": "Choisir des photos",
+    "addMorePhotos": "Ajouter",
+    "removePhoto": "Retirer {{name}}",
+    "selfieHint": "Vous deux au point de rendez-vous : la seule chose du dossier qui relie un visage à cette remise.",
     "cancelDeadline": "Si personne ne répond avant {{at}}, l’accord s’annule de lui-même"
   },
   "rules": {

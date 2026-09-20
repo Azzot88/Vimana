@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { raiseCard, raiseCardWithFiles } from '../api/terms'
+import PhotoPicker from './PhotoPicker'
 import {
   buildPayload,
   formsForRole,
@@ -55,6 +56,9 @@ export default function CardActions({
      and held here until the whole act goes at once, because the server writes
      nothing until every one of them is accepted. */
   const [files, setFiles] = useState<File[]>([])
+  /* T_UX.28 п.4 — kept apart from the pile above all the way to the server, so
+     it can be filed under its own kind. */
+  const [selfies, setSelfies] = useState<File[]>([])
 
   /* Ordered by the stage, not by the catalogue: `only` lists the kinds in the
      order they are meant to happen, and a row of buttons in protocol order
@@ -65,7 +69,6 @@ export default function CardActions({
         .map((kind) => byRole.find((f) => f.kind === kind))
         .filter((f): f is CardFormSpec => Boolean(f))
     : byRole
-  if (available.length === 0) return null
 
   const start = (spec: CardFormSpec) => {
     const initial: Record<string, string | boolean> = {}
@@ -76,8 +79,35 @@ export default function CardActions({
     setNote('')
     setError('')
     setFiles([])
+    setSelfies([])
     setOpen(spec)
   }
+
+  /* T_UX.28 п.3 (owner, 2026-09-19, вариант А): «Если на стадии у роли ровно
+     одно действие — разворачивать его форму сразу, без кнопки. Если несколько —
+     разворачивать первое (оно идёт первым по протоколу), остальные оставить
+     кнопками. Блок "ещё" остаётся свёрнутым всегда.»
+
+     The button that only opened a form was a press that told nobody anything:
+     at a stage with one action it asked the person to confirm they wanted to do
+     the thing the stage exists for. `muted` — the «ещё» row, a problem and a
+     cancellation — stays folded, because those are not the step anybody came to
+     take.
+
+     Opened once per stage, not on every render: `autoOpened` is what lets
+     somebody close the form and keep it closed. */
+  const firstKind = muted ? null : available[0]?.kind ?? null
+  const autoOpened = useRef<string | null>(null)
+  useEffect(() => {
+    if (!firstKind || autoOpened.current === firstKind) return
+    const spec = available.find((f) => f.kind === firstKind)
+    if (!spec) return
+    autoOpened.current = firstKind
+    start(spec)
+    // `start` and `available` are rebuilt every render; the kind is what
+    // actually changes, and it is what this watches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstKind])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,19 +137,25 @@ export default function CardActions({
     setError('')
     try {
       const payload = buildPayload(open, values)
-      if (open.needsPhoto || (open.optionalPhoto && files.length > 0)) {
+      if (
+        open.needsPhoto ||
+        (open.optionalPhoto && files.length > 0) ||
+        selfies.length > 0
+      ) {
         await raiseCardWithFiles(
           dealId,
           open.kind,
           files,
           payload,
           note || undefined,
+          selfies,
         )
       } else {
         await raiseCard(dealId, open.kind, payload, note || undefined)
       }
       setOpen(null)
       setFiles([])
+      setSelfies([])
       onDone()
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response
@@ -181,6 +217,8 @@ export default function CardActions({
       </label>
     )
   }
+
+  if (available.length === 0) return null
 
   if (!open) {
     return (
@@ -244,32 +282,35 @@ export default function CardActions({
               defaultValue: t('cards.shoot.default') as string,
             })}
           </p>
-          <label className="block">
-            <span className="block text-xs font-body text-navy/40 mb-1">
-              {t(`chat.kind.${open.needsPhoto ?? open.optionalPhoto}`)}
-              {/* T3.12.07 — said, so an empty input does not read as a fault. */}
-              {!open.needsPhoto && ` · ${t('cards.photoOptional')}`}
-            </span>
-            <input
-              type="file"
-              multiple
-              /* T3.11.27 — every picture (owner, 2026-09-13). A narrow list here
-                 hid files the server accepts and, worse, made a phone offering
-                 `application/octet-stream` look unpickable. What is really
-                 acceptable is decided by the bytes, server-side. */
-              accept="image/*"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="text-xs font-body"
-            />
-          </label>
-          {files.length > 0 && (
-            <p className="mt-1 text-[11px] font-body text-navy/40">
-              {t('terms.photosChosen', { count: files.length })}
-            </p>
-          )}
+          {/* T_UX.28 п.4 — «нужен красивый выбор нескольких фото» (owner,
+              2026-09-19). The bare input showed «3 файла» and replaced the
+              whole selection on the next pick, which is the wrong shape for
+              photographs taken one at a time from different sides. */}
+          <PhotoPicker
+            value={files}
+            onChange={setFiles}
+            label={t(`chat.kind.${open.needsPhoto ?? open.optionalPhoto}`)}
+            optional={!open.needsPhoto}
+          />
           <span className="block text-[11px] font-body text-navy/40 mt-1">
             {t('cards.photoWithIt')}
           </span>
+        </div>
+      )}
+
+      {/* T_UX.28 п.4 — «селфи с отправителем». Beside the parcel photographs,
+          never instead of them, and filed under its own kind: a picture of the
+          parcel says what changed hands, a selfie says who was standing
+          there. */}
+      {open.optionalSelfie && (
+        <div className="mt-3">
+          <PhotoPicker
+            value={selfies}
+            onChange={setSelfies}
+            label={t('chat.kind.selfie')}
+            hint={t('cards.selfieHint')}
+            optional
+          />
         </div>
       )}
 
@@ -291,6 +332,27 @@ export default function CardActions({
           {t('common.cancel')}
         </button>
       </div>
+
+      {/* T_UX.28 п.3, вариант А — «остальные оставить кнопками». The stage's
+          first action is open; everything else it offers stays one press away,
+          under the form rather than hidden behind it, so switching to another
+          action does not start with closing this one. */}
+      {available.length > 1 && (
+        <div className="mt-3 pt-3 border-t border-navy/5 flex flex-wrap gap-2">
+          {available
+            .filter((spec) => spec.kind !== open.kind)
+            .map((spec) => (
+              <button
+                key={spec.kind}
+                type="button"
+                onClick={() => start(spec)}
+                className="px-3 py-2 rounded-field border border-navy/15 text-sm font-body text-navy/80 hover:border-cyan hover:text-cyan"
+              >
+                {labels?.[spec.kind] ?? t(kindKey(spec.kind), spec.kind)}
+              </button>
+            ))}
+        </div>
+      )}
     </form>
   )
 }

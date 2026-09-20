@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import (
     APIRouter,
     Depends,
+    File,
     Form,
     HTTPException,
     Request,
@@ -42,8 +43,8 @@ from app.core.params import resolve_all
 from app.core.signing import sign_vault_message
 from app.core.trust import add_dealt_with, refresh_trust_counts
 from app.models.deal import (
-    Attachment, CardAckRole, CardState, Deal, DealEventType, DealStatus,
-    DealVaultMessage,
+    Attachment, AttachmentKind, CardAckRole, CardState, Deal, DealEventType,
+    DealStatus, DealVaultMessage,
 )
 from app.models.marketplace import Trip
 from app.models.user import User
@@ -546,6 +547,11 @@ async def create_card_with_files(
     deal_id: uuid.UUID,
     request: Request,
     files: list[UploadFile],
+    # T_UX.28 п.4 (owner, 2026-09-19) — «селфи с отправителем, фото передачи,
+    # фото отправки на почте и др.» A separate part rather than a flag on the
+    # files above, because the two piles are filed under different kinds: one
+    # shows what changed hands, the other who was standing there.
+    selfies: list[UploadFile] = File(default=[]),
     kind: str = Form(...),
     payload: str = Form("{}"),
     text: str | None = Form(default=None),
@@ -609,7 +615,15 @@ async def create_card_with_files(
         await store_upload(
             deal_id=deal_id,
             file=f,
-            kind=attachment_kind.value,
+            # T_UX.28 п.4 — a selfie is filed as a selfie. Same transaction,
+            # same validation, different label: an arbiter reading the record
+            # must be able to tell a photograph of the parcel from a photograph
+            # of the two people who met over it.
+            kind=(
+                AttachmentKind.selfie.value
+                if f in selfies
+                else attachment_kind.value
+            ),
             owner=current_user,
             db=db,
             # Content-Length covers the whole multipart body rather than one
@@ -617,7 +631,7 @@ async def create_card_with_files(
             # is still counted byte by byte while it is read.
             declared_length=request.headers.get("content-length"),
         )
-        for f in files
+        for f in [*files, *selfies]
     ]
 
     msg = await _raise_card(

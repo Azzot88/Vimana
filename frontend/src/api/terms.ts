@@ -121,12 +121,18 @@ export async function raiseCardWithFiles(
   files: File[],
   payload: Record<string, unknown> = {},
   text?: string,
+  /** T_UX.28 п.4 — selfies travel in their own part, so the server can file
+   *  them under their own kind. One request still: the declaration and all of
+   *  its evidence are one act, and a second upload is a card that can end up
+   *  standing without the picture it promised. */
+  selfies: File[] = [],
 ): Promise<VaultMessage> {
   const form = new FormData()
   form.append('kind', kind)
   form.append('payload', JSON.stringify(payload))
   if (text) form.append('text', text)
   for (const file of files) form.append('files', file)
+  for (const selfie of selfies) form.append('selfies', selfie)
   const { data } = await api.post<VaultMessage>(
     `/api/deals/${dealId}/cards/with-files`,
     form,

@@ -1123,6 +1123,16 @@ async def _add_arbiter_pool_columns(engine) -> None:
             await conn.execute(text(statement))
 
 
+async def _add_selfie_attachment_kind(engine) -> None:
+    """T_UX.28 п.4 — `0101` on the test database. Idempotent.
+
+    `ALTER TYPE … ADD VALUE IF NOT EXISTS` rather than a rebuilt enum, like
+    every other value added since `0027`."""
+    async with engine.begin() as conn:
+        for statement in _migration_statements("0101_selfie_attachment.py"):
+            await conn.execute(text(statement))
+
+
 async def _add_storage_terms_column(engine) -> None:
     """T_DEAL.1 — `0100` on the test database, after `create_all`. Idempotent.
 
@@ -2248,6 +2258,7 @@ async def test_engine():
     await _add_delivery_timer_columns(engine)
     await _add_arbiter_pool_columns(engine)
     await _add_storage_terms_column(engine)
+    await _add_selfie_attachment_kind(engine)
     await _normalise_json_nulls(engine)
     await _migrate_orders_category_to_string(engine)
     await _ensure_connections_unique(engine)

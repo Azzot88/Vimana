@@ -563,6 +563,7 @@
     "kind": {
       "handoff_photo": "Zdjęcie przekazania",
       "receipt_photo": "Zdjęcie odbioru",
+      "selfie": "Selfie z drugą stroną",
       "doc": "Dokument",
       "payment_receipt": "Potwierdzenie zapłaty",
       "identity_doc": "Dokument tożsamości",
@@ -1558,7 +1559,7 @@
       "pickup_confirmed": "Odbiór potwierdzony",
       "dropoff_proposed": "Zaproponuj doręczenie",
       "dropoff_confirmed": "Doręczenie potwierdzone",
-      "handoff_declared": "Zgłoś przekazanie",
+      "handoff_declared": "Zarejestruj przekazanie",
       "handoff_confirmed": "Przekazanie potwierdzone",
       "transit_update": "Status w drodze",
       "storage_charged": "Opłata za przechowanie",
@@ -1646,13 +1647,17 @@
     "photoWithIt": "Zdjęcie idzie razem z kartą — bez niego druga strona nie potwierdzi przekazania.",
     "shoot": {
       "default": "Sfotografuj to, co deklarujesz — zdjęcie jest zapisem i idzie razem z kartą.",
-      "handoff_declared": "Otwórz paczkę i sfotografuj zawartość, potem zapakowaną paczkę. Kilka zdjęć jest lepsze niż jedno.",
+      "handoff_declared": "Otwórz paczkę i sfotografuj zawartość, potem zapakowaną paczkę. Fotografuje ten, kto ją trzyma — druga strona nie powtarza.",
       "handoff_received": "Otwórz paczkę i sfotografuj zawartość przy nadawcy, potem zapakowaną paczkę. Kilka zdjęć jest lepsze niż jedno.",
       "posted_declared": "Sfotografuj otwartą paczkę przed zaklejeniem — to ostatni moment, gdy widać zawartość.",
       "delivery_declared": "Sfotografuj paczkę w chwili przekazania."
     },
     "photoNeeded": "Dołącz zdjęcie — bez niego przekazania nie da się potwierdzić",
     "photoOptional": "opcjonalnie",
+    "addPhotos": "Wybierz zdjęcia",
+    "addMorePhotos": "Dodaj kolejne",
+    "removePhoto": "Usuń {{name}}",
+    "selfieHint": "Wy dwoje w miejscu spotkania — jedyna rzecz w zapisie, która wiąże twarz z tym przekazaniem.",
     "cancelDeadline": "Jeśli nikt nie odpowie do {{at}}, transakcja anuluje się sama"
   },
   "rules": {

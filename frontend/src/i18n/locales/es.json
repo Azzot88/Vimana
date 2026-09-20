@@ -561,6 +561,7 @@
     "kind": {
       "handoff_photo": "Foto de la entrega",
       "receipt_photo": "Foto de la recepción",
+      "selfie": "Selfi con la otra parte",
       "doc": "Documento",
       "payment_receipt": "Comprobante de pago",
       "identity_doc": "Documento de identidad",
@@ -1552,7 +1553,7 @@
       "pickup_confirmed": "Recogida confirmada",
       "dropoff_proposed": "Proponer entrega",
       "dropoff_confirmed": "Entrega confirmada",
-      "handoff_declared": "Declarar entrega",
+      "handoff_declared": "Registrar la entrega",
       "handoff_confirmed": "Entrega confirmada",
       "transit_update": "Estado en tránsito",
       "storage_charged": "Cargo por almacenaje",
@@ -1640,13 +1641,17 @@
     "photoWithIt": "La foto va con la tarjeta: la otra parte no puede confirmar la entrega sin ella.",
     "shoot": {
       "default": "Fotografía lo que declaras: la foto es el registro y va con la tarjeta.",
-      "handoff_declared": "Abre el paquete y fotografía el contenido, luego el paquete cerrado. Varias fotos son mejor que una.",
+      "handoff_declared": "Abre el paquete y fotografía el contenido, luego el paquete cerrado. Fotografía quien lo tenga en las manos; la otra parte no lo repite.",
       "handoff_received": "Abre el paquete y fotografía el contenido delante del remitente, luego el paquete cerrado. Varias fotos son mejor que una.",
       "posted_declared": "Fotografía el paquete abierto, antes de cerrarlo: es el último momento en que se ve el contenido.",
       "delivery_declared": "Fotografía el paquete en el momento de la entrega."
     },
     "photoNeeded": "Adjunta la foto: la entrega no se puede confirmar sin ella",
     "photoOptional": "opcional",
+    "addPhotos": "Elegir fotos",
+    "addMorePhotos": "Añadir más",
+    "removePhoto": "Quitar {{name}}",
+    "selfieHint": "Vosotros dos en el punto de encuentro: lo único del registro que vincula una cara con esta entrega.",
     "cancelDeadline": "Si nadie responde antes de {{at}}, la operación se cancela sola"
   },
   "rules": {

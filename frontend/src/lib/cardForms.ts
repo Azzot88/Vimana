@@ -25,6 +25,11 @@ export interface CardFormSpec {
   /** T3.12.07 — evidence the card takes if there is any, and does not wait for:
    *  the photo of a handover in hand, the screenshot of a remote transfer. */
   optionalPhoto?: 'receipt_photo' | 'payment_receipt'
+  /** T_UX.28 п.4 — the card also takes a selfie, filed under its own kind.
+   *  Separate from `optionalPhoto` because it travels **beside** the required
+   *  photographs rather than instead of them: «селфи с отправителем, фото
+   *  передачи» are two answers, and an arbiter reads the labels. */
+  optionalSelfie?: boolean
   /** Whether a free-text note is offered. It travels encrypted, not in payload. */
   hasText?: boolean
 }
@@ -104,21 +109,21 @@ export const CARD_FORMS: CardFormSpec[] = [
        inside once the parcel is opened. The server still accepts the field for
        the cards that already carry it — history is not rewritten — it is simply
        no longer asked for. */
+    /* T_UX.28 п.5 (owner, 2026-09-19) — **one** card for the handover.
+       «Фотографии передачи делает любой участник и добавляет в чат, второй
+       участник независимо от роли просто соглашается. Если фото добавил один
+       из участников, дублировать тот же функционал у второго не нужно.»
+
+       It used to be two — «Передал» and «Получил» — and both asked for a
+       photograph of the same handover, so two people photographed one event
+       and each confirmed the other's picture of it. */
     kind: 'handoff.declared',
-    roles: ['sender'],
+    roles: ['sender', 'carrier'],
     fields: [],
     needsPhoto: 'handoff_photo',
-    hasText: true,
-  },
-  {
-    /* T3.11.27 — the same moment from the other side (owner, 2026-09-12).
-       Whoever is holding the parcel declares; the other confirms. Two kinds
-       rather than one shared by both roles, because an arbiter reads the
-       labels and «отдал» and «взял» are different claims about who was there. */
-    kind: 'handoff.received',
-    roles: ['carrier'],
-    fields: [],
-    needsPhoto: 'handoff_photo',
+    /* T_UX.28 п.4 — «селфи с отправителем»: its own kind of evidence, asked
+       for beside the parcel photographs and never instead of them. */
+    optionalSelfie: true,
     hasText: true,
   },
   {
