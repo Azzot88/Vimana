@@ -24,7 +24,7 @@ import pytest_asyncio
 from app.core.deal_storage import (
     StorageTerms,
     accrue,
-    days_of_storage,
+    nights_of_storage,
     terms_of,
 )
 
@@ -36,17 +36,20 @@ def _at(day: int, hour: int) -> datetime:
     return datetime(2026, 9, day, hour, 0, tzinfo=timezone.utc)
 
 
-def test_the_next_day_starts_in_the_morning_not_after_twenty_four_hours():
-    """Stored at noon, asked about at eleven the next morning: the morning has
-    passed, so this is the second storage day — even though it is 23 hours."""
-    assert days_of_storage(_at(1, 12), _at(2, 11), day_start_hour=DAY_START) == 2
+def test_a_night_spent_here_is_a_day_charged():
+    """Stored at noon, asked about at eleven the next morning: one night has
+    been spent, so it is one day — even though it is 23 hours."""
+    assert nights_of_storage(_at(1, 12), _at(2, 11), day_start_hour=DAY_START) == 1
 
 
-def test_the_day_it_arrives_is_the_first_day():
-    """Stored at noon, asked about at five the next morning: the morning has
-    not come, so it is still day one — and it is day one, not day nought: «два
-    дня бесплатно» counts the day the parcel was put away."""
-    assert days_of_storage(_at(1, 12), _at(2, 5), day_start_hour=DAY_START) == 1
+def test_a_parcel_collected_before_the_morning_has_cost_no_night():
+    """Stored at noon, asked about at five the next morning: the morning that
+    ends the first night has not come.
+
+    Owner, 2026-09-20: «Ночь пролежало — один день». A hotel counts what it
+    sold — the room overnight — and so does a warehouse; a parcel dropped off
+    at noon and collected the same evening has cost nobody a night."""
+    assert nights_of_storage(_at(1, 12), _at(2, 5), day_start_hour=DAY_START) == 0
 
 
 def test_the_boundary_is_local_to_the_parcel():
@@ -58,47 +61,47 @@ def test_the_boundary_is_local_to_the_parcel():
     when they declare the storage.
     """
     dubai = 4 * 60
-    # 01:30 UTC on the 2nd is 05:30 in Dubai — before the morning, still day one.
+    # 01:30 UTC on the 2nd is 05:30 in Dubai — the night has not ended yet.
     assert (
-        days_of_storage(
+        nights_of_storage(
             _at(1, 12),
             datetime(2026, 9, 2, 1, 30, tzinfo=timezone.utc),
             day_start_hour=DAY_START,
             tz_offset_minutes=dubai,
         )
-        == 1
+        == 0
     )
-    # 02:30 UTC is 06:30 in Dubai — the morning has come, and with it day two.
+    # 02:30 UTC is 06:30 in Dubai — the morning has come, and the night counts.
     assert (
-        days_of_storage(
+        nights_of_storage(
             _at(1, 12),
             datetime(2026, 9, 2, 2, 30, tzinfo=timezone.utc),
             day_start_hour=DAY_START,
             tz_offset_minutes=dubai,
         )
-        == 2
+        == 1
     )
 
 
-def test_the_free_days_come_first_and_cost_nothing():
-    """«До 2-х дней хранение бесплатное» — two mornings, then the meter."""
+def test_the_free_nights_come_first_and_cost_nothing():
+    """«До 2-х дней хранение бесплатное» — two nights, then the meter."""
     state = accrue(
         started_at=_at(1, 12),
-        now=_at(2, 12),  # the second day, and the last free one
+        now=_at(3, 12),  # two nights spent, the last of them free
         terms=TARIFF,
         units=3.0,
         day_start_hour=DAY_START,
         max_paid_days=14,
     )
-    assert state["days_begun"] == 2
+    assert state["nights"] == 2
     assert state["paid_days"] == 0
     assert state["amount"] == 0
 
 
-def test_the_third_day_is_the_first_paid_one():
+def test_the_third_night_is_the_first_paid_one():
     state = accrue(
         started_at=_at(1, 12),
-        now=_at(3, 12),
+        now=_at(4, 12),
         terms=TARIFF,
         units=3.0,
         day_start_hour=DAY_START,
@@ -119,7 +122,10 @@ def test_free_until_is_the_morning_the_charging_starts():
         day_start_hour=DAY_START,
         max_paid_days=14,
     )
-    assert state["free_until"] == _at(3, 6)
+    # Arrived on the 1st at noon: the first night ends on the 2nd at six, the
+    # second on the 3rd — so the third night, the first paid one, starts being
+    # charged at the morning of the 4th.
+    assert state["free_until"] == _at(4, 6)
 
 
 def test_the_ceiling_stops_the_sum_and_says_so():
@@ -154,7 +160,7 @@ def test_a_cargo_nobody_weighed_gives_no_sum_rather_than_nought():
         day_start_hour=DAY_START,
         max_paid_days=14,
     )
-    assert state["paid_days"] == 4
+    assert state["paid_days"] == 3
     assert state["amount"] is None
 
 

@@ -103,7 +103,7 @@ export interface DealDetail extends Deal {
     started_at: string
     free_days: number
     free_until: string
-    days_begun: number
+    nights: number
     paid_days: number
     price: number
     unit: 'kg' | 'place'

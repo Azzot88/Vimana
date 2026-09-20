@@ -16,7 +16,7 @@ const base = {
   started_at: '2026-09-18T12:00:00Z',
   free_days: 2,
   free_until: '2026-09-21T06:00:00Z',
-  days_begun: 1,
+  nights: 1,
   paid_days: 0,
   price: 1,
   unit: 'kg' as const,
@@ -38,7 +38,7 @@ describe('the storage note', () => {
 
   it('once it is paid, shows the days and the sum', () => {
     renderWithProviders(
-      <StorageNote storage={{ ...base, paid_days: 3, amount: 9, days_begun: 5 }} />,
+      <StorageNote storage={{ ...base, paid_days: 3, amount: 9, nights: 5 }} />,
     )
     expect(screen.getByText(/Accrued|Начислено/i)).toBeInTheDocument()
     expect(screen.getByText('9 USD')).toBeInTheDocument()

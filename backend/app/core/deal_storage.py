@@ -9,9 +9,8 @@ the carrier declares on the timeline instead.
 
 What this module owns:
   - `terms_of(payload)` — the storage terms frozen into the agreement.
-  - `days_of_storage(...)` — the boundary rule (owner: «Новый день начинается
-    утром например в 6 утра»), counted on the storage place's own clock, with
-    the day of arrival counted as the first.
+  - `nights_of_storage(...)` — the counting rule (owner: «считать ночами, как в
+    гостиницах»), with the morning that ends a night local to the parcel.
   - `accrue(...)` — what the counter shows: until when it is free, how many paid
     days have started, how much that is, and whether the platform's ceiling has
     been reached.
@@ -112,31 +111,29 @@ def _local(moment: datetime, tz_offset_minutes: int) -> datetime:
     )
 
 
-def days_of_storage(
+def nights_of_storage(
     start: datetime,
     now: datetime,
     *,
     day_start_hour: int,
     tz_offset_minutes: int = 0,
 ) -> int:
-    """Which storage day the parcel is on.
+    """How many nights the parcel has spent here.
 
-    Owner's rule, 2026-09-20: «Округление по границам суток — новый день
-    начинается утром например в 6 утра, позднее вручение по договорённости.»
+    Owner's rule, 2026-09-20: «Дни нужно считать наверное ночами, как в
+    гостиницах. Ночь пролежало — один день», and the morning that ends a night
+    is the boundary named earlier: «новый день начинается утром например в 6
+    утра, позднее вручение по договорённости».
 
-    A day is not 24 hours from whenever the carrier pressed the button: it is a
-    morning. **The day the parcel is put away is day one**, afternoon or not,
-    and every six o'clock after that starts the next — so «два дня бесплатно»
-    means two calendar days, which is what somebody reading the listing thinks
-    it means. The alternative, counting only whole days, would make a free
-    period quietly longer than it says and put the carrier's own storage on the
-    wrong side of the arithmetic.
+    A hotel counts nights because that is the thing being sold — the room
+    overnight — and a warehouse sells the same thing. It also settles the two
+    edges by itself, which is why it beats every rule I tried before it: a
+    parcel dropped off at noon and collected at six the same evening has cost
+    nobody a night and is free, and one dropped off at five to six in the
+    morning does not silently cost a whole day for five minutes.
 
-    The edge it creates — a parcel left at eleven at night and collected at
-    seven — is exactly what «позднее вручение по договорённости» forgives, and
-    the forgiving is the carrier's to do on the card. The clock does not do it
-    silently, because a clock that rounds in somebody's favour is a clock
-    nobody can check.
+    Counted in the storage place's own clock: a morning in Dubai is not a
+    morning in UTC.
     """
     if now <= start:
         return 0
@@ -148,8 +145,8 @@ def days_of_storage(
     if first <= local_start:
         first += timedelta(days=1)
     if local_now < first:
-        return 1
-    return (local_now - first).days + 2
+        return 0
+    return (local_now - first).days + 1
 
 
 def free_until(
@@ -159,28 +156,23 @@ def free_until(
     day_start_hour: int,
     tz_offset_minutes: int = 0,
 ) -> datetime:
-    """The moment storage stops being free — the morning day `free_days + 1`
-    begins on.
+    """The morning the charging starts — the end of the last free night.
 
-    With the arrival day counted as day one, two free days end on the second
-    morning after the parcel arrived, not the third. `free_days = 0` — «плачу с
-    первой минуты» — has no free morning at all, and the answer is the moment
-    it was put away.
+    Nights are what is counted, so two free nights end on the second morning
+    after the parcel arrived. `free_days = 0` — «плачу с первой ночи» — ends at
+    the first morning, which is what this arithmetic gives without a special
+    case.
 
     Returned in UTC so the screen can render it in the reader's own settings:
     the boundary is local to the parcel, the display is local to the person.
     """
-    if free_days <= 0:
-        return start.astimezone(timezone.utc) if start.tzinfo else start.replace(
-            tzinfo=timezone.utc
-        )
     local_start = _local(start, tz_offset_minutes)
     first = local_start.replace(
         hour=day_start_hour, minute=0, second=0, microsecond=0
     )
     if first <= local_start:
         first += timedelta(days=1)
-    local_boundary = first + timedelta(days=free_days - 1)
+    local_boundary = first + timedelta(days=max(free_days, 0))
     return (local_boundary - timedelta(minutes=tz_offset_minutes)).replace(
         tzinfo=timezone.utc
     )
@@ -211,13 +203,13 @@ def accrue(
     this deal. What happens next is a decision two people take, not one the
     clock takes for them.
     """
-    days_begun = days_of_storage(
+    nights = nights_of_storage(
         started_at,
         now,
         day_start_hour=day_start_hour,
         tz_offset_minutes=tz_offset_minutes,
     )
-    paid_days = max(0, days_begun - terms.free_days)
+    paid_days = max(0, nights - terms.free_days)
     capped = paid_days > max_paid_days
     billable = min(paid_days, max_paid_days)
     amount = None if units is None else round(billable * terms.price * units, 2)
@@ -230,7 +222,7 @@ def accrue(
             day_start_hour=day_start_hour,
             tz_offset_minutes=tz_offset_minutes,
         ),
-        "days_begun": days_begun,
+        "nights": nights,
         "paid_days": billable,
         "price": terms.price,
         "unit": terms.unit,
@@ -295,8 +287,12 @@ async def state_for_deal(
             select(DealVaultMessage)
             .where(
                 DealVaultMessage.deal_id == deal_id,
+                # `storage.charged` is read here but is **not** an ending kind,
+                # so it has to be named separately: leaving it to the set below
+                # is the bug that made a raised bill invisible to the screen
+                # that had to show it.
                 DealVaultMessage.card_kind.in_(
-                    {"transit.update", *STORAGE_ENDING_KINDS}
+                    {"transit.update", "storage.charged", *STORAGE_ENDING_KINDS}
                 ),
             )
             .order_by(DealVaultMessage.created_at.desc())
