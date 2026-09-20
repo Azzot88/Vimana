@@ -95,6 +95,19 @@ export interface DealDetail extends Deal {
   /** The settlement model the trip was published with — what «Способ расчёта»
    *  opens on instead of a guess. */
   trip_payment_model?: string | null
+  /** T_UX.28 п.7 — the trip's legs, so the deal screen can say what is planned
+   *  next: «прилёт в Нью-Йорк 21 сентября». The whole chain rather than a
+   *  computed «next», because which leg is next depends on what the carrier
+   *  has already declared — a question the screen answers, not the server. */
+  trip_segments?: Array<{
+    order: number
+    origin: string
+    destination: string
+    depart_at: string
+    arrive_at?: string | null
+    origin_city?: string | null
+    destination_city?: string | null
+  }>
   /** T_DEAL.1 — the storage the parcel is in right now, computed server-side
    *  from the timeline. `null` when it is not in one. `paid_days` is what the
    *  counter says and `charged` is what the carrier actually billed: the

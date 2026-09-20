@@ -584,6 +584,15 @@ class DealDetailOut(BaseModel):
     #: The settlement model the trip was published with. The agreement's own
     #: «Способ расчёта» opens on it rather than on a guess.
     trip_payment_model: str | None = None
+    #: T_UX.28 п.7 (owner, 2026-09-19): «На странице статуса всегда должна быть
+    #: информация о следующем запланированном статусе. Если вылетел, то надо
+    #: писать когда прилёт и куда… Эти данные все есть, их надо показывать.»
+    #:
+    #: They were indeed all there — on the trip, which the deal screen never
+    #: asked for. The whole chain travels rather than a computed «next»: which
+    #: leg is next depends on what the carrier has already declared, and that
+    #: is the screen's question, not the serialiser's.
+    trip_segments: list[TripSegmentOut] = Field(default_factory=list)
     #: T_DEAL.1 — the storage the parcel is in right now, computed from the
     #: timeline (`core.deal_storage.state_for_deal`), or `None` when it is not in
     #: one. Carries both numbers on purpose: what the счётчик says and what the

@@ -272,6 +272,60 @@ async def _guard_departure(db: AsyncSession, deal: Deal, actor: User) -> None:
     )
 
 
+async def _transit_stages(db: AsyncSession, deal_id: uuid.UUID) -> list[str]:
+    """Which stages of the journey this deal has already been told about.
+
+    T_UX.28 п.6. Read from the timeline rather than kept on the deal: the
+    declarations are already there, and a column repeating them would be a
+    second answer to «где посылка» that two writes could put at odds.
+    """
+    rows = (
+        await db.execute(
+            select(DealVaultMessage.card_payload)
+            .where(
+                DealVaultMessage.deal_id == deal_id,
+                DealVaultMessage.card_kind == CardKind.transit_update.value,
+            )
+            .order_by(DealVaultMessage.created_at)
+        )
+    ).scalars().all()
+    return [
+        payload["stage"]
+        for payload in rows
+        if isinstance(payload, dict) and isinstance(payload.get("stage"), str)
+    ]
+
+
+async def _guard_transit_stage(
+    db: AsyncSession, deal_id: uuid.UUID, stage: object
+) -> None:
+    """T_UX.28 п.6 (owner, 2026-09-19): «Если статус вылетел нажат, то его
+    нельзя нажать во второй раз… Пересадка тоже может быть повторена несколько
+    раз, но строго до того как прилетел. После прилёта Пересадка невозможна.»
+
+    Two rules, and only two. Departure and arrival happen once each — a second
+    «вылетел» is not new information, it is a contradiction of the first. A
+    layover repeats freely, because a journey can have several, and stops being
+    possible the moment the parcel has landed.
+
+    Delay, customs and storage are deliberately unconstrained: each of them can
+    genuinely happen again, and a rule forbidding the second one would silence
+    the person carrying the parcel at the moment they have most to say.
+    """
+    if not isinstance(stage, str):
+        return
+    done = await _transit_stages(db, deal_id)
+    if stage in ("departed", "arrived") and stage in done:
+        raise HTTPException(
+            status_code=409, detail=f"This deal is already marked «{stage}»"
+        )
+    if stage == "layover" and "arrived" in done:
+        raise HTTPException(
+            status_code=409,
+            detail="A layover cannot follow the arrival",
+        )
+
+
 async def _raise_card(
     deal_id: uuid.UUID,
     body: CardCreate,
@@ -329,6 +383,10 @@ async def _raise_card(
     # window closes when the flight leaves.
     if kind is CardKind.handoff_declared:
         await _guard_departure(db, deal, current_user)
+
+    # T_UX.28 п.6 — the order of the journey's own statuses.
+    if kind is CardKind.transit_update:
+        await _guard_transit_stage(db, deal_id, body.payload.get("stage"))
 
     # T3.11.27 — a cancellation is a thing you do *before* the parcel moves.
     # Owner's rule 2026-09-07: «Отмена до передачи должна подтверждаться обоими

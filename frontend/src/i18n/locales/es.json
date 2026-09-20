@@ -1611,6 +1611,7 @@
       "parcel_locker": "Consigna",
       "poste_restante": "Lista de correos",
       "departed": "Salió",
+      "layover": "Escala",
       "arrived": "Llegó",
       "delayed": "Retraso",
       "customs": "Aduana",
@@ -2116,6 +2117,7 @@
       "delivery": "Dónde y cuándo se entrega el paquete"
     },
     "noTime": "La hora aún no está fijada: acordadla con el botón de abajo.",
+    "proposed": "propuesto",
     "hours_one": "en {{count}} hora",
     "hours_other": "en {{count}} horas",
     "minutes_one": "en {{count}} minuto",
@@ -2139,6 +2141,14 @@
     "more": "más",
     "unpaidHint": "¿Entregado y sin pagar? Llama a un árbitro: ve la conversación y en qué punto está la operación.",
     "theirTurn": "Es el turno de la otra parte: te avisaremos y esta pantalla se actualiza sola.",
+    "next": {
+      "arrival": "Después: llegada a {{place}} — {{when}}",
+      "arrivalNoTime": "Después: llegada a {{place}}",
+      "meeting": "Después: encuentro — {{place}}, {{when}}",
+      "meetingNoTime": "Después: encuentro — {{place}}, hora sin fijar",
+      "delivery": "Después: entrega — {{place}}, {{when}}",
+      "deliveryNoTime": "Después: entrega — {{place}}, hora sin fijar"
+    },
     "hint": {
       "terms": "Acordad el precio y cómo cambia de manos el paquete. Nada empieza hasta fijar las condiciones.",
       "handover": "Las condiciones están fijadas. Acordad dónde y cuándo, y marcad la entrega con una foto.",

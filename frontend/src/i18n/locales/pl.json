@@ -1617,6 +1617,7 @@
       "parcel_locker": "Paczkomat",
       "poste_restante": "Poste restante",
       "departed": "Odleciał",
+      "layover": "Przesiadka",
       "arrived": "Przyleciał",
       "delayed": "Opóźnienie",
       "customs": "Odprawa",
@@ -2138,6 +2139,7 @@
       "delivery": "Gdzie i kiedy przesyłka trafia do odbiorcy"
     },
     "noTime": "Godzina nie jest jeszcze ustalona — ustalcie ją przyciskiem poniżej.",
+    "proposed": "propozycja",
     "hours_one": "za {{count}} godzinę",
     "hours_few": "za {{count}} godziny",
     "hours_many": "za {{count}} godzin",
@@ -2165,6 +2167,14 @@
     "more": "więcej",
     "unpaidHint": "Przekazane, ale nie rozliczone? Zaproś arbitra — widzi rozmowę i stan transakcji.",
     "theirTurn": "Teraz ruch drugiej strony — powiadomimy cię, a ten ekran odświeży się sam.",
+    "next": {
+      "arrival": "Dalej: przylot do {{place}} — {{when}}",
+      "arrivalNoTime": "Dalej: przylot do {{place}}",
+      "meeting": "Dalej: spotkanie — {{place}}, {{when}}",
+      "meetingNoTime": "Dalej: spotkanie — {{place}}, godzina nieustalona",
+      "delivery": "Dalej: doręczenie — {{place}}, {{when}}",
+      "deliveryNoTime": "Dalej: doręczenie — {{place}}, godzina nieustalona"
+    },
     "hint": {
       "terms": "Ustalcie cenę i sposób przekazania. Nic się nie zacznie, dopóki warunki nie są ustalone.",
       "handover": "Warunki ustalone. Ustalcie gdzie i kiedy, a potem oznaczcie przekazanie ze zdjęciem.",

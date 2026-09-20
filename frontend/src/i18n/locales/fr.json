@@ -1611,6 +1611,7 @@
       "parcel_locker": "Consigne",
       "poste_restante": "Poste restante",
       "departed": "Parti",
+      "layover": "Escale",
       "arrived": "Arrivé",
       "delayed": "Retard",
       "customs": "Douane",
@@ -2116,6 +2117,7 @@
       "delivery": "Où et quand le colis est remis"
     },
     "noTime": "L’heure n’est pas encore fixée — convenez-en avec le bouton ci-dessous.",
+    "proposed": "proposé",
     "hours_one": "dans {{count}} heure",
     "hours_other": "dans {{count}} heures",
     "minutes_one": "dans {{count}} minute",
@@ -2139,6 +2141,14 @@
     "more": "plus",
     "unpaidHint": "Remis mais pas payé ? Appelez un arbitre — il voit la conversation et l’état de l’accord.",
     "theirTurn": "C’est au tour de l’autre partie — vous serez prévenu, et cet écran se met à jour tout seul.",
+    "next": {
+      "arrival": "Ensuite : arrivée à {{place}} — {{when}}",
+      "arrivalNoTime": "Ensuite : arrivée à {{place}}",
+      "meeting": "Ensuite : rendez-vous — {{place}}, {{when}}",
+      "meetingNoTime": "Ensuite : rendez-vous — {{place}}, heure non fixée",
+      "delivery": "Ensuite : remise — {{place}}, {{when}}",
+      "deliveryNoTime": "Ensuite : remise — {{place}}, heure non fixée"
+    },
     "hint": {
       "terms": "Convenez du prix et de la façon dont le colis change de mains. Rien ne commence tant que les conditions ne sont pas fixées.",
       "handover": "Les conditions sont fixées. Convenez du lieu et de l’heure, puis marquez la remise avec une photo.",

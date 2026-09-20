@@ -1005,6 +1005,7 @@
       "delivery": "Where and when the parcel is handed over"
     },
     "noTime": "The time is not set yet — agree it with the button below.",
+    "proposed": "proposed",
     "hours_one": "in {{count}} hour",
     "hours_other": "in {{count}} hours",
     "minutes_one": "in {{count}} minute",
@@ -1028,6 +1029,14 @@
     "more": "more",
     "unpaidHint": "Handed over but not settled? Invite an arbiter — they see the conversation and where the deal stands.",
     "theirTurn": "It is the other side's turn — you will be notified, and this screen updates itself.",
+    "next": {
+      "arrival": "Next: arrival in {{place}} — {{when}}",
+      "arrivalNoTime": "Next: arrival in {{place}}",
+      "meeting": "Next: meeting — {{place}}, {{when}}",
+      "meetingNoTime": "Next: meeting — {{place}}, time not set",
+      "delivery": "Next: delivery — {{place}}, {{when}}",
+      "deliveryNoTime": "Next: delivery — {{place}}, time not set"
+    },
     "hint": {
       "terms": "Agree the price and how the parcel changes hands. Nothing starts until the terms are fixed.",
       "handover": "The terms are fixed. Agree where and when, then mark the handover with a photo.",
@@ -1768,6 +1777,7 @@
       "parcel_locker": "Parcel locker",
       "poste_restante": "Poste restante",
       "departed": "Departed",
+      "layover": "Layover",
       "arrived": "Arrived",
       "delayed": "Delayed",
       "customs": "Customs",

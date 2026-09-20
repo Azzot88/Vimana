@@ -92,7 +92,14 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged, onPrevi
     <div className={`rounded-2xl border p-4 max-w-md ${tone}`}>
       <div className="flex items-center gap-2 flex-wrap mb-2">
         <span className="text-sm font-display font-semibold text-navy">
-          {t(kindKey(kind), kind)}
+          {/* T_UX.28 п.6 (owner, 2026-09-19): «Названия статусов должны
+              дублироваться в чате — они дублируются неочевидно.» A transit card
+              used to be headed «Статус в пути» with the actual status folded
+              into the fields below, so the chat read as five identical rows.
+              The status **is** the news, so it is the heading. */}
+          {kind === 'transit.update' && typeof payload.stage === 'string'
+            ? t(`cards.opt.${payload.stage}`, payload.stage)
+            : t(kindKey(kind), kind)}
         </span>
         {msg.card_state && msg.card_state !== 'pending' && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-navy/10 text-navy/50">

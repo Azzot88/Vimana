@@ -38,7 +38,13 @@ from app.models.marketplace import Cargo, CargoTemplate, Category, Trip, TripSta
 from app.models.user import User
 from app.core.cargo import cargo_location, deal_no, multihop_deal_count
 from app.core.deal_storage import state_for_deal
-from app.schemas.marketplace import CargoCreate, DealDetailOut, DealEventOut, DealOut
+from app.schemas.marketplace import (
+    CargoCreate,
+    DealDetailOut,
+    DealEventOut,
+    DealOut,
+    TripSegmentOut,
+)
 
 router = APIRouter()
 
@@ -455,6 +461,12 @@ async def get_deal(
             trip.handover_destination if trip else None
         ),
         trip_payment_model=trip.payment_model if trip else None,
+        # T_UX.28 п.7 — «когда прилёт и куда» lives on the trip's segments, and
+        # they are already loaded with it (`lazy="selectin"`).
+        trip_segments=[
+            TripSegmentOut.model_validate(segment)
+            for segment in (trip.segments if trip else [])
+        ],
         # T_DEAL.1 — «ожидание, иногда платное», with its counter. Computed from
         # the timeline every time it is asked rather than stored: the number
         # changes with the clock, and a stored one would be wrong between two

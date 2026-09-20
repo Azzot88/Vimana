@@ -51,6 +51,11 @@ interface Meeting {
   method?: string
   place?: string
   at?: string
+  /** T_UX.28 п.9 — this arrangement is somebody's proposal, not an agreement:
+   *  the card is still awaiting an answer. Drawn differently, because «где вы
+   *  встречаетесь» and «где вам предлагают встретиться» are different facts and
+   *  only one of them is safe to plan around. */
+  proposed?: boolean
 }
 
 /** The arrangement as it stands: the last **accepted** meeting card wins, and
@@ -76,6 +81,23 @@ export function meetingOf(
       at: typeof p.at === 'string' ? p.at : undefined,
     }
   }
+  /* T_UX.28 п.9 — a standing proposal is shown, and shown **as** a proposal.
+     It used to be invisible until somebody answered it, so the screen said
+     «время не назначено» while a card two lines below named a time — and the
+     person who had already proposed it saw no trace of their own request. */
+  const pending = [...messages]
+    .reverse()
+    .find((m) => m.card_kind === kind && m.card_state === 'pending')
+  if (pending) {
+    const p = (pending.card_payload ?? {}) as Record<string, unknown>
+    return {
+      method: typeof p.method === 'string' ? p.method : undefined,
+      place: typeof p.city === 'string' ? p.city : undefined,
+      at: typeof p.at === 'string' ? p.at : undefined,
+      proposed: true,
+    }
+  }
+
   const p = terms?.payload
   if (!p) return {}
   /* Spelled out rather than indexed by `${stage}_place`: the payload is a named
@@ -126,9 +148,18 @@ export default function MeetingNote({
 
   return (
     <div className="rounded-2xl border border-cyan/30 bg-cyan/5 p-4 space-y-2">
-      <h3 className="text-sm font-display font-semibold text-navy">
-        {t(`meeting.title.${stage}`)}
-      </h3>
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="text-sm font-display font-semibold text-navy">
+          {t(`meeting.title.${stage}`)}
+        </h3>
+        {/* T_UX.28 п.9 — said out loud, because everything below it reads like
+            an arrangement and this one is still a question. */}
+        {meeting.proposed && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-amber/20 text-navy border border-amber/40">
+            {t('meeting.proposed')}
+          </span>
+        )}
+      </div>
 
       {(meeting.place || meeting.method) && (
         <p className="text-sm font-body text-navy/80">

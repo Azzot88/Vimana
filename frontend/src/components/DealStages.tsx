@@ -15,6 +15,7 @@ import {
 import type { Terms } from '../api/terms'
 import { formsForRole, type DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
+import { usePrefs } from '../hooks/usePrefs'
 import MeetingNote, { meetingOf } from './MeetingNote'
 import StorageNote from './StorageNote'
 import TermsProposeForm from './TermsProposeForm'
@@ -89,6 +90,9 @@ export default function DealStages({
   const [disputeReason, setDisputeReason] = useState<DisputeReason>('unpaid')
   const [disputeDetails, setDisputeDetails] = useState('')
   const [disputeBusy, setDisputeBusy] = useState(false)
+  // T_UX.28 п.7 — the arrival and the meeting are shown in the reader's own
+  // date settings, like every other moment on this screen.
+  const prefs = usePrefs()
   const [disputeError, setDisputeError] = useState('')
   /* T3.12.05 — the same form, sent as a request to the sender rather than as a
      dispute: the recipient does not open one, they ask (owner, 2026-09-13/14). */
@@ -108,8 +112,59 @@ export default function DealStages({
   // T3.12.08 — and whether it went by post, which is what keeps a paid-but-not
   // -received deal standing on delivery instead of reading as closed.
   const posted = messages.some((m) => m.card_kind === 'posted.confirmed')
+  /* T_UX.28 п.6 — every journey status already declared here, so the form can
+     stop offering the ones that cannot be pressed again. Read off the same
+     cards the ladder reads: a second list of «где посылка» is a second thing
+     to be wrong. */
+  const doneStages = messages
+    .filter((m) => m.card_kind === 'transit.update')
+    .map((m) => (m.card_payload as { stage?: string } | null)?.stage)
+    .filter((stage): stage is string => typeof stage === 'string')
+
   const currentKey: DealStageKey = stageOf(status, { arrived, posted })
   const currentIndex = stageIndex(currentKey)
+
+  /* T_UX.28 п.7 (owner, 2026-09-19): «На странице статуса всегда должна быть
+     информация о следующем запланированном статусе. Если вылетел, то надо
+     писать когда прилёт и куда. Если прилетел, то надо давать инфу о
+     предстоящей встрече и где. Эти данные все есть, их надо показывать.»
+
+     They were all there and none of them were here: the arrival sat on the
+     trip's last segment, which the deal screen never asked the server for, and
+     the meeting sat in the agreement, which this panel reads for the buttons
+     rather than for the sentence above them.
+
+     Below `currentKey` on purpose — it is the stage that decides which of the
+     two facts is the next one — and silent when there is nothing to say: an
+     empty «Дальше:» reads as a step nobody planned rather than as data we do
+     not have. */
+  const segments = (deal?.trip_segments ?? [])
+    .slice()
+    .sort((a, b) => a.order - b.order)
+  // Indexed rather than `.at(-1)`: this project builds to ES2020.
+  const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null
+  const nextStep = (() => {
+    if (status === 'cancelled' || TERMINAL_STATUSES.includes(status)) return null
+    if (currentKey === 'transit' && lastSegment) {
+      const place = lastSegment.destination_city || lastSegment.destination
+      return lastSegment.arrive_at
+        ? t('stages.next.arrival', {
+            place,
+            when: prefs.dateTime(lastSegment.arrive_at),
+          })
+        : t('stages.next.arrivalNoTime', { place })
+    }
+    const side = currentKey === 'handover' ? 'handover' : 'delivery'
+    const meeting = meetingOf(terms, messages, side)
+    if (!meeting.place) return null
+    const key = side === 'handover' ? 'meeting' : 'delivery'
+    return meeting.at
+      ? t(`stages.next.${key}`, {
+          place: meeting.place,
+          when: prefs.dateTime(meeting.at),
+        })
+      : t(`stages.next.${key}NoTime`, { place: meeting.place })
+  })()
 
   const raiseDispute = async () => {
     setDisputeBusy(true)
@@ -305,6 +360,11 @@ export default function DealStages({
                 : `stages.hint.${currentKey}`,
             )}
           </p>
+          {/* T_UX.28 п.7 — what is planned next, in one line, under the stage
+              it follows. */}
+          {nextStep && (
+            <p className="text-xs font-body text-navy/70 mt-1">{nextStep}</p>
+          )}
         </div>
 
         {/* Stage one is the terms, and the terms are a form rather than a chip:
@@ -391,6 +451,7 @@ export default function DealStages({
             myRole={myRole}
             only={mineNow}
             labels={meetingLabels}
+            doneStages={doneStages}
             onDone={onDone}
           />
         )}

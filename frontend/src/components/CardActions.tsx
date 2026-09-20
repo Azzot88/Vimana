@@ -35,6 +35,13 @@ interface Props {
    *  to move; the first time it is «Назначить вручение», and the stage is what
    *  knows which of the two it is (owner, 2026-09-16). */
   labels?: Record<string, string>
+  /** T_UX.28 п.6 — the journey statuses already declared in this deal.
+   *
+   *  Owner, 2026-09-19: «Если статус вылетел нажат, то его нельзя нажать во
+   *  второй раз. Если пропущены предыдущие статусы, то они не появляются.»
+   *  The server enforces the same two rules; this is what keeps the screen from
+   *  offering a press that is going to be refused. */
+  doneStages?: string[]
 }
 
 export default function CardActions({
@@ -44,6 +51,7 @@ export default function CardActions({
   only,
   muted = false,
   labels,
+  doneStages = [],
 }: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState<CardFormSpec | null>(null)
@@ -183,6 +191,49 @@ export default function CardActions({
         </label>
       )
     }
+    /* T_UX.28 п.6 (owner, 2026-09-19): «Сам выбор статусов должен быть
+       реализован проще… Если статус вылетел нажат, то его нельзя нажать во
+       второй раз. Если пропущены предыдущие статусы, то они не появляются.»
+
+       A dropdown with six words in it asked somebody standing in an airport to
+       open a menu and read. Chips say the same thing at a glance, and the ones
+       that cannot be pressed are not drawn at all — a disabled option in a list
+       is still something to read and decide about. */
+    if (f.type === 'select' && f.name === 'stage') {
+      const landed = doneStages.includes('arrived')
+      const offered = f.options.filter((o) => {
+        if (o === 'departed' || o === 'arrived') return !doneStages.includes(o)
+        // «Пересадка… строго до того как прилетел» — after the landing it is
+        // not a late entry, it is an impossible one.
+        if (o === 'layover') return !landed
+        return true
+      })
+      return (
+        <div key={f.name} className="w-full">
+          <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
+          <div className="flex flex-wrap gap-2">
+            {offered.map((o) => (
+              <button
+                key={o}
+                type="button"
+                aria-pressed={values[f.name] === o}
+                onClick={() =>
+                  setValues((v) => ({ ...v, [f.name]: v[f.name] === o ? '' : o }))
+                }
+                className={`text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border transition-colors ${
+                  values[f.name] === o
+                    ? 'border-cyan bg-cyan/10 text-navy'
+                    : 'border-navy/20 text-navy/50 hover:border-navy/40'
+                }`}
+              >
+                {t(`cards.opt.${o}`, o)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
     if (f.type === 'select') {
       return (
         <label key={f.name} className="flex-1 min-w-[9rem]">

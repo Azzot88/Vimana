@@ -112,7 +112,17 @@ class TransitUpdate(BaseModel):
     # by the carrier like every other one here, rather than a rung of the
     # ladder — it can happen before the carriage as well as before the
     # delivery, and a step that comes round twice is not a step.
-    stage: Literal["departed", "arrived", "delayed", "customs", "storage"]
+    # T_UX.28 п.6 (owner, 2026-09-19): «Сначала Вылетел, затем Пересадка…
+    # Пересадка тоже может быть повторена несколько раз, но строго до того как
+    # прилетел. После прилёта Пересадка невозможна.»
+    #
+    # `layover` joins the list rather than becoming a rung of the ladder, for
+    # the same reason storage did: it repeats, and an ordered ladder that can
+    # come round again is not a ladder. The order and the once-only rule are
+    # enforced in `api.cards._raise_card`, where the timeline can be read.
+    stage: Literal[
+        "departed", "layover", "arrived", "delayed", "customs", "storage"
+    ]
     eta: datetime | None = None
     #: T_DEAL.1 — the storage place's offset from UTC, in minutes, as the
     #: carrier's own device reports it. The free period ends at a morning

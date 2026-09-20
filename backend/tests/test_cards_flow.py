@@ -1301,6 +1301,60 @@ async def test_the_sender_declares_the_same_card(
     assert declared.json()["requires_ack_by"] == "carrier"
 
 
+async def test_a_departure_is_declared_once(client, carrier_headers, deal):
+    """T_UX.28 п.6 (owner, 2026-09-19): «Если статус вылетел нажат, то его
+    нельзя нажать во второй раз.»
+
+    A second «вылетел» is not new information — it contradicts the first, and
+    an append-only record cannot take either of them back.
+    """
+    first = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "departed"}
+    )
+    assert first.status_code == 201, first.text
+
+    again = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "departed"}
+    )
+    assert again.status_code == 409, again.text
+
+
+async def test_a_layover_repeats_but_never_after_the_arrival(
+    client, carrier_headers, deal
+):
+    """Owner, 2026-09-19: «Пересадка тоже может быть повторена несколько раз,
+    но строго до того как прилетел. После прилёта Пересадка невозможна.»"""
+    await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "departed"}
+    )
+    for _ in range(2):
+        r = await _card(
+            client, carrier_headers, deal.id, "transit.update", {"stage": "layover"}
+        )
+        assert r.status_code == 201, r.text
+
+    landed = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "arrived"}
+    )
+    assert landed.status_code == 201, landed.text
+
+    too_late = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "layover"}
+    )
+    assert too_late.status_code == 409, too_late.text
+
+
+async def test_a_delay_may_be_declared_again(client, carrier_headers, deal):
+    """Delay, customs and storage are deliberately unconstrained: each can
+    genuinely happen twice, and a rule against the second one would silence the
+    person carrying the parcel when they have most to say."""
+    for _ in range(2):
+        r = await _card(
+            client, carrier_headers, deal.id, "transit.update", {"stage": "delayed"}
+        )
+        assert r.status_code == 201, r.text
+
+
 async def test_the_retired_receipt_card_cannot_be_raised(client, carrier_headers, deal):
     """`handoff.received` stays in the catalogue so an arbiter can read deals
     struck before the two cards became one — and stays unraisable, so no new
