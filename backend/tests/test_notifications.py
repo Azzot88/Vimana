@@ -1,186 +1,541 @@
-"""T_UX.29 pt.7 — the bell, and the rule that decides what lands in it.
+import uuid as uuidlib
+from email import message_from_string
 
-Owner, 2026-09-20: «Панель должна показывать обновления, произошедшие за период
-неактивности. Если изменения произошли в активном окне, их статусы показывать не
-нужно.»
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-The second half is not a server rule and is not tested here: the screen that
-showed something marks it read (`DealVaultPage`), and what these tests pin down
-is the half that must be true for that to work — a row exists for everybody who
-was not the actor, addressed to them, with its own read state.
-"""
-from __future__ import annotations
-
-from datetime import datetime, timedelta, timezone
-
-import pytest_asyncio
-from tests.conftest import unique_email
+from tests.conftest import TEST_DATABASE_URL
 
 
-@pytest_asyncio.fixture
-async def pair(client, session_maker, seed_carrier, seed_sender):
-    """A deal with both parties, and nothing said in it yet."""
-    from app.models.deal import Deal, DealStatus
-    from app.models.marketplace import Cargo, Trip, TripStatus
+@pytest.fixture
+def sync_test_session(monkeypatch):
+    sync_url = TEST_DATABASE_URL.replace("+asyncpg", "+psycopg2")
+    engine = create_engine(sync_url, pool_pre_ping=True)
+    maker = sessionmaker(engine, expire_on_commit=False)
 
-    async with session_maker() as db:
-        trip = Trip(
-            carrier_id=seed_carrier.id,
-            origin="DXB",
-            destination="JFK",
-            depart_at=datetime.now(timezone.utc) + timedelta(days=4),
-            capacity=5.0,
-            allowed_categories=["document"],
-            status=TripStatus.open,
-            price_per_kg=20.0,
-            currency="USD",
+    from app.tasks import notifications as notif
+
+    monkeypatch.setattr(notif, "SyncSessionLocal", maker)
+    yield maker
+    engine.dispose()
+
+
+@pytest.fixture
+def channel_calls(monkeypatch):
+    calls = {"email": [], "telegram": [], "whatsapp": []}
+    from app.tasks import notifications as notif
+
+    # T_UX.9 — `send_email` grew an optional `html` part; the spy takes it too,
+    # otherwise every templated letter fails on arity instead of on content.
+    monkeypatch.setattr(
+        notif,
+        "send_email",
+        lambda to, subj, body, html=None: calls["email"].append((to, subj, body, html)),
+    )
+    monkeypatch.setattr(notif, "send_telegram", lambda chat, msg: calls["telegram"].append((chat, msg)))
+    monkeypatch.setattr(notif, "send_whatsapp", lambda number, msg: calls["whatsapp"].append((number, msg)))
+    return calls
+
+
+def test_notify_deal_status_sends_email_to_both_parties(
+    sync_test_session, channel_calls, seed_deal, seed_carrier, seed_sender
+):
+    from app.tasks.notifications import notify_deal_status
+
+    notify_deal_status(str(seed_deal.id), "accepted")
+
+    recipients = {c[0] for c in channel_calls["email"]}
+    assert seed_carrier.email in recipients
+    assert seed_sender.email in recipients
+
+
+def test_notify_deal_status_no_op_for_missing_deal(sync_test_session, channel_calls):
+    from app.tasks.notifications import notify_deal_status
+
+    notify_deal_status(str(uuidlib.uuid4()), "matched")
+
+    assert channel_calls["email"] == []
+    assert channel_calls["telegram"] == []
+    assert channel_calls["whatsapp"] == []
+
+
+def test_notify_deal_status_uses_soft_status_label(
+    sync_test_session, channel_calls, seed_deal
+):
+    from app.tasks.notifications import notify_deal_status
+
+    notify_deal_status(str(seed_deal.id), "in_transit")
+
+    assert channel_calls["email"], "expected at least one email sent"
+    subject, body = channel_calls["email"][0][1], channel_calls["email"][0][2]
+    assert "in_transit" not in body, "raw status must be translated to soft label"
+    assert "in_transit" not in subject
+
+
+# ── the sender's TLS handshake ────────────────────────────────────────────────
+# The Mailu deployment serves 465 and not 587, so the port is not a detail we
+# get to ignore: sending STARTTLS into an implicit-TLS port fails in a way that
+# looks like a certificate problem and costs an evening to trace.
+
+
+class _FakeSMTP:
+    """Stand-in for `smtplib.SMTP`, recording how the connection was opened."""
+
+    opened: list["_FakeSMTP"] = []
+
+    def __init__(self, host, port, context=None):
+        self.host = host
+        self.port = port
+        self.context = context
+        self.started_tls = False
+        self.login_args = None
+        self.sent = []
+        _FakeSMTP.opened.append(self)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def ehlo(self):
+        self.ehlo_count = getattr(self, "ehlo_count", 0) + 1
+
+    def has_extn(self, name):
+        # T_UX.9 pt.2 — the real client advertises both on the live path; the
+        # catcher advertises neither, and that difference is what the circuit
+        # tests below exercise.
+        return name in ("starttls", "auth")
+
+    def starttls(self, context=None):
+        self.started_tls = True
+
+    def login(self, user, password):
+        self.login_args = (user, password)
+
+    def sendmail(self, frm, to, raw):
+        self.sent.append((frm, to, raw))
+
+
+class _FakeSMTPSSL(_FakeSMTP):
+    """Implicit TLS — a distinct class so the test can tell which was chosen."""
+
+
+@pytest.fixture
+def smtp_spy(monkeypatch):
+    import smtplib
+
+    from app.core.config import settings
+
+    _FakeSMTP.opened = []
+    monkeypatch.setattr(smtplib, "SMTP", _FakeSMTP)
+    monkeypatch.setattr(smtplib, "SMTP_SSL", _FakeSMTPSSL)
+    monkeypatch.setattr(settings, "SMTP_HOST", "mail.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "vimana@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "secret")
+
+    def with_port(port):
+        monkeypatch.setattr(settings, "SMTP_PORT", port)
+        return _FakeSMTP.opened
+
+    return with_port
+
+
+def test_port_465_uses_implicit_tls(smtp_spy):
+    from app.core.email import send_email
+
+    opened = smtp_spy(465)
+    send_email("someone@example.test", "subject", "body")
+
+    conn = opened[0]
+    assert isinstance(conn, _FakeSMTPSSL), "465 must open with TLS already up"
+    assert not conn.started_tls, "STARTTLS on an implicit-TLS port breaks the handshake"
+    assert conn.context is not None, "TLS context must be explicit, not smtplib's default"
+
+
+def test_port_587_upgrades_with_starttls(smtp_spy):
+    from app.core.email import send_email
+
+    opened = smtp_spy(587)
+    send_email("someone@example.test", "subject", "body")
+
+    conn = opened[0]
+    assert type(conn) is _FakeSMTP, "587 must open in clear text first"
+    assert conn.started_tls, "587 without STARTTLS would send the password unencrypted"
+
+
+def test_credentials_and_envelope(smtp_spy):
+    from app.core.email import send_email
+
+    opened = smtp_spy(465)
+    send_email("someone@example.test", "subject", "body")
+
+    conn = opened[0]
+    assert conn.login_args == ("vimana@example.test", "secret")
+    frm, recipients, _ = conn.sent[0]
+    assert frm == "vimana@example.test"
+    assert recipients == ["someone@example.test"]
+
+
+def test_from_shows_the_brand_name(smtp_spy):
+    from app.core.email import FROM_DISPLAY_NAME, send_email
+
+    opened = smtp_spy(465)
+    send_email("someone@example.test", "subject", "body")
+
+    envelope_from, _, raw = opened[0].sent[0]
+    header = message_from_string(raw)["From"]
+    # The name is non-ASCII (em dash), so it must travel as an encoded word —
+    # raw UTF-8 in a header is dropped by some receivers.
+    assert FROM_DISPLAY_NAME not in header, "the name must be RFC 2047-encoded"
+    assert header.startswith("=?utf-8?"), header
+    assert "vimana@example.test" in header
+    # Routing is unaffected: the envelope carries the bare address.
+    assert envelope_from == "vimana@example.test"
+
+
+def test_message_carries_date_and_message_id(smtp_spy):
+    from app.core.email import send_email
+
+    opened = smtp_spy(465)
+    send_email("someone@example.test", "subject", "body")
+
+    msg = message_from_string(opened[0].sent[0][2])
+    # Both are mandatory per RFC 5322 and both are worth spam points when
+    # missing; nothing downstream fills them in for us.
+    assert msg["Date"], "a message with no Date is scored as spam"
+    message_id = msg["Message-ID"]
+    assert message_id, "a message with no Message-ID is scored as spam"
+    assert message_id.startswith("<") and message_id.endswith(">")
+    assert message_id.endswith("@example.test>"), (
+        "the id must be anchored to the sender's domain, not the container hostname"
+    )
+
+
+def test_no_connection_without_configuration(smtp_spy, monkeypatch):
+    from app.core.config import settings
+    from app.core.email import send_email
+
+    opened = smtp_spy(465)
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    send_email("someone@example.test", "subject", "body")
+
+    assert opened == [], "an unconfigured host must not reach the network"
+
+
+# ── T_UX.8 · waitlist letters ────────────────────────────────────────────────
+
+
+def test_send_email_reports_delivery(smtp_spy):
+    """The boolean is the whole point: a caller writes a `sent` mark from it."""
+    from app.core.email import send_email
+
+    smtp_spy(465)
+    assert send_email("someone@example.test", "subject", "body") is True
+
+
+def test_send_email_reports_silence_when_unconfigured(smtp_spy, monkeypatch):
+    from app.core.config import settings
+    from app.core.email import send_email
+
+    smtp_spy(465)
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    assert send_email("someone@example.test", "subject", "body") is False, (
+        "an unconfigured transport must not look like a delivered message"
+    )
+
+
+@pytest.fixture
+def mail_spy(monkeypatch):
+    """Record `send_email` calls; let the test decide whether they land.
+
+    The `channel_calls` fixture above returns None from its lambda, which reads
+    as "not delivered" — correct for the fire-and-forget notifications it was
+    written for, useless here, where the return value decides whether a row is
+    marked.
+    """
+    sent: list[tuple[str, str, str]] = []
+    state = {"delivers": True}
+    from app.tasks import notifications as notif
+
+    def _send(to, subject, body, html=None):
+        sent.append((to, subject, body, html))
+        return state["delivers"]
+
+    monkeypatch.setattr(notif, "send_email", _send)
+    return sent, state
+
+
+def _new_waitlist_entry(maker, *, sent_at=None, locale="en"):
+    from app.models.waitlist import WaitlistEntry
+
+    email = f"wl-{uuidlib.uuid4().hex[:10]}@vimana.test"
+    with maker() as db:
+        entry = WaitlistEntry(
+            email=email,
+            name="Tester",
+            source="landing",
+            locale=locale,
+            confirmation_sent_at=sent_at,
         )
-        db.add(trip)
-        await db.flush()
-        cargo = Cargo(
-            created_by_id=seed_sender.id,
-            category="document",
-            declared_value=500.0,
-            currency="USD",
-            final_destination=trip.destination,
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return str(entry.id), email
+
+
+def _confirmation_sent_at(maker, entry_id):
+    from app.models.waitlist import WaitlistEntry
+
+    with maker() as db:
+        return db.get(WaitlistEntry, entry_id).confirmation_sent_at
+
+
+def test_waitlist_letters_reach_visitor_and_owner(sync_test_session, mail_spy):
+    from app.core.superuser import USER_ZERO_EMAIL
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+
+    recipients = [c[0] for c in sent]
+    assert email in recipients, "the person who signed up must be answered"
+    assert USER_ZERO_EMAIL in recipients, "the owner must learn about the signup"
+
+
+def test_waitlist_confirmation_promises_an_invite(sync_test_session, mail_spy):
+    """T_UX.9 — one language per recipient now, chosen by `entry.locale`."""
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session, locale="ru")
+
+    send_waitlist_emails(entry_id)
+
+    body = next(c[2] for c in sent if c[0] == email)
+    assert "приглашение" in body, "the letter must say what happens next"
+
+
+def test_waitlist_confirmation_uses_the_landing_language(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session, locale="fr")
+
+    send_waitlist_emails(entry_id)
+
+    subject = next(c[1] for c in sent if c[0] == email)
+    assert "liste" in subject.lower()
+
+
+def test_waitlist_confirmation_without_locale_is_english(sync_test_session, mail_spy):
+    """Rows older than T_UX.9 carry NULL — English rather than a guess."""
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session, locale=None)
+
+    send_waitlist_emails(entry_id)
+
+    subject = next(c[1] for c in sent if c[0] == email)
+    assert "list" in subject.lower()
+
+
+def test_waitlist_marks_the_row_once_the_letter_lands(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    entry_id, _ = _new_waitlist_entry(sync_test_session)
+    send_waitlist_emails(entry_id)
+
+    assert _confirmation_sent_at(sync_test_session, entry_id) is not None
+
+
+def test_waitlist_does_not_mark_a_letter_that_never_left(sync_test_session, mail_spy):
+    """The bug this guards against is the one that started the whole task."""
+    from app.tasks.notifications import send_waitlist_emails
+
+    _, state = mail_spy
+    state["delivers"] = False
+    entry_id, _ = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+
+    assert _confirmation_sent_at(sync_test_session, entry_id) is None, (
+        "an unsent letter must leave the row pending, not marked done"
+    )
+
+
+def test_waitlist_letter_is_not_sent_twice(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    entry_id, email = _new_waitlist_entry(sync_test_session)
+
+    send_waitlist_emails(entry_id)
+    first = len([c for c in sent if c[0] == email])
+    send_waitlist_emails(entry_id)
+
+    assert len([c for c in sent if c[0] == email]) == first == 1
+
+
+def test_waitlist_missing_entry_is_a_no_op(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_waitlist_emails
+
+    sent, _ = mail_spy
+    send_waitlist_emails(str(uuidlib.uuid4()))
+
+    assert sent == []
+
+
+def test_backfill_dry_run_sends_nothing(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_pending_waitlist_confirmations
+
+    sent, _ = mail_spy
+    _, email = _new_waitlist_entry(sync_test_session)
+
+    result = send_pending_waitlist_confirmations(dry_run=True)
+
+    assert sent == [], "a dry run that sends mail is not a dry run"
+    assert email in result["addresses"]
+    assert result["sent"] == 0
+
+
+def test_backfill_writes_to_pending_and_skips_the_answered(sync_test_session, mail_spy):
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
+
+    from app.tasks.notifications import send_pending_waitlist_confirmations
+
+    sent, _ = mail_spy
+    pending_id, pending_email = _new_waitlist_entry(sync_test_session)
+    _, answered_email = _new_waitlist_entry(
+        sync_test_session, sent_at=_dt.now(_tz.utc)
+    )
+
+    send_pending_waitlist_confirmations()
+
+    recipients = [c[0] for c in sent]
+    assert pending_email in recipients
+    assert answered_email not in recipients, "nobody gets the same letter twice"
+    assert _confirmation_sent_at(sync_test_session, pending_id) is not None
+
+
+def test_backfill_is_safe_to_run_twice(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_pending_waitlist_confirmations
+
+    sent, _ = mail_spy
+    _, email = _new_waitlist_entry(sync_test_session)
+
+    send_pending_waitlist_confirmations()
+    after_first = len([c for c in sent if c[0] == email])
+    send_pending_waitlist_confirmations()
+
+    assert len([c for c in sent if c[0] == email]) == after_first == 1
+
+
+def test_admin_fallback_logs_instead_of_raising(monkeypatch, caplog):
+    """`logger` was undefined here — the fallback raised NameError instead."""
+    import logging
+
+    from app.tasks.notifications import notify_admins_scanner_down
+
+    monkeypatch.setenv("ADMIN_TELEGRAM_CHAT_IDS", "")
+    with caplog.at_level(logging.WARNING):
+        notify_admins_scanner_down("clamd not answering")
+
+    # `getMessage()` interpolates once. `record.message` is already the formatted
+    # string by the time caplog hands it over, so `% record.args` formats twice.
+    assert any("clamav down" in r.getMessage() for r in caplog.records)
+
+
+# ── T_UX.9 · language per recipient ──────────────────────────────────────────
+
+
+def _new_user(maker, locale: str):
+    from app.models.user import User
+
+    email = f"loc-{uuidlib.uuid4().hex[:10]}@vimana.test"
+    with maker() as db:
+        user = User(
+            email=email,
+            display_name="Locale Tester",
+            locale=locale,
+            notify_email=True,
         )
-        db.add(cargo)
-        await db.flush()
-        deal = Deal(
-            cargo_id=cargo.id,
-            trip_id=trip.id,
-            sender_id=seed_sender.id,
-            carrier_id=seed_carrier.id,
-            status=DealStatus.accepted,
-        )
-        db.add(deal)
-        await db.commit()
-        await db.refresh(deal)
-        return deal
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return str(user.id), email
 
 
-async def _unread(client, headers) -> int:
-    r = await client.get("/api/notifications/unread-count", headers=headers)
-    assert r.status_code == 200, r.text
-    return r.json()["unread"]
+def test_verification_code_is_written_in_the_account_language(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_verification_code
+
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "es")
+
+    send_verification_code(user_id, "418305")
+
+    subject, body = next((c[1], c[2]) for c in sent if c[0] == email)
+    assert "Código" in subject
+    assert "418305" in body
 
 
-async def test_a_card_tells_the_other_side_and_not_its_author(
-    client, carrier_headers, sender_headers, pair
-):
-    """Nobody is notified of their own press: `exclude` is the actor, passed
-    rather than inferred because half the callers act for the platform."""
-    before_carrier = await _unread(client, carrier_headers)
-    before_sender = await _unread(client, sender_headers)
+def test_verification_code_carries_an_html_part(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_verification_code
 
-    raised = await client.post(
-        f"/api/deals/{pair.id}/cards",
-        headers=sender_headers,
-        json={"kind": "pickup.proposed", "payload": {"method": "in_person"}},
-    )
-    assert raised.status_code == 201, raised.text
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "en")
 
-    assert await _unread(client, carrier_headers) == before_carrier + 1
-    assert await _unread(client, sender_headers) == before_sender
+    send_verification_code(user_id, "418305")
+
+    html = next(c[3] for c in sent if c[0] == email)
+    assert html and "<table" in html and "418305" in html
 
 
-async def test_the_panel_lists_what_happened_and_links_to_the_deal(
-    client, carrier_headers, sender_headers, pair
-):
-    await client.post(
-        f"/api/deals/{pair.id}/cards",
-        headers=sender_headers,
-        json={"kind": "pickup.proposed", "payload": {"method": "in_person"}},
-    )
-    r = await client.get("/api/notifications", headers=carrier_headers)
-    assert r.status_code == 200, r.text
-    mine = [n for n in r.json() if n["deal_id"] == str(pair.id)]
-    assert mine, r.text
-    assert mine[0]["kind"] == "deal.status"
-    assert mine[0]["read_at"] is None
+def test_recovery_letter_follows_the_account_language(sync_test_session, mail_spy):
+    from app.tasks.notifications import send_recovery_code_used
+
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "pl")
+
+    send_recovery_code_used(user_id, 7)
+
+    subject = next(c[1] for c in sent if c[0] == email)
+    assert "odzyskiwania" in subject.lower()
 
 
-async def test_the_open_deal_clears_its_own(
-    client, carrier_headers, sender_headers, pair
-):
-    """«Если изменения произошли в активном окне, их статусы показывать не
-    нужно» — the screen showing a deal marks that deal read, and nothing else
-    of the carrier's goes with it."""
-    await client.post(
-        f"/api/deals/{pair.id}/cards",
-        headers=sender_headers,
-        json={"kind": "pickup.proposed", "payload": {"method": "in_person"}},
-    )
-    assert await _unread(client, carrier_headers) >= 1
+def test_unknown_account_locale_does_not_break_delivery(sync_test_session, mail_spy):
+    """A stray tag in the column must not cost somebody their code."""
+    from app.tasks.notifications import send_verification_code
 
-    cleared = await client.post(
-        "/api/notifications/read",
-        headers=carrier_headers,
-        json={"deal_id": str(pair.id)},
-    )
-    assert cleared.status_code == 200, cleared.text
+    sent, _ = mail_spy
+    user_id, email = _new_user(sync_test_session, "kl")
 
-    r = await client.get("/api/notifications", headers=carrier_headers)
-    mine = [n for n in r.json() if n["deal_id"] == str(pair.id)]
-    assert all(n["read_at"] is not None for n in mine)
+    send_verification_code(user_id, "111222")
+
+    body = next(c[2] for c in sent if c[0] == email)
+    assert "111222" in body
 
 
-async def test_one_person_cannot_read_another_s(client, carrier_headers, sender_headers, pair):
-    """The caller is in the WHERE clause, not merely checked: the ids come from
-    a client, and a statement that could touch somebody else's row if the check
-    were forgotten is a statement waiting for the day it is."""
-    await client.post(
-        f"/api/deals/{pair.id}/cards",
-        headers=sender_headers,
-        json={"kind": "pickup.proposed", "payload": {"method": "in_person"}},
-    )
-    listed = await client.get("/api/notifications", headers=carrier_headers)
-    ids = [n["id"] for n in listed.json() if n["deal_id"] == str(pair.id)]
-    assert ids
+def test_send_email_refuses_a_non_ascii_address(smtp_spy):
+    """`sendmail` encodes the envelope as ASCII and raises; False is the answer
+    every caller already knows how to handle."""
+    from app.core.email import send_email
 
-    # The sender asks to read the carrier's rows by id.
-    await client.post(
-        "/api/notifications/read", headers=sender_headers, json={"ids": ids}
-    )
-    again = await client.get("/api/notifications", headers=carrier_headers)
-    still = [n for n in again.json() if n["id"] in ids]
-    assert all(n["read_at"] is None for n in still)
+    opened = smtp_spy(465)
+    assert send_email("\x80@x.test", "s", "b") is False
+    assert opened == [], "nothing should reach the network"
 
 
-async def test_a_chat_message_notifies_without_carrying_its_text(
-    client, carrier_headers, sender_headers, pair
-):
-    """Chat bodies are encrypted at rest; a preview here would undo that for
-    the price of a nicer line in a panel."""
-    sent = await client.post(
-        f"/api/deals/{pair.id}/dealvault/messages",
-        headers=sender_headers,
-        json={"text": "meet me at the north exit"},
-    )
-    assert sent.status_code == 201, sent.text
+def test_is_valid_email_rejects_non_ascii():
+    """One door, six callers: registration, email change, passkey and Nostr
+    signup, and the mail console all went through this."""
+    from app.core.email_verification import is_valid_email
 
-    r = await client.get("/api/notifications", headers=carrier_headers)
-    chat = [
-        n
-        for n in r.json()
-        if n["deal_id"] == str(pair.id) and n["kind"] == "chat.message"
-    ]
-    assert chat, r.text
-    assert "north exit" not in str(chat[0]["payload"])
-
-
-async def test_a_push_endpoint_is_kept_once_per_browser(client, sender_headers):
-    """The endpoint is the identity of the row: a browser re-issues it on
-    rotation, and the same account on two devices has two."""
-    body = {"endpoint": f"https://push.test/{unique_email('e')}", "p256dh": "k", "auth": "a"}
-    first = await client.post("/api/notifications/push", headers=sender_headers, json=body)
-    assert first.status_code == 204, first.text
-    again = await client.post("/api/notifications/push", headers=sender_headers, json=body)
-    assert again.status_code == 204, again.text
-
-
-async def test_the_stream_needs_a_session(client):
-    """It carries everything addressed to one person; an unauthenticated reader
-    is not a person."""
-    r = await client.get("/api/events/stream")
-    assert r.status_code in (401, 403), r.text
+    assert is_valid_email("someone@example.test") is True
+    assert is_valid_email("\x80@x.test") is False
+    assert is_valid_email("почта@пример.рф") is False
