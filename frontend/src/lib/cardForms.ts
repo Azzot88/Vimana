@@ -85,12 +85,6 @@ export const PAYMENT_METHODS = [
  *  only what is still ahead. */
 export const TRANSIT_SEQUENCE = ['departed', 'layover', 'arrived'] as const
 
-/** T_UX.28 п.6, kept — «Пересадка тоже может быть повторена несколько раз, но
- *  строго до того как прилетел». A milestone that holds its place in the order
- *  without being spent by the first one: a journey can have several layovers,
- *  and none of them after the landing. */
-export const TRANSIT_REPEATABLE = new Set(['layover'])
-
 /** How far along the journey these declarations put the parcel: `-1` for the
  *  statuses that have no place in the order.
  *
@@ -101,9 +95,34 @@ export const transitRank = (stage: string): number =>
 /** The furthest milestone already declared, or `-1` for a parcel that has not
  *  reported anything yet.
  *
- *  Called by: `components/CardActions`. */
+ *  Called by: `transitOffer`. */
 export const transitReached = (declared: readonly string[]): number =>
   declared.reduce((far, s) => Math.max(far, transitRank(s)), -1)
+
+/** T_UX.29 pt.5 (owner, 2026-09-20): «Прошедшие статусы, которые были
+ *  кнопками, должны пропадать из блока. А показываться только тот, который
+ *  следует сразу после.»
+ *
+ *  The chips stopped being a menu of the journey and became the next step. What
+ *  is behind is gone — the record of it is the chat, where the card itself
+ *  stands with its time — and what is ahead is one thing, except in the air:
+ *  `layover` repeats and `arrived` follows it, so between departure and landing
+ *  the carrier is offered both. Naming only one of them would make a journey
+ *  with a connection undeclarable, and a journey without one unfinishable.
+ *
+ *  `storage` — «Готово к вручению» since this round — is the far end and stays
+ *  offered: it is the one status the carrier may need to repeat while a
+ *  recipient is found. Delay and customs are gone from the list entirely
+ *  (owner: «это будет сказано в чате, если нужно»); old deals keep theirs, and
+ *  the labels stay so an arbiter can read them.
+ *
+ *  Called by: `components/CardActions`. */
+export function transitOffer(declared: readonly string[]): string[] {
+  const reached = transitReached(declared)
+  if (reached < transitRank('departed')) return ['departed']
+  if (reached < transitRank('arrived')) return ['layover', 'arrived']
+  return ['storage']
+}
 
 const MEETING_FIELDS: CardField[] = [
   { name: 'method', type: 'select', options: HANDOVER_METHODS, required: true },
@@ -177,14 +196,11 @@ export const CARD_FORMS: CardFormSpec[] = [
            decided in `CardActions`, off the stages already declared. */
         name: 'stage',
         type: 'select',
-        options: [
-          'departed',
-          'layover',
-          'arrived',
-          'delayed',
-          'customs',
-          'storage',
-        ],
+        /* T_UX.29 pt.5 — `delayed` and `customs` are off the list (owner,
+           2026-09-20). Which of the rest may be pressed is `transitOffer`; this
+           is only what the card can carry at all, and it mirrors the server's
+           `TransitUpdate.stage`. */
+        options: ['departed', 'layover', 'arrived', 'storage'],
         required: true,
       },
       { name: 'eta', type: 'datetime' },

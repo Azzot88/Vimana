@@ -578,7 +578,7 @@
     "uploadFailed": "Could not upload the file",
     "arbiterOpened": "An arbiter opened this thread for the dispute. Both sides see this notice.",
     "kind": {
-      "handoff_photo": "Hand-off photo",
+      "handoff_photo": "Send-off photo",
       "receipt_photo": "Receipt photo",
       "selfie": "Selfie with the other party",
       "selfieWithSender": "Selfie with the sender",
@@ -587,7 +587,7 @@
       "payment_receipt": "Payment receipt",
       "identity_doc": "Identity document",
       "pre_seal_photo": "Photo before sealing",
-      "cargo_photo": "Photo of the shipment"
+      "cargo_photo": "Cargo photo"
     },
     "shareAddress": {
       "button": "Share my address",
@@ -1059,7 +1059,7 @@
       "layover": "the parcel is waiting for a connecting flight.",
       "delayed": "the carrier has flagged that the timing has shifted.",
       "customs": "the parcel is going through control — no meeting is arranged until it is out.",
-      "storage": "customs is behind it and the parcel is waiting to be handed over — you can arrange the meeting."
+      "storage": "the flight has landed and the parcel is waiting to be handed over — you can arrange the meeting."
     },
     "next": {
       "arrival": "Next: arrival in {{place}} — {{when}}",
@@ -1814,7 +1814,7 @@
       "arrived": "Arrived",
       "delayed": "Delayed",
       "customs": "Customs",
-      "storage": "Storage",
+      "storage": "Ready to hand over",
       "cash": "Cash",
       "platform": "On platform",
       "escrow": "Escrow",

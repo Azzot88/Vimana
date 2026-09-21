@@ -120,9 +120,12 @@ class TransitUpdate(BaseModel):
     # the same reason storage did: it repeats, and an ordered ladder that can
     # come round again is not a ladder. The order and the once-only rule are
     # enforced in `api.cards._raise_card`, where the timeline can be read.
-    stage: Literal[
-        "departed", "layover", "arrived", "delayed", "customs", "storage"
-    ]
+    # T_UX.29 pt.5 (owner, 2026-09-20): «Задержку и Таможню убираем, это будет
+    # сказано в чате, если нужно.» Both are gone from what may be raised, and
+    # deliberately not from `cards.opt.*` on the client: deals struck before
+    # this round carry them, and an arbiter reading one must still find the
+    # word. Validation runs on creation only, so the history is untouched.
+    stage: Literal["departed", "layover", "arrived", "storage"]
     eta: datetime | None = None
     #: T_DEAL.1 — the storage place's offset from UTC, in minutes, as the
     #: carrier's own device reports it. The free period ends at a morning

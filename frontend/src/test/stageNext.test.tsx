@@ -97,10 +97,10 @@ describe('the next planned step', () => {
 
 describe('the journey statuses', () => {
   it('stops offering a departure once it has been declared', () => {
-    /* T_UX.29 п.2 — and it is still **shown**. Silently dropping it made the
-       row shrink with no explanation; the owner asked for the opposite, that
-       the journey so far read off the card. So it stays, as a record with a
-       tick and nothing to press. */
+    /* T_UX.29 pt.5 (owner, 2026-09-20): «Прошедшие статусы, которые были
+       кнопками, должны пропадать из блока.» The record of the departure is its
+       card in the chat, with a time and an author; a ticked chip repeating it
+       under the next button was a second copy of the same list. */
     stages({
       messages: [
         msg({
@@ -110,10 +110,7 @@ describe('the journey statuses', () => {
         }),
       ],
     })
-    expect(
-      screen.queryByRole('button', { name: /^Departed$|^Вылетел$/ }),
-    ).not.toBeInTheDocument()
-    expect(screen.getByText(/^Departed$|^Вылетел$/)).toBeInTheDocument()
+    expect(screen.queryByText(/^Departed$|^Вылетел$/)).not.toBeInTheDocument()
     // The layover is still on, because the parcel has not landed.
     expect(screen.getByText(/^Layover$|^Пересадка$/)).toBeInTheDocument()
   })

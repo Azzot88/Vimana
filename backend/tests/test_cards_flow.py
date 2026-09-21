@@ -1353,15 +1353,37 @@ async def test_a_layover_repeats_but_never_after_the_arrival(
     assert too_late.status_code == 409, too_late.text
 
 
-async def test_a_delay_may_be_declared_again(client, carrier_headers, deal):
-    """Delay, customs and storage are deliberately unconstrained: each can
-    genuinely happen twice, and a rule against the second one would silence the
-    person carrying the parcel when they have most to say."""
+async def test_storage_may_be_declared_again(client, carrier_headers, deal):
+    """T_DEAL.1 — «Готово к вручению» is unconstrained: a parcel can wait for a
+    recipient more than once, and a rule against the second declaration would
+    silence the person holding it when they have most to say.
+
+    T_UX.29 pt.5 — delay and customs used to stand here for the same reason and
+    are gone at the owner's word («это будет сказано в чате, если нужно»); the
+    test moved to the one such status that remains rather than disappearing
+    with them, because the property being checked is still in the code.
+    """
     for _ in range(2):
         r = await _card(
-            client, carrier_headers, deal.id, "transit.update", {"stage": "delayed"}
+            client, carrier_headers, deal.id, "transit.update", {"stage": "storage"}
         )
         assert r.status_code == 201, r.text
+
+
+async def test_a_delay_or_customs_can_no_longer_be_raised(
+    client, carrier_headers, deal
+):
+    """T_UX.29 pt.5 (owner, 2026-09-20): «Задержку и Таможню убираем.»
+
+    Refused by the payload model, not by the chip list: deals struck before this
+    round keep their cards and an arbiter still reads the words, but nothing new
+    grows one.
+    """
+    for gone in ("delayed", "customs"):
+        r = await _card(
+            client, carrier_headers, deal.id, "transit.update", {"stage": gone}
+        )
+        assert r.status_code == 422, f"{gone}: {r.text}"
 
 
 async def test_the_retired_receipt_card_cannot_be_raised(client, carrier_headers, deal):
@@ -1590,10 +1612,10 @@ async def test_a_status_behind_the_journey_cannot_be_declared(
     )
     assert backwards.status_code == 409, backwards.text
 
-    # The conditions keep their freedom: customs happens after the landing as
-    # readily as before it, and «задерживаемся» is never behind anything.
+    # The far end keeps its freedom: «Готово к вручению» follows the landing and
+    # may be declared more than once while a recipient is found.
     still_fine = await _card(
-        client, carrier_headers, deal.id, "transit.update", {"stage": "customs"}
+        client, carrier_headers, deal.id, "transit.update", {"stage": "storage"}
     )
     assert still_fine.status_code == 201, still_fine.text
 

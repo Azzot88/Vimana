@@ -1140,17 +1140,31 @@ describe('the status form on the flight', () => {
     expect(screen.getByText(/^Stage$|^Этап$/)).toBeInTheDocument()
   })
 
-  it('offers nothing behind the furthest status declared', () => {
+  it('offers the next status and nothing else', () => {
+    /* T_UX.29 pt.5 — one step ahead, and what is behind is gone from the block.
+       After the landing the only thing left to declare is the far end. */
     renderWithProviders(flight([update('departed'), update('arrived')]))
-    // Drawn as a record — visible, with nothing to press.
-    expect(screen.getByText(/^Departed$|^Вылетел$/)).toBeInTheDocument()
+    expect(screen.queryByText(/^Departed$|^Вылетел$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Landed$|^Прилетел$/)).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /^Departed$|^Вылетел$/ }),
-    ).not.toBeInTheDocument()
-    // The conditions keep their freedom: customs happens after a landing as
-    // readily as before one.
+      screen.getByRole('button', {
+        name: /ready to hand over|Готово к вручению/i,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('no longer offers a delay or customs at all', () => {
+    // Owner, 2026-09-20: «Задержку и Таможню убираем, это будет сказано в чате,
+    // если нужно.»
+    renderWithProviders(flight([update('departed')]))
+    expect(screen.queryByText(/^Delay$|^Задержка$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Customs$|^Таможня$/)).not.toBeInTheDocument()
+    // What is offered in the air is the connection and the landing.
     expect(
-      screen.getByRole('button', { name: /^Customs$|^Таможня$/ }),
+      screen.getByRole('button', { name: /^Layover$|^Пересадка$/ }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^Landed$|^Прилетел$/ }),
     ).toBeInTheDocument()
   })
 

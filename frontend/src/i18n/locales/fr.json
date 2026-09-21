@@ -559,7 +559,7 @@
     "uploadFailed": "Impossible d'envoyer le fichier",
     "arbiterOpened": "Un arbitre a ouvert cette conversation pour le litige. Les deux parties voient cet avis.",
     "kind": {
-      "handoff_photo": "Photo de la remise",
+      "handoff_photo": "Photo de l’envoi",
       "receipt_photo": "Photo de la réception",
       "selfie": "Selfie avec l’autre partie",
       "selfieWithSender": "Selfie avec l’expéditeur",
@@ -1618,7 +1618,7 @@
       "arrived": "Arrivé",
       "delayed": "Retard",
       "customs": "Douane",
-      "storage": "Stockage",
+      "storage": "Prêt pour la remise",
       "cash": "Espèces",
       "platform": "Sur la plateforme",
       "escrow": "Séquestre",
@@ -2173,7 +2173,7 @@
       "layover": "le colis attend un vol de correspondance.",
       "delayed": "le transporteur signale un décalage.",
       "customs": "le colis passe le contrôle — aucun rendez-vous n’est fixé avant.",
-      "storage": "la douane est passée et le colis attend la remise — vous pouvez convenir du rendez-vous."
+      "storage": "le vol a atterri et le colis attend la remise — vous pouvez convenir du rendez-vous."
     },
     "next": {
       "arrival": "Ensuite : arrivée à {{place}} — {{when}}",

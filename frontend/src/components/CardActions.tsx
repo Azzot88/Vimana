@@ -8,9 +8,7 @@ import {
   buildPayload,
   formsForRole,
   kindKey,
-  TRANSIT_REPEATABLE,
-  transitRank,
-  transitReached,
+  transitOffer,
   type CardField,
   type CardFormSpec,
   type DealRole,
@@ -243,57 +241,23 @@ export default function CardActions({
        that cannot be pressed are not drawn at all — a disabled option in a list
        is still something to read and decide about. */
     if (f.type === 'select' && f.name === 'stage') {
-      /* T_UX.29 п.2 (owner, 2026-09-20): «Если посылка уже отправлена и летит,
-         то нельзя выбрать статус "Вылетела", она уже вылетела… на карточке не
-         должно быть возможности выбрать предыдущий статус, только один из
-         последующих. Это должно читаться на карточке.»
+      /* T_UX.29 pt.5 (owner, 2026-09-20): «Прошедшие статусы, которые были
+         кнопками, должны пропадать из блока. А показываться только тот, который
+         следует сразу после.»
 
-         The rule used to be three special cases — departed and arrived once
-         each, layover not after landing — and it left every gap the list did
-         not name: a landed parcel could still be declared departed, a delay
-         could be filed before the flight it delayed. One order, read once,
-         closes all of them: nothing at or behind the furthest milestone already
-         declared is offered again.
-
-         And the passed ones are **drawn**, not dropped. Silently removing them
-         made the row shrink with no explanation — «где кнопка "Вылетел"» — and
-         the owner asked for the opposite: the journey so far should read off
-         the card. They are stated as a record rather than as a control, so
-         there is nothing to decide about them. */
-      const reached = transitReached(doneStages)
-      /* A milestone still open: ahead of the furthest one declared, or level
-         with it and repeatable — «Пересадка… может быть повторена несколько
-         раз, но строго до того как прилетел» (T_UX.28 п.6, kept). */
-      const stillAhead = (o: string) => {
-        const r = transitRank(o)
-        if (r < 0) return true
-        return r > reached || (r === reached && TRANSIT_REPEATABLE.has(o))
-      }
-      /* Declared, not merely «behind» — the difference matters. A carrier who
-         announced the landing without ever announcing a layover has not had
-         one, and «Пересадка ✓» over that journey would be the screen inventing
-         a stop. Drawn is what this deal actually said. */
-      const passed = f.options
-        .filter(
-          (o) =>
-            transitRank(o) >= 0 && doneStages.includes(o) && !stillAhead(o),
-        )
-        .slice()
-        .sort((a, b) => transitRank(a) - transitRank(b))
-      const offered = f.options.filter(stillAhead)
+         The record of what has happened is the chat — every status is a card
+         there, with its time and its author. Repeating it here as a row of
+         ticked chips was a second copy of the same list, growing under the one
+         button somebody actually came to press, and the owner asked for the
+         opposite of what the previous round built. Which statuses are still
+         ahead is `transitOffer`, declared once and shared with the server's
+         own guard. */
+      const offered = transitOffer(doneStages)
+      if (offered.length === 0) return null
       return (
         <div key={f.name} className="w-full">
           <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
           <div className="flex flex-wrap items-center gap-2">
-            {passed.map((o) => (
-              <span
-                key={o}
-                className="inline-flex items-center gap-1 text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border border-navy/10 bg-navy/[0.04] text-navy/35"
-              >
-                {t(`cards.opt.${o}`, o)}
-                <span aria-hidden>✓</span>
-              </span>
-            ))}
             {offered.map((o) => (
               <button
                 key={o}

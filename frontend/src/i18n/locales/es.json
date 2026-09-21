@@ -559,7 +559,7 @@
     "uploadFailed": "No se pudo subir el archivo",
     "arbiterOpened": "Un árbitro abrió esta conversación por la disputa. Ambas partes ven este aviso.",
     "kind": {
-      "handoff_photo": "Foto de la entrega",
+      "handoff_photo": "Foto del envío",
       "receipt_photo": "Foto de la recepción",
       "selfie": "Selfi con la otra parte",
       "selfieWithSender": "Selfi con el remitente",
@@ -568,7 +568,7 @@
       "payment_receipt": "Comprobante de pago",
       "identity_doc": "Documento de identidad",
       "pre_seal_photo": "Foto antes de cerrar",
-      "cargo_photo": "Foto del envío"
+      "cargo_photo": "Foto de la carga"
     },
     "shareAddress": {
       "button": "Compartir mi dirección",
@@ -1618,7 +1618,7 @@
       "arrived": "Llegó",
       "delayed": "Retraso",
       "customs": "Aduana",
-      "storage": "Almacenaje",
+      "storage": "Listo para entregar",
       "cash": "Efectivo",
       "platform": "En la plataforma",
       "escrow": "Depósito",
@@ -2173,7 +2173,7 @@
       "layover": "el paquete espera un vuelo de conexión.",
       "delayed": "el transportista ha señalado que el plazo se desplaza.",
       "customs": "el paquete pasa el control — no se concierta el encuentro hasta que salga.",
-      "storage": "la aduana ya está pasada y el paquete espera la entrega — pueden concertar el encuentro."
+      "storage": "el vuelo ha aterrizado y el paquete espera la entrega — pueden concertar el encuentro."
     },
     "next": {
       "arrival": "Después: llegada a {{place}} — {{when}}",

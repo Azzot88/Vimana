@@ -561,7 +561,7 @@
     "uploadFailed": "Nie udało się wysłać pliku",
     "arbiterOpened": "Arbiter otworzył tę rozmowę w związku ze sporem. Obie strony widzą to powiadomienie.",
     "kind": {
-      "handoff_photo": "Zdjęcie przekazania",
+      "handoff_photo": "Zdjęcie nadania",
       "receipt_photo": "Zdjęcie odbioru",
       "selfie": "Selfie z drugą stroną",
       "selfieWithSender": "Selfie z nadawcą",
@@ -570,7 +570,7 @@
       "payment_receipt": "Potwierdzenie zapłaty",
       "identity_doc": "Dokument tożsamości",
       "pre_seal_photo": "Zdjęcie przed zaklejeniem",
-      "cargo_photo": "Zdjęcie przesyłki"
+      "cargo_photo": "Zdjęcie ładunku"
     },
     "shareAddress": {
       "button": "Udostępnij adres",
@@ -1624,7 +1624,7 @@
       "arrived": "Przyleciał",
       "delayed": "Opóźnienie",
       "customs": "Odprawa",
-      "storage": "Przechowanie",
+      "storage": "Gotowe do wydania",
       "cash": "Gotówka",
       "platform": "Na platformie",
       "escrow": "Escrow",
@@ -2199,7 +2199,7 @@
       "layover": "paczka czeka na lot przesiadkowy.",
       "delayed": "przewoźnik zgłosił, że termin się przesuwa.",
       "customs": "paczka przechodzi kontrolę — do jej zakończenia nie umawia się spotkania.",
-      "storage": "odprawa celna za nami, paczka czeka na wydanie — można umówić spotkanie."
+      "storage": "lot wylądował, paczka czeka na wydanie — można umówić spotkanie."
     },
     "next": {
       "arrival": "Dalej: przylot do {{place}} — {{when}}",
