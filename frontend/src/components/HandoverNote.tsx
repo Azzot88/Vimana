@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import type { Terms } from '../api/terms'
-import type { DealRole } from '../lib/cardForms'
 import MonoText from './MonoText'
 
 /**
