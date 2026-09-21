@@ -1187,19 +1187,24 @@ describe('the far side of the flight', () => {
        `transit` and `arrived` share the status `in_transit`, and the union
        «every stage standing on the current status» put the whole arrival over a
        flight still in the air. */
+    /* Anchored on purpose: this stage's own hint ends «…posted by mail or
+       handed to delivery», so a loose match finds the sentence explaining the
+       stage rather than a control that should not be on it. What is being
+       asserted is the **action**, and an action is a button or a form's
+       heading — both of which carry the label and nothing else. */
     renderWithProviders(flight([update('departed')]))
     expect(
-      screen.queryByText(/posted by mail|Отправлено по почте/i),
+      screen.queryByText(/^posted by mail$|^отправлено по почте$/i),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText(/handed to delivery|Передано в доставку/i),
+      screen.queryByText(/^handed to delivery$|^передано в доставку$/i),
     ).not.toBeInTheDocument()
   })
 
   it('offers them once the flight is down', () => {
     renderWithProviders(flight([update('arrived')]))
     expect(
-      screen.getByText(/posted by mail|Отправлено по почте/i),
+      screen.getByText(/^posted by mail$|^отправлено по почте$/i),
     ).toBeInTheDocument()
   })
 
@@ -1353,7 +1358,7 @@ describe('an arrangement that already stands', () => {
        describes the wrong event to the two people standing at it. */
     renderWithProviders(panel([landed, settled]))
     expect(
-      screen.queryByText(/handed to delivery|Передано в доставку/i),
+      screen.queryByText(/^handed to delivery$|^передано в доставку$/i),
     ).not.toBeInTheDocument()
   })
 
@@ -1373,7 +1378,7 @@ describe('an arrangement that already stands', () => {
       ),
     )
     expect(
-      screen.getByText(/handed to delivery|Передано в доставку/i),
+      screen.getByText(/^handed to delivery$|^передано в доставку$/i),
     ).toBeInTheDocument()
     expect(screen.queryByText(/^Handed over$|^Вручено$/)).not.toBeInTheDocument()
   })
