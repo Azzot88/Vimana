@@ -1566,6 +1566,7 @@
       "posted_declared": "Zgłoś nadanie",
       "posted_confirmed": "Nadanie potwierdzone",
       "delivery_declared": "Zgłoś doręczenie",
+      "delivery_handed": "Wręczono",
       "delivery_confirmed": "Doręczenie potwierdzone",
       "payment_method_agreed": "Sposób płatności",
       "payment_declared": "Zgłoś płatność",
@@ -2167,6 +2168,13 @@
     "more": "więcej",
     "unpaidHint": "Przekazane, ale nie rozliczone? Zaproś arbitra — widzi rozmowę i stan transakcji.",
     "theirTurn": "Teraz ruch drugiej strony — powiadomimy cię, a ten ekran odświeży się sam.",
+    "now": "Teraz: {{status}}",
+    "transitHint": {
+      "layover": "paczka czeka na lot przesiadkowy.",
+      "delayed": "przewoźnik zgłosił, że termin się przesuwa.",
+      "customs": "paczka przechodzi kontrolę — do jej zakończenia nie umawia się spotkania.",
+      "storage": "odprawa celna za nami, paczka czeka na wydanie — można umówić spotkanie."
+    },
     "next": {
       "arrival": "Dalej: przylot do {{place}} — {{when}}",
       "arrivalNoTime": "Dalej: przylot do {{place}}",

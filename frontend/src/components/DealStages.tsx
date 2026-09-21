@@ -121,6 +121,41 @@ export default function DealStages({
     .map((m) => (m.card_payload as { stage?: string } | null)?.stage)
     .filter((stage): stage is string => typeof stage === 'string')
 
+  /* T_UX.29 pt.2 п.1, п.3 (owner, 2026-09-20): «После смены статуса "Прилетел"
+     на "Таможня" окно не обновилось» и «Статус хранение должен показывать
+     получателю, что можно планировать забор посылки».
+
+     Where the parcel is **right now**, as the carrier last declared it. Two
+     complaints with one answer: pressing a chip changed nothing on the panel —
+     the news went into the chat and the left-hand column stood as it was — and
+     the person waiting for the parcel had nowhere to read what «таможня» or
+     «хранение» means for them. Neither is a rung: customs, delay and storage
+     come round more than once, and a rung that repeats stops being a rung
+     (`T_DEAL.1`). So they are a line under the heading, with the sentence that
+     says what to do about them.
+
+     The **last** declaration wins, not the furthest milestone: a parcel that
+     landed and then went into storage is in storage. Superseded and declined
+     cards count for the same reason the landing does — the carrier said it. */
+  const lastTransit = [...messages]
+    .reverse()
+    .map((m) =>
+      m.card_kind === 'transit.update'
+        ? (m.card_payload as { stage?: string } | null)?.stage
+        : undefined,
+    )
+    .find((stage): stage is string => typeof stage === 'string')
+
+  /* Silent on the two that are rungs of their own: «Сейчас: Прилетел» under a
+     heading reading «Прилетел» is a line that repeats rather than informs. */
+  const transitNow =
+    lastTransit && lastTransit !== 'arrived' && lastTransit !== 'departed'
+      ? lastTransit
+      : null
+  const transitHint = transitNow
+    ? t(`stages.transitHint.${transitNow}`, { defaultValue: '' })
+    : ''
+
   const marks = { arrived, posted }
   const currentKey: DealStageKey = stageOf(status, marks)
   const currentIndex = stageIndex(currentKey)
@@ -300,16 +335,49 @@ export default function DealStages({
      same arrangement the meeting card shows decides which caption it is:
      a place or a time already agreed means moving, nothing means setting. */
   const meetingLabels: Record<string, string> = {}
+  /* T_UX.29 pt.2 п.2 (owner, 2026-09-20): «Всё ещё предлагается выбрать способ
+     передачи, хотя он уже назначен — и написано, что условия уже согласованы.»
+
+     The caption was decided by the place and the time alone, so an **accepted**
+     «Вручение перенесено» that named only the method left the screen offering
+     «Способ передачи» over a method the two of them had already agreed — while
+     the boarding pass above said «Условия согласованы». An answered card is an
+     arrangement whatever fields it carried; the missing time is what
+     `MeetingNote` says on its own line, not a reason to call the whole section
+     unset. */
+  const meetingStands: Record<'handover' | 'delivery', boolean> = {
+    handover: false,
+    delivery: false,
+  }
   for (const [kind, stageOfMeeting] of [
     ['pickup.proposed', 'handover'],
     ['dropoff.proposed', 'delivery'],
   ] as const) {
     const arranged = meetingOf(terms, messages, stageOfMeeting)
-    if (!arranged.place && !arranged.at) {
+    const answered = messages.some(
+      (m) => m.card_kind === kind && m.card_state === 'accepted',
+    )
+    meetingStands[stageOfMeeting] = Boolean(
+      arranged.place || arranged.at || answered,
+    )
+    if (!meetingStands[stageOfMeeting]) {
       meetingLabels[kind] = t(
         `cards.kind.${stageOfMeeting === 'handover' ? 'pickup' : 'dropoff'}_assign`,
       )
     }
+  }
+
+  /* T_UX.29 pt.2 п.4 (owner, 2026-09-20): «После того как выбрано время
+     вручения при способе передачи "Лично в руки", окно должно называться не
+     "Передано в доставку", а "Вручено".»
+
+     One card, two acts: `delivery.declared` ends the carriage either by putting
+     the parcel into somebody's hands or by handing it to a service that will.
+     «Передано в доставку» over a meeting at a café describes the wrong event to
+     the two people standing at it — and an arbiter reads these labels. The
+     agreed method is what decides, so the caption follows it. */
+  if (meetingOf(terms, messages, 'delivery').method === 'in_person') {
+    meetingLabels['delivery.declared'] = t('cards.kind.delivery_handed')
   }
 
   /* T_UX.29 п.4 (owner, 2026-09-20): «Раздел "Способ передачи"… должен быть
@@ -350,6 +418,23 @@ export default function DealStages({
           formsForRole(myRole).some((form) => form.kind === kind),
       )
     : []
+
+  /* T_UX.29 pt.2 п.2 — and an arrangement that already stands is not the form
+     this stage opens with. `CardActions` expands the first action it is given
+     (`T_UX.28 п.3`), so «Способ передачи» unfolded itself over a meeting the
+     two of them had agreed, with every field blank. Moved to the end it is
+     still one press away — which is what changing an arrangement should cost —
+     and the step that is actually next opens instead.
+
+     Stable sort: everything else keeps the protocol order the stage declared. */
+  const stillToArrange = (kind: string) =>
+    (kind === 'dropoff.proposed' && meetingStands.delivery) ||
+    (kind === 'pickup.proposed' && meetingStands.handover)
+      ? 1
+      : 0
+  const ordered = [...mineNow].sort(
+    (a, b) => stillToArrange(a) - stillToArrange(b),
+  )
 
   return (
     <div className="space-y-4">
@@ -424,6 +509,24 @@ export default function DealStages({
                 : `stages.hint.${currentKey}`,
             )}
           </p>
+          {/* T_UX.29 pt.2 пп.1, 3 — where it is now, for everybody and not
+              only for the carrier who typed it. Drawn above «Дальше», because
+              «сейчас» is what the next line is measured from, and silent when
+              the last word about the journey is the rung itself: «Сейчас:
+              Прилетел» under a heading that says «Прилетел» is a line that
+              repeats rather than informs. */}
+          {transitNow && (
+            <p className="text-xs font-body text-navy mt-1">
+              <span className="font-medium">
+                {t('stages.now', {
+                  status: t(`cards.opt.${transitNow}`, transitNow),
+                })}
+              </span>
+              {/* The sentence is what makes the line worth reading; without one
+                  a dangling dash is all that is added. */}
+              {transitHint && ` — ${transitHint}`}
+            </p>
+          )}
           {/* T_UX.28 п.7 — what is planned next, in one line, under the stage
               it follows. */}
           {nextStep && (
@@ -513,7 +616,7 @@ export default function DealStages({
           <CardActions
             dealId={dealId}
             myRole={myRole}
-            only={mineNow}
+            only={ordered}
             labels={meetingLabels}
             doneStages={doneStages}
             /* T_UX.29 п.1 — «Статус "В пути" это то же самое что и этап "В

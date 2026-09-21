@@ -1560,6 +1560,7 @@
       "posted_declared": "Declarar el envío postal",
       "posted_confirmed": "Envío confirmado",
       "delivery_declared": "Declarar recepción",
+      "delivery_handed": "Entregado en mano",
       "delivery_confirmed": "Recepción confirmada",
       "payment_method_agreed": "Método de pago",
       "payment_declared": "Declarar pago",
@@ -2141,6 +2142,13 @@
     "more": "más",
     "unpaidHint": "¿Entregado y sin pagar? Llama a un árbitro: ve la conversación y en qué punto está la operación.",
     "theirTurn": "Es el turno de la otra parte: te avisaremos y esta pantalla se actualiza sola.",
+    "now": "Ahora: {{status}}",
+    "transitHint": {
+      "layover": "el paquete espera un vuelo de conexión.",
+      "delayed": "el transportista ha señalado que el plazo se desplaza.",
+      "customs": "el paquete pasa el control — no se concierta el encuentro hasta que salga.",
+      "storage": "la aduana ya está pasada y el paquete espera la entrega — pueden concertar el encuentro."
+    },
     "next": {
       "arrival": "Después: llegada a {{place}} — {{when}}",
       "arrivalNoTime": "Después: llegada a {{place}}",

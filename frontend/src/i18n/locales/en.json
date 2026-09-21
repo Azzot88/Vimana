@@ -1029,6 +1029,13 @@
     "more": "more",
     "unpaidHint": "Handed over but not settled? Invite an arbiter — they see the conversation and where the deal stands.",
     "theirTurn": "It is the other side's turn — you will be notified, and this screen updates itself.",
+    "now": "Now: {{status}}",
+    "transitHint": {
+      "layover": "the parcel is waiting for a connecting flight.",
+      "delayed": "the carrier has flagged that the timing has shifted.",
+      "customs": "the parcel is going through control — no meeting is arranged until it is out.",
+      "storage": "customs is behind it and the parcel is waiting to be handed over — you can arrange the meeting."
+    },
     "next": {
       "arrival": "Next: arrival in {{place}} — {{when}}",
       "arrivalNoTime": "Next: arrival in {{place}}",
@@ -1727,6 +1734,7 @@
       "posted_declared": "Posted by mail",
       "posted_confirmed": "Posting confirmed",
       "delivery_declared": "Handed to delivery",
+      "delivery_handed": "Handed over",
       "delivery_confirmed": "Delivery confirmed",
       "payment_method_agreed": "Payment method",
       "payment_declared": "Payment made",

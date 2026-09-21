@@ -97,9 +97,16 @@ export default function DealCard({ msg, dealId, myRole, mine, onChanged, onPrevi
               used to be headed «Статус в пути» with the actual status folded
               into the fields below, so the chat read as five identical rows.
               The status **is** the news, so it is the heading. */}
+          {/* T_UX.29 pt.2 п.4 — and a hand-to-hand delivery is «Вручено», not
+              «Передано в доставку». The same card ends the carriage two ways,
+              and the method it carries says which; the panel captions it the
+              same way (`DealStages`), because §9a: one act, one name, wherever
+              it is drawn. */}
           {kind === 'transit.update' && typeof payload.stage === 'string'
             ? t(`cards.opt.${payload.stage}`, payload.stage)
-            : t(kindKey(kind), kind)}
+            : kind === 'delivery.declared' && payload.method === 'in_person'
+              ? t('cards.kind.delivery_handed')
+              : t(kindKey(kind), kind)}
         </span>
         {msg.card_state && msg.card_state !== 'pending' && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-navy/10 text-navy/50">

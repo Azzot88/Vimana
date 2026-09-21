@@ -1235,3 +1235,146 @@ describe('the far side of the flight', () => {
     ).toBeInTheDocument()
   })
 })
+
+// ── T_UX.29 pt.2 · where it is now, and what the next act is called ───────
+
+describe('the panel after a status that is not a rung', () => {
+  const flight = (messages: VaultMessage[], myRole: DealRole = 'recipient') => (
+    <DealStages
+      dealId="d1"
+      status="in_transit"
+      myRole={myRole}
+      terms={null}
+      deal={null}
+      messages={messages}
+      onDone={() => {}}
+    />
+  )
+  const update = (stage: string, id = `t-${stage}`): VaultMessage =>
+    msg({
+      id,
+      card_kind: 'transit.update',
+      card_state: 'accepted',
+      card_payload: { stage },
+    })
+
+  it('says where the parcel is now, not only in the chat', () => {
+    /* T_UX.29 pt.2 п.1 (owner, 2026-09-20): «После смены статуса "Прилетел" на
+       "Таможня" окно не обновилось и кнопки остались в том же наборе.» The news
+       went into the chat and the left-hand column stood as it was. */
+    renderWithProviders(flight([update('arrived'), update('customs')]))
+    expect(screen.getByText(/^Now: Customs|^Сейчас: Таможня/)).toBeInTheDocument()
+  })
+
+  it('tells the recipient what storage means for them', () => {
+    /* T_UX.29 pt.2 п.3 — «Статус хранение должен показывать получателю, что
+       можно планировать забор посылки. Он сигнализирует, что таможня пройдена
+       и можно встречаться.» */
+    renderWithProviders(flight([update('arrived'), update('storage')]))
+    expect(
+      screen.getByText(/arrange the meeting|можно договариваться о встрече/i),
+    ).toBeInTheDocument()
+  })
+
+  it('does not repeat the rung it is standing on', () => {
+    // «Сейчас: Прилетел» under a heading reading «Прилетел» informs nobody.
+    renderWithProviders(flight([update('arrived')]))
+    expect(screen.queryByText(/^Now: |^Сейчас: /)).not.toBeInTheDocument()
+  })
+})
+
+describe('an arrangement that already stands', () => {
+  const agreed = (over: Record<string, unknown> = {}): Terms =>
+    ({
+      id: 't1',
+      deal_id: 'd1',
+      card_kind: 'terms.agreed',
+      card_state: 'accepted',
+      requires_ack_by: null,
+      supersedes_id: null,
+      payload: { delivery_method: 'in_person', ...over },
+      description: null,
+      created_at: '2026-09-20T10:00:00Z',
+    }) as Terms
+
+  const landed = msg({
+    id: 't-arrived',
+    card_kind: 'transit.update',
+    card_state: 'accepted',
+    card_payload: { stage: 'arrived' },
+  })
+  const settled = msg({
+    id: 'drop-ok',
+    card_kind: 'dropoff.proposed',
+    card_state: 'accepted',
+    card_payload: { method: 'in_person' },
+  })
+
+  const panel = (messages: VaultMessage[], terms: Terms | null = agreed()) => (
+    <DealStages
+      dealId="d1"
+      status="in_transit"
+      myRole="recipient"
+      terms={terms}
+      deal={null}
+      messages={messages}
+      onDone={() => {}}
+    />
+  )
+
+  it('stops calling it «Способ передачи» once a card has been answered', () => {
+    /* T_UX.29 pt.2 п.2 (owner, 2026-09-20): «Всё ещё предлагается выбрать
+       способ передачи, хотя он уже назначен — и написано, что условия уже
+       согласованы.» The caption was decided by place and time alone, so an
+       accepted card naming only the method left the section reading «unset». */
+    renderWithProviders(panel([landed, settled]))
+    expect(
+      screen.queryByText(/delivery method|Способ передачи/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/move the delivery|Перенести вручение/i),
+    ).toBeInTheDocument()
+  })
+
+  it('does not unfold itself over an arrangement the two of them made', () => {
+    // The stage opens with the step that is actually next; changing a standing
+    // arrangement stays one press away.
+    renderWithProviders(panel([landed, settled]))
+    // The open form is the handover; the meeting is a button under it.
+    expect(screen.getByText(/^Handed over$|^Вручено$/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /move the delivery|Перенести вручение/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('calls a hand-to-hand delivery «Вручено», not «Передано в доставку»', () => {
+    /* T_UX.29 pt.2 п.4 — one card ends the carriage two ways, and the agreed
+       method says which. «Передано в доставку» over a meeting at a café
+       describes the wrong event to the two people standing at it. */
+    renderWithProviders(panel([landed, settled]))
+    expect(
+      screen.queryByText(/handed to delivery|Передано в доставку/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps «Передано в доставку» when the parcel goes on by courier', () => {
+    renderWithProviders(
+      panel(
+        [
+          landed,
+          msg({
+            id: 'drop-courier',
+            card_kind: 'dropoff.proposed',
+            card_state: 'accepted',
+            card_payload: { method: 'courier' },
+          }),
+        ],
+        agreed({ delivery_method: 'courier' }),
+      ),
+    )
+    expect(
+      screen.getByText(/handed to delivery|Передано в доставку/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/^Handed over$|^Вручено$/)).not.toBeInTheDocument()
+  })
+})

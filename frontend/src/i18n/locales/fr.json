@@ -1560,6 +1560,7 @@
       "posted_declared": "Déclarer l'envoi postal",
       "posted_confirmed": "Envoi confirmé",
       "delivery_declared": "Déclarer la livraison",
+      "delivery_handed": "Remis en main propre",
       "delivery_confirmed": "Livraison confirmée",
       "payment_method_agreed": "Mode de paiement",
       "payment_declared": "Déclarer le paiement",
@@ -2141,6 +2142,13 @@
     "more": "plus",
     "unpaidHint": "Remis mais pas payé ? Appelez un arbitre — il voit la conversation et l’état de l’accord.",
     "theirTurn": "C’est au tour de l’autre partie — vous serez prévenu, et cet écran se met à jour tout seul.",
+    "now": "Maintenant : {{status}}",
+    "transitHint": {
+      "layover": "le colis attend un vol de correspondance.",
+      "delayed": "le transporteur signale un décalage.",
+      "customs": "le colis passe le contrôle — aucun rendez-vous n’est fixé avant.",
+      "storage": "la douane est passée et le colis attend la remise — vous pouvez convenir du rendez-vous."
+    },
     "next": {
       "arrival": "Ensuite : arrivée à {{place}} — {{when}}",
       "arrivalNoTime": "Ensuite : arrivée à {{place}}",
