@@ -1146,13 +1146,22 @@ describe('the status form on the flight', () => {
        stopped being a status (owner: «не нужно "передано на хранение", оно
        подразумевается»). */
     renderWithProviders(flight([update('departed'), update('arrived')]))
-    expect(screen.queryByText(/^Departed$|^Вылетел$/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Landed$|^Прилетел$/)).not.toBeInTheDocument()
-    expect(
-      screen.queryByText(/ready to hand over|Готово к вручению/i),
-    ).not.toBeInTheDocument()
-    // The field itself is gone, not merely empty.
+    /* Asked of the **buttons**, not of the text: «Прилетел» is also a rung of
+       the ladder and the heading of the stage, and both belong there. What must
+       be gone is the chip — and the surest sign of that is the field's own
+       label, which is drawn only when something is offered. */
     expect(screen.queryByText(/^Stage$|^Этап$/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Departed$|^Вылетел$/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Arrived$|^Прилетел$/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', {
+        name: /ready to hand over|Готово к вручению/i,
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it('no longer offers a delay or customs at all', () => {
@@ -1166,7 +1175,10 @@ describe('the status form on the flight', () => {
       screen.getByRole('button', { name: /^Layover$|^Пересадка$/ }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /^Landed$|^Прилетел$/ }),
+      // `cards.opt.arrived`, the chip — not `stages.arrived`, the rung. The two
+      // are one word in Russian and two in English, which is exactly how a
+      // loose regex passes at home and fails in the other locale.
+      screen.getByRole('button', { name: /^Arrived$|^Прилетел$/ }),
     ).toBeInTheDocument()
   })
 
@@ -1541,7 +1553,7 @@ describe('the handover form', () => {
     // The note is what somebody adds after doing the thing; above the photos it
     // read as the first question the form asks.
     renderWithProviders(panel('sender'))
-    const photo = screen.getByText(/^Hand-off photo$|^Фото передачи$/i)
+    const photo = screen.getByText(/^Send-off photo$|^Фото отправки$/i)
     const note = screen.getByText(/^Note$|^Заметка$/)
     // Document order, not string order: what is being asserted is where the
     // reader's eye reaches them.
