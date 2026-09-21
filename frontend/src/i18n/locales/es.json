@@ -1595,6 +1595,9 @@
       "fragile": "Frágil",
       "parcel_count": "Bultos",
       "stage": "Etapa",
+      "storage_days": "Almacenaje, días",
+      "storage_amount": "Almacenaje, importe",
+      "storage_currency": "Almacenaje, moneda",
       "eta": "ETA",
       "amount": "Importe",
       "days": "Días",
@@ -2142,6 +2145,12 @@
     "title": {
       "handover": "Dónde y cuándo os veis",
       "delivery": "Dónde y cuándo se entrega el paquete"
+    },
+    "storage": {
+      "title": "El encuentro cae fuera del almacenaje gratuito",
+      "days_one": "{{count}} día de pago",
+      "days_other": "{{count}} días de pago",
+      "consent": "Aceptar este encuentro es aceptar el coste de almacenaje y su pago."
     },
     "noTime": "La hora aún no está fijada: acordadla con el botón de abajo.",
     "proposed": "propuesto",

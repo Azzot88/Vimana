@@ -110,18 +110,19 @@ export const transitReached = (declared: readonly string[]): number =>
  *  the carrier is offered both. Naming only one of them would make a journey
  *  with a connection undeclarable, and a journey without one unfinishable.
  *
- *  `storage` — «Готово к вручению» since this round — is the far end and stays
- *  offered: it is the one status the carrier may need to repeat while a
- *  recipient is found. Delay and customs are gone from the list entirely
- *  (owner: «это будет сказано в чате, если нужно»); old deals keep theirs, and
- *  the labels stay so an arbiter can read them.
+ *  After the landing there is nothing left to declare: waiting for the
+ *  recipient is not a status any more (T_UX.29 pt.6, owner: «не нужно
+ *  "передано на хранение", оно подразумевается») — the counter starts itself
+ *  from the arrival. Delay and customs are gone from the list for the same kind
+ *  of reason, at the owner's word («это будет сказано в чате, если нужно»); old
+ *  deals keep their cards, and the labels stay so an arbiter can read them.
  *
  *  Called by: `components/CardActions`. */
 export function transitOffer(declared: readonly string[]): string[] {
   const reached = transitReached(declared)
   if (reached < transitRank('departed')) return ['departed']
   if (reached < transitRank('arrived')) return ['layover', 'arrived']
-  return ['storage']
+  return []
 }
 
 const MEETING_FIELDS: CardField[] = [
@@ -200,7 +201,7 @@ export const CARD_FORMS: CardFormSpec[] = [
            2026-09-20). Which of the rest may be pressed is `transitOffer`; this
            is only what the card can carry at all, and it mirrors the server's
            `TransitUpdate.stage`. */
-        options: ['departed', 'layover', 'arrived', 'storage'],
+        options: ['departed', 'layover', 'arrived'],
         required: true,
       },
       { name: 'eta', type: 'datetime' },

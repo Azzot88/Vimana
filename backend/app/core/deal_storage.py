@@ -3,9 +3,19 @@
 Storage is **not** a handover method and **not** a rung of the ladder (owner,
 2026-09-20): «это не До востребования — это просто хранение перед этапом
 вручения. Состояние этапа — ни расчёта, ни получения. Ожидание, иногда
-платное.» It can happen twice in one deal — before the carriage and before the
-delivery — and a rung that can come round again is not a rung, so it is a state
-the carrier declares on the timeline instead.
+платное.»
+
+**And it is not declared either** (owner, 2026-09-20, second pass): «хранения до
+вылета не будет как отдельного статуса, оно подразумевается и бесплатно… не
+нужно "передано на хранение", оно подразумевается». The waiting begins where it
+actually begins — when the flight lands and nobody has taken the parcel yet — so
+the counter anchors on the arrival card instead of on a declaration of its own.
+
+That removes the button nobody would remember to press, and with it the gap it
+left: a carrier who landed, waited four days and never declared storage was
+storing for free, and the one who pressed the chip paid. Before the carriage
+there is no counter at all now, which is the same decision said the other way:
+that waiting is implied and free.
 
 What this module owns:
   - `terms_of(payload)` — the storage terms frozen into the agreement.
@@ -264,11 +274,15 @@ async def state_for_deal(
 ) -> dict | None:
     """The storage this deal is in right now, or `None` if it is not in one.
 
-    Reads the timeline rather than a column on the deal: the waiting is already
-    a card in the chain (`transit.update` with `stage: storage`), and a second
-    record of «is it stored» is a second answer to be wrong. The parcel is in
-    storage when the last such declaration is newer than every card that would
-    have moved it on.
+    Reads the timeline rather than a column on the deal: the landing is already
+    a card in the chain (`transit.update` with `stage: arrived`), and a second
+    record of «is it stored» is a second answer to be wrong. The parcel is
+    waiting when that landing is newer than every card that would have moved it
+    on — which is what «оно подразумевается» means in code.
+
+    `now` is normally the clock, and is passed explicitly when the question is
+    «what would this cost **then**»: a meeting proposed for a date past the free
+    period is quoted with `now=` that date (`api.cards._raise_card`).
 
     Returns the accrual as `core.deal_storage.accrue` computes it, plus `charged` —
     what the carrier has actually billed, once they have. The счётчик is
@@ -315,7 +329,7 @@ async def state_for_deal(
             # Newest first, so the first ender we meet is newer than anything
             # below it: whatever storage may be further down has already ended.
             break
-        if row.card_kind == "transit.update" and payload.get("stage") == "storage":
+        if row.card_kind == "transit.update" and payload.get("stage") == "arrived":
             started = row
             break
 
@@ -339,7 +353,14 @@ async def state_for_deal(
 
 
 def _offset_of(payload: dict | None) -> int:
-    """The storage place's offset from UTC, as the declaration recorded it."""
+    """The storage place's offset from UTC, as the landing recorded it.
+
+    Sent by the carrier's own device on the arrival card: the free period ends
+    at a morning, and a morning in New York is not a morning in UTC. Absent — an
+    older client, or anything else speaking the API — it reads as UTC, which is
+    a boundary off by hours rather than a refused declaration about where the
+    parcel is.
+    """
     if not isinstance(payload, dict):
         return 0
     raw = payload.get("tz_offset_minutes")

@@ -1029,6 +1029,12 @@
       "handover": "Where and when you meet",
       "delivery": "Where and when the parcel is handed over"
     },
+    "storage": {
+      "title": "Meeting falls past the free storage",
+      "days_one": "{{count}} paid day",
+      "days_other": "{{count}} paid days",
+      "consent": "Agreeing to this meeting accepts the storage charge and paying it."
+    },
     "noTime": "The time is not set yet — agree it with the button below.",
     "proposed": "proposed",
     "hours_one": "in {{count}} hour",
@@ -1791,6 +1797,9 @@
       "fragile": "Fragile",
       "parcel_count": "Parcels",
       "stage": "Stage",
+      "storage_days": "Storage, days",
+      "storage_amount": "Storage, amount",
+      "storage_currency": "Storage, currency",
       "eta": "ETA",
       "amount": "Amount",
       "days": "Days",

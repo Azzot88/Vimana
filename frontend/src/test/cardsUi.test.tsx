@@ -1140,17 +1140,19 @@ describe('the status form on the flight', () => {
     expect(screen.getByText(/^Stage$|^Этап$/)).toBeInTheDocument()
   })
 
-  it('offers the next status and nothing else', () => {
-    /* T_UX.29 pt.5 — one step ahead, and what is behind is gone from the block.
-       After the landing the only thing left to declare is the far end. */
+  it('offers nothing once the flight is down', () => {
+    /* T_UX.29 pt.5–6 — one step ahead, what is behind is gone from the block,
+       and after the landing there is no step left: waiting for the recipient
+       stopped being a status (owner: «не нужно "передано на хранение", оно
+       подразумевается»). */
     renderWithProviders(flight([update('departed'), update('arrived')]))
     expect(screen.queryByText(/^Departed$|^Вылетел$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/^Landed$|^Прилетел$/)).not.toBeInTheDocument()
     expect(
-      screen.getByRole('button', {
-        name: /ready to hand over|Готово к вручению/i,
-      }),
-    ).toBeInTheDocument()
+      screen.queryByText(/ready to hand over|Готово к вручению/i),
+    ).not.toBeInTheDocument()
+    // The field itself is gone, not merely empty.
+    expect(screen.queryByText(/^Stage$|^Этап$/)).not.toBeInTheDocument()
   })
 
   it('no longer offers a delay or customs at all', () => {
@@ -1283,16 +1285,6 @@ describe('the panel after a status that is not a rung', () => {
        went into the chat and the left-hand column stood as it was. */
     renderWithProviders(flight([update('arrived'), update('customs')]))
     expect(screen.getByText(/^Now: Customs|^Сейчас: Таможня/)).toBeInTheDocument()
-  })
-
-  it('tells the recipient what storage means for them', () => {
-    /* T_UX.29 pt.2 п.3 — «Статус хранение должен показывать получателю, что
-       можно планировать забор посылки. Он сигнализирует, что таможня пройдена
-       и можно встречаться.» */
-    renderWithProviders(flight([update('arrived'), update('storage')]))
-    expect(
-      screen.getByText(/arrange the meeting|можно договариваться о встрече/i),
-    ).toBeInTheDocument()
   })
 
   it('does not repeat the rung it is standing on', () => {
@@ -1556,5 +1548,69 @@ describe('the handover form', () => {
     expect(
       photo.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+})
+
+// ── T_UX.29 pt.6 · a meeting past the free storage carries its price ──────
+
+describe('the price of a late meeting', () => {
+  const quoted = (over: Record<string, unknown> = {}) =>
+    msg({
+      id: 'drop-late',
+      card_kind: 'dropoff.proposed',
+      card_state: 'pending',
+      requires_ack_by: 'carrier',
+      card_payload: {
+        method: 'in_person',
+        city: 'Queens',
+        at: '2026-10-02T18:00:00Z',
+        storage_days: 3,
+        storage_amount: 12,
+        storage_currency: 'USD',
+        ...over,
+      },
+    })
+
+  it('states the sum and says that agreeing accepts it', () => {
+    /* T_UX.29 pt.6 (owner, 2026-09-20): «Если личная встреча назначается после
+       срока бесплатного хранения… он должен видеть стоимость, и, соглашаясь, он
+       соглашается на стоимость хранения и оплату стоимости.» */
+    renderWithProviders(
+      <MeetingNote
+        terms={null}
+        messages={[quoted()]}
+        stage="delivery"
+        myRole="recipient"
+      />,
+    )
+    expect(
+      screen.getByText(/past the free storage|после бесплатного хранения/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/12 USD/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/accepts the storage charge|принимаете стоимость хранения/i),
+    ).toBeInTheDocument()
+  })
+
+  it('says nothing when the meeting is inside the free period', () => {
+    // Most meetings are, and a zero would read as «хранение бесплатно» — a
+    // different statement from «платить не за что».
+    renderWithProviders(
+      <MeetingNote
+        terms={null}
+        messages={[
+          quoted({
+            storage_days: undefined,
+            storage_amount: undefined,
+            storage_currency: undefined,
+          }),
+        ]}
+        stage="delivery"
+        myRole="recipient"
+      />,
+    )
+    expect(
+      screen.queryByText(/past the free storage|после бесплатного хранения/i),
+    ).not.toBeInTheDocument()
   })
 })

@@ -1601,6 +1601,9 @@
       "fragile": "Delikatne",
       "parcel_count": "Paczek",
       "stage": "Etap",
+      "storage_days": "Przechowanie, dni",
+      "storage_amount": "Przechowanie, kwota",
+      "storage_currency": "Przechowanie, waluta",
       "eta": "ETA",
       "amount": "Kwota",
       "days": "Doby",
@@ -2164,6 +2167,14 @@
     "title": {
       "handover": "Gdzie i kiedy się spotykacie",
       "delivery": "Gdzie i kiedy przesyłka trafia do odbiorcy"
+    },
+    "storage": {
+      "title": "Spotkanie po bezpłatnym przechowaniu",
+      "days_one": "{{count}} płatna doba",
+      "days_few": "{{count}} płatne doby",
+      "days_many": "{{count}} płatnych dób",
+      "days_other": "{{count}} płatnych dób",
+      "consent": "Zgoda na to spotkanie oznacza przyjęcie kosztu przechowania i jego zapłatę."
     },
     "noTime": "Godzina nie jest jeszcze ustalona — ustalcie ją przyciskiem poniżej.",
     "proposed": "propozycja",

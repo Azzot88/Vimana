@@ -280,7 +280,7 @@ async def test_a_deal_not_in_storage_says_nothing_about_it(
     assert r.json()["storage"] is None
 
 
-async def test_declaring_storage_starts_the_counter(
+async def test_the_landing_starts_the_counter(
     client, carrier_headers, sender_headers, stored_deal
 ):
     declared = await _card(
@@ -288,14 +288,17 @@ async def test_declaring_storage_starts_the_counter(
         carrier_headers,
         stored_deal.id,
         "transit.update",
-        {"stage": "storage", "tz_offset_minutes": 240},
+        {"stage": "arrived", "tz_offset_minutes": 240},
     )
     assert declared.status_code == 201, declared.text
 
     r = await client.get(f"/api/deals/{stored_deal.id}", headers=sender_headers)
     state = r.json()["storage"]
     assert state is not None
-    # Just declared: nothing has been charged, and the sender can see when it
+    # T_UX.29 pt.6 — nobody declared storage: the flight landed, and the waiting
+    # begins there. The chip that used to start this was a button people forget,
+    # and forgetting it was free storage.
+    # Just landed: nothing has been charged, and the sender can see when it
     # would start to be.
     assert state["paid_days"] == 0
     assert state["free_days"] == 2
@@ -305,17 +308,17 @@ async def test_declaring_storage_starts_the_counter(
     assert state["charged"] is None
 
 
-async def test_only_the_carrier_declares_storage(
+async def test_only_the_carrier_declares_the_journey(
     client, sender_headers, stored_deal
 ):
-    """The parcel is in the carrier's hands; a sender saying it is in storage
-    would be a claim about somebody else's cupboard."""
+    """The parcel is in the carrier's hands; a sender saying where it is would
+    be a claim about somebody else's afternoon."""
     r = await _card(
         client,
         sender_headers,
         stored_deal.id,
         "transit.update",
-        {"stage": "storage"},
+        {"stage": "arrived"},
     )
     assert r.status_code == 403, r.text
 
@@ -331,7 +334,7 @@ async def test_the_carrier_bills_and_the_paying_side_answers(
         carrier_headers,
         stored_deal.id,
         "transit.update",
-        {"stage": "storage", "tz_offset_minutes": 0},
+        {"stage": "arrived", "tz_offset_minutes": 0},
     )
     billed = await _card(
         client,
@@ -368,7 +371,7 @@ async def test_the_sender_cannot_bill_for_storage(
     assert r.status_code == 403, r.text
 
 
-async def test_the_handover_ends_the_storage(
+async def test_the_handover_ends_the_waiting(
     client, carrier_headers, sender_headers, stored_deal
 ):
     """Nothing is «taken off storage» by hand: the parcel moving on is the end
@@ -379,7 +382,7 @@ async def test_the_handover_ends_the_storage(
         carrier_headers,
         stored_deal.id,
         "transit.update",
-        {"stage": "storage", "tz_offset_minutes": 0},
+        {"stage": "arrived", "tz_offset_minutes": 0},
     )
     handed = await _card(
         client,
@@ -421,7 +424,7 @@ async def test_a_trip_without_a_tariff_has_no_counter(
         carrier_headers,
         stored_deal.id,
         "transit.update",
-        {"stage": "storage"},
+        {"stage": "arrived"},
     )
     r = await client.get(f"/api/deals/{stored_deal.id}", headers=sender_headers)
     assert r.json()["storage"] is None
@@ -489,3 +492,107 @@ async def test_a_trip_may_say_nothing_about_storage(client, carrier_headers):
     r = await client.post("/api/trips", headers=carrier_headers, json=_trip_body())
     assert r.status_code == 201, r.text
     assert r.json()["storage_terms"] is None
+
+
+# ── T_UX.29 pt.6 · a meeting past the free period carries its price ─────────
+
+
+async def test_a_late_meeting_is_quoted_on_the_card(
+    client, carrier_headers, stored_deal
+):
+    """Owner, 2026-09-20: «Если личная встреча назначается после срока
+    бесплатного хранения… он должен видеть стоимость, и, соглашаясь, он
+    соглашается на стоимость хранения и оплату стоимости.»
+
+    Written into the payload rather than shown beside it, like a cancellation's
+    deadline: the card is what the other side answers, and a price that lived
+    only on a screen would leave «я соглашался на встречу, а не на счёт» with
+    nothing to settle it.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    landed = await _card(
+        client,
+        carrier_headers,
+        stored_deal.id,
+        "transit.update",
+        {"stage": "arrived", "tz_offset_minutes": 0},
+    )
+    assert landed.status_code == 201, landed.text
+
+    # Two free nights on this tariff, so a meeting a week out is paid for.
+    late = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    proposed = await _card(
+        client,
+        carrier_headers,
+        stored_deal.id,
+        "dropoff.proposed",
+        {"method": "in_person", "city": "Queens", "at": late},
+    )
+    assert proposed.status_code == 201, proposed.text
+    payload = proposed.json()["card_payload"]
+    assert payload["storage_days"] > 0
+    assert payload["storage_amount"] > 0
+    assert payload["storage_currency"] == "USD"
+
+
+async def test_a_meeting_inside_the_free_period_is_not_quoted(
+    client, carrier_headers, stored_deal
+):
+    """Silence, not a zero: «платить не за что» and «хранение бесплатно» are
+    different statements, and only one of them is true here."""
+    from datetime import datetime, timedelta, timezone
+
+    await _card(
+        client,
+        carrier_headers,
+        stored_deal.id,
+        "transit.update",
+        {"stage": "arrived", "tz_offset_minutes": 0},
+    )
+    soon = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+    proposed = await _card(
+        client,
+        carrier_headers,
+        stored_deal.id,
+        "dropoff.proposed",
+        {"method": "in_person", "city": "Queens", "at": soon},
+    )
+    assert proposed.status_code == 201, proposed.text
+    payload = proposed.json()["card_payload"]
+    assert payload.get("storage_days") is None
+    assert payload.get("storage_amount") is None
+
+
+async def test_the_quote_is_the_server_s_to_write(
+    client, carrier_headers, stored_deal
+):
+    """A price the proposer could type is a price the proposer could choose."""
+    from datetime import datetime, timedelta, timezone
+
+    await _card(
+        client,
+        carrier_headers,
+        stored_deal.id,
+        "transit.update",
+        {"stage": "arrived", "tz_offset_minutes": 0},
+    )
+    soon = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+    proposed = await _card(
+        client,
+        carrier_headers,
+        stored_deal.id,
+        "dropoff.proposed",
+        {
+            "method": "in_person",
+            "city": "Queens",
+            "at": soon,
+            "storage_days": 99,
+            "storage_amount": 9999,
+            "storage_currency": "BTC",
+        },
+    )
+    assert proposed.status_code == 201, proposed.text
+    payload = proposed.json()["card_payload"]
+    assert payload.get("storage_days") is None
+    assert payload.get("storage_amount") is None

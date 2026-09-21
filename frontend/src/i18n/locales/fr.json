@@ -1595,6 +1595,9 @@
       "fragile": "Fragile",
       "parcel_count": "Colis",
       "stage": "Étape",
+      "storage_days": "Stockage, jours",
+      "storage_amount": "Stockage, montant",
+      "storage_currency": "Stockage, devise",
       "eta": "ETA",
       "amount": "Montant",
       "days": "Jours",
@@ -2142,6 +2145,12 @@
     "title": {
       "handover": "Où et quand vous vous retrouvez",
       "delivery": "Où et quand le colis est remis"
+    },
+    "storage": {
+      "title": "Rendez-vous au-delà du stockage gratuit",
+      "days_one": "{{count}} jour payant",
+      "days_other": "{{count}} jours payants",
+      "consent": "Accepter ce rendez-vous, c’est accepter le coût du stockage et son paiement."
     },
     "noTime": "L’heure n’est pas encore fixée — convenez-en avec le bouton ci-dessous.",
     "proposed": "proposé",

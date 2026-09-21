@@ -85,6 +85,15 @@ class MeetingPoint(BaseModel):
     # took their parcel does not exist.
     postal_service: str | None = Field(default=None, max_length=120)
 
+    #: T_UX.29 pt.6 — what waiting until `at` costs, stamped by the server when
+    #: the meeting falls past the free storage period (`api.cards._storage_quote`).
+    #: Declared here and not sent by anybody: a price the proposer could type
+    #: would be a price the proposer could choose. Absent when the meeting is
+    #: inside the free period, which is most of them.
+    storage_days: int | None = Field(default=None, ge=0)
+    storage_amount: float | None = Field(default=None, ge=0)
+    storage_currency: str | None = Field(default=None, max_length=4)
+
     @model_validator(mode="after")
     def _service_needs_a_carrier_of_parcels(self) -> "MeetingPoint":
         """T3.11.22 — the same narrowing as on the trip, one step further in.
@@ -125,7 +134,11 @@ class TransitUpdate(BaseModel):
     # deliberately not from `cards.opt.*` on the client: deals struck before
     # this round carry them, and an arbiter reading one must still find the
     # word. Validation runs on creation only, so the history is untouched.
-    stage: Literal["departed", "layover", "arrived", "storage"]
+    # T_UX.29 pt.6 — and `storage` left with them (owner, 2026-09-20): «не нужно
+    # "передано на хранение", оно подразумевается». The counter now anchors on
+    # the arrival (`core.deal_storage.state_for_deal`), so the status existed
+    # only to be forgotten — and forgetting it was free storage.
+    stage: Literal["departed", "layover", "arrived"]
     eta: datetime | None = None
     #: T_DEAL.1 — the storage place's offset from UTC, in minutes, as the
     #: carrier's own device reports it. The free period ends at a morning

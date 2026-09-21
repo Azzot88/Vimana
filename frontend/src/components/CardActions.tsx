@@ -183,6 +183,16 @@ export default function CardActions({
     setError('')
     try {
       const payload = buildPayload(active, values)
+      /* T_DEAL.1 — the free period ends at a morning, and a morning in New York
+         is not a morning in UTC. The offset travels with the declaration that
+         starts the counter; nobody types it, and nothing else on this form
+         knows where the parcel is. Sent on every journey status rather than on
+         the landing alone: the server reads whichever one it anchors on, and a
+         field present only sometimes is a field that will be missing the day
+         the anchor moves. */
+      if (active.kind === 'transit.update') {
+        payload.tz_offset_minutes = -new Date().getTimezoneOffset()
+      }
       if (
         active.needsPhoto ||
         (active.optionalPhoto && files.length > 0) ||

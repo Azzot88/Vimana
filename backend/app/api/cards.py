@@ -46,7 +46,7 @@ from app.models.deal import (
     Attachment, AttachmentKind, CardAckRole, CardState, Deal, DealEventType,
     DealStatus, DealVaultMessage,
 )
-from app.models.marketplace import Trip
+from app.models.marketplace import Cargo, Trip
 from app.models.user import User
 from app.schemas.cards import PAYLOAD_MODELS, CardCreate
 from app.schemas.dealvault import MessageOut
@@ -438,6 +438,61 @@ async def _supersede_open_proposal(
     return standing[-1].id if standing else None
 
 
+async def _storage_quote(
+    db: AsyncSession, deal: Deal, at: object
+) -> dict[str, object]:
+    """What waiting until `at` would cost, when it costs anything.
+
+    T_UX.29 pt.6 (owner, 2026-09-20): «Если личная встреча назначается после
+    срока бесплатного хранения, или переносится за период платного хранения, то
+    это должно проверяться и оповещать получателя — в этот момент он должен
+    видеть стоимость, и, соглашаясь, он соглашается на стоимость хранения и
+    оплату стоимости.»
+
+    Stamped into the card's own payload rather than shown beside it, exactly as
+    a cancellation's deadline is: the card is what the other side answers, and a
+    price that lived only on a screen would leave «я соглашался на встречу, а не
+    на счёт» with nothing to settle it. In the chain the sum stands inside the
+    thing that was accepted.
+
+    Empty when there is nothing to say — no tariff in the agreement, no landing
+    yet, a meeting inside the free period, or a cargo nobody weighed so the
+    tariff has nothing to multiply. Silence is the right answer to all four; a
+    zero would read as «хранение бесплатно», which is a different statement.
+
+    Called by: `_raise_card`, for `dropoff.proposed`.
+    """
+    from app.core.deal_storage import state_for_deal
+
+    if not isinstance(at, str):
+        return {}
+    try:
+        when = datetime.fromisoformat(at.replace("Z", "+00:00"))
+    except ValueError:
+        return {}
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+
+    agreed = await _agreed_terms(db, deal.id)
+    cargo = (
+        await db.execute(select(Cargo).where(Cargo.id == deal.cargo_id))
+    ).scalar_one_or_none()
+    state = await state_for_deal(
+        db,
+        deal.id,
+        agreed_payload=agreed.card_payload if agreed else None,
+        weight_kg=cargo.weight_kg if cargo else None,
+        now=when,
+    )
+    if not state or not state.get("paid_days") or state.get("amount") is None:
+        return {}
+    return {
+        "storage_days": state["paid_days"],
+        "storage_amount": state["amount"],
+        "storage_currency": state["currency"],
+    }
+
+
 async def _raise_card(
     deal_id: uuid.UUID,
     body: CardCreate,
@@ -659,6 +714,21 @@ async def _raise_card(
                 "This declaration is raised together with its photo — "
                 "use /cards/with-files"
             ),
+        )
+
+    # T_UX.29 pt.6 — a meeting past the free period carries its price, and the
+    # price is the server's to write. Whatever the client sent under these names
+    # is dropped first: rebuilt every time rather than merged, so a meeting moved
+    # back inside the free period loses the quote it used to carry instead of
+    # keeping a stale one nobody owes.
+    if kind is CardKind.dropoff_proposed:
+        clean = {
+            k: v for k, v in body.payload.items() if not k.startswith("storage_")
+        }
+        body = CardCreate(
+            kind=body.kind,
+            payload={**clean, **await _storage_quote(db, deal, clean.get("at"))},
+            text=body.text,
         )
 
     payload = _validate_payload(spec, body.payload)

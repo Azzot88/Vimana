@@ -3,6 +3,7 @@ import type { VaultMessage } from '../api/dealvault'
 import type { Terms } from '../api/terms'
 import type { DealRole } from '../lib/cardForms'
 import { usePrefs } from '../hooks/usePrefs'
+import MonoText from './MonoText'
 
 /**
  * T3.11.27 — where you are meeting, at what time, and what to do there.
@@ -51,11 +52,40 @@ interface Meeting {
   method?: string
   place?: string
   at?: string
+  /** T_UX.29 pt.6 — what this meeting costs in storage, when it falls past the
+   *  free period. Written by the server onto the card (`_storage_quote`), so
+   *  agreeing to the meeting is agreeing to the sum — and the sum is inside the
+   *  thing that was agreed, not beside it on a screen. */
+  storage?: { days: number; amount: number; currency: string }
   /** T_UX.28 п.9 — this arrangement is somebody's proposal, not an agreement:
    *  the card is still awaiting an answer. Drawn differently, because «где вы
    *  встречаетесь» and «где вам предлагают встретиться» are different facts and
    *  only one of them is safe to plan around. */
   proposed?: boolean
+}
+
+/** One meeting card, read. Shared by the two readers below so that a field
+ *  added to the card — the storage quote was the first — reaches both the
+ *  arrangement and the standing proposal, instead of only whichever one somebody
+ *  remembered to change. */
+function fromCard(card: VaultMessage): Meeting {
+  const p = (card.card_payload ?? {}) as Record<string, unknown>
+  const days = p.storage_days
+  const amount = p.storage_amount
+  return {
+    method: typeof p.method === 'string' ? p.method : undefined,
+    place: typeof p.city === 'string' ? p.city : undefined,
+    at: typeof p.at === 'string' ? p.at : undefined,
+    storage:
+      typeof days === 'number' && typeof amount === 'number'
+        ? {
+            days,
+            amount,
+            currency:
+              typeof p.storage_currency === 'string' ? p.storage_currency : 'USD',
+          }
+        : undefined,
+  }
 }
 
 /** The arrangement as it stands: the last **accepted** meeting card wins, and
@@ -73,14 +103,7 @@ export function meetingOf(
   const card = [...messages]
     .reverse()
     .find((m) => m.card_kind === kind && m.card_state === 'accepted')
-  if (card) {
-    const p = (card.card_payload ?? {}) as Record<string, unknown>
-    return {
-      method: typeof p.method === 'string' ? p.method : undefined,
-      place: typeof p.city === 'string' ? p.city : undefined,
-      at: typeof p.at === 'string' ? p.at : undefined,
-    }
-  }
+  if (card) return fromCard(card)
   const p = terms?.payload
   if (!p) return {}
   /* Spelled out rather than indexed by `${stage}_place`: the payload is a named
@@ -116,13 +139,7 @@ function proposedMeeting(
     .reverse()
     .find((m) => m.card_kind === kind && m.card_state === 'pending')
   if (!card) return {}
-  const p = (card.card_payload ?? {}) as Record<string, unknown>
-  return {
-    method: typeof p.method === 'string' ? p.method : undefined,
-    place: typeof p.city === 'string' ? p.city : undefined,
-    at: typeof p.at === 'string' ? p.at : undefined,
-    proposed: true,
-  }
+  return { ...fromCard(card), proposed: true }
 }
 
 export default function MeetingNote({
@@ -199,6 +216,33 @@ export default function MeetingNote({
           </span>
         )}
       </p>
+
+      {/* T_UX.29 pt.6 (owner, 2026-09-20): «Если личная встреча назначается
+          после срока бесплатного хранения… он должен видеть стоимость, и,
+          соглашаясь, он соглашается на стоимость хранения и оплату стоимости.»
+
+          Said at full weight, and said **before** the answer: the sum arrives
+          with the proposal, so «я соглашался на встречу, а не на счёт» has
+          nowhere to stand. Amber rather than the card's own calm blue — this is
+          the one line here that costs money. */}
+      {meeting.storage && (
+        <div className="rounded-field border border-amber/50 bg-amber/10 p-3 space-y-1">
+          <p className="text-xs font-body font-medium text-navy">
+            {t('meeting.storage.title')}
+          </p>
+          <div className="flex justify-between gap-4">
+            <span className="text-xs font-body text-navy/60">
+              {t('meeting.storage.days', { count: meeting.storage.days })}
+            </span>
+            <MonoText className="text-sm text-navy">
+              {meeting.storage.amount} {meeting.storage.currency}
+            </MonoText>
+          </div>
+          <p className="text-[11px] font-body text-navy/70">
+            {t('meeting.storage.consent')}
+          </p>
+        </div>
+      )}
 
       {/* The carrier's memo. Two lines, because two things go wrong at a
           handover and both are settled by looking: a parcel heavier than the
