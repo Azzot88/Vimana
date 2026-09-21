@@ -262,7 +262,7 @@ async def test_transit_update_is_carrier_only_and_needs_no_answer(
 
 
 async def test_the_recipient_moves_the_delivery_and_the_carrier_answers(
-    client, session_maker, deal
+    client, session_maker, carrier_headers, deal
 ):
     """T3.12.01 — the recipient's own end of the route. The one who has to agree
     to be there is the carrier; the answer used to go to the sender."""
@@ -286,6 +286,15 @@ async def test_the_recipient_moves_the_delivery_and_the_carrier_answers(
         row = await db.get(Deal, deal.id)
         row.recipient_id = person.id
         await db.commit()
+
+    # T_UX.29 п.4 — the first word on the delivery is the carrier's. The
+    # recipient moves what is already named, which is the case this test is
+    # about; before it is named they have nothing to move.
+    first = await _card(
+        client, carrier_headers, deal.id, "dropoff.proposed",
+        {"method": "in_person", "city": "Brooklyn"},
+    )
+    assert first.status_code == 201, first.text
 
     moved = await _card(
         client, headers, deal.id, "dropoff.proposed",
@@ -809,7 +818,7 @@ async def test_platform_cards_are_chained(
 
 
 async def test_the_card_names_the_service_beside_the_tracking_number(
-    client, sender_headers, deal
+    client, carrier_headers, deal
 ):
     """T3.11.22 — «какой отправил фактически, рядом с `tracking_number`».
 
@@ -819,7 +828,7 @@ async def test_the_card_names_the_service_beside_the_tracking_number(
     """
     r = await _card(
         client,
-        sender_headers,
+        carrier_headers,
         deal.id,
         "dropoff.proposed",
         {
@@ -833,13 +842,13 @@ async def test_the_card_names_the_service_beside_the_tracking_number(
 
 
 async def test_a_service_on_a_hand_to_hand_meeting_is_refused(
-    client, sender_headers, deal
+    client, carrier_headers, deal
 ):
     """Nothing was posted, so nobody carried it. Refused rather than dropped: a
     field silently ignored is a field the sender believes they filled in."""
     r = await _card(
         client,
-        sender_headers,
+        carrier_headers,
         deal.id,
         "dropoff.proposed",
         {"method": "in_person", "postal_service": "СДЭК"},
@@ -1554,3 +1563,106 @@ async def test_a_webp_is_a_picture_too(client, sender_headers, deal):
         data={"kind": "handoff.declared", "payload": "{}"},
     )
     assert r.status_code == 201, r.text
+
+
+# ── T_UX.29 · the journey goes one way, and the delivery is named once ──────
+
+
+async def test_a_status_behind_the_journey_cannot_be_declared(
+    client, carrier_headers, deal
+):
+    """T_UX.29 п.2 (owner, 2026-09-20): «Если посылка уже отправлена и летит, то
+    нельзя выбрать статус "Вылетела", она уже вылетела. И так со всеми
+    статусами — только один из последующих.»
+
+    The old rule was three special cases and left everything it did not name.
+    This deal never declared a departure, so «departed already declared» was
+    false — and a parcel on the ground in New York could be announced as just
+    having taken off.
+    """
+    landed = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "arrived"}
+    )
+    assert landed.status_code == 201, landed.text
+
+    backwards = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "departed"}
+    )
+    assert backwards.status_code == 409, backwards.text
+
+    # The conditions keep their freedom: customs happens after the landing as
+    # readily as before it, and «задерживаемся» is never behind anything.
+    still_fine = await _card(
+        client, carrier_headers, deal.id, "transit.update", {"stage": "customs"}
+    )
+    assert still_fine.status_code == 201, still_fine.text
+
+
+async def test_only_the_carrier_names_the_delivery_first(
+    client, carrier_headers, sender_headers, deal
+):
+    """T_UX.29 п.4 (owner, 2026-09-20): «Раздел "Способ передачи"… должен быть
+    доступен для настройки только Перевозчику.»
+
+    The carrier is the one who will be standing there holding the parcel; an
+    arrangement proposed around them is a plan for somebody else's afternoon.
+    Once it is named, everybody who may raise the card may propose a change —
+    that is the second half of the same rule.
+    """
+    too_early = await _card(
+        client, sender_headers, deal.id, "dropoff.proposed",
+        {"method": "in_person", "city": "Queens"},
+    )
+    assert too_early.status_code == 403, too_early.text
+
+    named = await _card(
+        client, carrier_headers, deal.id, "dropoff.proposed",
+        {"method": "in_person", "city": "Brooklyn"},
+    )
+    assert named.status_code == 201, named.text
+
+    changed = await _card(
+        client, sender_headers, deal.id, "dropoff.proposed",
+        {"method": "in_person", "city": "Queens"},
+    )
+    assert changed.status_code == 201, changed.text
+
+
+async def test_a_newer_meeting_retires_the_one_nobody_answered(
+    client, carrier_headers, sender_headers, deal
+):
+    """T_UX.29 п.7 (owner, 2026-09-20): «Вручение перенесено и подтверждено, но
+    панель "Перенести вручение" всё ещё висит у второго участника.»
+
+    Two people proposed a meeting almost at once, one was accepted and the other
+    stayed `pending` for good: a live «Принять · Отклонить» over a question
+    already settled, whose answer would have moved the meeting back.
+
+    Superseded rather than declined — nobody refused anything, the request was
+    overtaken — and the newer card points back at it, so the chain still reads.
+    """
+    first = await _card(
+        client, sender_headers, deal.id, "pickup.proposed",
+        {"method": "in_person", "city": "Dubai Mall"},
+    )
+    assert first.status_code == 201, first.text
+
+    second = await _card(
+        client, carrier_headers, deal.id, "pickup.proposed",
+        {"method": "in_person", "city": "Marina"},
+    )
+    assert second.status_code == 201, second.text
+    assert second.json()["supersedes_id"] == first.json()["id"]
+
+    listing = await client.get(
+        f"/api/deals/{deal.id}/dealvault", headers=sender_headers
+    )
+    states = {m["id"]: m["card_state"] for m in listing.json()["items"]}
+    assert states[first.json()["id"]] == "superseded"
+    assert states[second.json()["id"]] == "pending"
+
+    # And the retired one can no longer be answered: the ack path refuses
+    # anything that is not pending, which is what stops a settled arrangement
+    # being moved back by a stale button.
+    stale = await _ack(client, carrier_headers, deal.id, first.json()["id"])
+    assert stale.status_code == 409, stale.text

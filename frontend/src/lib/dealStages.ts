@@ -53,6 +53,20 @@ export interface DealStage {
    *  stage ever needs one again, it needs a card first. */
   photo?: never
   photoBy?: never
+  /** T_UX.29 п.3 (owner, 2026-09-20): «пока посылка не прилетела, не должно
+   *  показываться статусов "Отправлено по почте" и "Передано в доставку".
+   *  Проверь чтобы статусы и кнопки не накладывались раньше времени.»
+   *
+   *  `transit` and `arrived` share the status `in_transit`, and the screen used
+   *  to treat *every* stage standing on the current status as live — a rule
+   *  written for `delivery` and `payment`, which genuinely overlap. These two
+   *  do not: they are the same flight before and after it lands, and the union
+   *  put the whole arrival's actions on a parcel still in the air.
+   *
+   *  A mark this stage waits for, beyond its statuses. `delivery` and `payment`
+   *  declare none and go on overlapping; `arrived` declares `arrived` and stays
+   *  out of the way until the flight is down. */
+  requires?: keyof StageMarks
 }
 
 /** The whole ladder, in order. `closed` is last and has nothing to do — it is
@@ -93,6 +107,12 @@ export const DEAL_STAGES: DealStage[] = [
   {
     key: 'transit',
     statuses: ['in_transit'],
+    /* T_UX.29 п.3 — `posted.declared` and `delivery.declared` are **not** here.
+       Both are ways of ending the carriage at the far end, and a parcel that has
+       not landed cannot be at the far end of anything: offering «Отправлено по
+       почте» over a flight in the air is a declaration that could only be made
+       by mistake, into a chain that cannot take it back. They live on `arrived`,
+       which is the rung that knows the plane is down. */
     kinds: [
       'transit.update',
       /* T_DEAL.1 — the storage bill belongs wherever the storage can happen,
@@ -100,8 +120,6 @@ export const DEAL_STAGES: DealStage[] = [
          connection before it flies and for a recipient after it lands. */
       'storage.charged',
       'dropoff.proposed',
-      'posted.declared',
-      'delivery.declared',
     ],
   },
   {
@@ -122,7 +140,13 @@ export const DEAL_STAGES: DealStage[] = [
        answer and a second record of where the parcel is. */
     key: 'arrived',
     statuses: ['in_transit'],
-    kinds: ['dropoff.proposed', 'storage.charged', 'delivery.declared'],
+    requires: 'arrived',
+    kinds: [
+      'dropoff.proposed',
+      'storage.charged',
+      'posted.declared',
+      'delivery.declared',
+    ],
   },
   {
     key: 'delivery',

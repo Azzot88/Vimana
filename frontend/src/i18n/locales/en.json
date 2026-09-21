@@ -1715,7 +1715,7 @@
       "handover_conditions": "Handover conditions",
       "pickup_proposed": "Move the meeting",
       "pickup_assign": "Set the meeting",
-      "dropoff_assign": "Set the delivery",
+      "dropoff_assign": "Delivery method",
       "pickup_confirmed": "Meeting moved",
       "dropoff_proposed": "Move the delivery",
       "dropoff_confirmed": "Delivery moved",

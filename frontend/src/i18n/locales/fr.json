@@ -1549,7 +1549,7 @@
       "handover_conditions": "Conditions de remise",
       "pickup_proposed": "Proposer la remise",
       "pickup_assign": "Fixer le rendez-vous",
-      "dropoff_assign": "Fixer la remise",
+      "dropoff_assign": "Mode de remise",
       "pickup_confirmed": "Remise confirmée",
       "dropoff_proposed": "Proposer la livraison",
       "dropoff_confirmed": "Livraison confirmée",

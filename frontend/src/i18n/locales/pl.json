@@ -1555,7 +1555,7 @@
       "handover_conditions": "Warunki przekazania",
       "pickup_proposed": "Zaproponuj odbiór",
       "pickup_assign": "Ustal spotkanie",
-      "dropoff_assign": "Ustal doręczenie",
+      "dropoff_assign": "Sposób doręczenia",
       "pickup_confirmed": "Odbiór potwierdzony",
       "dropoff_proposed": "Zaproponuj doręczenie",
       "dropoff_confirmed": "Doręczenie potwierdzone",

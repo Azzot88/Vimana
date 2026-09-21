@@ -6,6 +6,9 @@ import {
   buildPayload,
   formsForRole,
   kindKey,
+  TRANSIT_REPEATABLE,
+  transitRank,
+  transitReached,
   type CardField,
   type CardFormSpec,
   type DealRole,
@@ -42,6 +45,19 @@ interface Props {
    *  The server enforces the same two rules; this is what keeps the screen from
    *  offering a press that is going to be refused. */
   doneStages?: string[]
+  /** T_UX.29 п.1 (owner, 2026-09-20): «Статус "В пути" в Поле изменения
+   *  статуса должен быть виден сразу, а не за кнопкой.»
+   *
+   *  One kind whose form is the stage itself rather than one action among
+   *  several: it is drawn open whenever the stage offers it, and closing it
+   *  clears the fields instead of folding it away. Everything else on the stage
+   *  stays a button underneath, as before.
+   *
+   *  The auto-open below is not the same thing. That opens whichever action
+   *  happens to come first and gives way the moment another one is pressed or
+   *  the first is answered — which is how «Статус в пути» disappeared behind a
+   *  button on exactly the stage named after it. */
+  pinned?: string
 }
 
 export default function CardActions({
@@ -52,6 +68,7 @@ export default function CardActions({
   muted = false,
   labels,
   doneStages = [],
+  pinned,
 }: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState<CardFormSpec | null>(null)
@@ -104,7 +121,18 @@ export default function CardActions({
 
      Opened once per stage, not on every render: `autoOpened` is what lets
      somebody close the form and keep it closed. */
-  const firstKind = muted ? null : available[0]?.kind ?? null
+  /* T_UX.29 п.1 — the stage's own form, open for as long as the stage offers
+     it. `active` is what the rest of this component draws: whatever was
+     deliberately opened, and the pinned form whenever nothing was. */
+  const pinnedSpec = pinned
+    ? available.find((f) => f.kind === pinned) ?? null
+    : null
+  const active = open ?? pinnedSpec
+
+  /* Auto-open stands down where a form is pinned: the two would fight over the
+     same slot, and the pin is the stronger statement — «виден сразу» rather
+     than «виден, пока первый по протоколу». */
+  const firstKind = muted || pinnedSpec ? null : available[0]?.kind ?? null
   const autoOpened = useRef<string | null>(null)
   useEffect(() => {
     if (!firstKind || autoOpened.current === firstKind) return
@@ -119,7 +147,7 @@ export default function CardActions({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!open) return
+    if (!active) return
     /* T3.11.27 — the declaration and its evidence are one act (owner, walking
        the flow 2026-09-12, twice).
 
@@ -137,31 +165,34 @@ export default function CardActions({
        this was meant to prevent, in a chain that cannot take it back. One
        request now: the server validates every file first and writes nothing
        until they are all accepted. */
-    if (open.needsPhoto && files.length === 0) {
+    if (active.needsPhoto && files.length === 0) {
       setError(t('cards.photoNeeded') as string)
       return
     }
     setBusy(true)
     setError('')
     try {
-      const payload = buildPayload(open, values)
+      const payload = buildPayload(active, values)
       if (
-        open.needsPhoto ||
-        (open.optionalPhoto && files.length > 0) ||
+        active.needsPhoto ||
+        (active.optionalPhoto && files.length > 0) ||
         selfies.length > 0
       ) {
         await raiseCardWithFiles(
           dealId,
-          open.kind,
+          active.kind,
           files,
           payload,
           note || undefined,
           selfies,
         )
       } else {
-        await raiseCard(dealId, open.kind, payload, note || undefined)
+        await raiseCard(dealId, active.kind, payload, note || undefined)
       }
-      setOpen(null)
+      // A pinned form does not fold away when it is sent — it comes back empty,
+      // because the next status is the next thing this stage is for.
+      if (pinnedSpec) start(pinnedSpec)
+      else setOpen(null)
       setFiles([])
       setSelfies([])
       onDone()
@@ -200,18 +231,57 @@ export default function CardActions({
        that cannot be pressed are not drawn at all — a disabled option in a list
        is still something to read and decide about. */
     if (f.type === 'select' && f.name === 'stage') {
-      const landed = doneStages.includes('arrived')
-      const offered = f.options.filter((o) => {
-        if (o === 'departed' || o === 'arrived') return !doneStages.includes(o)
-        // «Пересадка… строго до того как прилетел» — after the landing it is
-        // not a late entry, it is an impossible one.
-        if (o === 'layover') return !landed
-        return true
-      })
+      /* T_UX.29 п.2 (owner, 2026-09-20): «Если посылка уже отправлена и летит,
+         то нельзя выбрать статус "Вылетела", она уже вылетела… на карточке не
+         должно быть возможности выбрать предыдущий статус, только один из
+         последующих. Это должно читаться на карточке.»
+
+         The rule used to be three special cases — departed and arrived once
+         each, layover not after landing — and it left every gap the list did
+         not name: a landed parcel could still be declared departed, a delay
+         could be filed before the flight it delayed. One order, read once,
+         closes all of them: nothing at or behind the furthest milestone already
+         declared is offered again.
+
+         And the passed ones are **drawn**, not dropped. Silently removing them
+         made the row shrink with no explanation — «где кнопка "Вылетел"» — and
+         the owner asked for the opposite: the journey so far should read off
+         the card. They are stated as a record rather than as a control, so
+         there is nothing to decide about them. */
+      const reached = transitReached(doneStages)
+      /* A milestone still open: ahead of the furthest one declared, or level
+         with it and repeatable — «Пересадка… может быть повторена несколько
+         раз, но строго до того как прилетел» (T_UX.28 п.6, kept). */
+      const stillAhead = (o: string) => {
+        const r = transitRank(o)
+        if (r < 0) return true
+        return r > reached || (r === reached && TRANSIT_REPEATABLE.has(o))
+      }
+      /* Declared, not merely «behind» — the difference matters. A carrier who
+         announced the landing without ever announcing a layover has not had
+         one, and «Пересадка ✓» over that journey would be the screen inventing
+         a stop. Drawn is what this deal actually said. */
+      const passed = f.options
+        .filter(
+          (o) =>
+            transitRank(o) >= 0 && doneStages.includes(o) && !stillAhead(o),
+        )
+        .slice()
+        .sort((a, b) => transitRank(a) - transitRank(b))
+      const offered = f.options.filter(stillAhead)
       return (
         <div key={f.name} className="w-full">
           <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {passed.map((o) => (
+              <span
+                key={o}
+                className="inline-flex items-center gap-1 text-xs font-body px-3 py-2 min-h-[2.75rem] rounded-field border border-navy/10 bg-navy/[0.04] text-navy/35"
+              >
+                {t(`cards.opt.${o}`, o)}
+                <span aria-hidden>✓</span>
+              </span>
+            ))}
             {offered.map((o) => (
               <button
                 key={o}
@@ -271,7 +341,7 @@ export default function CardActions({
 
   if (available.length === 0) return null
 
-  if (!open) {
+  if (!active) {
     return (
       <div className="flex flex-wrap gap-2">
         {available.map((spec) => (
@@ -298,11 +368,11 @@ export default function CardActions({
       className="rounded-2xl border border-navy/10 bg-surface p-4 mb-3"
     >
       <p className="text-sm font-display font-semibold text-navy mb-3">
-        {labels?.[open.kind] ?? t(kindKey(open.kind), open.kind)}
+        {labels?.[active.kind] ?? t(kindKey(active.kind), active.kind)}
       </p>
-      <div className="flex flex-wrap gap-3">{open.fields.map(field)}</div>
+      <div className="flex flex-wrap gap-3">{active.fields.map(field)}</div>
 
-      {open.hasText && (
+      {active.hasText && (
         <label className="block mt-3">
           <span className="block text-xs font-body text-navy/40 mb-1">
             {t('cards.note')}
@@ -315,7 +385,7 @@ export default function CardActions({
         </label>
       )}
 
-      {(open.needsPhoto || open.optionalPhoto) && (
+      {(active.needsPhoto || active.optionalPhoto) && (
         <div className="mt-2">
           {/* The photograph is part of the declaration, so it is asked for
               **here**, inside the form that makes it — not afterwards, in the
@@ -329,7 +399,7 @@ export default function CardActions({
               is the one thing on this form that an arbiter will later wish
               somebody had read. */}
           <p className="text-xs font-body text-navy/60 mb-1">
-            {t(`cards.shoot.${open.kind.replace('.', '_')}`, {
+            {t(`cards.shoot.${active.kind.replace('.', '_')}`, {
               defaultValue: t('cards.shoot.default') as string,
             })}
           </p>
@@ -340,8 +410,8 @@ export default function CardActions({
           <PhotoPicker
             value={files}
             onChange={setFiles}
-            label={t(`chat.kind.${open.needsPhoto ?? open.optionalPhoto}`)}
-            optional={!open.needsPhoto}
+            label={t(`chat.kind.${active.needsPhoto ?? active.optionalPhoto}`)}
+            optional={!active.needsPhoto}
           />
           <span className="block text-[11px] font-body text-navy/40 mt-1">
             {t('cards.photoWithIt')}
@@ -353,7 +423,7 @@ export default function CardActions({
           never instead of them, and filed under its own kind: a picture of the
           parcel says what changed hands, a selfie says who was standing
           there. */}
-      {open.optionalSelfie && (
+      {active.optionalSelfie && (
         <div className="mt-3">
           <PhotoPicker
             value={selfies}
@@ -375,9 +445,12 @@ export default function CardActions({
         >
           {busy ? '...' : t('cards.send')}
         </button>
+        {/* A pinned form has nothing to fold into, so «Отмена» empties it
+            rather than closing it: the stage still needs its status form open
+            after somebody changes their mind about a chip. */}
         <button
           type="button"
-          onClick={() => setOpen(null)}
+          onClick={() => (pinnedSpec ? start(pinnedSpec) : setOpen(null))}
           className="px-4 py-2 rounded-lg border border-navy/15 text-sm font-body"
         >
           {t('common.cancel')}
@@ -391,7 +464,7 @@ export default function CardActions({
       {available.length > 1 && (
         <div className="mt-3 pt-3 border-t border-navy/5 flex flex-wrap gap-2">
           {available
-            .filter((spec) => spec.kind !== open.kind)
+            .filter((spec) => spec.kind !== active.kind)
             .map((spec) => (
               <button
                 key={spec.kind}

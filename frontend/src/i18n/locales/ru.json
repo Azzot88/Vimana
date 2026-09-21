@@ -1729,7 +1729,7 @@
       "handover_conditions": "Условия передачи",
       "pickup_proposed": "Перенести встречу",
       "pickup_assign": "Назначить встречу",
-      "dropoff_assign": "Назначить вручение",
+      "dropoff_assign": "Способ передачи",
       "pickup_confirmed": "Встреча перенесена",
       "dropoff_proposed": "Перенести вручение",
       "dropoff_confirmed": "Вручение перенесено",

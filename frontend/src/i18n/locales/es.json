@@ -1549,7 +1549,7 @@
       "handover_conditions": "Condiciones de entrega",
       "pickup_proposed": "Proponer recogida",
       "pickup_assign": "Fijar el encuentro",
-      "dropoff_assign": "Fijar la entrega",
+      "dropoff_assign": "Forma de entrega",
       "pickup_confirmed": "Recogida confirmada",
       "dropoff_proposed": "Proponer entrega",
       "dropoff_confirmed": "Entrega confirmada",

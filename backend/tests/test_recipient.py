@@ -522,6 +522,23 @@ async def test_the_recipient_moves_the_delivery_and_the_carrier_answers(client, 
     отправитель видит это в чате»."""
     rec_hdr, _ = await _recipient(client, _deal, "r-moves")
 
+    # T_UX.29 п.4 — the carrier names the delivery first; the recipient's card is
+    # a change to it. Before anything is named there is nothing to move, and the
+    # server says so with a 403.
+    too_early = await client.post(
+        f"/api/deals/{_deal['deal_id']}/cards",
+        headers=rec_hdr,
+        json={"kind": "dropoff.proposed", "payload": {"method": "in_person", "city": "Queens"}},
+    )
+    assert too_early.status_code == 403, too_early.text
+
+    named = await client.post(
+        f"/api/deals/{_deal['deal_id']}/cards",
+        headers=_deal["carrier_headers"],
+        json={"kind": "dropoff.proposed", "payload": {"method": "in_person", "city": "Brooklyn"}},
+    )
+    assert named.status_code == 201, named.text
+
     proposed = await client.post(
         f"/api/deals/{_deal['deal_id']}/cards",
         headers=rec_hdr,
@@ -542,6 +559,18 @@ async def test_the_recipient_moves_the_delivery_and_the_carrier_answers(client, 
         json={"decision": "accepted"},
     )
     assert by_carrier.status_code == 200, by_carrier.text
+
+    # T_UX.29 п.7 — and the proposal it overtook is not still waiting for an
+    # answer. Two live «Принять · Отклонить» over one meeting is what left a
+    # settled arrangement answerable, and answering would have moved it back.
+    assert proposed.json()["supersedes_id"] == named.json()["id"]
+    listing = await client.get(
+        f"/api/deals/{_deal['deal_id']}/dealvault", headers=rec_hdr
+    )
+    states = {
+        m["id"]: m["card_state"] for m in listing.json()["items"] if m.get("card_kind")
+    }
+    assert states[named.json()["id"]] == "superseded"
 
     seen = await client.get(
         f"/api/deals/{_deal['deal_id']}/dealvault", headers=_deal["sender_headers"]

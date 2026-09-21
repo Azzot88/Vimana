@@ -121,7 +121,8 @@ export default function DealStages({
     .map((m) => (m.card_payload as { stage?: string } | null)?.stage)
     .filter((stage): stage is string => typeof stage === 'string')
 
-  const currentKey: DealStageKey = stageOf(status, { arrived, posted })
+  const marks = { arrived, posted }
+  const currentKey: DealStageKey = stageOf(status, marks)
   const currentIndex = stageIndex(currentKey)
 
   /* T_UX.28 п.7 (owner, 2026-09-19): «На странице статуса всегда должна быть
@@ -239,10 +240,17 @@ export default function DealStages({
      owner reported together.
 
      Every stage standing on this status is live, not just the first one. */
+  /* T_UX.29 п.3 — and a stage that is waiting for something is not live yet.
+     `arrived` shares `in_transit` with `transit`, so the union above made the
+     whole arrival — «Отправлено по почте», «Передано в доставку» — pressable
+     over a parcel still in the air. `delivery` and `payment` declare no mark
+     and go on overlapping, which is the case this union was written for. */
   const liveKinds = Array.from(
     new Set(
       DEAL_STAGES.filter(
-        (s) => s.key === currentKey || s.statuses.includes(status),
+        (s) =>
+          s.key === currentKey ||
+          (s.statuses.includes(status) && (!s.requires || marks[s.requires])),
       ).flatMap((s) => s.kinds),
     ),
     /* T3.12.08 — «получено как должно» exists only for a posted parcel: at
@@ -304,10 +312,41 @@ export default function DealStages({
     }
   }
 
+  /* T_UX.29 п.4 (owner, 2026-09-20): «Раздел "Способ передачи"… должен быть
+     доступен для настройки только Перевозчику, Получатель либо соглашается,
+     либо предлагает изменения.»
+
+     Has anything been said about the delivery yet — the mirror of the server's
+     `_delivery_already_named`, read the same way. An unanswered
+     `dropoff.proposed` counts: a proposal is a conversation opened, and the
+     answer to one the recipient disagrees with is a counter-proposal rather
+     than a refusal and silence. The method alone does not count — every
+     agreement carries one, so counting it would mean the delivery was always
+     already named and the rule below would never fire once. */
+  const deliveryNamed =
+    Boolean(terms?.payload?.delivery_place || terms?.payload?.delivery_at) ||
+    messages.some((m) => m.card_kind === 'dropoff.proposed')
+
+  /* T_UX.29 п.1 — the pending rule has one exception, and it is the card the
+     stage is named after. A `transit.update` waits on the other side's
+     «Принято», and the journey does not: a carrier who declared a delay still
+     has to declare the landing an hour later. Standing on its own pending card
+     is exactly how «Статус в пути» vanished from the stage called «В пути».
+     Every other kind keeps the rule — a second unanswered «Передал
+     перевозчику» is two contradictory declarations of one act.
+
+     T_UX.29 п.4 — and nothing is named before the carrier names it. The first
+     word on «как вручаем» is theirs, because they are the one who will be
+     standing there holding the parcel; afterwards everybody who may raise the
+     card gets it back. The server refuses the same way — this is what keeps the
+     screen from offering a press that ends in a refusal. */
   const mineNow = myRole
     ? stageKinds.filter(
         (kind) =>
-          !pendingKinds.has(kind) &&
+          (!pendingKinds.has(kind) || kind === 'transit.update') &&
+          (kind !== 'dropoff.proposed' ||
+            myRole === 'carrier' ||
+            deliveryNamed) &&
           formsForRole(myRole).some((form) => form.kind === kind),
       )
     : []
@@ -315,30 +354,55 @@ export default function DealStages({
   return (
     <div className="space-y-4">
       {/* The ladder. Done, now, ahead — the «список смены статусов», read off
-          the status rather than kept as a second record beside it. */}
-      <ol className="space-y-1">
+          the status rather than kept as a second record beside it.
+
+          T_UX.29 п.6 (owner, 2026-09-20): «Панель прогресса должна быть
+          горизонтальной и в одну строку, и статусы выделяться чуть более
+          явно.»
+
+          Seven rungs stacked vertically cost the top third of the panel to say
+          one thing — where the deal stands — and pushed the stage's own actions
+          below the fold on a laptop. Horizontal, it is a strip above them: the
+          whole route at a glance, and the eye lands on the actions first.
+
+          The three states are told apart by shape now, not only by opacity. The
+          live rung is a filled chip and the rest is plain text, so «где мы
+          сейчас» survives a glance, a dim screen and a colour-blind reader —
+          three ways the old 50 %/30 % difference failed.
+
+          Scrolls rather than wraps on a narrow screen: «в одну строку» is the
+          instruction, and a route broken across two lines reads as two
+          routes. */}
+      <ol className="flex items-center overflow-x-auto pb-0.5 -mx-1 px-1">
         {DEAL_STAGES.map((stage, index) => {
           const done = index < currentIndex
           const live = index === currentIndex
           return (
             <li
               key={stage.key}
-              className={`flex items-center gap-2 text-sm font-body ${
-                live
-                  ? 'text-navy font-medium'
-                  : done
-                    ? 'text-navy/50'
-                    : 'text-navy/30'
-              }`}
+              aria-current={live ? 'step' : undefined}
+              className="flex items-center shrink-0"
             >
+              {index > 0 && (
+                <span
+                  aria-hidden
+                  className={`w-3 sm:w-4 h-px shrink-0 ${
+                    done || live ? 'bg-navy/30' : 'bg-navy/10'
+                  }`}
+                />
+              )}
               <span
-                aria-hidden
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  live ? 'bg-cyan' : done ? 'bg-navy/40' : 'bg-navy/15'
-                }`}
-              />
-              {t(`stages.${stage.key}`)}
-              {done && <span className="text-xs text-navy/30">✓</span>}
+                className={
+                  live
+                    ? 'px-2.5 py-1 rounded-full bg-cyan/15 border border-cyan/60 font-display font-semibold text-xs text-navy whitespace-nowrap'
+                    : `px-1 font-body text-[11px] whitespace-nowrap ${
+                        done ? 'text-navy/55' : 'text-navy/25'
+                      }`
+                }
+              >
+                {t(`stages.${stage.key}`)}
+                {done && <span className="ml-0.5 text-navy/30">✓</span>}
+              </span>
             </li>
           )
         })}
@@ -452,6 +516,10 @@ export default function DealStages({
             only={mineNow}
             labels={meetingLabels}
             doneStages={doneStages}
+            /* T_UX.29 п.1 — «Статус "В пути" это то же самое что и этап "В
+               пути"». On the two rungs that are the flight, the status form is
+               the stage, so it is drawn open rather than offered. */
+            pinned="transit.update"
             onDone={onDone}
           />
         )}

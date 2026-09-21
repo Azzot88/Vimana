@@ -272,6 +272,22 @@ async def _guard_departure(db: AsyncSession, deal: Deal, actor: User) -> None:
     )
 
 
+#: T_UX.29 п.2 — the journey's own order, and the only three statuses that have
+#: one. `delayed`, `customs` and `storage` are conditions rather than
+#: milestones: each can genuinely come round twice, so they carry no rank and
+#: are never refused for being «previous».
+#:
+#: Mirrored on the client by `lib/cardForms.TRANSIT_SEQUENCE`, which draws the
+#: passed ones as a record and offers only what is still ahead. The pair a
+#: reviewer compares is this dict and that list.
+TRANSIT_ORDER: dict[str, int] = {"departed": 0, "layover": 1, "arrived": 2}
+
+#: T_UX.28 п.6, kept — «Пересадка тоже может быть повторена несколько раз, но
+#: строго до того как прилетел». A milestone that may be reached again: it holds
+#: its place in the order without being spent by the first one.
+TRANSIT_REPEATABLE: frozenset[str] = frozenset({"layover"})
+
+
 async def _transit_stages(db: AsyncSession, deal_id: uuid.UUID) -> list[str]:
     """Which stages of the journey this deal has already been told about.
 
@@ -311,19 +327,115 @@ async def _guard_transit_stage(
     Delay, customs and storage are deliberately unconstrained: each of them can
     genuinely happen again, and a rule forbidding the second one would silence
     the person carrying the parcel at the moment they have most to say.
+
+    T_UX.29 п.2 (owner, 2026-09-20): «Если посылка уже отправлена и летит, то
+    нельзя выбрать статус "Вылетела", она уже вылетела. И так со всеми статусами
+    — не должно быть возможности выбрать предыдущий статус, только один из
+    последующих.»
+
+    The two rules above were three special cases, and they left every gap they
+    did not name: a landed parcel could still be declared departed, because
+    «departed already in done» was false for a deal whose carrier skipped it.
+    `TRANSIT_ORDER` says the same thing once and closes all of them — nothing at
+    or behind the furthest milestone already declared. The unranked three keep
+    their freedom, which is the whole reason they are unranked.
     """
     if not isinstance(stage, str):
         return
     done = await _transit_stages(db, deal_id)
-    if stage in ("departed", "arrived") and stage in done:
-        raise HTTPException(
-            status_code=409, detail=f"This deal is already marked «{stage}»"
-        )
-    if stage == "layover" and "arrived" in done:
+    rank = TRANSIT_ORDER.get(stage)
+    if rank is None:
+        return
+    reached = max((TRANSIT_ORDER.get(s, -1) for s in done), default=-1)
+    if rank < reached or (rank == reached and stage not in TRANSIT_REPEATABLE):
         raise HTTPException(
             status_code=409,
-            detail="A layover cannot follow the arrival",
+            detail=f"This deal is already past «{stage}»",
         )
+
+
+async def _delivery_already_named(db: AsyncSession, deal: Deal) -> bool:
+    """Whether anything has yet been said about where the parcel is handed over.
+
+    T_UX.29 п.4 — the test behind «только Перевозчику». The rule is about the
+    **first word**, not about who owns the subject: once the delivery has been
+    named, everybody who may raise the card may propose a change to it, which is
+    exactly what the recipient is meant to do with an arrangement that does not
+    suit them.
+
+    Any `dropoff.proposed` counts, unanswered ones included. A proposal still
+    awaiting its «Принято» is a conversation that has been opened, and the
+    answer to one the recipient disagrees with is a counter-proposal — which
+    retires the first (`_supersede_open_proposal`), not a refusal followed by
+    silence. Requiring an *accepted* card here would leave them able to decline
+    and nothing else.
+
+    The agreement counts too: `delivery_place` and `delivery_at` are sections the
+    two sides negotiate, and a delivery named there is named. The method alone is
+    not, deliberately — every agreement carries one, so counting it would mean
+    the delivery was always already set and this rule would never fire once.
+
+    Called by: `_raise_card`, for `dropoff.proposed`.
+    """
+    agreed = await _agreed_terms(db, deal.id)
+    payload = (agreed.card_payload or {}) if agreed else {}
+    if payload.get("delivery_place") or payload.get("delivery_at"):
+        return True
+    said = (
+        await db.execute(
+            select(func.count())
+            .select_from(DealVaultMessage)
+            .where(
+                DealVaultMessage.deal_id == deal.id,
+                DealVaultMessage.card_kind == CardKind.dropoff_proposed.value,
+            )
+        )
+    ).scalar_one()
+    return said > 0
+
+
+async def _supersede_open_proposal(
+    db: AsyncSession, deal_id: uuid.UUID, kind: CardKind
+) -> uuid.UUID | None:
+    """A newer proposal replaces an unanswered older one of the same kind.
+
+    T_UX.29 п.7 (owner, 2026-09-20): «Вручение перенесено и подтверждено, но
+    панель "Перенести вручение" всё ещё висит у второго участника.»
+
+    Two people proposed a meeting within a minute of each other, one of the two
+    was accepted, and the other stayed `pending` forever — a live «Принять ·
+    Отклонить» over an arrangement that had already been settled by the card
+    below it. Answering it would move the meeting back; ignoring it leaves the
+    chat asking a question nobody should answer.
+
+    Superseded rather than declined: nobody refused anything, the request was
+    overtaken. That is what `CardState.superseded` means everywhere else in this
+    protocol — see `_amend_meeting_point`, which retires an agreement the same
+    way — and it keeps the older card readable in the chain with the newer one
+    pointing back at it through `supersedes_id`.
+
+    Only the meeting cards, on purpose. A second unanswered `handoff.declared`
+    is not a correction of the first, it is a second account of the same act by
+    a different person, and both belong in the record with their own photographs.
+
+    Returns the id of the newest card it retired, for the new one to point at.
+
+    Called by: `_raise_card`, for `pickup.proposed` and `dropoff.proposed`.
+    """
+    standing = (
+        await db.execute(
+            select(DealVaultMessage)
+            .where(
+                DealVaultMessage.deal_id == deal_id,
+                DealVaultMessage.card_kind == kind.value,
+                DealVaultMessage.card_state == CardState.pending,
+            )
+            .order_by(DealVaultMessage.created_at)
+        )
+    ).scalars().all()
+    for row in standing:
+        row.card_state = CardState.superseded
+    return standing[-1].id if standing else None
 
 
 async def _raise_card(
@@ -387,6 +499,29 @@ async def _raise_card(
     # T_UX.28 п.6 — the order of the journey's own statuses.
     if kind is CardKind.transit_update:
         await _guard_transit_stage(db, deal_id, body.payload.get("stage"))
+
+    # T_UX.29 п.4 (owner, 2026-09-20): «Раздел "Способ передачи"… должен быть
+    # доступен для настройки только Перевозчику, Получатель либо соглашается,
+    # либо предлагает изменения.»
+    #
+    # The first word on how the parcel is handed over is the carrier's: they are
+    # the one who will be standing there holding it, and an arrangement proposed
+    # around them is a plan for somebody else's afternoon. Once there is one,
+    # everybody who may raise the card gets it back — proposing a change to a
+    # standing arrangement is precisely what the recipient is meant to do with
+    # one that does not suit them.
+    #
+    # The screen narrows itself the same way. This is the rule (§6.9.5 п.6);
+    # hiding the button is the courtesy.
+    if (
+        kind is CardKind.dropoff_proposed
+        and creator is not CardAckRole.carrier
+        and not await _delivery_already_named(db, deal)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="The carrier sets the handover method — you may propose a change once it is set",
+        )
 
     # T3.11.27 — a cancellation is a thing you do *before* the parcel moves.
     # Owner's rule 2026-09-07: «Отмена до передачи должна подтверждаться обоими
@@ -528,6 +663,15 @@ async def _raise_card(
 
     payload = _validate_payload(spec, body.payload)
 
+    # T_UX.29 п.7 — a meeting proposed while another one is still unanswered
+    # replaces it. Two live «Принять · Отклонить» over one meeting is two
+    # answers to «где встречаемся», and the second one outlives the deal.
+    overtaken = (
+        await _supersede_open_proposal(db, deal_id, kind)
+        if kind in (CardKind.pickup_proposed, CardKind.dropoff_proposed)
+        else None
+    )
+
     msg = DealVaultMessage(
         deal_id=deal_id,
         sender_id=current_user.id,
@@ -537,6 +681,7 @@ async def _raise_card(
         card_payload=payload,
         card_state=CardState.pending if spec.ack_by else CardState.accepted,
         requires_ack_by=resolve_ack_role(spec, deal, creator),
+        supersedes_id=overtaken,
     )
     sign_vault_message(msg, current_user)
     db.add(msg)

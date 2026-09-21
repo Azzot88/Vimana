@@ -69,6 +69,42 @@ export const PAYMENT_METHODS = [
   'platform_wallet',
 ] as const
 
+/** T_UX.29 п.2 — the journey's own order (owner, 2026-09-20).
+ *
+ *  «Если посылка уже отправлена и летит, то нельзя выбрать статус "Вылетела",
+ *  она уже вылетела. И так со всеми статусами — на карточке не должно быть
+ *  возможности выбрать предыдущий статус, только один из последующих. Это
+ *  должно читаться на карточке.»
+ *
+ *  Three of the six statuses happen once and in this order. The other three —
+ *  `delayed`, `customs`, `storage` — are conditions rather than milestones: a
+ *  flight can be delayed twice and a parcel can wait for a connection and then
+ *  again for a recipient, so they carry no rank and stay offered throughout.
+ *
+ *  Read by `CardActions`, which draws the passed ones as a record and offers
+ *  only what is still ahead. */
+export const TRANSIT_SEQUENCE = ['departed', 'layover', 'arrived'] as const
+
+/** T_UX.28 п.6, kept — «Пересадка тоже может быть повторена несколько раз, но
+ *  строго до того как прилетел». A milestone that holds its place in the order
+ *  without being spent by the first one: a journey can have several layovers,
+ *  and none of them after the landing. */
+export const TRANSIT_REPEATABLE = new Set(['layover'])
+
+/** How far along the journey these declarations put the parcel: `-1` for the
+ *  statuses that have no place in the order.
+ *
+ *  Called by: `components/CardActions`, `transitReached`. */
+export const transitRank = (stage: string): number =>
+  (TRANSIT_SEQUENCE as readonly string[]).indexOf(stage)
+
+/** The furthest milestone already declared, or `-1` for a parcel that has not
+ *  reported anything yet.
+ *
+ *  Called by: `components/CardActions`. */
+export const transitReached = (declared: readonly string[]): number =>
+  declared.reduce((far, s) => Math.max(far, transitRank(s)), -1)
+
 const MEETING_FIELDS: CardField[] = [
   { name: 'method', type: 'select', options: HANDOVER_METHODS, required: true },
   { name: 'city', type: 'text' },

@@ -1555,7 +1555,7 @@
       "handover_conditions": "Умови передачі",
       "pickup_proposed": "Запропонувати передачу",
       "pickup_assign": "Призначити зустріч",
-      "dropoff_assign": "Призначити вручення",
+      "dropoff_assign": "Спосіб передачі",
       "pickup_confirmed": "Передачу узгоджено",
       "dropoff_proposed": "Запропонувати вручення",
       "dropoff_confirmed": "Вручення узгоджено",

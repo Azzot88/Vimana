@@ -97,6 +97,10 @@ describe('the next planned step', () => {
 
 describe('the journey statuses', () => {
   it('stops offering a departure once it has been declared', () => {
+    /* T_UX.29 п.2 — and it is still **shown**. Silently dropping it made the
+       row shrink with no explanation; the owner asked for the opposite, that
+       the journey so far read off the card. So it stays, as a record with a
+       tick and nothing to press. */
     stages({
       messages: [
         msg({
@@ -106,7 +110,10 @@ describe('the journey statuses', () => {
         }),
       ],
     })
-    expect(screen.queryByText(/^Departed$|^Вылетел$/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Departed$|^Вылетел$/ }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText(/^Departed$|^Вылетел$/)).toBeInTheDocument()
     // The layover is still on, because the parcel has not landed.
     expect(screen.getByText(/^Layover$|^Пересадка$/)).toBeInTheDocument()
   })
@@ -123,6 +130,24 @@ describe('the journey statuses', () => {
         }),
       ],
     })
+    expect(screen.queryByText(/^Layover$|^Пересадка$/)).not.toBeInTheDocument()
+  })
+
+  it('does not invent a stop the carrier never declared', () => {
+    /* T_UX.29 п.2 — the record is what this deal said, not everything the
+       order puts behind the furthest milestone. A landing announced without a
+       layover has not had one, and «Пересадка ✓» over it would be the screen
+       adding a stop to somebody's journey. */
+    stages({
+      messages: [
+        msg({
+          card_kind: 'transit.update',
+          card_state: 'accepted',
+          card_payload: { stage: 'arrived' },
+        }),
+      ],
+    })
+    expect(screen.queryByText(/^Departed$|^Вылетел$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/^Layover$|^Пересадка$/)).not.toBeInTheDocument()
   })
 })

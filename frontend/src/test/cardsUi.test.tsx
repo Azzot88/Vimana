@@ -1089,3 +1089,149 @@ describe('MeetingNote', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+// ── T_UX.29 · the flight goes one way, and the panel says which ───────────
+
+describe('the status form on the flight', () => {
+  const flight = (messages: VaultMessage[], myRole: DealRole = 'carrier') => (
+    <DealStages
+      dealId="d1"
+      status="in_transit"
+      myRole={myRole}
+      terms={null}
+      deal={null}
+      messages={messages}
+      onDone={() => {}}
+    />
+  )
+  const update = (stage: string): VaultMessage =>
+    msg({
+      id: `t-${stage}`,
+      card_kind: 'transit.update',
+      card_state: 'accepted',
+      card_payload: { stage },
+    })
+
+  it('stands open rather than behind a button', () => {
+    /* T_UX.29 п.1 (owner, 2026-09-20): «Статус "В пути" в Поле изменения
+       статуса должен быть виден сразу, а не за кнопкой. Статус "В пути" это то
+       же самое что и этап "В пути".» The form's own field is on the screen
+       with nothing pressed. */
+    renderWithProviders(flight([]))
+    expect(screen.getByText(/^Stage$|^Этап$/)).toBeInTheDocument()
+  })
+
+  it('stays open while its own card is waiting for an answer', () => {
+    /* A transit card waits on «Принято» and the journey does not: a carrier who
+       declared a delay still has to declare the landing an hour later. Standing
+       on its own pending card is how the form vanished from the stage named
+       after it. */
+    renderWithProviders(
+      flight([
+        msg({
+          id: 'p1',
+          card_kind: 'transit.update',
+          card_state: 'pending',
+          requires_ack_by: 'sender',
+          card_payload: { stage: 'delayed' },
+        }),
+      ]),
+    )
+    expect(screen.getByText(/^Stage$|^Этап$/)).toBeInTheDocument()
+  })
+
+  it('offers nothing behind the furthest status declared', () => {
+    renderWithProviders(flight([update('departed'), update('arrived')]))
+    // Drawn as a record — visible, with nothing to press.
+    expect(screen.getByText(/^Departed$|^Вылетел$/)).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Departed$|^Вылетел$/ }),
+    ).not.toBeInTheDocument()
+    // The conditions keep their freedom: customs happens after a landing as
+    // readily as before one.
+    expect(
+      screen.getByRole('button', { name: /^Customs$|^Таможня$/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('marks the live rung of the progress panel for a reader', () => {
+    renderWithProviders(flight([update('departed')]))
+    const live = document.querySelector('[aria-current="step"]')
+    expect(live?.textContent).toMatch(/in transit|В пути/i)
+  })
+})
+
+describe('the far side of the flight', () => {
+  const flight = (messages: VaultMessage[], myRole: DealRole = 'carrier') => (
+    <DealStages
+      dealId="d1"
+      status="in_transit"
+      myRole={myRole}
+      terms={null}
+      deal={null}
+      messages={messages}
+      onDone={() => {}}
+    />
+  )
+  const update = (stage: string): VaultMessage =>
+    msg({
+      id: `t-${stage}`,
+      card_kind: 'transit.update',
+      card_state: 'accepted',
+      card_payload: { stage },
+    })
+
+  it('keeps the arrival’s actions away from a parcel in the air', () => {
+    /* T_UX.29 п.3 (owner, 2026-09-20): «пока посылка не прилетела, не должно
+       показываться статусов "Отправлено по почте" и "Передано в доставку"».
+       `transit` and `arrived` share the status `in_transit`, and the union
+       «every stage standing on the current status» put the whole arrival over a
+       flight still in the air. */
+    renderWithProviders(flight([update('departed')]))
+    expect(
+      screen.queryByText(/posted by mail|Отправлено по почте/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/handed to delivery|Передано в доставку/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('offers them once the flight is down', () => {
+    renderWithProviders(flight([update('arrived')]))
+    expect(
+      screen.getByText(/posted by mail|Отправлено по почте/i),
+    ).toBeInTheDocument()
+  })
+
+  it('lets only the carrier name the handover method first', () => {
+    /* T_UX.29 п.4 — «должен быть доступен для настройки только Перевозчику,
+       Получатель либо соглашается, либо предлагает изменения». */
+    renderWithProviders(flight([update('arrived')], 'recipient'))
+    expect(
+      screen.queryByText(/delivery method|Способ передачи/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('gives it back to the recipient once it has been named', () => {
+    /* The second half of the rule: «либо соглашается, либо предлагает
+       изменения». An arrangement standing is something to disagree with, and
+       the caption says so — «Перенести вручение», not «Способ передачи». */
+    renderWithProviders(
+      flight(
+        [
+          update('arrived'),
+          msg({
+            id: 'drop1',
+            card_kind: 'dropoff.proposed',
+            card_state: 'accepted',
+            card_payload: { method: 'in_person', city: 'Queens' },
+          }),
+        ],
+        'recipient',
+      ),
+    )
+    expect(
+      screen.getByText(/move the delivery|Перенести вручение/i),
+    ).toBeInTheDocument()
+  })
+})
