@@ -4,6 +4,7 @@ from app.models.social import InviteLink, Connection, ClosePair
 from app.models.marketplace import Trip, TripSegment, Cargo, CargoTemplate, TripStatus, Category, DEFAULT_CATEGORIES, Chat, ChatMessage, SenderRequest
 from app.models.deal import Deal, DealChainAnchor, DealEvent, DealVaultMessage, Attachment, Dispute, DealStatus, DealEventType, AttachmentKind, DisputeStatus, ArbiterAccessGrant, DealParticipant, DealParticipantRole, CardState, CardAckRole
 from app.models.metrics import PublishMetric
+from app.models.notification import Notification, NotificationKind, PushSubscription
 from app.models.notices import (
     NoticeSeverity, NoticeSurface, PlatformNotice, RouteNote, RouteStatus,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "InviteLink", "Connection", "ClosePair",
     "Trip", "TripSegment", "Cargo", "CargoTemplate", "TripStatus", "Category", "DEFAULT_CATEGORIES",
     "Chat", "ChatMessage",
+    "Notification", "NotificationKind", "PushSubscription",
     "Deal", "DealEvent", "DealVaultMessage", "Attachment", "Dispute",
     "DealStatus", "DealEventType", "AttachmentKind", "DisputeStatus",
     "ArbiterAccessGrant", "PublishMetric",

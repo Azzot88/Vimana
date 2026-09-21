@@ -45,6 +45,8 @@ from app.api.participants import router as participants_router
 from app.api.threshold import router as threshold_router
 from app.api.trips import router as trips_router
 from app.api.trust import router as trust_router
+from app.api.notifications import router as notifications_router
+from app.api.events import router as events_router
 from app.api.uba import router as uba_router
 from app.api.verification import router as verification_router
 from app.api.waitlist import router as waitlist_router
@@ -261,6 +263,8 @@ app.include_router(step_up_router, prefix="/api/auth/step-up", tags=["auth"])
 app.include_router(participants_router, prefix="/api", tags=["participants"])
 app.include_router(notices_router, prefix="/api", tags=["notices"])
 app.include_router(uba_router, prefix="/api", tags=["uba"])
+app.include_router(notifications_router, prefix="/api", tags=["notifications"])
+app.include_router(events_router, prefix="/api", tags=["events"])
 app.include_router(telegram_router, prefix="/api/telegram", tags=["telegram"])
 app.include_router(airports_router, prefix="/api/airports", tags=["airports"])
 # T3.11.07 — postal services and payment systems, both country-scoped and both

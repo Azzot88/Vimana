@@ -954,6 +954,10 @@
     "locked": "locked by the carrier",
     "lockIt": "lock this",
     "noRecipient": "recipient not named yet",
+    "recipientSelf": "You",
+    "recipientChoose": "Choose",
+    "recipientChange": "Change",
+    "recipientNeeded": "A recipient is required: the terms cannot be fixed without one.",
     "section": {
       "cargo": "Cargo",
       "handover": "Handover",
@@ -973,6 +977,7 @@
       "fragile": "Fragile",
       "openOnHandover": "Open on handover",
       "url": "Item link",
+      "recipient": "Recipient",
       "method": "Method",
       "place": "Place",
       "at": "When",
@@ -1022,6 +1027,18 @@
       "pay": "Hand the money over, or send the transfer.",
       "screenshot": "Paying electronically — attach the transaction screenshot, the receipt or the bank slip to the card.",
       "finish": "If everything matches, complete the handover."
+    }
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "title": "Notifications",
+    "readAll": "Mark all read",
+    "empty": "Nothing missed",
+    "kind": {
+      "chat_message": "New message in a deal",
+      "trip_response": "A response to your trip",
+      "request_new": "Somebody is asking for your corridor",
+      "deal_status": "A deal moved"
     }
   },
   "meeting": {

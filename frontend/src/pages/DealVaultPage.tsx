@@ -16,6 +16,8 @@ import { getDeal, type DealDetail, type DealStatus } from '../api/deals'
 import { getTerms, type Terms } from '../api/terms'
 import { decryptMessageForMe } from '../api/participants'
 import RecipientModal from '../components/RecipientModal'
+import { markRead } from '../api/notifications'
+import { useEventStream } from '../hooks/useEventStream'
 import SafeFilePicker from '../components/SafeFilePicker'
 import { decryptE2E, envelopeParts } from '../lib/threshold'
 import { roleIn } from '../lib/dealRole'
@@ -143,6 +145,25 @@ export default function DealVaultPage() {
   useLiveBeat(() => {
     load()
     setTick((n) => n + 1)
+    /* T_UX.29 pt.7 (owner, 2026-09-20): «Если изменения произошли в активном
+       окне, их статусы показывать не нужно.» This screen is the active window
+       for its own deal, so it clears that deal's notifications while it is
+       open and visible — `useLiveBeat` does not fire on a hidden tab, which is
+       exactly the distinction the rule is about. What is left in the bell is,
+       by construction, what nobody was looking at. */
+    if (dealId) void markRead({ deal_id: dealId })
+  }, Boolean(dealId))
+
+  /* T_UX.29 pt.3 — and the same thing without the wait. A press on the other
+     side arrives here as an event; the beat above stays as the floor under a
+     connection that can die without saying so. Filtered to this deal: the
+     stream carries everything addressed to this person, and refetching a deal
+     because a different one moved would be work for nothing. */
+  useEventStream((event) => {
+    if (!dealId || event.deal_id !== dealId) return
+    load()
+    setTick((n) => n + 1)
+    void markRead({ deal_id: dealId })
   }, Boolean(dealId))
 
   /* T3.11.17 — refetched with the messages, not once on mount: accepting a card

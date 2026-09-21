@@ -2093,6 +2093,10 @@
     "locked": "zablokowane przez przewoźnika",
     "lockIt": "zablokuj",
     "noRecipient": "odbiorca jeszcze nie wskazany",
+    "recipientSelf": "Ty",
+    "recipientChoose": "Wybierz",
+    "recipientChange": "Zmień",
+    "recipientNeeded": "Odbiorca jest wymagany: bez niego nie da się ustalić warunków.",
     "section": {
       "cargo": "Przesyłka",
       "handover": "Przekazanie",
@@ -2112,6 +2116,7 @@
       "fragile": "Delikatne",
       "openOnHandover": "Otworzyć przy przekazaniu",
       "url": "Link do towaru",
+      "recipient": "Odbiorca",
       "method": "Sposób",
       "place": "Miejsce",
       "at": "Kiedy",
@@ -2161,6 +2166,18 @@
       "pay": "Przekaż pieniądze do rąk albo wyślij przelew.",
       "screenshot": "Przy płatności elektronicznej dołącz do karty zrzut transakcji, potwierdzenie lub wyciąg bankowy.",
       "finish": "Jeśli wszystko się zgadza — zakończ przekazanie."
+    }
+  },
+  "notifications": {
+    "bell": "Powiadomienia",
+    "title": "Powiadomienia",
+    "readAll": "Oznacz wszystkie",
+    "empty": "Nic nie przegapiłeś",
+    "kind": {
+      "chat_message": "Nowa wiadomość w transakcji",
+      "trip_response": "Odpowiedź na Twój lot",
+      "request_new": "Ktoś szuka przewoźnika na Twoim korytarzu",
+      "deal_status": "Status transakcji się zmienił"
     }
   },
   "meeting": {

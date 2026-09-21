@@ -213,3 +213,26 @@ export function routeChain(trip: {
 export function routeNode(code: string, city?: string | null): string {
   return city ? `${city}, ${code}` : code
 }
+
+/** An ISO instant into what `DateTimeField` reads: `YYYY-MM-DDTHH:mm`, local.
+ *
+ *  Local rather than UTC because that is what the field means wherever it is
+ *  used — somebody types the clock on the wall where the thing happens.
+ *  Round-tripping through UTC here would move every edited moment by the
+ *  offset, silently, and only for people not on UTC.
+ *
+ *  T_UX.29 pt.7 — moved here from `pages/NewTripPage` when the terms form grew
+ *  its own time fields: the second copy would have been the first place the two
+ *  drifted.
+ *
+ *  Called by: `pages/NewTripPage`, `components/TermsProposeForm`.
+ */
+export function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`
+}

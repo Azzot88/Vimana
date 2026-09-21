@@ -113,6 +113,39 @@ async def file_request(
         notify=body.notify,
     )
     db.add(row)
+    await db.flush()
+
+    # T_UX.29 pt.7 — «запросы на перевозку» in the owner's list of what the bell
+    # carries. Addressed, not broadcast: the carriers already flying this
+    # corridor inside the window the sender named. A notification to everybody
+    # with a trip anywhere would be advertising, and a bell that advertises is a
+    # bell people switch off.
+    from app.core.notify import notify
+    from app.models.marketplace import Trip, TripStatus
+    from app.models.notification import NotificationKind
+
+    carriers = (
+        await db.execute(
+            select(Trip.carrier_id)
+            .where(
+                Trip.origin == row.origin,
+                Trip.destination == row.destination,
+                Trip.status == TripStatus.open,
+                func.date(Trip.depart_at) >= row.window_from,
+                func.date(Trip.depart_at) <= row.window_to,
+            )
+            .distinct()
+            .limit(50)
+        )
+    ).scalars().all()
+    await notify(
+        db,
+        carriers,
+        NotificationKind.request_new,
+        payload={"origin": row.origin, "destination": row.destination},
+        exclude=current_user.id,
+    )
+
     await db.commit()
     await db.refresh(row)
     return row

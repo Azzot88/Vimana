@@ -216,6 +216,21 @@ async def match_deal(
             author=current_user,
         )
 
+    # T_UX.29 pt.7 (owner, 2026-09-20): «у перевозчика должно быть оповещение о
+    # предложении, основанном на его рейсе». This is that moment — a sender has
+    # answered a published trip with cargo, and the deal exists because of it.
+    from app.core.notify import notify
+    from app.models.notification import NotificationKind
+
+    await notify(
+        db,
+        (deal.carrier_id,),
+        NotificationKind.trip_response,
+        deal_id=deal.id,
+        trip_id=deal.trip_id,
+        exclude=current_user.id,
+    )
+
     await db.commit()
     await db.refresh(deal)
     return deal

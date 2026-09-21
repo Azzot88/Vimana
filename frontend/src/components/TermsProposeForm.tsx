@@ -5,6 +5,9 @@ import { HANDOVER_METHODS, PAYMENT_METHODS } from '../lib/cardForms'
 import type { DealDetail } from '../api/deals'
 import type { DealRole } from '../lib/cardForms'
 import { usePrefs } from '../hooks/usePrefs'
+import { toLocalInput } from '../lib/format'
+import DateTimeField from './DateTimeField'
+import RecipientModal from './RecipientModal'
 
 /** T3.11.27 — the agreement, in the sections the two sides negotiate.
  *
@@ -84,7 +87,26 @@ export default function TermsProposeForm({
   const [handoverPlace, setHandoverPlace] = useState(str(p.handover_place))
   const [deliveryMethod, setDeliveryMethod] = useState(str(p.delivery_method))
   const [deliveryPlace, setDeliveryPlace] = useState(str(p.delivery_place))
+  /* T_UX.29 pt.7 п.1 (owner, 2026-09-20): «Там же должна быть возможность
+     выбрать время, если встреча личная, передача лично в руки.» The agreement
+     has carried `handover_at` and `delivery_at` since T3.11.27 and the form
+     simply never asked, so the only way to name a time was a meeting card
+     raised afterwards — a second step for something the two of them were
+     agreeing anyway. Asked per end and only for a meeting in person: there is
+     no hour to agree with a post office. */
+  const [handoverAt, setHandoverAt] = useState(toLocalInput(p.handover_at))
+  const [deliveryAt, setDeliveryAt] = useState(toLocalInput(p.delivery_at))
   const [payer, setPayer] = useState<'sender' | 'recipient'>(p.payer ?? 'sender')
+  /* T_UX.29 pt.7 п.1 — «Когда отправитель предлагает условия перевозчику, ему
+     там же нужно выбрать Получателя, в том же окне.»
+     `IMPLEMENTATIONPLAN §3.12.3` already requires a recipient **before** the
+     terms are fixed, and the server refuses to agree them without one (409). So
+     the old order made somebody fill the whole form and meet a refusal at the
+     end; the answer belongs where the question is asked. */
+  const [recipientOpen, setRecipientOpen] = useState(false)
+  const [recipientName, setRecipientName] = useState<string | null>(
+    fromBoard?.recipient_name ?? null,
+  )
   const [locked, setLocked] = useState<string[]>(p.locked ?? [])
   /* T3.11.27 (owner, 2026-09-12): «Способ оплаты… должен быть внутри формы
      Предложить условия». Opened on the trip's published model, because that is
@@ -110,6 +132,11 @@ export default function TermsProposeForm({
      request itself is one press further on, in `send`. */
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    /* T_UX.29 pt.7 п.1 — the recipient picker lives inside this form, and it
+       has a search box: Enter in it would otherwise submit the terms and open
+       the preview over the modal. The picker is not a step of the form, so
+       while it is open the form has nothing to submit. */
+    if (recipientOpen) return
     setError('')
     setReview(true)
   }
@@ -126,8 +153,10 @@ export default function TermsProposeForm({
         price_total: Number(price),
         handover_method: handoverMethod || null,
         handover_place: handoverPlace || null,
+        handover_at: handoverAt ? new Date(handoverAt).toISOString() : null,
         delivery_method: deliveryMethod || null,
         delivery_place: deliveryPlace || null,
+        delivery_at: deliveryAt ? new Date(deliveryAt).toISOString() : null,
         payment_method: paymentMethod || undefined,
         payer,
         locked,
@@ -143,6 +172,35 @@ export default function TermsProposeForm({
       setBusy(false)
     }
   }
+
+  /* T_UX.29 pt.7 п.1 — the hour of a meeting in person, with our own picker.
+     Drawn only for `in_person`: there is no time to agree with a post office or
+     a parcel locker, and a blank box beside them would read as a question the
+     two of them had failed to answer. */
+  const timeBox = (
+    value: string,
+    setter: (v: string) => void,
+    section: string,
+    show: boolean,
+  ) =>
+    show ? (
+      <div className="flex-1 min-w-[10rem]">
+        <span className="block text-xs font-body text-navy/40 mb-1">
+          {t('agreement.field.at')}
+        </span>
+        <DateTimeField
+          value={value}
+          onChange={setter}
+          style={prefs.style}
+          ariaLabel={t('agreement.field.at') as string}
+        />
+        {lockedForMe(section) && (
+          <span className="block text-[11px] font-body text-navy/40 mt-1">
+            {t('agreement.locked')}
+          </span>
+        )}
+      </div>
+    ) : null
 
   const box = (
     label: string,
@@ -309,6 +367,41 @@ export default function TermsProposeForm({
         </div>
       )}
 
+      {/* T_UX.29 pt.7 п.1 — the recipient, asked where the terms are.
+          Only of the sender: the role is theirs to fill (`§3.12.3`), and a
+          carrier looking at a button they cannot press learns that half the
+          controls here do nothing. */}
+      {myRole === 'sender' && (
+        <div className="mt-3 rounded-field border border-navy/10 bg-surface p-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <span className="block text-xs font-body text-navy/40">
+                {t('agreement.field.recipient')}
+              </span>
+              <span className="text-sm font-body text-navy">
+                {recipientName ?? t('agreement.noRecipient')}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRecipientOpen(true)}
+              className="px-3 py-2 rounded-field border border-navy/15 text-sm font-body text-navy/80 hover:border-cyan hover:text-cyan"
+            >
+              {recipientName
+                ? t('agreement.recipientChange')
+                : t('agreement.recipientChoose')}
+            </button>
+          </div>
+          {/* Said before the form is filled, not after it is refused: the
+              server will not agree terms without a recipient who accepted. */}
+          {!recipientName && (
+            <p className="text-[11px] font-body text-navy/50 mt-1">
+              {t('agreement.recipientNeeded')}
+            </p>
+          )}
+        </div>
+      )}
+
       {heading(SECTIONS[0])}
       <div className="flex flex-wrap gap-3">
         {methodBox(
@@ -321,6 +414,12 @@ export default function TermsProposeForm({
         {box(t('agreement.field.place'), handoverPlace, setHandoverPlace, {
           section: 'handover',
         })}
+        {timeBox(
+          handoverAt,
+          setHandoverAt,
+          'handover',
+          handoverMethod === 'in_person',
+        )}
       </div>
 
       {heading(SECTIONS[1])}
@@ -335,6 +434,12 @@ export default function TermsProposeForm({
         {box(t('agreement.field.place'), deliveryPlace, setDeliveryPlace, {
           section: 'delivery',
         })}
+        {timeBox(
+          deliveryAt,
+          setDeliveryAt,
+          'delivery',
+          deliveryMethod === 'in_person',
+        )}
       </div>
 
       {heading(SECTIONS[2])}
@@ -458,6 +563,31 @@ export default function TermsProposeForm({
             </div>
           </div>
         </div>
+      )}
+
+      {/* T_UX.29 pt.7 п.1 — the same picker the deal screen opens, not a second
+          one (`§9a`). It owns the three ways of naming somebody — a contact, a
+          public key, a link for a person who is not here yet — and each of them
+          is an **offer** the other side accepts; rebuilding that beside it would
+          have been a fourth way to get one of the three subtly wrong. */}
+      {recipientOpen && (
+        <RecipientModal
+          open
+          dealId={dealId}
+          onClose={() => setRecipientOpen(false)}
+          onAttached={(name) => {
+            setRecipientName(name)
+            setRecipientOpen(false)
+          }}
+          selfRecipient={Boolean(
+            fromBoard?.recipient_id &&
+              fromBoard.recipient_id === fromBoard.sender_id,
+          )}
+          onSelf={() => {
+            setRecipientName(t('agreement.recipientSelf'))
+            setRecipientOpen(false)
+          }}
+        />
       )}
     </form>
   )

@@ -2071,6 +2071,10 @@
     "locked": "verrouillé par le transporteur",
     "lockIt": "verrouiller",
     "noRecipient": "destinataire pas encore nommé",
+    "recipientSelf": "Vous",
+    "recipientChoose": "Choisir",
+    "recipientChange": "Changer",
+    "recipientNeeded": "Un destinataire est obligatoire : sans lui, les conditions ne peuvent être fixées.",
     "section": {
       "cargo": "Colis",
       "handover": "Remise au transporteur",
@@ -2090,6 +2094,7 @@
       "fragile": "Fragile",
       "openOnHandover": "Ouvrir à la remise",
       "url": "Lien de l’article",
+      "recipient": "Destinataire",
       "method": "Méthode",
       "place": "Lieu",
       "at": "Quand",
@@ -2139,6 +2144,18 @@
       "pay": "Remettez l’argent en main propre, ou envoyez le virement.",
       "screenshot": "Paiement électronique : joignez à la carte la capture de la transaction, le reçu ou le relevé bancaire.",
       "finish": "Si tout correspond, terminez la remise."
+    }
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "title": "Notifications",
+    "readAll": "Tout marquer comme lu",
+    "empty": "Rien de manqué",
+    "kind": {
+      "chat_message": "Nouveau message dans un accord",
+      "trip_response": "Une réponse à votre vol",
+      "request_new": "Quelqu’un cherche votre corridor",
+      "deal_status": "L’accord a avancé"
     }
   },
   "meeting": {

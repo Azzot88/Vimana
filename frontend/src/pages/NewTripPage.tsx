@@ -39,7 +39,7 @@ import CategoryBubbles from '../components/CategoryBubbles'
 import MonoText from '../components/MonoText'
 import WizardSheet from '../components/WizardSheet'
 import CorridorRequirements from '../components/CorridorRequirements'
-import { routeNode } from '../lib/format'
+import { routeNode, toLocalInput } from '../lib/format'
 import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.20 — four steps, and only the first is required.
@@ -493,23 +493,6 @@ function reversedDraft(base: Partial<Draft>): Partial<Draft> {
   const origin = { ...(base.handoverDestination ?? EMPTY_HANDOVER), postalServices: '' }
   const destination = { ...(base.handoverOrigin ?? EMPTY_HANDOVER) }
   return { ...base, nodes, handoverOrigin: origin, handoverDestination: destination }
-}
-
-/** An ISO instant into what `DateTimeField` reads: `YYYY-MM-DDTHH:mm`, local.
- *
- *  Local rather than UTC because that is what the field means everywhere else
- *  in this form — the carrier types the clock on the wall at the airport they
- *  are leaving from. Round-tripping through UTC here would move every edited
- *  departure by the offset, silently, and only for carriers not on UTC.
- */
-function toLocalInput(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`
 }
 
 // Feature flags for experimental input methods (voice / ticket scan).

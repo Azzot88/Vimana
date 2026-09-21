@@ -47,6 +47,7 @@ from app.models.deal import (
     DealStatus, DealVaultMessage,
 )
 from app.models.marketplace import Cargo, Trip
+from app.models.notification import NotificationKind
 from app.models.user import User
 from app.schemas.cards import PAYLOAD_MODELS, CardCreate
 from app.schemas.dealvault import MessageOut
@@ -775,6 +776,19 @@ async def _raise_card(
     )
     if kind is CardKind.received_as_expected:
         await _received_as_expected(db, deal, msg, current_user)
+
+    # T_UX.29 pt.7 — the other two learn about it. Inside this transaction, so a
+    # card that fails a later check cannot leave a notification about itself.
+    from app.core.notify import notify
+
+    await notify(
+        db,
+        (deal.sender_id, deal.carrier_id, deal.recipient_id),
+        NotificationKind.deal_status,
+        deal_id=deal.id,
+        payload={"card_kind": kind.value},
+        exclude=current_user.id,
+    )
     return msg
 
 

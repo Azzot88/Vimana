@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import { isSuperuser } from '../lib/permissions'
 import LanguageSwitcher from './LanguageSwitcher'
 import ModeSwitcher from './ModeSwitcher'
+import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
   const { user, logout } = useAuthStore()
@@ -87,6 +88,10 @@ export default function Navbar() {
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
+          {/* T_UX.29 pt.7 — the bell, and only for somebody signed in: there is
+              nothing addressed to a visitor. Left of the mode switch, because
+              «что произошло» is read before «в каком я режиме». */}
+          {user && <NotificationBell />}
           <ModeSwitcher />
           <LanguageSwitcher />
           {user && (

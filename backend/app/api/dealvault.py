@@ -499,6 +499,21 @@ async def create_message(
     # transaction: message and its chain entry commit or roll back together.
     await db.flush()
     await _chain_message(db, msg, current_user)
+    # T_UX.29 pt.7 — the other people in the deal learn that something was said.
+    # **The text is not carried**: chat bodies are encrypted at rest, and a
+    # preview in the notification would undo that for the price of a nicer line
+    # in a panel. The notification says «в сделке новое сообщение» and takes you
+    # there to read it.
+    from app.core.notify import notify
+    from app.models.notification import NotificationKind
+
+    await notify(
+        db,
+        (deal.sender_id, deal.carrier_id, deal.recipient_id),
+        NotificationKind.chat_message,
+        deal_id=deal.id,
+        exclude=current_user.id,
+    )
     await db.commit()
     await db.refresh(msg)
 
@@ -823,6 +838,20 @@ async def ack_card(
             from app.api.cards import apply_acceptance
 
             await apply_acceptance(db, deal, msg, current_user)
+
+    # T_UX.29 pt.7 — an answered card moves the deal, and the other side is
+    # usually the one who has been waiting for it.
+    from app.core.notify import notify
+    from app.models.notification import NotificationKind
+
+    await notify(
+        db,
+        (deal.sender_id, deal.carrier_id, deal.recipient_id),
+        NotificationKind.deal_status,
+        deal_id=deal.id,
+        payload={"card_kind": msg.card_kind, "decision": body.decision},
+        exclude=current_user.id,
+    )
 
     await db.commit()
     await db.refresh(msg)
