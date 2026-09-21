@@ -562,6 +562,8 @@
       "handoff_photo": "Photo de la remise",
       "receipt_photo": "Photo de la réception",
       "selfie": "Selfie avec l’autre partie",
+      "selfieWithSender": "Selfie avec l’expéditeur",
+      "selfieWithCarrier": "Selfie avec le transporteur",
       "doc": "Document",
       "payment_receipt": "Reçu de paiement",
       "identity_doc": "Pièce d'identité",

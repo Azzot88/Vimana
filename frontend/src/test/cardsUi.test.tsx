@@ -1501,3 +1501,46 @@ describe('the calendar inside a card form', () => {
     ).not.toBeNull()
   })
 })
+
+// ── T_UX.29 pt.4 · the selfie says who, the note comes last, the clock wraps
+
+describe('the handover form', () => {
+  const panel = (myRole: DealRole) => (
+    <DealStages
+      dealId="d1"
+      status="accepted"
+      myRole={myRole}
+      terms={null}
+      deal={null}
+      messages={[]}
+      onDone={() => {}}
+    />
+  )
+
+  it('names the selfie after the person who should be in it', () => {
+    /* T_UX.29 pt.4 п.2 (owner, 2026-09-20). «Селфи с участником» asked both
+       sides for the same nameless picture. */
+    renderWithProviders(panel('sender'))
+    expect(
+      screen.getByText(/selfie with the carrier|Селфи с Перевозчиком/i),
+    ).toBeInTheDocument()
+
+    renderWithProviders(panel('carrier'))
+    expect(
+      screen.getByText(/selfie with the sender|Селфи с Отправителем/i),
+    ).toBeInTheDocument()
+  })
+
+  it('asks for the note after the evidence, not before it', () => {
+    // The note is what somebody adds after doing the thing; above the photos it
+    // read as the first question the form asks.
+    renderWithProviders(panel('sender'))
+    const photo = screen.getByText(/^Hand-off photo$|^Фото передачи$/i)
+    const note = screen.getByText(/^Note$|^Заметка$/)
+    // Document order, not string order: what is being asserted is where the
+    // reader's eye reaches them.
+    expect(
+      photo.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+})

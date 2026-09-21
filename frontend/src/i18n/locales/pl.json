@@ -564,6 +564,8 @@
       "handoff_photo": "Zdjęcie przekazania",
       "receipt_photo": "Zdjęcie odbioru",
       "selfie": "Selfie z drugą stroną",
+      "selfieWithSender": "Selfie z nadawcą",
+      "selfieWithCarrier": "Selfie z przewoźnikiem",
       "doc": "Dokument",
       "payment_receipt": "Potwierdzenie zapłaty",
       "identity_doc": "Dokument tożsamości",

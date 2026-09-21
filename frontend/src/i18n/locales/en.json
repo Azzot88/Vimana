@@ -581,6 +581,8 @@
       "handoff_photo": "Hand-off photo",
       "receipt_photo": "Receipt photo",
       "selfie": "Selfie with the other party",
+      "selfieWithSender": "Selfie with the sender",
+      "selfieWithCarrier": "Selfie with the carrier",
       "doc": "Document",
       "payment_receipt": "Payment receipt",
       "identity_doc": "Identity document",

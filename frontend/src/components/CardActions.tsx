@@ -409,19 +409,6 @@ export default function CardActions({
       </p>
       <div className="flex flex-wrap gap-3">{active.fields.map(field)}</div>
 
-      {active.hasText && (
-        <label className="block mt-3">
-          <span className="block text-xs font-body text-navy/40 mb-1">
-            {t('cards.note')}
-          </span>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm"
-          />
-        </label>
-      )}
-
       {(active.needsPhoto || active.optionalPhoto) && (
         <div className="mt-2">
           {/* The photograph is part of the declaration, so it is asked for
@@ -462,14 +449,43 @@ export default function CardActions({
           there. */}
       {active.optionalSelfie && (
         <div className="mt-3">
+          {/* T_UX.29 pt.4 п.2 — «Селфи с Перевозчиком» у отправителя и «Селфи
+              с Отправителем» у перевозчика. «Селфи с участником» asked both of
+              them for the same nameless picture; the label says who is
+              supposed to be in the frame beside you, which is the only thing
+              about a selfie that can be got wrong. */}
           <PhotoPicker
             value={selfies}
             onChange={setSelfies}
-            label={t('chat.kind.selfie')}
+            label={t(
+              myRole === 'carrier'
+                ? 'chat.kind.selfieWithSender'
+                : myRole === 'sender'
+                  ? 'chat.kind.selfieWithCarrier'
+                  : 'chat.kind.selfie',
+            )}
             hint={t('cards.selfieHint')}
             optional
           />
         </div>
+      )}
+
+      {/* T_UX.29 pt.4 п.2 (owner, 2026-09-20): «Поле "Заметка" перенести вниз
+          окна, после фото.» The note is what somebody adds **after** doing the
+          thing the card is about; standing above the evidence it read as the
+          first question the form asks, and the photographs — which the card
+          cannot be confirmed without — came after an optional sentence. */}
+      {active.hasText && (
+        <label className="block mt-3">
+          <span className="block text-xs font-body text-navy/40 mb-1">
+            {t('cards.note')}
+          </span>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-navy/15 font-body text-sm"
+          />
+        </label>
       )}
 
       {error && <p className="mt-2 text-xs font-body text-danger">{error}</p>}

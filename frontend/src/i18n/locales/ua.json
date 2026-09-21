@@ -564,6 +564,8 @@
       "handoff_photo": "Фото передачі",
       "receipt_photo": "Фото отримання",
       "selfie": "Селфі з учасником",
+      "selfieWithSender": "Селфі з Відправником",
+      "selfieWithCarrier": "Селфі з Перевізником",
       "doc": "Документ",
       "payment_receipt": "Чек оплати",
       "identity_doc": "Документ особи",

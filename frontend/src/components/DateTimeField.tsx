@@ -360,8 +360,8 @@ export default function DateTimeField({
               </span>
               <input
                 type="number"
-                min={hour12 ? 1 : 0}
-                max={hour12 ? 12 : 23}
+                /* No `min`/`max`: the browser's stepper stops dead at a bound,
+                   and the wrap above is what should happen there instead. */
                 value={pad(displayHour)}
                 onChange={(e) => {
                   // An emptied box is mid-edit, not midnight: `Number("")` is 0,
@@ -369,9 +369,25 @@ export default function DateTimeField({
                   if (e.target.value === '') return
                   const raw = Number(e.target.value)
                   if (Number.isNaN(raw)) return
+                  /* T_UX.29 pt.4 п.4 (owner, 2026-09-20): «Часы календаря
+                     должны иметь бесконечную прокрутку без смены даты. После
+                     23 часов должно идти 00, а дата остаётся той же.»
+
+                     Clamping made the top of the dial a wall: somebody
+                     stepping past 23 to reach an early-morning flight stopped
+                     at 23 and had to retype. Wrapping is the behaviour of
+                     every clock. The day never moves with it — `setClock`
+                     rebuilds the time on the draft's own date — which is the
+                     half the owner named explicitly, because a picker that
+                     rolled the date under the hour would be worse than the
+                     wall. */
+                  /* On a 12-hour dial the box holds 1…12, so the wrap is
+                     done one step below and put back: 13 → 1, 0 → 12. Then the
+                     familiar mapping to a 24-hour clock, where 12 am is 0. */
+                  const twelve = ((((raw - 1) % 12) + 12) % 12) + 1
                   const h24 = hour12
-                    ? (raw % 12) + (meridiem === 'pm' ? 12 : 0)
-                    : Math.min(23, Math.max(0, raw))
+                    ? (twelve % 12) + (meridiem === 'pm' ? 12 : 0)
+                    : ((raw % 24) + 24) % 24
                   setClock(h24, draft?.getMinutes() ?? 0)
                 }}
                 aria-label={t('calendar.hours') as string}
@@ -380,15 +396,15 @@ export default function DateTimeField({
               <MonoText className="text-navy/40">:</MonoText>
               <input
                 type="number"
-                min={0}
-                max={59}
                 step={5}
                 value={pad(draft?.getMinutes() ?? 0)}
                 onChange={(e) => {
                   if (e.target.value === '') return
                   const raw = Number(e.target.value)
                   if (Number.isNaN(raw)) return
-                  setClock(hours24, Math.min(59, Math.max(0, raw)))
+                  // Minutes wrap for the same reason: 55 → 60 means the top
+                  // of the next hour to a person, and 0 is what that is.
+                  setClock(hours24, ((raw % 60) + 60) % 60)
                 }}
                 aria-label={t('calendar.minutes') as string}
                 className="w-14 border border-navy/20 rounded-field px-2 py-1.5 text-sm font-mono text-navy text-center focus:outline-none focus:border-cyan"
