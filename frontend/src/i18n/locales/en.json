@@ -1331,19 +1331,31 @@
         "whatsapp": "WhatsApp"
       },
       "class": {
-        "deal": "Deals",
+        "deal_terms": "Deal terms",
+        "deal_meeting": "Meeting and handover",
+        "deal_custody": "Parcel and journey",
+        "deal_money": "Money",
+        "deal_storage": "Storage",
+        "deal_trouble": "Trouble",
         "deadline": "Deadlines",
-        "vault": "Vault messages",
-        "trust": "Verification and trust",
+        "marketplace": "Corridors",
         "dispute": "Disputes",
-        "security": "Security"
+        "security": "Security",
+        "vault": "Vault messages",
+        "trust": "Verification and trust"
       },
       "classHint": {
-        "deal": "agreed, accepted, in transit, delivered, confirmed, closed",
+        "deal_terms": "proposal, counter, agreement, the recipient role",
+        "deal_meeting": "where and when: set, moved, address shared",
+        "deal_custody": "handover, transit updates, landing, posted, delivered",
+        "deal_money": "payment declared, settlement confirmed, deal closed",
+        "deal_storage": "a meeting past the free period, the storage bill",
+        "deal_trouble": "an issue, a cancellation, a request to call an arbiter",
         "deadline": "24 hours before a deadline",
+        "marketplace": "a trip appeared in a corridor you asked about",
+        "dispute": "opened, answered, decided",
         "vault": "new messages in a deal's vault",
-        "trust": "badges, levels, connections",
-        "dispute": "opened, answered, decided"
+        "trust": "badges, levels, connections"
       }
     },
     "email": "Email",
@@ -1870,7 +1882,6 @@
     "summary_other": "{{corridor}} · {{category}}: {{count}} required documents",
     "notBlocking": "This does not stop you publishing — the platform records that you were told, it does not rule for the authority."
   },
-
   "checklist": {
     "title": "What you need to collect",
     "lead": "We assemble the documents your corridor asks for from published rules, and work out what already has to be started. No account needed.",
@@ -1927,7 +1938,6 @@
     "warnCount_other": "Too late: {{count}} required documents can no longer be prepared before departure",
     "warnNotBlocking": "This is a warning, not a refusal — you can still publish and agree.",
     "warnSeeList": "See the list",
-
     "attrHint": {
       "author_known": "yes or no",
       "purpose": "personal or resale",
@@ -1957,7 +1967,6 @@
     "waiting_one": "{{count}} waiting",
     "waiting_other": "{{count}} waiting"
   },
-
   "rules": {
     "cancelTimeout": {
       "title": "Cancellation nobody answers",

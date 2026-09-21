@@ -82,15 +82,37 @@ class EventClass:
 
 #: Order matters — it is the order of the rows on the screen.
 EVENT_CLASSES: tuple[EventClass, ...] = (
-    # T3.11.16 — `trip_rescheduled` joins the deal class rather than getting one
-    # of its own: to the person receiving it, «перевозчик перенёс рейс» is news
-    # about their delivery, and a separate switch would ask them to reason about
-    # our table layout.
-    # T3.12.05 — an offer to be a recipient is news about a parcel too.
+    # T_UX.29 pt.8 (owner, 2026-09-21) — the single `deal` row became six.
+    #
+    # One switch covered the whole life of a delivery, so «не пиши мне про
+    # каждый чих в пути, но про деньги пиши» was not expressible and the only
+    # way to quieten the noisy half was to quieten the half that mattered. Split
+    # **by the kind of act, not by the rung of the ladder**: somebody wants to
+    # hear about money and not about transit updates, and nobody thinks in
+    # «ступень 3». That is the same principle the module opens with — the class
+    # is the granularity at which people actually differ.
+    #
+    # The old `deal` key may still sit in somebody's stored matrix. Nothing has
+    # to clean it up: `wants` reads the class it is asked about, a gap means the
+    # default, and `resolved` only emits classes that exist. A migration here
+    # would have to guess what each account wanted, which is precisely what the
+    # gap-means-default rule exists to avoid.
+    #
+    # `deal_event` is one letter serving all six (`core/email_templates`), so
+    # the class cannot be derived from the kind — `tasks/notifications._notify_user`
+    # takes it explicitly. Every other letter keeps deriving it.
+    EventClass("deal_terms", kinds=("recipient_offered",)),
+    EventClass("deal_meeting", kinds=()),
+    # T3.11.16 — `trip_rescheduled` lands here rather than getting a row of its
+    # own: to the person waiting, «перевозчик перенёс рейс» is news about their
+    # parcel, and a separate switch would ask them to reason about our table.
     EventClass(
-        "deal",
-        kinds=("deal_status", "trip_rescheduled", "recipient_offered", "delivery_reminder"),
+        "deal_custody",
+        kinds=("deal_status", "trip_rescheduled", "delivery_reminder"),
     ),
+    EventClass("deal_money", kinds=()),
+    EventClass("deal_storage", kinds=()),
+    EventClass("deal_trouble", kinds=()),
     EventClass("deadline", kinds=("deadline_reminder",)),
     # T3.11.19 — «кто летит в ближайшие дни ЛА — Москва?» is 366 posts in the
     # dump. The sender does not scroll a board, they shout into a corridor and
@@ -129,6 +151,57 @@ EVENT_CLASSES: tuple[EventClass, ...] = (
 
 _BY_KEY = {cls.key: cls for cls in EVENT_CLASSES}
 _BY_KIND = {kind: cls.key for cls in EVENT_CLASSES for kind in cls.kinds}
+
+#: T_UX.29 pt.8 — which switch a card belongs under.
+#:
+#: Declared here and not in `core/cards.py` because it is a **preferences**
+#: question, not a protocol one: the catalogue says what a card is, this says
+#: which row of somebody's settings silences it. A kind missing from this map
+#: falls back to `deal_custody` — the class about the parcel itself — because an
+#: unmapped card is a card somebody forgot, and the parcel is the safest thing to
+#: file it under.
+CLASS_OF_CARD: dict[str, str] = {
+    "terms.proposed": "deal_terms",
+    "terms.countered": "deal_terms",
+    "terms.agreed": "deal_terms",
+    "terms.amended": "deal_terms",
+    "terms.reconfirm_requested": "deal_terms",
+    "handover.conditions": "deal_terms",
+    "cargo.photographed": "deal_terms",
+    "pickup.proposed": "deal_meeting",
+    "pickup.confirmed": "deal_meeting",
+    "dropoff.proposed": "deal_meeting",
+    "dropoff.confirmed": "deal_meeting",
+    "address.shared": "deal_meeting",
+    "handoff.declared": "deal_custody",
+    "handoff.confirmed": "deal_custody",
+    "transit.update": "deal_custody",
+    "posted.declared": "deal_custody",
+    "posted.confirmed": "deal_custody",
+    "delivery.declared": "deal_custody",
+    "delivery.confirmed": "deal_custody",
+    "received.as_expected": "deal_custody",
+    "payment.method_agreed": "deal_money",
+    "payment.declared": "deal_money",
+    "payment.confirmed": "deal_money",
+    "buyout.requested": "deal_money",
+    "buyout.agreed": "deal_money",
+    "buyout.purchased": "deal_money",
+    "storage.charged": "deal_storage",
+    "issue.reported": "deal_trouble",
+    "cancel.requested": "deal_trouble",
+    "cancel.confirmed": "deal_trouble",
+    "dispute.requested": "deal_trouble",
+    "dispute.opened": "deal_trouble",
+}
+
+
+def class_of_card(card_kind: str | None) -> str:
+    """The settings row a card's letter is filed under.
+
+    Called by: `core.notify.notify` (through its callers' `letter` block).
+    """
+    return CLASS_OF_CARD.get(card_kind or "", "deal_custody")
 
 
 def class_of(kind: str) -> str | None:

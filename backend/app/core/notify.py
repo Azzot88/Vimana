@@ -30,7 +30,8 @@ collects endpoints, and this is the function that will fan out to them once ther
 are VAPID keys and a consent flow.
 
 Functions (PROJECT §6.2a):
-  - `notify(db, user_ids, kind, ...)` — write the rows and publish the nudge.
+  - `notify(db, user_ids, kind, ...)` — write the rows, publish the nudge and,
+    for the four moments that earn one, queue the letter.
     Called by: `api.cards._raise_card`, `api.dealvault.post_message`,
     `api.deals.match`, `api.requests.create_request`.
   - `channel_for(user_id)` — the Redis channel a person's tabs listen on.
@@ -70,6 +71,7 @@ async def notify(
     trip_id: uuid.UUID | None = None,
     payload: dict | None = None,
     exclude: uuid.UUID | None = None,
+    letter: dict | None = None,
 ) -> None:
     """Tell these people, once each, and nudge whatever they have open.
 
@@ -82,8 +84,18 @@ async def notify(
     out which of them exist and which is the same person twice. A sender who
     named themselves recipient is one row, not two.
 
+    `letter` is the third delivery and the rarest: `{"moment", "event_class",
+    "deal_no", "route", "role"}` sends an email through the account's matrix,
+    and `None` — the usual case — means the bell and nothing more. The four
+    moments that earn one are the owner's list (2026-09-21), and everything else
+    a deal does stops at the panel: a letter per card is a mailbox nobody reads,
+    and the one that mattered would arrive in the middle of it.
+
     **Does not commit.** The rows join the caller's transaction, so a card that
-    fails validation cannot leave a notification about itself behind.
+    fails validation cannot leave a notification about itself behind. The letter
+    is queued rather than sent here for the same reason it is a Celery task
+    everywhere else — SMTP inside a request is a request that waits on somebody
+    else's mail server.
     """
     targets: list[uuid.UUID] = []
     for candidate in user_ids:
@@ -112,6 +124,66 @@ async def notify(
             "trip_id": str(trip_id) if trip_id else None,
         },
     )
+
+    if letter and deal_id:
+        _post(targets, deal_id, letter)
+
+
+async def letter_facts(db: AsyncSession, deal) -> dict:
+    """The two facts every deal letter carries: its number and its corridor.
+
+    Owner, 2026-09-21: «номер сделки в заголовке письма, в теле — коридор и
+    номер». Read once by the caller and handed to `notify` rather than looked up
+    in the worker, because the worker runs after a commit that may never happen
+    — and a letter about a card that was rolled back is worse than no letter.
+
+    Both may come back empty and the letter is still worth sending: the fact
+    list drops blanks, so a deal whose trip has no route yet produces a shorter
+    letter rather than one with a dangling label.
+
+    Called by: `api.cards._raise_card`, `api.dealvault.ack_card`, `api.deals.match`.
+    """
+    from sqlalchemy import select
+
+    from app.core.cargo import deal_no
+    from app.models.marketplace import Cargo, Trip
+
+    cargo = (
+        await db.execute(select(Cargo).where(Cargo.id == deal.cargo_id))
+    ).scalar_one_or_none()
+    trip = (
+        await db.execute(select(Trip).where(Trip.id == deal.trip_id))
+    ).scalar_one_or_none()
+    return {
+        "deal_no": deal_no(cargo.shipment_no if cargo else None, deal.position or 1)
+        or "",
+        "route": f"{trip.origin} → {trip.destination}" if trip else "",
+    }
+
+
+def _post(user_ids: list[uuid.UUID], deal_id: uuid.UUID, letter: dict) -> None:
+    """Queue the letter for each recipient. Best-effort, like the nudge.
+
+    A broker that is unreachable must not fail the card that has already been
+    written to the chain — the act happened, and the record of it is the vault,
+    not the email about it. Logged at warning, because a product that quietly
+    stops writing to people looks exactly like a product nobody is using.
+    """
+    try:
+        from app.tasks.notifications import notify_deal_event
+
+        for user_id in user_ids:
+            notify_deal_event.delay(
+                str(user_id),
+                letter["moment"],
+                letter["event_class"],
+                str(deal_id),
+                letter.get("deal_no") or "",
+                letter.get("route") or "",
+                letter.get("role") or "",
+            )
+    except Exception:  # noqa: BLE001 — the bell already has it
+        logger.warning("deal letter not queued", exc_info=True)
 
 
 async def _publish(user_ids: list[uuid.UUID], event: dict) -> None:

@@ -89,6 +89,31 @@
     },
     "note": "Puedes desactivar las notificaciones de acuerdos en tu perfil."
   },
+  "deal_event": {
+    "subject": "Vimana · {{ deal_no }} · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "Abre la operación para ver qué ha cambiado y responder si es tu turno."
+    ],
+    "labels": {
+      "proposed": "Alguien ha respondido a tu vuelo",
+      "arrived": "El paquete ha aterrizado",
+      "closed": "La otra parte ha cerrado la operación",
+      "needs_ack": "Se necesita tu confirmación"
+    },
+    "roles": {
+      "sender": "el remitente",
+      "carrier": "el transportista",
+      "recipient": "el destinatario",
+      "arbiter": "el árbitro"
+    },
+    "facts_deal_no": "operación",
+    "facts_route": "corredor",
+    "facts_role": "actualizado por",
+    "cta": "Abrir la operación",
+    "note": "Qué avisos de operaciones llegan a tu correo se configura en tu perfil."
+  },
   "corridor_trip": {
     "subject": "Vimana · Hay un vuelo en tu corredor",
     "preheader": "Alguien vuela donde estabas buscando",
@@ -101,7 +126,6 @@
     "cta": "Abrir el vuelo",
     "note": "Los correos sobre vuelos en tus corredores se desactivan en el perfil."
   },
-
   "trip_rescheduled": {
     "subject": "Vimana · El transportista movió el vuelo",
     "preheader": "Cambió la fecha de salida de tu acuerdo",

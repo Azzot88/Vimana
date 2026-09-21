@@ -89,6 +89,31 @@
     },
     "note": "Powiadomienia o transakcjach można wyłączyć w profilu."
   },
+  "deal_event": {
+    "subject": "Vimana · {{ deal_no }} · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "Otwórz transakcję, aby zobaczyć, co się zmieniło, i odpowiedzieć, jeśli to Twój ruch."
+    ],
+    "labels": {
+      "proposed": "Ktoś odpowiedział na Twój lot",
+      "arrived": "Paczka wylądowała",
+      "closed": "Druga strona zamknęła transakcję",
+      "needs_ack": "Potrzebne Twoje potwierdzenie"
+    },
+    "roles": {
+      "sender": "nadawca",
+      "carrier": "przewoźnik",
+      "recipient": "odbiorca",
+      "arbiter": "arbiter"
+    },
+    "facts_deal_no": "transakcja",
+    "facts_route": "korytarz",
+    "facts_role": "kto zmienił",
+    "cta": "Otwórz transakcję",
+    "note": "To, które powiadomienia o transakcjach trafiają na pocztę, ustawisz w profilu."
+  },
   "corridor_trip": {
     "subject": "Vimana · Pojawił się lot na Twoim korytarzu",
     "preheader": "Ktoś leci tam, gdzie szukałeś",
@@ -101,7 +126,6 @@
     "cta": "Otwórz lot",
     "note": "Listy o lotach na Twoich korytarzach można wyłączyć w profilu."
   },
-
   "trip_rescheduled": {
     "subject": "Vimana · Przewoźnik przełożył lot",
     "preheader": "Zmieniła się data wylotu w Twojej transakcji",

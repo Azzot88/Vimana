@@ -1108,19 +1108,31 @@
         "whatsapp": "WhatsApp"
       },
       "class": {
-        "deal": "Transactions",
+        "deal_terms": "Conditions de l’accord",
+        "deal_meeting": "Rendez-vous et remise",
+        "deal_custody": "Colis et trajet",
+        "deal_money": "Argent",
+        "deal_storage": "Stockage",
+        "deal_trouble": "Problèmes",
         "deadline": "Échéances",
-        "vault": "Messages du coffre",
-        "trust": "Vérification et confiance",
+        "marketplace": "Corridors",
         "dispute": "Litiges",
-        "security": "Sécurité"
+        "security": "Sécurité",
+        "vault": "Messages du coffre",
+        "trust": "Vérification et confiance"
       },
       "classHint": {
-        "deal": "convenue, acceptée, en transit, livrée, confirmée, clôturée",
+        "deal_terms": "proposition, contre-proposition, accord, rôle du destinataire",
+        "deal_meeting": "où et quand : fixé, déplacé, adresse partagée",
+        "deal_custody": "remise, statuts du trajet, atterrissage, poste, livraison",
+        "deal_money": "paiement déclaré, règlement confirmé, accord clôturé",
+        "deal_storage": "rendez-vous au-delà de la période gratuite, facture de stockage",
+        "deal_trouble": "incident, annulation, demande d’arbitre",
         "deadline": "24 heures avant l'échéance",
+        "marketplace": "un vol est apparu dans un corridor que vous suivez",
+        "dispute": "ouvert, réponse, tranché",
         "vault": "nouveaux messages dans le coffre d'une transaction",
-        "trust": "badges, niveaux, relations",
-        "dispute": "ouvert, réponse, tranché"
+        "trust": "badges, niveaux, relations"
       }
     },
     "email": "Email",

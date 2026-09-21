@@ -35,7 +35,7 @@ from app.core.keypair import decrypt_nsec
 from app.core.signing import sign_vault_message
 from app.core.storage import get_presigned_url, presign_ttl_for_kind, upload_file
 from app.core.threshold import E2EPayload, envelope_parts, nip44_decrypt
-from app.core.cards import CardKind, role_of, spec_for
+from app.core.cards import CardAckRole, CardKind, role_of, spec_for
 from app.core.deal_access import party_role
 from app.models.deal import (
     Attachment, AttachmentKind, CardState, Deal, DealEventType, DealVaultMessage,
@@ -841,9 +841,17 @@ async def ack_card(
 
     # T_UX.29 pt.7 — an answered card moves the deal, and the other side is
     # usually the one who has been waiting for it.
-    from app.core.notify import notify
+    #
+    # T_UX.29 pt.8 — and if the answer **closed** the deal, that is one of the
+    # four moments that earns a letter (owner, 2026-09-21: «контрагент завершил
+    # сделку»). Read off the status after `apply_acceptance` rather than guessed
+    # from the card: several different cards can be the last one, and the deal
+    # itself is the only thing that knows it is over.
+    from app.core.notify import letter_facts, notify
+    from app.models.deal import DealStatus
     from app.models.notification import NotificationKind
 
+    closing = deal.status in (DealStatus.confirmed, DealStatus.closed)
     await notify(
         db,
         (deal.sender_id, deal.carrier_id, deal.recipient_id),
@@ -851,6 +859,16 @@ async def ack_card(
         deal_id=deal.id,
         payload={"card_kind": msg.card_kind, "decision": body.decision},
         exclude=current_user.id,
+        letter=(
+            {
+                "moment": "closed",
+                "event_class": "deal_money",
+                "role": (role_of(deal, current_user.id) or CardAckRole.sender).value,
+                **await letter_facts(db, deal),
+            }
+            if closing
+            else None
+        ),
     )
 
     await db.commit()

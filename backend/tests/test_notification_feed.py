@@ -189,3 +189,82 @@ async def test_the_stream_needs_a_session(client):
     is not a person."""
     r = await client.get("/api/events/stream")
     assert r.status_code in (401, 403), r.text
+
+
+# ── T_UX.29 pt.8 · four moments earn a letter, the rest stop at the bell ────
+
+
+async def test_a_card_that_awaits_you_sends_a_letter(
+    client, carrier_headers, sender_headers, pair, monkeypatch
+):
+    """Owner's list, 2026-09-21: «требуется подтверждение» is one of the four.
+
+    Addressed to **one** person — the one who can answer. A letter to somebody
+    with nothing to press is the letter that teaches people to stop opening
+    them, and everybody else still gets the bell.
+    """
+    queued: list[tuple] = []
+    from app.tasks import notifications as notif
+
+    monkeypatch.setattr(
+        notif.notify_deal_event,
+        "delay",
+        lambda *args: queued.append(args),
+    )
+
+    r = await client.post(
+        f"/api/deals/{pair.id}/cards",
+        headers=sender_headers,
+        json={"kind": "pickup.proposed", "payload": {"method": "in_person"}},
+    )
+    assert r.status_code == 201, r.text
+
+    assert len(queued) == 1, queued
+    _, moment, event_class, _, deal_no, route, role = queued[0]
+    assert moment == "needs_ack"
+    assert event_class == "deal_meeting"
+    assert role == "sender"
+    assert route  # the corridor, which the owner asked to be in the body
+    assert deal_no or deal_no == ""  # a pre-format deal may carry none
+
+
+async def test_the_landing_is_told_to_everybody(
+    client, carrier_headers, sender_headers, pair, monkeypatch
+):
+    """«Груз прилетел» — the one moment somebody waits for with nothing to
+    press, so it goes to the whole deal rather than to one answerer."""
+    queued: list[tuple] = []
+    from app.tasks import notifications as notif
+
+    monkeypatch.setattr(
+        notif.notify_deal_event, "delay", lambda *args: queued.append(args)
+    )
+
+    r = await client.post(
+        f"/api/deals/{pair.id}/cards",
+        headers=carrier_headers,
+        json={"kind": "transit.update", "payload": {"stage": "arrived"}},
+    )
+    assert r.status_code == 201, r.text
+    assert [q[1] for q in queued] == ["arrived"]
+    assert {q[2] for q in queued} == {"deal_custody"}
+
+
+async def test_an_ordinary_card_does_not_write(
+    client, carrier_headers, sender_headers, pair, monkeypatch
+):
+    """Everything outside the four stops at the bell: a letter per card is a
+    mailbox nobody reads, and the one that mattered arrives in the middle."""
+    queued: list[tuple] = []
+    from app.tasks import notifications as notif
+
+    monkeypatch.setattr(
+        notif.notify_deal_event, "delay", lambda *args: queued.append(args)
+    )
+    sent = await client.post(
+        f"/api/deals/{pair.id}/dealvault/messages",
+        headers=sender_headers,
+        json={"text": "on my way"},
+    )
+    assert sent.status_code == 201, sent.text
+    assert queued == []

@@ -89,6 +89,31 @@
     },
     "note": "You can turn deal notifications off in your profile."
   },
+  "deal_event": {
+    "subject": "Vimana · {{ deal_no }} · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "Open the deal to see what changed, and to answer if it is your turn."
+    ],
+    "labels": {
+      "proposed": "Somebody responded to your trip",
+      "arrived": "The parcel has landed",
+      "closed": "The other side closed the deal",
+      "needs_ack": "Your confirmation is needed"
+    },
+    "roles": {
+      "sender": "the sender",
+      "carrier": "the carrier",
+      "recipient": "the recipient",
+      "arbiter": "the arbiter"
+    },
+    "facts_deal_no": "deal",
+    "facts_route": "corridor",
+    "facts_role": "moved by",
+    "cta": "Open the deal",
+    "note": "Which deal notifications reach your inbox is set in your profile."
+  },
   "corridor_trip": {
     "subject": "Vimana · A trip on the corridor you asked about",
     "preheader": "Somebody is flying where you were looking",
@@ -101,7 +126,6 @@
     "cta": "Open the trip",
     "note": "Letters about trips on your corridors can be switched off in your profile."
   },
-
   "trip_rescheduled": {
     "subject": "Vimana · The carrier moved the flight",
     "preheader": "The departure date on your deal has changed",

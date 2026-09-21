@@ -89,6 +89,31 @@
     },
     "note": "Vous pouvez désactiver les notifications de transaction dans votre profil."
   },
+  "deal_event": {
+    "subject": "Vimana · {{ deal_no }} · {{ label }}",
+    "preheader": "{{ label }}",
+    "heading": "{{ label }}",
+    "body": [
+      "Ouvrez l’accord pour voir ce qui a changé et répondre si c’est votre tour."
+    ],
+    "labels": {
+      "proposed": "Quelqu’un a répondu à votre vol",
+      "arrived": "Le colis a atterri",
+      "closed": "L’autre partie a clôturé l’accord",
+      "needs_ack": "Votre confirmation est attendue"
+    },
+    "roles": {
+      "sender": "l’expéditeur",
+      "carrier": "le transporteur",
+      "recipient": "le destinataire",
+      "arbiter": "l’arbitre"
+    },
+    "facts_deal_no": "accord",
+    "facts_route": "corridor",
+    "facts_role": "mis à jour par",
+    "cta": "Ouvrir l’accord",
+    "note": "Les notifications d’accord qui arrivent par courriel se règlent dans votre profil."
+  },
   "corridor_trip": {
     "subject": "Vimana · Un vol sur le corridor que vous suiviez",
     "preheader": "Quelqu'un vole là où vous cherchiez",
@@ -101,7 +126,6 @@
     "cta": "Ouvrir le vol",
     "note": "Les messages sur les vols de vos corridors se désactivent dans le profil."
   },
-
   "trip_rescheduled": {
     "subject": "Vimana · Le transporteur a déplacé le vol",
     "preheader": "La date de départ de votre transaction a changé",

@@ -47,6 +47,7 @@ from app.models.deal import (
     DealStatus, DealVaultMessage,
 )
 from app.models.marketplace import Cargo, Trip
+from app.core.notification_prefs import class_of_card
 from app.models.notification import NotificationKind
 from app.models.user import User
 from app.schemas.cards import PAYLOAD_MODELS, CardCreate
@@ -779,11 +780,77 @@ async def _raise_card(
 
     # T_UX.29 pt.7 — the other two learn about it. Inside this transaction, so a
     # card that fails a later check cannot leave a notification about itself.
-    from app.core.notify import notify
+    from app.core.notify import letter_facts, notify
+
+    facts = await letter_facts(db, deal)
+
+    # T_UX.29 pt.8 — two of the owner's four letter-worthy moments live here.
+    #
+    # «Груз прилетел» goes to everybody: the recipient's side of the deal starts
+    # at the landing, and it is the one moment somebody is waiting for without
+    # having anything to press.
+    if kind is CardKind.transit_update and payload.get("stage") == "arrived":
+        await notify(
+            db,
+            (deal.sender_id, deal.carrier_id, deal.recipient_id),
+            NotificationKind.deal_status,
+            deal_id=deal.id,
+            payload={"card_kind": kind.value, "stage": "arrived"},
+            exclude=current_user.id,
+            letter={
+                "moment": "arrived",
+                "event_class": "deal_custody",
+                "role": creator.value if creator else "",
+                **facts,
+            },
+        )
+        return msg
+
+    # «Требуется подтверждение» goes to **one** person — the one the card is
+    # addressed to. The others get the bell and nothing else: a letter to
+    # somebody with nothing to press is the letter that teaches people to stop
+    # opening them. Which settings row silences it is the card's own class, so
+    # a person who muted transit still hears that money is waiting on them.
+    owed = msg.requires_ack_by
+    watchers = [deal.sender_id, deal.carrier_id, deal.recipient_id]
+    answerer = (
+        {
+            CardAckRole.sender: deal.sender_id,
+            CardAckRole.carrier: deal.carrier_id,
+            CardAckRole.recipient: deal.recipient_id,
+        }.get(owed)
+        if owed
+        else None
+    )
+
+    if answerer and answerer != current_user.id:
+        await notify(
+            db,
+            (answerer,),
+            NotificationKind.deal_status,
+            deal_id=deal.id,
+            payload={"card_kind": kind.value},
+            letter={
+                "moment": "needs_ack",
+                # T_UX.29 pt.6, the open item closed: a meeting that carries a
+                # storage price is filed under storage, not under meetings.
+                # Somebody who muted «где встречаемся» has not muted «это будет
+                # стоить денег», and the class is what decides whether the
+                # letter goes at all.
+                "event_class": (
+                    "deal_storage"
+                    if payload.get("storage_amount") is not None
+                    else class_of_card(kind.value)
+                ),
+                "role": creator.value if creator else "",
+                **facts,
+            },
+        )
+        watchers = [w for w in watchers if w != answerer]
 
     await notify(
         db,
-        (deal.sender_id, deal.carrier_id, deal.recipient_id),
+        watchers,
         NotificationKind.deal_status,
         deal_id=deal.id,
         payload={"card_kind": kind.value},

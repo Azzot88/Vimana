@@ -219,7 +219,10 @@ async def match_deal(
     # T_UX.29 pt.7 (owner, 2026-09-20): «у перевозчика должно быть оповещение о
     # предложении, основанном на его рейсе». This is that moment — a sender has
     # answered a published trip with cargo, and the deal exists because of it.
-    from app.core.notify import notify
+    # T_UX.29 pt.8 — and it is the first of the owner's four letter-worthy
+    # moments: «предложена сделка». The carrier published a trip and somebody
+    # answered it with cargo; nothing else in their day will tell them.
+    from app.core.notify import letter_facts, notify
     from app.models.notification import NotificationKind
 
     await notify(
@@ -229,6 +232,12 @@ async def match_deal(
         deal_id=deal.id,
         trip_id=deal.trip_id,
         exclude=current_user.id,
+        letter={
+            "moment": "proposed",
+            "event_class": "deal_terms",
+            "role": "sender",
+            **await letter_facts(db, deal),
+        },
     )
 
     await db.commit()

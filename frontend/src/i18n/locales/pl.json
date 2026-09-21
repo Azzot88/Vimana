@@ -1112,19 +1112,31 @@
         "whatsapp": "WhatsApp"
       },
       "class": {
-        "deal": "Transakcje",
+        "deal_terms": "Warunki transakcji",
+        "deal_meeting": "Spotkanie i wydanie",
+        "deal_custody": "Paczka i droga",
+        "deal_money": "Pieniądze",
+        "deal_storage": "Przechowanie",
+        "deal_trouble": "Problemy",
         "deadline": "Terminy",
-        "vault": "Wiadomości w sejfie",
-        "trust": "Weryfikacja i zaufanie",
+        "marketplace": "Korytarze",
         "dispute": "Spory",
-        "security": "Bezpieczeństwo"
+        "security": "Bezpieczeństwo",
+        "vault": "Wiadomości w sejfie",
+        "trust": "Weryfikacja i zaufanie"
       },
       "classHint": {
-        "deal": "uzgodniona, przyjęta, w drodze, dostarczona, potwierdzona, zamknięta",
+        "deal_terms": "propozycja, kontrpropozycja, uzgodnienie, rola odbiorcy",
+        "deal_meeting": "gdzie i kiedy: ustalone, przeniesione, adres",
+        "deal_custody": "przekazanie, statusy drogi, lądowanie, poczta, wydanie",
+        "deal_money": "płatność zgłoszona, rozliczenie potwierdzone, transakcja zamknięta",
+        "deal_storage": "spotkanie poza okresem bezpłatnym, rachunek za przechowanie",
+        "deal_trouble": "problem, anulowanie, prośba o arbitra",
         "deadline": "24 godziny przed terminem",
+        "marketplace": "pojawił się lot w korytarzu, o który pytałeś",
+        "dispute": "otwarty, odpowiedź, rozstrzygnięty",
         "vault": "nowe wiadomości w sejfie transakcji",
-        "trust": "odznaki, poziomy, powiązania",
-        "dispute": "otwarty, odpowiedź, rozstrzygnięty"
+        "trust": "odznaki, poziomy, powiązania"
       }
     },
     "email": "Email",

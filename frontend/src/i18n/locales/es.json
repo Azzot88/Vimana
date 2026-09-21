@@ -1108,19 +1108,31 @@
         "whatsapp": "WhatsApp"
       },
       "class": {
-        "deal": "Acuerdos",
+        "deal_terms": "Condiciones",
+        "deal_meeting": "Encuentro y entrega",
+        "deal_custody": "Paquete y trayecto",
+        "deal_money": "Dinero",
+        "deal_storage": "Almacenaje",
+        "deal_trouble": "Problemas",
         "deadline": "Plazos",
-        "vault": "Mensajes de la caja",
-        "trust": "Verificación y confianza",
+        "marketplace": "Corredores",
         "dispute": "Disputas",
-        "security": "Seguridad"
+        "security": "Seguridad",
+        "vault": "Mensajes de la caja",
+        "trust": "Verificación y confianza"
       },
       "classHint": {
-        "deal": "acordado, aceptado, en tránsito, entregado, confirmado, cerrado",
+        "deal_terms": "propuesta, contrapropuesta, acuerdo, rol de destinatario",
+        "deal_meeting": "dónde y cuándo: fijado, movido, dirección",
+        "deal_custody": "entrega, estados del trayecto, aterrizaje, correo, entrega final",
+        "deal_money": "pago declarado, liquidación confirmada, operación cerrada",
+        "deal_storage": "encuentro fuera del periodo gratuito, factura de almacenaje",
+        "deal_trouble": "incidencia, cancelación, petición de árbitro",
         "deadline": "24 horas antes del plazo",
+        "marketplace": "ha aparecido un vuelo en un corredor que sigues",
+        "dispute": "abierta, respondida, resuelta",
         "vault": "mensajes nuevos en la caja de un acuerdo",
-        "trust": "insignias, niveles, conexiones",
-        "dispute": "abierta, respondida, resuelta"
+        "trust": "insignias, niveles, conexiones"
       }
     },
     "email": "Email",

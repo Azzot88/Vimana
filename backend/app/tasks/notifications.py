@@ -32,7 +32,7 @@ def _send(user_or_locale, to: str, kind: str, **ctx) -> bool:
     return send_email(to, letter.subject, letter.text, letter.html)
 
 
-def _notify_user(user, kind: str, **ctx) -> None:
+def _notify_user(user, kind: str, event_class: str | None = None, **ctx) -> None:
     """Fan one event out to whichever channels want this **class** of event.
 
     T3.32 — the three booleans used to answer this, one channel at a time for
@@ -53,12 +53,16 @@ def _notify_user(user, kind: str, **ctx) -> None:
     and they take the text part of the same letter rather than a second string
     that would drift away from it.
 
-    Called by: `notify_deal_status`, `check_upcoming_deadlines`.
+    T_UX.29 pt.8 — `event_class` may be passed in. One letter (`deal_event`)
+    now serves six settings rows, so the class cannot always be derived from the
+    kind; every other letter still derives it and nothing else changed.
+
+    Called by: `notify_deal_status`, `check_upcoming_deadlines`, `notify_deal_event`.
     """
     from app.core.email_templates import render
     from app.core.notification_prefs import class_of, wants
 
-    event_class = class_of(kind)
+    event_class = event_class or class_of(kind)
     letter = render(kind, getattr(user, "locale", None), **ctx)
 
     def wanted(channel: str) -> bool:
@@ -93,6 +97,57 @@ def notify_deal_status(deal_id: str, status: str) -> None:
             _notify_user(sender, "deal_status", status=status)
         if carrier and carrier.id != (sender.id if sender else None):
             _notify_user(carrier, "deal_status", status=status)
+
+
+@celery_app.task(name="app.tasks.notifications.notify_deal_event")
+def notify_deal_event(
+    user_id: str,
+    moment: str,
+    event_class: str,
+    deal_id: str,
+    deal_no: str,
+    route: str,
+    role: str,
+) -> None:
+    """T_UX.29 pt.8 — one letter about a deal, for the four moments worth one.
+
+    Owner's list, 2026-09-21: «предложена сделка, груз прилетел, контрагент
+    завершил сделку, требуется подтверждение». Everything else a deal does goes
+    to the bell and stops there — a letter per card would be a mailbox nobody
+    reads, and the one letter that mattered would arrive in the middle of it.
+
+    **The class decides whether it is sent, the moment decides what it says.**
+    That split is why there is one template and six switches: somebody who
+    silenced `deal_custody` still hears about money, and both letters look the
+    same when they arrive.
+
+    Everything needed is passed in rather than looked up: the caller holds the
+    deal in a transaction that has not committed yet, and a worker re-reading it
+    a moment later would either see the old row or have to wait for a commit
+    that may never come.
+
+    Called by: `core.notify.notify`.
+    """
+    import os
+
+    from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
+
+    with SyncSessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        _notify_user(
+            user,
+            "deal_event",
+            event_class=event_class,
+            moment=moment,
+            deal_no=deal_no,
+            route=route,
+            role=role,
+            cta_url=f"{base}/deals/{deal_id}/vault",
+        )
 
 
 @celery_app.task(name="app.tasks.notifications.check_upcoming_deadlines")

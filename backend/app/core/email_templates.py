@@ -83,6 +83,21 @@ _LETTERS: dict[str, dict[str, Any]] = {
     # not an explanation, and the person losing access is the one who needs it.
     "role_revoked": {"facts": ["role", "reason"]},
     "deal_status": {},
+    # T_UX.29 pt.8 (owner, 2026-09-21) — **one letter for every moment in a
+    # deal that is worth a letter**, with the moment in a labels map exactly as
+    # `deal_status` does it with the status.
+    #
+    # Six letters would have been six blocks in six catalogues that drift apart
+    # the first time somebody edits one of them; one letter with a map keeps
+    # every message about a deal looking the same (`DESIGNGUIDELINES §9a`), and
+    # adding a moment is one short string per locale rather than a new template.
+    #
+    # Facts, by the owner's decision: the deal number and the corridor in the
+    # body, the number again in the subject, and the **role** of whoever moved
+    # it — not their name. A letter goes to an inbox, and the role is what the
+    # reader needs to know («перевозчик» tells them whose turn it was); the name
+    # is on the screen behind the link, where the deal already shows it.
+    "deal_event": {"cta": True, "facts": ["deal_no", "route", "role"]},
     "deadline_reminder": {},
     # T3.11.16 — the carrier moved the flight. Both dates are facts rather than
     # prose: the sender's own plans hang off the old one, and «перенесла билеты»
@@ -193,6 +208,12 @@ def sample_context(kind: str) -> dict[str, Any]:
             "reason": "Больше не в графике дежурств по спорам",
         },
         "deal_status": {"status": "in_transit"},
+        "deal_event": {
+            "moment": "needs_ack",
+            "deal_no": "PF-293-98187-1",
+            "route": "IST → JFK",
+            "role": "carrier",
+        },
         "deadline_reminder": {},
         "trip_rescheduled": {
             "route": "DXB → JFK",
@@ -250,6 +271,21 @@ def render(kind: str, locale: str | None, **ctx: Any) -> Rendered:
         labels = strings.get("labels", {})
         status = ctx.get("status", "")
         ctx = {**ctx, "label": labels.get(status, status)}
+
+    # T_UX.29 pt.8 — the same trick for the moment: one letter, a label per
+    # moment, and `{{ label }}` resolved once so subject, heading and preheader
+    # cannot say three different things. The role is looked up the same way —
+    # «carrier» in a Russian letter would be the one untranslated word in it.
+    if kind == "deal_event":
+        labels = strings.get("labels", {})
+        moment = ctx.get("moment", "")
+        roles = strings.get("roles", {})
+        role = ctx.get("role", "")
+        ctx = {
+            **ctx,
+            "label": labels.get(moment, moment),
+            "role": roles.get(role, role),
+        }
 
     subject = _fill(strings["subject"], ctx)
     heading = _fill(strings["heading"], ctx)
