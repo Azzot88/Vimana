@@ -1693,6 +1693,7 @@
     }
   },
   "calendar": {
+    "pickDate": "Choisir une date",
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
     "time": "Heure",
@@ -2111,6 +2112,29 @@
     "chargedAgreed": "Convenu pour le stockage",
     "chargedDays": "{{days}} jours",
     "advisory": "Le compteur est indicatif : le transporteur annonce la somme finale et vous la confirmez."
+  },
+  "handover": {
+    "finish": "Terminer la remise",
+    "toPay": "À payer",
+    "toReceive": "À recevoir",
+    "title": {
+      "giving": "Remise en main propre",
+      "taking": "Réception du colis"
+    },
+    "giving": {
+      "hand": "Remettez le colis au destinataire.",
+      "letThemCheck": "Laissez-le vérifier l’emballage, l’état et le contenu — sans le presser.",
+      "takeMoney": "Encaissez l’argent en espèces, ou attendez le virement.",
+      "screenshot": "Pour un virement, faites une capture du crédit et joignez-la à la carte.",
+      "finish": "Si le montant est juste et que personne n’a de réclamation, terminez la remise."
+    },
+    "taking": {
+      "check": "Prenez le colis et vérifiez l’emballage — ouvert ou intact.",
+      "contents": "Comparez le contenu avec la description des conditions convenues.",
+      "pay": "Remettez l’argent en main propre, ou envoyez le virement.",
+      "screenshot": "Paiement électronique : joignez à la carte la capture de la transaction, le reçu ou le relevé bancaire.",
+      "finish": "Si tout correspond, terminez la remise."
+    }
   },
   "meeting": {
     "title": {

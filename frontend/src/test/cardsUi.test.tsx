@@ -1378,3 +1378,121 @@ describe('an arrangement that already stands', () => {
     expect(screen.queryByText(/^Handed over$|^Вручено$/)).not.toBeInTheDocument()
   })
 })
+
+// ── T_UX.29 pt.3 · the checklist at the door, and our own calendar ────────
+
+describe('the memo before the handover', () => {
+  const agreed = (over: Record<string, unknown> = {}): Terms =>
+    ({
+      id: 't1',
+      deal_id: 'd1',
+      card_kind: 'terms.agreed',
+      card_state: 'accepted',
+      requires_ack_by: null,
+      supersedes_id: null,
+      payload: {
+        delivery_method: 'in_person',
+        price_total: 37.5,
+        currency: 'USD',
+        ...over,
+      },
+      description: null,
+      created_at: '2026-09-20T10:00:00Z',
+    }) as Terms
+
+  const landed = msg({
+    id: 't-arrived',
+    card_kind: 'transit.update',
+    card_state: 'accepted',
+    card_payload: { stage: 'arrived' },
+  })
+
+  const panel = (myRole: DealRole, terms: Terms | null = agreed()) => (
+    <DealStages
+      dealId="d1"
+      status="in_transit"
+      myRole={myRole}
+      terms={terms}
+      deal={null}
+      messages={[landed]}
+      onDone={() => {}}
+    />
+  )
+
+  it('tells the receiving side what to check and what to attach', () => {
+    /* T_UX.29 pt.3 (owner, 2026-09-20): «У получателя нет окна подтверждения
+       правильности груза и деталей для проверки… Сумма к оплате такая-то,
+       проверьте… приложите скрин транзакции, квитанцию или банковский чек.»
+       The sender is the payer here and there is no separate recipient, so the
+       sender is the one at the door. */
+    renderWithProviders(panel('sender'))
+    expect(
+      screen.getByText(/check the packaging|проверьте упаковку/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/compare the contents|Сверьте содержимое/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/bank slip|банковский чек/i),
+    ).toBeInTheDocument()
+    // The sum, stated so there is something to compare with.
+    expect(screen.getByText(/37\.5 USD/)).toBeInTheDocument()
+    expect(screen.getByText(/^To pay$|^К оплате$/)).toBeInTheDocument()
+  })
+
+  it('tells the side handing it over to let them look, and to screenshot the credit', () => {
+    renderWithProviders(panel('carrier'))
+    expect(
+      screen.getByText(/do not rush them|не торопите/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/wait for the transfer|дождитесь перевода/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/^To receive$|^К получению$/)).toBeInTheDocument()
+  })
+
+  it('does not tell a recipient to pay when the sender settles', () => {
+    /* A recipient in a deal the sender pays from afar checks the parcel and
+       nothing else — «передайте деньги» there is somebody else's job. */
+    renderWithProviders(panel('recipient', agreed({ payer: 'sender' })))
+    expect(
+      screen.getByText(/check the packaging|проверьте упаковку/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/^To pay$|^К оплате$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/37\.5 USD/)).not.toBeInTheDocument()
+  })
+
+  it('names the button after the act, not after sending a message', () => {
+    // Owner, 2026-09-20: «И кнопка — "Завершить передачу"».
+    renderWithProviders(panel('sender'))
+    expect(
+      screen.getByRole('button', {
+        name: /complete the handover|Завершить передачу/i,
+      }),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('the calendar inside a card form', () => {
+  it('is ours, not the browser’s', () => {
+    /* T_UX.29 pt.3 (owner, 2026-09-20): «везде должны быть нормальные
+       календари, которые разработали мы сами, а не стандартные». The native
+       control takes its clock from the device, so the account's date setting
+       looked broken on the busiest form in the product. */
+    const { container } = renderWithProviders(
+      <DealStages
+        dealId="d1"
+        status="in_transit"
+        myRole="carrier"
+        terms={null}
+        deal={null}
+        messages={[]}
+        onDone={() => {}}
+      />,
+    )
+    expect(container.querySelector('input[type="datetime-local"]')).toBeNull()
+    expect(
+      container.querySelector('button[aria-haspopup="dialog"]'),
+    ).not.toBeNull()
+  })
+})

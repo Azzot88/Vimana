@@ -7,6 +7,7 @@ import AirportSelect from '../components/AirportSelect'
 import DepartureChip from '../components/DepartureChip'
 import InquiryPanel from '../components/InquiryPanel'
 import MonoText from '../components/MonoText'
+import DateTimeField from '../components/DateTimeField'
 import NostrBadge from '../components/NostrBadge'
 import RouteNoteBadge from '../components/RouteNoteBadge'
 import TripPreview from '../components/TripPreview'
@@ -121,12 +122,15 @@ export default function TripsPage() {
         </div>
         <div className="md:flex-1 md:min-w-[140px]">
           <label htmlFor={dateId} className="block text-xs font-body font-medium text-navy/60 mb-1">{t('trips.date')}</label>
-          <input
+          {/* T_UX.29 pt.3 — the board filter asks for a day, and it asks for
+              it with the same calendar as the rest of the product (`§9a`). */}
+          <DateTimeField
             id={dateId}
-            type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full border border-navy/20 rounded-field px-3 py-2 min-h-[2.75rem] text-sm font-mono text-navy focus:outline-none focus:border-cyan transition-colors"
+            onChange={setDate}
+            style={prefs.style}
+            dateOnly
+            ariaLabel={t('trips.date') as string}
           />
         </div>
         <button

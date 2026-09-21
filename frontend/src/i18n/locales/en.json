@@ -999,6 +999,29 @@
     "chargedDays": "{{days}} days",
     "advisory": "The counter is a notice: the carrier names the final sum and you confirm it."
   },
+  "handover": {
+    "finish": "Complete the handover",
+    "toPay": "To pay",
+    "toReceive": "To receive",
+    "title": {
+      "giving": "Handing the parcel over",
+      "taking": "Receiving the parcel"
+    },
+    "giving": {
+      "hand": "Hand the parcel to the recipient.",
+      "letThemCheck": "Let them check the packaging, the condition and the contents — do not rush them.",
+      "takeMoney": "Take the money in cash, or wait for the transfer.",
+      "screenshot": "For a transfer, screenshot the credit and attach it to the card.",
+      "finish": "If the sum is right and neither side has a complaint, complete the handover."
+    },
+    "taking": {
+      "check": "Take the parcel and check the packaging — opened or intact.",
+      "contents": "Compare the contents with the description in the agreed terms.",
+      "pay": "Hand the money over, or send the transfer.",
+      "screenshot": "Paying electronically — attach the transaction screenshot, the receipt or the bank slip to the card.",
+      "finish": "If everything matches, complete the handover."
+    }
+  },
   "meeting": {
     "title": {
       "handover": "Where and when you meet",
@@ -1944,6 +1967,7 @@
     }
   },
   "calendar": {
+    "pickDate": "Pick a date",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "time": "Time",

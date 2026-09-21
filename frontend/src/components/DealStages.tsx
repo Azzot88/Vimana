@@ -17,6 +17,7 @@ import { formsForRole, type DealRole } from '../lib/cardForms'
 import CardActions from './CardActions'
 import { usePrefs } from '../hooks/usePrefs'
 import MeetingNote, { meetingOf } from './MeetingNote'
+import HandoverNote from './HandoverNote'
 import StorageNote from './StorageNote'
 import TermsProposeForm from './TermsProposeForm'
 
@@ -579,6 +580,20 @@ export default function DealStages({
             when the deal is actually in one; the server decides that. */}
         {deal?.storage && <StorageNote storage={deal.storage} />}
 
+        {/* T_UX.29 pt.3 — the checklist for the act the button below declares:
+            what to look at, what the sum is, and what to attach when the money
+            moves by transfer. Drawn only for the person who can press it — a
+            memo about somebody else's afternoon is one more thing to read. */}
+        {myRole && mineNow.includes('delivery.declared') && (
+          <HandoverNote
+            terms={terms}
+            side={myRole === 'carrier' ? 'giving' : 'taking'}
+            money={
+              myRole === 'carrier' ? 'receive' : myRole === payer ? 'pay' : null
+            }
+          />
+        )}
+
         {(currentKey === 'handover' ||
           currentKey === 'arrived' ||
           currentKey === 'delivery') && (
@@ -623,6 +638,10 @@ export default function DealStages({
                пути"». On the two rungs that are the flight, the status form is
                the stage, so it is drawn open rather than offered. */
             pinned="transit.update"
+            /* T_UX.29 pt.3 — «И кнопка — "Завершить передачу"» (owner,
+               2026-09-20). The window keeps the name of the act («Вручено»),
+               the button says what pressing it does. */
+            submitLabels={{ 'delivery.declared': t('handover.finish') }}
             onDone={onDone}
           />
         )}

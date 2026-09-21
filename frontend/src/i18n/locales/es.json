@@ -1693,6 +1693,7 @@
     }
   },
   "calendar": {
+    "pickDate": "Elegir fecha",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "time": "Hora",
@@ -2111,6 +2112,29 @@
     "chargedAgreed": "Acordado por el almacenaje",
     "chargedDays": "{{days}} días",
     "advisory": "El contador es informativo: el transportista dice el importe final y tú lo confirmas."
+  },
+  "handover": {
+    "finish": "Finalizar la entrega",
+    "toPay": "A pagar",
+    "toReceive": "A recibir",
+    "title": {
+      "giving": "Entrega en mano",
+      "taking": "Recepción del paquete"
+    },
+    "giving": {
+      "hand": "Entregue el paquete al destinatario.",
+      "letThemCheck": "Déjele comprobar el embalaje, el estado y el contenido — sin prisas.",
+      "takeMoney": "Cobre el dinero en efectivo, o espere la transferencia.",
+      "screenshot": "Si es transferencia, haga captura del abono y adjúntela a la tarjeta.",
+      "finish": "Si el importe es correcto y ninguna parte tiene reclamación, finalice la entrega."
+    },
+    "taking": {
+      "check": "Reciba el paquete y compruebe el embalaje — si está abierto o intacto.",
+      "contents": "Compare el contenido con la descripción de las condiciones acordadas.",
+      "pay": "Entregue el dinero en mano, o envíe la transferencia.",
+      "screenshot": "Pago electrónico: adjunte a la tarjeta la captura de la transacción, el recibo o el justificante bancario.",
+      "finish": "Si todo coincide, finalice la entrega."
+    }
   },
   "meeting": {
     "title": {

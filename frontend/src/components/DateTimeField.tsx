@@ -25,7 +25,10 @@ import MonoText from './MonoText'
  *  ours: `date_format` decides day-month order, the clock, and which day starts
  *  the week.
  *
- *  Called by: `pages/NewTripPage` (every stop on the route).
+ *  Called by: `pages/NewTripPage` (every stop on the route),
+ *  `pages/ChecklistWizardPage`, `components/CardActions` (every `datetime`
+ *  field a card declares), and — with `dateOnly` — `pages/TripsPage` and
+ *  `pages/RequestsPage` for the day filters.
  */
 interface DateTimeFieldProps {
   id?: string
@@ -38,6 +41,16 @@ interface DateTimeFieldProps {
   min?: string
   required?: boolean
   ariaLabel?: string
+  /** T_UX.29 pt.3 (owner, 2026-09-20: «везде должны быть нормальные календари,
+   *  которые разработали мы сами, а не стандартные»).
+   *
+   *  A day without a clock: the value becomes `YYYY-MM-DD`, the time row is not
+   *  drawn, and the trigger prints the date alone. The board filter and the
+   *  sender's «в ближайшие дни» window ask for a day and nothing else — giving
+   *  them an hour to fill in would be asking for precision they do not have,
+   *  and leaving them on `<input type="date">` meant two different calendars in
+   *  one product (`§9a`). */
+  dateOnly?: boolean
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -50,10 +63,27 @@ function toValue(d: Date, hours: number, minutes: number): string {
   )}:${pad(minutes)}`
 }
 
+/** The same day without the clock: `YYYY-MM-DD`, which is what `<input
+ *  type="date">` sent and what the filters behind it already speak.
+ *
+ *  Called by: `save`, in `dateOnly` mode. */
+function toDayValue(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /** The wire shape → `Date`, or `null` for empty and unparseable alike. Both
  *  mean "nothing chosen yet" to every caller. */
 function parseValue(value: string): Date | null {
   if (!value) return null
+  /* A bare `YYYY-MM-DD` is parsed by the spec as **UTC** midnight, so west of
+     Greenwich `new Date('2026-09-20')` is the 19th at 20:00 — the calendar
+     would highlight the day before the one in the box. Date-only values are
+     built locally instead; everything with a clock in it already means local
+     time and parses correctly. */
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (day) {
+    return new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
+  }
   const d = new Date(value)
   return Number.isNaN(d.getTime()) ? null : d
 }
@@ -69,6 +99,7 @@ export default function DateTimeField({
   min,
   required,
   ariaLabel,
+  dateOnly = false,
 }: DateTimeFieldProps) {
   const { t, i18n } = useTranslation()
   const locale = style === 'us' ? 'en-US' : intlLocale(i18n.language)
@@ -188,7 +219,9 @@ export default function DateTimeField({
 
   const save = () => {
     if (!draft) return
-    onChange(toValue(draft, draft.getHours(), draft.getMinutes()))
+    onChange(
+      dateOnly ? toDayValue(draft) : toValue(draft, draft.getHours(), draft.getMinutes()),
+    )
     setOpen(false)
     triggerRef.current?.focus()
   }
@@ -212,9 +245,9 @@ export default function DateTimeField({
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12,
+        ...(dateOnly
+          ? {}
+          : { hour: '2-digit', minute: '2-digit', hour12 }),
       })
     : ''
 
@@ -239,7 +272,7 @@ export default function DateTimeField({
           shown ? 'text-navy' : 'text-navy/35'
         }`}
       >
-        {shown || t('trips.pickDateTime')}
+        {shown || t(dateOnly ? 'calendar.pickDate' : 'trips.pickDateTime')}
       </button>
 
       {open &&
@@ -248,7 +281,9 @@ export default function DateTimeField({
           <div
             ref={popoverRef}
             role="dialog"
-            aria-label={t('trips.pickDateTime') as string}
+            aria-label={
+              t(dateOnly ? 'calendar.pickDate' : 'trips.pickDateTime') as string
+            }
             tabIndex={-1}
             style={{ top: anchor.top, left: anchor.left, minWidth: Math.max(anchor.width, 288) }}
             className="absolute z-popover w-72 rounded-card border border-navy/15 bg-white shadow-lift p-3"
@@ -315,7 +350,11 @@ export default function DateTimeField({
               })}
             </div>
 
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-navy/10">
+            <div
+              className={`items-center gap-2 mt-3 pt-3 border-t border-navy/10 ${
+                dateOnly ? 'hidden' : 'flex'
+              }`}
+            >
               <span className="text-[11px] font-body text-navy/50">
                 {t('calendar.time')}
               </span>

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { raiseCard, raiseCardWithFiles } from '../api/terms'
 import PhotoPicker from './PhotoPicker'
+import DateTimeField from './DateTimeField'
+import { usePrefs } from '../hooks/usePrefs'
 import {
   buildPayload,
   formsForRole,
@@ -58,6 +60,12 @@ interface Props {
    *  the first is answered — which is how «Статус в пути» disappeared behind a
    *  button on exactly the stage named after it. */
   pinned?: string
+  /** T_UX.29 pt.3 — a caption for the submit button, by kind. «Отправить» is
+   *  right for a status update and wrong for the press that ends the carriage:
+   *  «Завершить передачу» is what the person at the door is doing, and the
+   *  generic verb made the last act of a deal look like sending a message
+   *  (owner, 2026-09-20). */
+  submitLabels?: Record<string, string>
 }
 
 export default function CardActions({
@@ -69,8 +77,12 @@ export default function CardActions({
   labels,
   doneStages = [],
   pinned,
+  submitLabels,
 }: Props) {
   const { t } = useTranslation()
+  // T_UX.29 pt.3 — the picker reads the account's date style, like every other
+  // date on this screen does.
+  const prefs = usePrefs()
   const [open, setOpen] = useState<CardFormSpec | null>(null)
   const [values, setValues] = useState<Record<string, string | boolean>>({})
   const [note, setNote] = useState('')
@@ -324,11 +336,36 @@ export default function CardActions({
         </label>
       )
     }
+    /* T_UX.29 pt.3 (owner, 2026-09-20): «везде должны быть нормальные
+       календари, которые разработали мы сами, а не стандартные».
+
+       This was the last `<input type="datetime-local">` in the product, and it
+       stood on the busiest form there is — «Ожидается» on every transit update,
+       «Когда» on every meeting. The native control is drawn by the browser: it
+       takes 12- or 24-hour from the **device**, so the account's date setting
+       looked broken exactly here, and it cannot be translated (`T3.11.07`). */
+    if (f.type === 'datetime') {
+      /* A `div`, not a `label`: the trigger is a button, and a button is not a
+         labelable element — the name comes from `ariaLabel` instead. */
+      return (
+        <div key={f.name} className="flex-1 min-w-[9rem]">
+          <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
+          <DateTimeField
+            value={String(values[f.name] ?? '')}
+            onChange={(v) => setValues((prev) => ({ ...prev, [f.name]: v }))}
+            style={prefs.style}
+            required={f.required}
+            ariaLabel={label as string}
+          />
+        </div>
+      )
+    }
+
     return (
       <label key={f.name} className="flex-1 min-w-[9rem]">
         <span className="block text-xs font-body text-navy/40 mb-1">{label}</span>
         <input
-          type={f.type === 'datetime' ? 'datetime-local' : f.type}
+          type={f.type}
           step={f.type === 'number' ? 'any' : undefined}
           required={f.required}
           value={String(values[f.name] ?? '')}
@@ -443,7 +480,7 @@ export default function CardActions({
           disabled={busy}
           className="px-4 py-2 rounded-lg bg-navy text-white text-sm font-body disabled:opacity-50"
         >
-          {busy ? '...' : t('cards.send')}
+          {busy ? '...' : submitLabels?.[active.kind] ?? t('cards.send')}
         </button>
         {/* A pinned form has nothing to fold into, so «Отмена» empties it
             rather than closing it: the stage still needs its status form open

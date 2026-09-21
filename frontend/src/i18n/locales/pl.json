@@ -1701,6 +1701,7 @@
     }
   },
   "calendar": {
+    "pickDate": "Wybierz datę",
     "prevMonth": "Poprzedni miesiąc",
     "nextMonth": "Następny miesiąc",
     "time": "Godzina",
@@ -2133,6 +2134,29 @@
     "chargedAgreed": "Uzgodnione za przechowanie",
     "chargedDays": "{{days}} dób",
     "advisory": "Licznik jest informacyjny: ostateczną kwotę podaje przewoźnik, a Ty ją potwierdzasz."
+  },
+  "handover": {
+    "finish": "Zakończ przekazanie",
+    "toPay": "Do zapłaty",
+    "toReceive": "Do odebrania",
+    "title": {
+      "giving": "Przekazanie z rąk do rąk",
+      "taking": "Odbiór przesyłki"
+    },
+    "giving": {
+      "hand": "Przekaż przesyłkę odbiorcy.",
+      "letThemCheck": "Pozwól sprawdzić opakowanie, stan i zawartość — bez pośpiechu.",
+      "takeMoney": "Odbierz pieniądze gotówką albo poczekaj na przelew.",
+      "screenshot": "Przy przelewie zrób zrzut zaksięgowania i dołącz go do karty.",
+      "finish": "Jeśli kwota się zgadza i żadna ze stron nie ma zastrzeżeń — zakończ przekazanie."
+    },
+    "taking": {
+      "check": "Odbierz przesyłkę i sprawdź opakowanie — czy otwarte, czy całe.",
+      "contents": "Porównaj zawartość z opisem w uzgodnionych warunkach.",
+      "pay": "Przekaż pieniądze do rąk albo wyślij przelew.",
+      "screenshot": "Przy płatności elektronicznej dołącz do karty zrzut transakcji, potwierdzenie lub wyciąg bankowy.",
+      "finish": "Jeśli wszystko się zgadza — zakończ przekazanie."
+    }
   },
   "meeting": {
     "title": {

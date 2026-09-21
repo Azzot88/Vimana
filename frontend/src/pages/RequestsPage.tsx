@@ -10,6 +10,7 @@ import {
 } from '../api/requests'
 import AirportSelect from '../components/AirportSelect'
 import MonoText from '../components/MonoText'
+import DateTimeField from '../components/DateTimeField'
 import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.19 — «кто летит в ближайшие дни ЛА — Москва?», as a screen.
@@ -124,28 +125,34 @@ export default function RequestsPage() {
             single date would force a precision the sender does not have — then
             miss a trip leaving the day before. */}
         <div className="flex flex-wrap gap-3">
-          <label className="flex-1 min-w-[9rem]">
+          <div className="flex-1 min-w-[9rem]">
             <span className="block text-xs font-body text-navy/40 mb-1">
               {t('requests.windowFrom')}
             </span>
-            <input
-              type="date"
+            {/* T_UX.29 pt.3 — our own calendar, in day-only mode: the window
+                is «в ближайшие дни», and an hour here would be precision the
+                sender does not have. */}
+            <DateTimeField
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm"
+              onChange={setFrom}
+              style={prefs.style}
+              dateOnly
+              ariaLabel={t('requests.windowFrom') as string}
             />
-          </label>
-          <label className="flex-1 min-w-[9rem]">
+          </div>
+          <div className="flex-1 min-w-[9rem]">
             <span className="block text-xs font-body text-navy/40 mb-1">
               {t('requests.windowTo')}
             </span>
-            <input
-              type="date"
+            <DateTimeField
               value={until}
-              onChange={(e) => setUntil(e.target.value)}
-              className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm"
+              onChange={setUntil}
+              style={prefs.style}
+              dateOnly
+              min={from || undefined}
+              ariaLabel={t('requests.windowTo') as string}
             />
-          </label>
+          </div>
         </div>
 
         <label className="block">
