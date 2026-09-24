@@ -51,7 +51,12 @@ router = APIRouter()
 _HEARTBEAT_SECONDS = 20
 
 
-@router.get("/events/stream")
+# Kept out of the OpenAPI schema. Its one reader is the contract fuzz, which
+# treats every operation as request → response: the in-process ASGI client
+# returns only when the body ends, and this body never does, so the fuzz hung
+# on the first example that carried a valid token. The schema also called this
+# a JSON 200, which it is not. Covered by `test_notification_feed` instead.
+@router.get("/events/stream", include_in_schema=False)
 async def stream(
     request: Request,
     current_user: User = Depends(get_current_user),

@@ -16,6 +16,7 @@ was not the actor, addressed to them, with its own read state.
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest_asyncio
@@ -189,6 +190,67 @@ async def test_the_stream_needs_a_session(client):
     is not a person."""
     r = await client.get("/api/events/stream")
     assert r.status_code in (401, 403), r.text
+
+
+async def test_the_stream_says_ready_and_ends_with_its_reader(sender_headers):
+    """The open stream: `ready` first, and it ends when the reader leaves.
+
+    Called on the ASGI app directly, not through `client`. Both in-process
+    clients — httpx here, `starlette_testclient` in the fuzz — hand back a
+    response only once its body is complete, and this body never completes; the
+    fuzz hung on exactly that. Here the reader disconnects after the first
+    chunk, which is what a closed tab does, and the stream has to notice.
+
+    `wait_for` is the point of the test as much as the assertions are: a stream
+    that ignores the disconnect fails here in five seconds instead of hanging
+    the run.
+    """
+    from app.main import app
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": "/api/events/stream",
+        "raw_path": b"/api/events/stream",
+        "root_path": "",
+        "query_string": b"",
+        "headers": [
+            (b"host", b"test"),
+            (b"authorization", sender_headers["Authorization"].encode()),
+        ],
+        "client": ("127.0.0.1", 50000),
+        "server": ("test", 80),
+    }
+    first_chunk = asyncio.Event()
+    request_sent = False
+    start: dict = {}
+    chunks: list[bytes] = []
+
+    async def receive():
+        nonlocal request_sent
+        if not request_sent:
+            request_sent = True
+            return {"type": "http.request", "body": b"", "more_body": False}
+        await first_chunk.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == "http.response.start":
+            start.update(message)
+        elif message["type"] == "http.response.body" and message.get("body"):
+            chunks.append(message["body"])
+            first_chunk.set()
+
+    await asyncio.wait_for(app(scope, receive, send), timeout=5)
+
+    assert start["status"] == 200
+    headers = dict(start["headers"])
+    assert headers[b"content-type"].startswith(b"text/event-stream")
+    assert headers[b"x-accel-buffering"] == b"no"
+    assert b"".join(chunks).startswith(b"event: ready\n")
 
 
 # ── T_UX.29 pt.8 · four moments earn a letter, the rest stop at the bell ────

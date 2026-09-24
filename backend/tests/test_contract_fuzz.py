@@ -11,6 +11,10 @@ pt.2 (authed): same fuzz but with a real Bearer token — exercises the
     handler bodies past the auth gate. Two flavors: regular user and
     superuser.
 
+An endpoint whose body never ends (SSE) must be `include_in_schema=False`. The
+ASGI client here returns a response only once its body is complete, so such an
+operation does not fail the run — it hangs it, silently, under a valid token.
+
 MVP scope for both:
 - `not_a_server_error` check only (skip response_schema_conformance —
   OpenAPI is auto-generated and may have gaps).
