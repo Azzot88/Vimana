@@ -482,15 +482,20 @@ async def test_letter_goes_out_with_every_toggle_off(
 ):
     """A change of what somebody may do with other people's data cannot depend
     on a notification setting."""
+    from app.core.notification_prefs import EVENT_CLASSES
+
     user_id, _ = subject
 
     async with session_maker() as db:
         user = await db.get(User, user_id)
         # Every class, every channel, off. The security class is meant to
-        # ignore this entirely.
+        # ignore this entirely. Read from the registry, not spelled out: the
+        # hand-written list missed `marketplace` when it appeared, then kept
+        # switching off `deal` after T_UX.29 pt.8 split it — and passed both
+        # times.
         user.notification_prefs = {
-            cls: {"email": False, "telegram": False, "whatsapp": False}
-            for cls in ("deal", "deadline", "vault", "trust", "dispute", "security")
+            cls.key: {"email": False, "telegram": False, "whatsapp": False}
+            for cls in EVENT_CLASSES
         }
         await db.commit()
 

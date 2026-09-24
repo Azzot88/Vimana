@@ -84,7 +84,7 @@ def test_a_switched_off_class_is_not_delivered(sync_sessions, spy):
 
     user = _user(
         sync_sessions,
-        notification_prefs={"deal": {"email": False, "telegram": False}},
+        notification_prefs={"deal_custody": {"email": False, "telegram": False}},
     )
     _notify_user(user, "deal_status", status="delivered")
 
@@ -100,7 +100,7 @@ def test_security_is_delivered_with_everything_switched_off(sync_sessions, spy):
     user = _user(
         sync_sessions,
         notification_prefs={
-            "deal": {"email": False, "telegram": False},
+            "deal_custody": {"email": False, "telegram": False},
             "security": {"email": False, "telegram": False},
         },
     )
@@ -111,12 +111,21 @@ def test_security_is_delivered_with_everything_switched_off(sync_sessions, spy):
 
 
 def test_an_unknown_key_reads_as_the_default(sync_sessions, spy):
-    """A blob written by a newer deploy must not silence an older one."""
+    """A blob written by a newer deploy must not silence an older one.
+
+    `deal` is the same case from the other side: the single row before T_UX.29
+    pt.8 split it in six, still sitting in stored matrices. It reads as unknown,
+    so none of the six inherits it — the rule the split was written against.
+    """
     from app.tasks.notifications import _notify_user
 
     user = _user(
         sync_sessions,
-        notification_prefs={"invented_class": {"email": False}, "deal": {}},
+        notification_prefs={
+            "invented_class": {"email": False},
+            "deal": {"email": False},
+            "deal_custody": {},
+        },
     )
     _notify_user(user, "deal_status", status="delivered")
 
@@ -139,7 +148,7 @@ def test_an_unclassified_letter_is_delivered_rather_than_dropped(sync_sessions, 
     outcomes: nobody ever learns the thing happened."""
     from app.tasks.notifications import _notify_user
 
-    user = _user(sync_sessions, notification_prefs={"deal": {"email": False}})
+    user = _user(sync_sessions, notification_prefs={"deal_custody": {"email": False}})
     _notify_user(user, "waitlist_confirmation")
 
     assert len(spy["email"]) == 1
@@ -162,7 +171,7 @@ def test_every_class_kind_is_a_real_letter():
 def test_classes_with_nothing_to_send_are_not_shown():
     """A switch for a message that never arrives is a promise the product does
     not keep."""
-    from app.core.notification_prefs import visible_classes
+    from app.core.notification_prefs import CLASS_OF_CARD, visible_classes
 
     shown = {cls.key for cls in visible_classes()}
     # T3.11.19 — `marketplace` joined when it gained a producer (`corridor_trip`).
@@ -171,7 +180,24 @@ def test_classes_with_nothing_to_send_are_not_shown():
     # a switch, so adding one here is a deliberate act.
     # T3.12.09 — `dispute` joined the same way `marketplace` did: it gained a
     # producer, the letter that tells an arbiter a dispute was offered to them.
-    assert shown == {"deal", "deadline", "marketplace", "dispute", "security"}
+    # T_UX.29 pt.8 — `deal` became six rows, by the kind of act.
+    assert shown == {
+        "deal_terms",
+        "deal_meeting",
+        "deal_custody",
+        "deal_money",
+        "deal_storage",
+        "deal_trouble",
+        "deadline",
+        "marketplace",
+        "dispute",
+        "security",
+    }
+    # Four of the six own no letter kind: their mail is the one `deal_event`
+    # letter, filed by card. A row with neither is a switch with nothing behind it.
+    carded = set(CLASS_OF_CARD.values())
+    for cls in visible_classes():
+        assert cls.kinds or cls.key in carded, f"{cls.key} has no producer"
 
 
 def test_security_is_the_locked_class():
@@ -218,10 +244,12 @@ def test_sanitize_drops_what_it_does_not_know():
 
     assert sanitize(
         {
-            "deal": {"email": False, "carrier_pigeon": True},
+            "deal_custody": {"email": False, "carrier_pigeon": True},
             "invented": {"email": False},
+            # What a bundle from before T_UX.29 pt.8 still sends.
+            "deal": {"email": False},
         }
-    ) == {"deal": {"email": False}}
+    ) == {"deal_custody": {"email": False}}
 
 
 def test_sanitize_drops_a_write_to_a_locked_class():
@@ -236,7 +264,7 @@ def test_sanitize_refuses_a_value_that_is_not_a_boolean():
     from app.core.notification_prefs import sanitize
 
     with pytest.raises(ValueError):
-        sanitize({"deal": {"email": "yes"}})
+        sanitize({"deal_custody": {"email": "yes"}})
 
 
 def test_merge_keeps_the_rows_a_write_did_not_mention():
@@ -268,9 +296,20 @@ async def test_me_answers_with_the_matrix_filled_in(client):
     resp = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     prefs = resp.json()["notification_prefs"]
 
-    assert set(prefs) == {"deal", "deadline", "marketplace", "dispute", "security"}
-    assert set(prefs["deal"]) == {"email", "telegram", "whatsapp"}
-    assert prefs["deal"]["email"] is True
+    assert set(prefs) == {
+        "deal_terms",
+        "deal_meeting",
+        "deal_custody",
+        "deal_money",
+        "deal_storage",
+        "deal_trouble",
+        "deadline",
+        "marketplace",
+        "dispute",
+        "security",
+    }
+    assert set(prefs["deal_custody"]) == {"email", "telegram", "whatsapp"}
+    assert prefs["deal_custody"]["email"] is True
     assert resp.json()["notification_locked"] == ["security"]
     # The account has an address only on mail, so that is the only column the
     # screen may let anybody click.
@@ -293,13 +332,13 @@ async def test_one_cell_can_be_written_on_its_own(client):
 
     resp = await client.patch(
         "/api/auth/me",
-        json={"notification_prefs": {"deal": {"telegram": False}}},
+        json={"notification_prefs": {"deal_custody": {"telegram": False}}},
         headers=headers,
     )
     assert resp.status_code == 200
     prefs = resp.json()["notification_prefs"]
-    assert prefs["deal"]["telegram"] is False
-    assert prefs["deal"]["email"] is True, "the cell next to it was not touched"
+    assert prefs["deal_custody"]["telegram"] is False
+    assert prefs["deal_custody"]["email"] is True, "the cell next to it was not touched"
     assert prefs["deadline"]["telegram"] is True, "the row below was not touched"
 
 
@@ -316,7 +355,7 @@ async def test_a_second_write_does_not_undo_the_first(client):
 
     await client.patch(
         "/api/auth/me",
-        json={"notification_prefs": {"deal": {"telegram": False}}},
+        json={"notification_prefs": {"deal_custody": {"telegram": False}}},
         headers=headers,
     )
     resp = await client.patch(
@@ -326,7 +365,7 @@ async def test_a_second_write_does_not_undo_the_first(client):
     )
 
     prefs = resp.json()["notification_prefs"]
-    assert prefs["deal"]["telegram"] is False
+    assert prefs["deal_custody"]["telegram"] is False
     assert prefs["deadline"]["email"] is False
 
 
@@ -415,7 +454,7 @@ async def test_a_malformed_write_is_refused(client):
 
     resp = await client.patch(
         "/api/auth/me",
-        json={"notification_prefs": {"deal": {"email": "yes"}}},
+        json={"notification_prefs": {"deal_custody": {"email": "yes"}}},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 422
