@@ -14,6 +14,7 @@ import {
   passkeySignupVerify,
 } from '../api/passkey'
 import { useAuthStore } from '../stores/auth'
+import { AFTER_SIGN_IN, afterSignIn } from '../lib/returnTo'
 
 /** T3.14 — sign in or sign up with a passkey.
  *
@@ -27,9 +28,16 @@ interface Props {
    *  the only name it would otherwise have. */
   displayName?: string
   email?: string
+  /** T_UX.30 — where the sign-in page was asked to send the person. */
+  returnUrl?: string
 }
 
-export default function PasskeyAuthButton({ mode, displayName, email }: Props) {
+export default function PasskeyAuthButton({
+  mode,
+  displayName,
+  email,
+  returnUrl = AFTER_SIGN_IN,
+}: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -45,7 +53,9 @@ export default function PasskeyAuthButton({ mode, displayName, email }: Props) {
     localStorage.setItem('token', token)
     const { data: user } = await me()
     setAuth(user, token)
-    navigate(user.email && !user.email_verified ? '/verify-email' : '/dashboard')
+    navigate(
+      afterSignIn(returnUrl, { emailUnverified: Boolean(user.email && !user.email_verified) }),
+    )
   }
 
   const run = async () => {

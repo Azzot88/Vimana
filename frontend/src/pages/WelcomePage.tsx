@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { me, updateMe } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import { safeReturnUrl } from '../lib/returnTo'
 
 /**
  * T3.28 pt.2 — the one question left after a code created an account.
@@ -19,11 +20,17 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
  * Skippable on purpose. The placeholder is serviceable, the person can rename
  * themselves later in the profile, and a wall between someone and the product
  * they just proved they wanted is a strange thing to build.
+ *
+ * T_UX.30 — and it hands the person on to where they were going. It used to
+ * end on the panel whatever brought them here, so a stranger who signed up from
+ * a recipient link or a friend's invite named themselves and never saw either.
  */
 export default function WelcomePage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { user, token, setAuth } = useAuthStore()
+  const [params] = useSearchParams()
+  const next = safeReturnUrl(params.get('returnUrl'))
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -39,7 +46,7 @@ export default function WelcomePage() {
       // placeholder works. Profile can fix it later.
     } finally {
       setBusy(false)
-      navigate('/dashboard')
+      navigate(next)
     }
   }
 
@@ -90,7 +97,7 @@ export default function WelcomePage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(next)}
             className="w-full text-xs font-body text-muted"
           >
             {t('welcome.skip')}

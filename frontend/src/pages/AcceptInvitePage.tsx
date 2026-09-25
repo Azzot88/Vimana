@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { acceptInvite } from '../api/social'
 import MonoText from '../components/MonoText'
+import { withReturn } from '../lib/returnTo'
 
 /**
  * T_UX.7 pt.3 — every string on this screen used to be Russian, in the source.
@@ -26,7 +27,7 @@ export default function AcceptInvitePage() {
     if (!authToken) {
       // Read back by `LoginPage` since T_UX.7 pt.2 — before that the invite was
       // dropped on the floor after signing in.
-      navigate(`/login?returnUrl=/invite/${token}`, { replace: true })
+      navigate(withReturn('/login', `/invite/${token}`), { replace: true })
       return
     }
     if (!token) return

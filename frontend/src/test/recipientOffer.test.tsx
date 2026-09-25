@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import JoinDealPage from '../pages/JoinDealPage'
 import RecipientOfferSection from '../components/RecipientOfferSection'
 import { useAuthStore } from '../stores/auth'
@@ -68,6 +68,12 @@ const offer: RecipientOffer = {
   invited_at: '2026-09-14T10:00:00Z',
 }
 
+/** Where the sign-in redirect landed, query string included. */
+function LoginSpy() {
+  const location = useLocation()
+  return <p data-testid="login-at">{location.pathname + location.search}</p>
+}
+
 const renderJoin = () =>
   renderWithProviders(
     <Routes>
@@ -114,6 +120,23 @@ describe('JoinDealPage', () => {
     )
     await waitFor(() => expect(declineRecipientOffer).toHaveBeenCalledWith('o1', true))
     expect(await screen.findByText(t('recipientOffer.declined'))).toBeInTheDocument()
+  })
+
+  it('sends a signed-out visitor to sign in with the way back attached', async () => {
+    // T_UX.30 — it said `?next=`, which the sign-in page never read: a stranger
+    // following the link signed up and the offer was lost on the way.
+    useAuthStore.setState({ user: null, token: null, authState: 'anonymous' })
+    renderWithProviders(
+      <Routes>
+        <Route path="/join/deal/:token" element={<JoinDealPage />} />
+        <Route path="/login" element={<LoginSpy />} />
+      </Routes>,
+      { route: '/join/deal/tok' },
+    )
+    expect((await screen.findByTestId('login-at')).textContent).toBe(
+      '/login?returnUrl=%2Fjoin%2Fdeal%2Ftok',
+    )
+    expect(claimInvite).not.toHaveBeenCalled()
   })
 
   it('says why when the link cannot be used', async () => {

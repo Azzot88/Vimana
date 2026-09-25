@@ -1,10 +1,11 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from './stores/auth'
 import AuthBootstrap from './components/AuthBootstrap'
 import Layout from './components/Layout'
 import MonoText from './components/MonoText'
 import RouteErrorBoundary from './components/ErrorBoundary'
+import { withReturn } from './lib/returnTo'
 
 /**
  * T_UX.7 pt.2 — the three pages a stranger can reach are bundled eagerly; every
@@ -65,9 +66,19 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const WelcomePage = lazy(() => import('./pages/WelcomePage'))
 
-function ProtectedRoute() {
+/** T_UX.30 — a signed-out visit to a protected address remembers the address.
+ *
+ *  Letters link straight into deals, and a session that ended in between used
+ *  to send the person to the sign-in page with no memory of where they were
+ *  going: they proved who they were and landed somewhere else.
+ *
+ *  Exported for its test; `App` is its only other caller. */
+export function ProtectedRoute() {
   const token = useAuthStore((s) => s.token)
-  if (!token) return <Navigate to="/login" replace />
+  const location = useLocation()
+  if (!token) {
+    return <Navigate to={withReturn('/login', location.pathname + location.search)} replace />
+  }
   return <Outlet />
 }
 

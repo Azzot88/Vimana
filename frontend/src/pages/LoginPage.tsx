@@ -18,31 +18,8 @@ import CodeField from '../components/CodeField'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAuthStore } from '../stores/auth'
 import { usePersistedState } from '../hooks/usePersistedState'
+import { afterSignIn, safeReturnUrl } from '../lib/returnTo'
 import { APP_VERSION } from '../version'
-
-/**
- * T_UX.7 pt.2 — where to go after signing in.
- *
- * `AcceptInvitePage` has always sent people here as `/login?returnUrl=/invite/…`
- * and nothing ever read the parameter, so anyone opening an invite link while
- * signed out landed on the dashboard and the invite was silently dropped. The
- * person who sent it never got connected and had no way to know.
- *
- * Reading it back is also the exact sink the react-router open-redirect
- * advisory (GHSA-wrjc-x8rr-h8h6) is about, so the check is deliberately narrow
- * rather than clever: one leading slash, no scheme, no protocol-relative `//`,
- * no backslash — which browsers normalise to `/` and which is what that
- * advisory turns into an off-site redirect. Anything else falls back to `/`,
- * because a login that lands somewhere harmless is a nuisance and one that
- * lands on an attacker's page is a phishing step.
- */
-export function safeReturnUrl(raw: string | null): string {
-  if (!raw) return '/'
-  if (!raw.startsWith('/')) return '/'
-  if (raw.startsWith('//') || raw.startsWith('/\\')) return '/'
-  if (raw.includes('\\')) return '/'
-  return raw
-}
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -227,7 +204,10 @@ export default function LoginPage() {
       // The server says whether it just made this account. It used to be
       // guessed by comparing the display name with the local part of the
       // address — a guess that cannot work at all for an account born in a chat.
-      navigate(data.created ? '/welcome' : returnUrl)
+      // T_UX.30 — and a new account used to lose the destination here: the
+      // welcome screen now carries it on, so a stranger who signed up from a
+      // recipient link still lands on the offer.
+      navigate(afterSignIn(returnUrl, { created: data.created }))
     } catch {
       // One message for wrong, expired and already-spent: the server does not
       // tell them apart either, and separating them helps whoever is guessing.
@@ -552,8 +532,8 @@ export default function LoginPage() {
             <div className="h-px bg-navy/10 flex-1" />
           </div>
           <div className="space-y-2">
-            <PasskeyAuthButton mode="login" />
-            <NostrAuthButton mode="login" />
+            <PasskeyAuthButton mode="login" returnUrl={returnUrl} />
+            <NostrAuthButton mode="login" returnUrl={returnUrl} />
           </div>
         </div>
         <div className="flex items-center justify-between mt-4">

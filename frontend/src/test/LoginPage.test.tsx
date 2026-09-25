@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import LoginPage, { safeReturnUrl } from '../pages/LoginPage'
+import LoginPage from '../pages/LoginPage'
 import { renderWithProviders } from './render'
 
 /** The page asks the server two questions, and neither is what this file is
@@ -61,35 +61,8 @@ describe('LoginPage', () => {
   })
 })
 
-describe('safeReturnUrl', () => {
-  /**
-   * T_UX.7 pt.2 — the post-login destination is attacker-reachable through the
-   * query string, which is precisely what GHSA-wrjc-x8rr-h8h6 turns into an
-   * off-site redirect. These are the shapes that advisory is about.
-   */
-  it('keeps ordinary in-app paths', () => {
-    expect(safeReturnUrl('/invite/abc123')).toBe('/invite/abc123')
-    expect(safeReturnUrl('/deals/42?tab=chat')).toBe('/deals/42?tab=chat')
-  })
-
-  it('refuses anything that can leave the site', () => {
-    for (const hostile of [
-      'https://evil.example/steal',
-      '//evil.example',
-      '/\\evil.example',
-      '/path\\..\\elsewhere',
-      'javascript:alert(1)',
-      'evil.example',
-    ]) {
-      expect(safeReturnUrl(hostile)).toBe('/')
-    }
-  })
-
-  it('falls back to the front page when there is nothing to return to', () => {
-    expect(safeReturnUrl(null)).toBe('/')
-    expect(safeReturnUrl('')).toBe('/')
-  })
-})
+// T_UX.30 — `safeReturnUrl` moved to `lib/returnTo` with the rest of the
+// «where after sign-in» decision; its cases live in `returnTo.test.tsx`.
 
 // ── T3.28 pt.2 · the one-field door ──────────────────────────────────────────
 

@@ -11,6 +11,7 @@ import {
 import { PURPOSE_LOGIN, PURPOSE_SIGNUP } from '../lib/identity'
 import { hasNip07Extension } from '../lib/nostr'
 import { useAuthStore } from '../stores/auth'
+import { AFTER_SIGN_IN, afterSignIn } from '../lib/returnTo'
 
 /** T3.13 — sign in or sign up with a Nostr key, no password anywhere.
  *
@@ -23,9 +24,11 @@ interface Props {
   mode: 'login' | 'signup'
   /** Required in signup mode — the account has no other name to go by. */
   displayName?: string
+  /** T_UX.30 — where the sign-in page was asked to send the person. */
+  returnUrl?: string
 }
 
-export default function NostrAuthButton({ mode, displayName }: Props) {
+export default function NostrAuthButton({ mode, displayName, returnUrl = AFTER_SIGN_IN }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -38,7 +41,9 @@ export default function NostrAuthButton({ mode, displayName }: Props) {
     localStorage.setItem('token', token)
     return me().then(({ data: user }) => {
       setAuth(user, token)
-      navigate(user.email && !user.email_verified ? '/verify-email' : '/dashboard')
+      navigate(
+        afterSignIn(returnUrl, { emailUnverified: Boolean(user.email && !user.email_verified) }),
+      )
     })
   }
 

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import CodeField from '../components/CodeField'
 import { me, requestEmailCode, verifyEmail } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
+import { safeReturnUrl } from '../lib/returnTo'
 
 /** T3.11 — email confirmation by 6-digit code.
  *
@@ -21,6 +22,10 @@ export default function VerifyEmailPage() {
   const user = useAuthStore((s) => s.user)
   const token = useAuthStore((s) => s.token)
   const setAuth = useAuthStore((s) => s.setAuth)
+  // T_UX.30 — a passkey or Nostr sign-in with an unconfirmed address comes
+  // through here on its way somewhere; the destination travels with it.
+  const [params] = useSearchParams()
+  const next = safeReturnUrl(params.get('returnUrl'))
 
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
@@ -36,8 +41,8 @@ export default function VerifyEmailPage() {
 
   // Already done (or nothing to prove) — don't strand the user on a dead page.
   useEffect(() => {
-    if (user && (user.email_verified || !user.email)) navigate('/dashboard')
-  }, [user, navigate])
+    if (user && (user.email_verified || !user.email)) navigate(next)
+  }, [user, navigate, next])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,7 +53,7 @@ export default function VerifyEmailPage() {
       await verifyEmail(code.trim())
       const { data: fresh } = await me()
       if (token) setAuth(fresh, token)
-      navigate('/dashboard')
+      navigate(next)
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 429) setError(t('verifyEmail.errorTooManyAttempts'))

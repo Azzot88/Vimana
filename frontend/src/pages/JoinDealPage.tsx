@@ -5,11 +5,13 @@ import { claimInvite, type RecipientOffer } from '../api/participants'
 import { RecipientOfferCard } from '../components/RecipientOfferSection'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
+import { withReturn } from '../lib/returnTo'
 
 /** T3.3 / T3.12.05 — landing page for a `/join/deal/:token` invite link.
  *
- * Not logged in → `/login?next=` back here. Logged in → the link is bound to this
- * person and **the offer is shown** (owner, 2026-09-14): opening a link used to
+ * Not logged in → `/login?returnUrl=` back here (T_UX.30 — it said `next`, which
+ * the sign-in page never read, and the offer was lost on the way). Logged in →
+ * the link is bound to this person and **the offer is shown** (owner, 2026-09-14): opening a link used to
  * make somebody the recipient on the spot, which is exactly «меня вписали в
  * чужую сделку». Now they see the route, the sender and what is sent, and
  * accept, decline, or decline and ask not to be offered the role again.
@@ -28,7 +30,7 @@ export default function JoinDealPage() {
   useEffect(() => {
     if (!token) return
     if (!user) {
-      nav(`/login?next=/join/deal/${token}`, { replace: true })
+      nav(withReturn('/login', `/join/deal/${token}`), { replace: true })
       return
     }
     claimInvite(token)
