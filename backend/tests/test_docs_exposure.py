@@ -26,16 +26,21 @@ def _fresh_app(*, expose: bool):
 
 @pytest.fixture
 def _restore_docs_env():
+    import app.main as main_module
+
     original = os.environ.get("EXPOSE_DOCS")
+    session_app = main_module.app
     yield
     if original is None:
         os.environ.pop("EXPOSE_DOCS", None)
     else:
         os.environ["EXPOSE_DOCS"] = original
-    # Reload back to whatever default the running test session expected.
-    import app.main as main_module
-
-    importlib.reload(main_module)
+    # Put the session's instance back instead of reloading a third time. Every
+    # reload makes `app.main.app` a new object, and a new one carries none of
+    # conftest's overrides: a later `from app.main import app` got the real
+    # `get_db` — the main database's pool — instead of `vimana_test`. That is
+    # how the SSE test failed in a full run and passed alone.
+    main_module.app = session_app
 
 
 async def test_docs_disabled_returns_404(_restore_docs_env):
