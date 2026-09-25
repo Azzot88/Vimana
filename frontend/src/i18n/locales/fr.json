@@ -2167,7 +2167,10 @@
       "chat_message": "Nouveau message dans un accord",
       "trip_response": "Une réponse à votre vol",
       "request_new": "Quelqu’un cherche votre corridor",
-      "deal_status": "L’accord a avancé"
+      "deal_status": "L’accord a avancé",
+      "trip_corridor": "Un vol sur le corridor que vous cherchiez",
+      "recipient_offer": "On vous propose le rôle de destinataire",
+      "dispute_offer": "Un litige vous est proposé"
     }
   },
   "meeting": {

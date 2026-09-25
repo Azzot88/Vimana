@@ -284,6 +284,45 @@ async def test_the_chosen_arbiter_is_told_by_letter(
         assert sent and sent[0][0] == str(row.offered_to_id)
 
 
+async def test_the_chosen_arbiter_hears_it_in_the_bell(
+    client, session_maker, monkeypatch, sender_headers, seed_sender, seed_carrier
+):
+    """T_UX.31 — the letter's button led to `/admin`, an address the app does not
+    have, and the offer did not reach the bell at all. The row is written with
+    the offer, in the same transaction, and names no deal: the vault opens to the
+    arbiter only once a party grants access."""
+    from sqlalchemy import select
+
+    from app.models.deal import Dispute
+    from app.models.notification import Notification
+    from app.tasks import notifications
+
+    monkeypatch.setattr(notifications.send_dispute_offered, "delay", lambda *args: None)
+
+    await _arbiter(client, session_maker, "pool-bell")
+    deal_id = await _deal(session_maker, seed_sender, seed_carrier)
+    r = await client.post(
+        f"/api/deals/{deal_id}/dispute",
+        headers=sender_headers,
+        json={"reason": "other", "details": "bell"},
+    )
+    assert r.status_code == 201, r.text
+
+    async with session_maker() as db:
+        row = await db.get(Dispute, uuid.UUID(r.json()["id"]))
+        assert row.offered_to_id is not None
+        rings = (
+            await db.execute(
+                select(Notification).where(
+                    Notification.user_id == row.offered_to_id,
+                    Notification.kind == "dispute.offer",
+                )
+            )
+        ).scalars().all()
+        assert rings, "the arbiter the pool picked has nothing in the bell"
+        assert all(n.deal_id is None for n in rings)
+
+
 async def test_the_common_queue_is_closed_in_the_pool(
     client, session_maker, seed_sender, seed_carrier
 ):

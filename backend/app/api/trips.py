@@ -195,6 +195,24 @@ async def create_trip(
     # a segment outliving its trip would be a record of nothing.
     trip.segments = [TripSegment(**segment) for segment in segments]
     db.add(trip)
+    await db.flush()
+
+    # T_UX.31 — the people who asked for this corridor get the trip in their
+    # bell as well as by letter. Written inside the transaction like every other
+    # notification: a trip that fails to commit cannot leave a row about itself.
+    from app.core.corridor import waiting_requests
+    from app.core.notify import notify
+    from app.models.notification import NotificationKind
+
+    waiting = (await db.execute(waiting_requests(trip))).scalars().all()
+    await notify(
+        db,
+        [request.sender_id for request in waiting],
+        NotificationKind.corridor_trip,
+        trip_id=trip.id,
+        payload={"origin": trip.origin, "destination": trip.destination},
+        exclude=current_user.id,
+    )
     await db.commit()
     # Full refresh rather than `refresh(trip, ["segments"])`. Naming attributes
     # would refresh only those and leave `created_at` — a server-side default

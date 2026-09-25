@@ -215,3 +215,102 @@ async def test_publishing_a_trip_notifies_only_the_matching_window(
             delete(SenderRequest).where(SenderRequest.origin == corridor)
         )
         await db.commit()
+
+
+# ── T_UX.31 · the letter and the bell lead to the trip ──────────────────────
+
+
+async def _waiting_corridor(session_maker, seed_sender) -> str:
+    """A request on a corridor nobody else in `vimana_test` uses."""
+    corridor = uuidlib.uuid4().hex[:3].upper()
+    async with session_maker() as db:
+        db.add(
+            SenderRequest(
+                sender_id=seed_sender.id,
+                origin=corridor,
+                destination="SVO",
+                window_from=date.today(),
+                window_to=date.today() + timedelta(days=10),
+            )
+        )
+        await db.commit()
+    return corridor
+
+
+async def _publish(client, carrier_headers, corridor: str) -> str:
+    trip = await client.post(
+        "/api/trips",
+        headers=carrier_headers,
+        json={
+            "payment_model": "cash_on_delivery",
+            "segments": [
+                {
+                    "origin": corridor,
+                    "destination": "SVO",
+                    "depart_at": (
+                        datetime.now(timezone.utc) + timedelta(days=3)
+                    ).isoformat(),
+                }
+            ],
+        },
+    )
+    assert trip.status_code == 201, trip.text
+    return trip.json()["id"]
+
+
+async def _forget(session_maker, corridor: str) -> None:
+    async with session_maker() as db:
+        await db.execute(delete(SenderRequest).where(SenderRequest.origin == corridor))
+        await db.commit()
+
+
+async def test_the_corridor_letter_names_the_route_and_links_to_the_trip(
+    client, session_maker, carrier_headers, seed_sender, monkeypatch
+):
+    """The template reads `route` and `cta_url`, and the task used to pass
+    `origin`, `destination` and `trip_id`: the letter arrived as «есть рейс»
+    with no corridor named and no button to press."""
+    from app.tasks import notifications as notif
+
+    corridor = await _waiting_corridor(session_maker, seed_sender)
+    sent: list[tuple[str, str, dict]] = []
+    monkeypatch.setattr(
+        notif,
+        "_notify_user",
+        lambda user, kind, **ctx: sent.append((str(user.id), kind, ctx)),
+    )
+    try:
+        trip_id = await _publish(client, carrier_headers, corridor)
+        notif.notify_corridor_subscribers(trip_id)
+    finally:
+        await _forget(session_maker, corridor)
+
+    letters = [
+        ctx
+        for who, kind, ctx in sent
+        if who == str(seed_sender.id) and kind == "corridor_trip"
+    ]
+    assert len(letters) == 1, sent
+    assert letters[0]["route"] == f"{corridor} → SVO"
+    assert letters[0]["cta_url"].endswith(f"/trips/{trip_id}/respond")
+
+
+async def test_a_trip_on_the_corridor_rings_the_sender_s_bell(
+    client, session_maker, carrier_headers, sender_headers, seed_sender
+):
+    """The letter could be switched off; the bell is the answer that stays. It
+    names the trip and no deal — there is none yet — so the bell leads to it."""
+    corridor = await _waiting_corridor(session_maker, seed_sender)
+    try:
+        trip_id = await _publish(client, carrier_headers, corridor)
+        feed = (await client.get("/api/notifications", headers=sender_headers)).json()
+    finally:
+        await _forget(session_maker, corridor)
+
+    rings = [n for n in feed if n["kind"] == "trip.corridor" and n["trip_id"] == trip_id]
+    assert len(rings) == 1, feed
+    assert rings[0]["deal_id"] is None
+    assert rings[0]["payload"] == {"origin": corridor, "destination": "SVO"}
+
+    carrier_feed = (await client.get("/api/notifications", headers=carrier_headers)).json()
+    assert not [n for n in carrier_feed if n["trip_id"] == trip_id]

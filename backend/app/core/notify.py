@@ -33,7 +33,8 @@ Functions (PROJECT §6.2a):
   - `notify(db, user_ids, kind, ...)` — write the rows, publish the nudge and,
     for the four moments that earn one, queue the letter.
     Called by: `api.cards._raise_card`, `api.dealvault.post_message`,
-    `api.deals.match`, `api.requests.create_request`.
+    `api.deals.match`, `api.requests.create_request`, `api.trips.create_trip`,
+    `api.participants.offer_recipient`, `core.arbitration.offer_next` (T_UX.31).
   - `channel_for(user_id)` — the Redis channel a person's tabs listen on.
     Called by: `notify`, `api.events.stream`.
 """

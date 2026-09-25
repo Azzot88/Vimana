@@ -2189,7 +2189,10 @@
       "chat_message": "Nowa wiadomość w transakcji",
       "trip_response": "Odpowiedź na Twój lot",
       "request_new": "Ktoś szuka przewoźnika na Twoim korytarzu",
-      "deal_status": "Status transakcji się zmienił"
+      "deal_status": "Status transakcji się zmienił",
+      "trip_corridor": "Lot na korytarzu, o który pytałeś",
+      "recipient_offer": "Proponujemy Ci rolę odbiorcy",
+      "dispute_offer": "Proponujemy Ci spór"
     }
   },
   "meeting": {

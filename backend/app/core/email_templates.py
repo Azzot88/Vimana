@@ -188,7 +188,7 @@ def sample_context(kind: str) -> dict[str, Any]:
         },
         "dispute_offered": {
             "deal": "PF-482-19375-1",
-            "cta_url": "https://vimana.dealvault.club/admin",
+            "cta_url": "https://vimana.dealvault.club/disputes",
         },
         "delivery_reminder": {
             "route": "DXB → JFK",
@@ -220,7 +220,10 @@ def sample_context(kind: str) -> dict[str, Any]:
             "was": "2026-09-12 23:40 UTC",
             "now": "2026-09-15 08:05 UTC",
         },
-        "corridor_trip": {"route": "LAX → SVO"},
+        "corridor_trip": {
+            "route": "LAX → SVO",
+            "cta_url": "https://vimana.dealvault.club/trips/00000000-0000-4000-8000-000000000000/respond",
+        },
     }
     return samples[kind]
 

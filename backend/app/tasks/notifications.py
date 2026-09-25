@@ -667,7 +667,9 @@ def send_dispute_offered(user_id: str, deal_no: str) -> None:
             user,
             "dispute_offered",
             deal=deal_no,
-            cta_url=f"{base}/admin",
+            # T_UX.31 — `/admin` is not an address the app has; the arbiter's
+            # queue lives on `/disputes`, and the answer is due within a day.
+            cta_url=f"{base}/disputes",
         )
 
 
@@ -973,28 +975,24 @@ def notify_corridor_subscribers(trip_id: str) -> None:
 
     Called by: `api.trips.create_trip`.
     """
-    from sqlalchemy import select
+    import os
 
+    from app.core.corridor import waiting_requests
     from app.models.marketplace import SenderRequest, Trip
     from app.models.user import User
+
+    base = os.getenv("VIMANA_PUBLIC_URL", "https://vimana.dealvault.club").rstrip("/")
 
     with SyncSessionLocal() as db:
         trip = db.get(Trip, trip_id)
         if not trip or trip.depart_at is None:
             return
-        departs = trip.depart_at.date()
 
+        # T_UX.31 — the same question the bell asks (`core.corridor`), narrowed
+        # by the request's own «пишите мне»: the switch silences letters, the
+        # bell inside the product stays.
         waiting = (
-            db.execute(
-                select(SenderRequest).where(
-                    SenderRequest.origin == trip.origin,
-                    SenderRequest.destination == trip.destination,
-                    SenderRequest.is_open.is_(True),
-                    SenderRequest.notify.is_(True),
-                    SenderRequest.window_from <= departs,
-                    SenderRequest.window_to >= departs,
-                )
-            )
+            db.execute(waiting_requests(trip).where(SenderRequest.notify.is_(True)))
             .scalars()
             .all()
         )
@@ -1010,10 +1008,13 @@ def notify_corridor_subscribers(trip_id: str) -> None:
             seen.add(key)
             person = db.get(User, key)
             if person:
+                # T_UX.31 — the letter promised a route and a button and was
+                # handed neither: the template reads `route` and `cta_url`, and
+                # this call passed `origin`, `destination` and `trip_id`. It
+                # arrived as «есть рейс» with no corridor and no way to it.
                 _notify_user(
                     person,
                     "corridor_trip",
-                    origin=trip.origin,
-                    destination=trip.destination,
-                    trip_id=str(trip.id),
+                    route=f"{trip.origin} → {trip.destination}",
+                    cta_url=f"{base}/trips/{trip.id}/respond",
                 )

@@ -193,6 +193,29 @@ async def test_deal_principals_cant_take_the_link(client, _deal):
 # ── an offer to a person ──────────────────────────────────────────────────
 
 
+async def test_an_offer_rings_the_person_s_bell(client, _deal):
+    """T_UX.31 — the letter can be switched off in the matrix; the bell cannot.
+    The row names no deal: until the offer is accepted the deal is not theirs to
+    open, and a bell that led into a 403 would be worse than none."""
+    hdr, _ = await _register(client, "r-bell")
+    user_id = await _me(client, hdr)
+
+    offered = await _offer(client, _deal, user_id)
+    assert offered.status_code == 201, offered.text
+
+    feed = (await client.get("/api/notifications", headers=hdr)).json()
+    rings = [n for n in feed if n["kind"] == "recipient.offer"]
+    assert len(rings) == 1, feed
+    assert rings[0]["deal_id"] is None
+    assert rings[0]["payload"]["route"]
+
+    # The sender who made the offer is not told of their own press.
+    sender_feed = (
+        await client.get("/api/notifications", headers=_deal["sender_headers"])
+    ).json()
+    assert not [n for n in sender_feed if n["kind"] == "recipient.offer"]
+
+
 async def test_an_offer_waits_for_the_person_s_answer(client, _deal):
     hdr, _ = await _register(client, "r-wait")
     user_id = await _me(client, hdr)

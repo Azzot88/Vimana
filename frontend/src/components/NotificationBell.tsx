@@ -7,6 +7,7 @@ import {
   unreadCount,
   type AppNotification,
 } from '../api/notifications'
+import { hrefFor, routeOf } from '../lib/notificationLinks'
 import { useEventStream } from '../hooks/useEventStream'
 import { useLiveBeat } from '../hooks/useLiveBeat'
 import { usePrefs } from '../hooks/usePrefs'
@@ -99,8 +100,6 @@ export default function NotificationBell() {
     }
   }
 
-  const href = (n: AppNotification) =>
-    n.deal_id ? `/deals/${n.deal_id}/vault` : n.trip_id ? `/trips` : '/notifications'
 
   return (
     <div className="relative" ref={boxRef}>
@@ -159,7 +158,10 @@ export default function NotificationBell() {
               {items.map((n) => (
                 <li key={n.id}>
                   <Link
-                    to={href(n)}
+                    /* T_UX.31 — decided by what the row is about, in one place
+                       (`lib/notificationLinks`); it used to fall through to
+                       `/notifications`, which is not an address. */
+                    to={hrefFor(n)}
                     onClick={() => setOpen(false)}
                     className={`block rounded-field px-2 py-2 hover:bg-navy/5 ${
                       n.read_at ? 'opacity-60' : ''
@@ -168,6 +170,14 @@ export default function NotificationBell() {
                     <span className="block text-xs font-body text-navy">
                       {t(`notifications.kind.${n.kind.replace('.', '_')}`, n.kind)}
                     </span>
+                    {/* The corridor, when the row carries one: «запрос по
+                        вашему коридору» without naming which is a line you
+                        have to open to understand. */}
+                    {routeOf(n) && (
+                      <span className="block text-[11px] font-mono text-navy/60">
+                        {routeOf(n)}
+                      </span>
+                    )}
                     <span className="block text-[11px] font-body text-navy/40">
                       {prefs.since(n.created_at)}
                     </span>

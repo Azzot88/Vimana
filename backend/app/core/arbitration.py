@@ -147,6 +147,19 @@ async def offer_next(
     if chosen is not None:
         dispute.offered_to_id = chosen
         dispute.offered_at = datetime.now(timezone.utc)
+        # T_UX.31 — the offer in the arbiter's bell, inside the caller's
+        # transaction: the letter (`announce_offer`) goes after the commit, the
+        # row goes with it. Not tied to the deal — the arbiter reads the vault
+        # only once a party grants access.
+        from app.core.notify import notify
+        from app.models.notification import NotificationKind
+
+        await notify(
+            db,
+            [chosen],
+            NotificationKind.dispute_offer,
+            payload={"deal_no": await offer_label(db, dispute)},
+        )
     # Nobody free: the dispute stays open with no offer, and the hourly sweep
     # (`tasks.cleanup.reassign_arbiters`) tries again.
     return chosen

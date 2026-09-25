@@ -1038,7 +1038,10 @@
       "chat_message": "New message in a deal",
       "trip_response": "A response to your trip",
       "request_new": "Somebody is asking for your corridor",
-      "deal_status": "A deal moved"
+      "deal_status": "A deal moved",
+      "trip_corridor": "A trip on the corridor you asked about",
+      "recipient_offer": "You are offered the role of recipient",
+      "dispute_offer": "A dispute is offered to you"
     }
   },
   "meeting": {

@@ -11,6 +11,10 @@ export type NotificationKind =
   | 'trip.response'
   | 'request.new'
   | 'deal.status'
+  // T_UX.31
+  | 'trip.corridor'
+  | 'recipient.offer'
+  | 'dispute.offer'
 
 export interface AppNotification {
   id: string

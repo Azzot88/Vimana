@@ -337,6 +337,19 @@ async def offer_recipient(
     await _withdraw_pending(db, deal_id, keep_id=row.id)
 
     route, _ = await _route(db, deal)
+    # T_UX.31 — the offer in the bell as well as in the letter: the letter can be
+    # switched off, and an offer nobody hears about is one nobody answers. Not
+    # tied to the deal — until it is accepted the deal is not theirs to open.
+    from app.core.notify import notify
+    from app.models.notification import NotificationKind
+
+    await notify(
+        db,
+        [person.id],
+        NotificationKind.recipient_offer,
+        payload={"route": route},
+        exclude=current_user.id,
+    )
     await db.commit()
     await db.refresh(row)
     _notify(person, route, current_user.display_name)

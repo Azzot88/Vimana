@@ -40,6 +40,7 @@ import MonoText from '../components/MonoText'
 import WizardSheet from '../components/WizardSheet'
 import CorridorRequirements from '../components/CorridorRequirements'
 import { routeNode, toLocalInput } from '../lib/format'
+import { corridorFromQuery } from '../lib/notificationLinks'
 import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.20 — four steps, and only the first is required.
@@ -714,6 +715,29 @@ export default function NewTripPage() {
       .catch(() => setError(t('trips.editNotFound') as string))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reverseId, repeatId])
+
+  /* T_UX.31 — «запрос на перевозку по вашему коридору» in the bell opens the
+     wizard with that corridor as the first and last stop. Like «обратный рейс»
+     it is an explicit request for a specific trip, so it starts a fresh draft,
+     and the marker is dropped from the address once used so a reload continues
+     whatever the carrier has typed since. Only the codes: the country comes
+     from picking an airport from the list, and a code typed in is a code and
+     nothing more (`AirportSelect.onPick`). */
+  const corridor = corridorFromQuery(params.get('from'), params.get('to'))
+  const corridorUsed = useRef(false)
+  useEffect(() => {
+    if (!corridor || corridorUsed.current || editingId) return
+    corridorUsed.current = true
+    setDraft({
+      ...EMPTY,
+      nodes: [
+        { ...EMPTY_NODE, code: corridor.origin },
+        { ...EMPTY_NODE, code: corridor.destination },
+      ],
+    })
+    setParams({ step: '1' }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [corridor?.origin, corridor?.destination])
 
   // Postal services follow the **arrival** country: onward shipping happens
   // after landing. Refetched when that country changes and not before — a

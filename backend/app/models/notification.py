@@ -52,6 +52,14 @@ class NotificationKind(str, enum.Enum):
     request_new = "request.new"
     #: A card was raised or answered on a deal: the status moved.
     deal_status = "deal.status"
+    #: T_UX.31 — a trip was published into a corridor this person asked about.
+    #: The letter existed since T3.11.19; the bell did not.
+    corridor_trip = "trip.corridor"
+    #: T_UX.31 — somebody offered this person the role of recipient. Not tied to
+    #: the deal: until the offer is accepted the deal is not theirs to open.
+    recipient_offer = "recipient.offer"
+    #: T_UX.31 — the pool picked this arbiter for a dispute; 24 hours to answer.
+    dispute_offer = "dispute.offer"
 
 
 class Notification(Base):

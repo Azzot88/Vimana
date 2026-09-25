@@ -2167,7 +2167,10 @@
       "chat_message": "Nuevo mensaje en una operación",
       "trip_response": "Respuesta a tu vuelo",
       "request_new": "Alguien busca tu corredor",
-      "deal_status": "La operación ha avanzado"
+      "deal_status": "La operación ha avanzado",
+      "trip_corridor": "Un vuelo en el corredor que buscabas",
+      "recipient_offer": "Te proponen el papel de destinatario",
+      "dispute_offer": "Se te propone una disputa"
     }
   },
   "meeting": {
