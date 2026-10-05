@@ -1,0 +1,803 @@
+{
+  "_note": [
+    "T_RULES.7 — ВЫМЫШЛЕННЫЙ коридор для проверки страницы правил. Ни одной реальной страны,",
+    "ни одного реального закона: Аркадия (XA) → хаб Транзитании (XT-HUB) → Борея (XB) и её город.",
+    "Коды XA–XZ (кроме XK) ISO 3166 оставляет для пользовательского назначения, реальная страна их",
+    "не получит; core/rule_status запрещает публиковать набор с такой юрисдикцией. Ссылки ведут на",
+    "example.org / .net / .com — домены, зарезервированные для примеров (RFC 2606). Валюта XTS —",
+    "код ISO 4217 для тестов. Смотреть: /admin/rules → набор → «Предпросмотр».",
+    "Файл намеренно задействует всё, что принимает load_rules: три направления, четыре вида",
+    "юрисдикций, два языка с переводом и без, признанный пробел, источники с датой и без, со ссылкой",
+    "и без, документы для всех трёх сторон, условия-листья и группы all/any, все операторы."
+  ],
+  "jurisdictions": [
+    {"code": "XA", "kind": "country", "parent_code": null, "name": "Аркадия (вымышленная, тест)"},
+    {"code": "XT", "kind": "country", "parent_code": null, "name": "Транзитания (вымышленная, тест)"},
+    {"code": "XT-HUB", "kind": "transit_point", "parent_code": "XT", "name": "Хаб Транзитании (вымышленный аэропорт, тест)"},
+    {"code": "XB", "kind": "country", "parent_code": null, "name": "Борея (вымышленная, тест)"},
+    {"code": "XB-NO", "kind": "subdivision", "parent_code": "XB", "name": "Северная провинция Бореи (тест)"},
+    {"code": "XB-NO-CAP", "kind": "city", "parent_code": "XB-NO", "name": "Нордхавн, столица провинции (тест)"}
+  ],
+  "sets": [
+    {
+      "direction": "export",
+      "jurisdiction": "XA",
+      "category": "medicine",
+      "title": "[ТЕСТ] Вывоз лекарств из Аркадии",
+      "sections": [
+        {
+          "anchor": "banned",
+          "locale": "ru",
+          "order": 0,
+          "title": "Запрещено к вывозу",
+          "body": "Из Аркадии **нельзя вывезти** ни при каких условиях:\n\n- препараты с веществом `аркадин` в любой дозировке;\n- любые лекарства сверх запаса на **90 дней** приёма;\n- образцы, которых нет в [Реестре лекарств Аркадии](https://example.org/arcadia/registry).\n\nЧто можно вывезти без разрешения — в разделе [«Разрешено без разрешения»](#permitted).",
+          "sources": [
+            {
+              "authority": "Министерство здравоохранения Аркадии (вымышленное)",
+              "document_title": "Закон о лекарственном обороте, ст. 14",
+              "document_date": "2025-03-01",
+              "url": "https://example.org/arcadia/law-14",
+              "quote": "Вывоз препаратов, содержащих аркадин, запрещается независимо от количества и цели вывоза."
+            },
+            {
+              "authority": "Таможенная служба Аркадии (вымышленная)",
+              "document_title": "Памятка для выезжающих",
+              "url": "https://example.org/arcadia/customs-leaflet",
+              "quote": "Лекарственные средства сверх девяностодневного запаса подлежат задержанию на выезде."
+            }
+          ]
+        },
+        {
+          "anchor": "banned",
+          "locale": "en",
+          "order": 0,
+          "title": "Not allowed out",
+          "body": "These **cannot leave** Arcadia under any conditions:\n\n- anything containing `arcadine`, at any dose;\n- any medicine beyond a **90-day** supply;\n- samples missing from the [Arcadian Medicines Register](https://example.org/arcadia/registry).\n\nWhat may leave without a permit is under [«Allowed without a permit»](#permitted).",
+          "sources": [
+            {
+              "authority": "Ministry of Health of Arcadia (fictional)",
+              "document_title": "Medicines Act, art. 14",
+              "document_date": "2025-03-01",
+              "url": "https://example.org/arcadia/law-14",
+              "quote": "The export of preparations containing arcadine is prohibited regardless of quantity or purpose."
+            },
+            {
+              "authority": "Customs Service of Arcadia (fictional)",
+              "document_title": "Leaflet for departing travellers",
+              "url": "https://example.org/arcadia/customs-leaflet",
+              "quote": "Medicines in excess of a ninety-day supply are subject to detention on departure."
+            }
+          ]
+        },
+        {
+          "anchor": "permitted",
+          "locale": "ru",
+          "order": 1,
+          "title": "Разрешено без разрешения",
+          "body": "Для **личного приёма** можно вывезти без разрешения:\n\n| Что | Сколько | Условие |\n|---|---|---|\n| Безрецептурные препараты | до 5 упаковок | в заводской упаковке |\n| Рецептурные препараты | до 90 дней приёма | с копией рецепта |\n| Медицинские изделия | без ограничения | только для себя |\n\n> Всё, что сверх этого, — уже раздел [«Можно с разрешением»](#with-permit).",
+          "sources": [
+            {
+              "authority": "Министерство здравоохранения Аркадии (вымышленное)",
+              "document_title": "Приказ № 7 «О личном запасе лекарств»",
+              "document_date": "2024-11-15",
+              "url": "https://example.org/arcadia/order-7",
+              "quote": "Физическое лицо вправе вывезти лекарственные средства для личного применения в количестве, не превышающем девяностодневного курса."
+            }
+          ]
+        },
+        {
+          "anchor": "permitted",
+          "locale": "en",
+          "order": 1,
+          "title": "Allowed without a permit",
+          "body": "For **personal use** you may take out without a permit:\n\n| What | How much | Condition |\n|---|---|---|\n| Over-the-counter medicines | up to 5 packs | factory packaging |\n| Prescription medicines | up to 90 days | with a copy of the prescription |\n| Medical devices | no limit | for yourself only |\n\n> Anything beyond this is [«Allowed with a permit»](#with-permit).",
+          "sources": [
+            {
+              "authority": "Ministry of Health of Arcadia (fictional)",
+              "document_title": "Order No. 7 on personal medicine supplies",
+              "document_date": "2024-11-15",
+              "url": "https://example.org/arcadia/order-7",
+              "quote": "An individual may export medicines for personal use in a quantity not exceeding a ninety-day course."
+            }
+          ]
+        },
+        {
+          "anchor": "with-permit",
+          "locale": "ru",
+          "order": 2,
+          "title": "Можно с разрешением",
+          "body": "Больше пяти упаковок или вывоз **на продажу** — только с разрешением Минздрава. Подать заявку можно [онлайн](https://example.org/arcadia/permit-form) или в региональном офисе; рассматривают до 21 дня.\n\n1. Заполнить форму.\n2. Приложить копию рецепта или договор поставки.\n3. Оплатить сбор 45 EUR.\n\nСписок документов с обратным отсчётом от даты вылета соберёт [чеклист](/checklist).",
+          "sources": [
+            {
+              "authority": "Министерство здравоохранения Аркадии (вымышленное)",
+              "document_title": "Регламент выдачи разрешений на вывоз",
+              "document_date": "2025-01-10",
+              "url": "https://example.org/arcadia/permit-rules",
+              "quote": "Срок рассмотрения заявления не превышает двадцати одного календарного дня со дня его регистрации."
+            },
+            {
+              "authority": "Министерство здравоохранения Аркадии (вымышленное)",
+              "document_title": "Тарифы на услуги министерства",
+              "document_date": "2025-01-10",
+              "quote": "Сбор за выдачу разрешения на вывоз составляет сорок пять евро."
+            },
+            {
+              "authority": "Портал госуслуг Аркадии (вымышленный)",
+              "document_title": "Ответы на частые вопросы",
+              "quote": "Заявление можно подать в электронной форме без личного визита."
+            }
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "anchor": "q-can-take",
+          "locale": "ru",
+          "order": 0,
+          "question": "Сколько лекарств можно взять с собой без разрешения?",
+          "answer": "На **90 дней приёма** для себя, безрецептурных — до пяти упаковок. Таблица — в разделе ниже.",
+          "section_anchor": "permitted"
+        },
+        {
+          "anchor": "q-banned",
+          "locale": "ru",
+          "order": 1,
+          "question": "Что нельзя вывозить совсем?",
+          "answer": "Всё с **аркадином** и всё, чего нет в реестре. Разрешение здесь не помогает.",
+          "section_anchor": "banned"
+        },
+        {
+          "anchor": "q-permit-time",
+          "locale": "ru",
+          "order": 2,
+          "question": "Сколько ждать разрешения на вывоз?",
+          "answer": "До **21 дня**. Подавайте заранее: разрешение действует 30 дней.",
+          "section_anchor": "with-permit"
+        },
+        {
+          "anchor": "q-can-take",
+          "locale": "en",
+          "order": 0,
+          "question": "How much medicine can I take without a permit?",
+          "answer": "A **90-day supply** for yourself; up to five packs of over-the-counter medicines.",
+          "section_anchor": "permitted"
+        },
+        {
+          "anchor": "q-banned",
+          "locale": "en",
+          "order": 1,
+          "question": "What can never leave?",
+          "answer": "Anything with **arcadine** and anything not on the register. A permit does not help.",
+          "section_anchor": "banned"
+        }
+      ],
+      "requirements": [
+        {
+          "code": "xa_export_permit",
+          "title": "Разрешение Минздрава на вывоз лекарств",
+          "issuer": "Министерство здравоохранения Аркадии (вымышленное)",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": {"any": [
+            {"attr": "count", "op": ">", "value": 5},
+            {"attr": "purpose", "op": "==", "value": "resale"}
+          ]},
+          "valid_for_days": 30,
+          "lead_time_days": 21,
+          "cost_estimate": 45,
+          "currency": "EUR",
+          "notes": "Нужно, если упаковок больше пяти или вывоз на продажу. Подавать не раньше чем за 30 дней до вылета."
+        },
+        {
+          "code": "prescription_copy",
+          "title": "Копия рецепта",
+          "issuer": "Лечащий врач",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": null,
+          "valid_for_days": 180,
+          "lead_time_days": 2,
+          "cost_estimate": 0,
+          "currency": "EUR",
+          "notes": "Перевод не требуется."
+        },
+        {
+          "code": "pharmacy_receipt",
+          "title": "Чек из аптеки",
+          "issuer": "Аптека",
+          "obtained_by": "sender",
+          "is_mandatory": false,
+          "condition": {"attr": "declared_value", "op": ">=", "value": 200},
+          "lead_time_days": 0,
+          "currency": "USD",
+          "notes": "Желателен при объявленной стоимости от 200: подтверждает законную покупку."
+        }
+      ]
+    },
+    {
+      "direction": "export",
+      "jurisdiction": "XA",
+      "category": "art",
+      "title": "[ТЕСТ] Вывоз предметов искусства из Аркадии",
+      "sections": [
+        {
+          "anchor": "not-cultural",
+          "locale": "ru",
+          "order": 0,
+          "title": "Когда вещь не считается культурной ценностью",
+          "body": "Предмет **моложе 50 лет** или работа **неизвестного автора** вывозится без экспертизы. Возраст вещи можно проверить по [каталогу Национального музея](https://example.net/arcadia-museum/catalogue).",
+          "sources": [
+            {
+              "authority": "Министерство культуры Аркадии (вымышленное)",
+              "document_title": "Закон о культурных ценностях, ст. 3",
+              "document_date": "2023-06-20",
+              "url": "https://example.net/arcadia-culture/law-3",
+              "quote": "Культурной ценностью признаётся предмет, созданный более пятидесяти лет назад автором, установленным экспертизой."
+            },
+            {
+              "authority": "Национальный музей Аркадии (вымышленный)",
+              "document_title": "Разъяснение для владельцев",
+              "document_date": "2024-02-02",
+              "quote": "Работы неустановленного авторства экспертизе при вывозе не подлежат."
+            }
+          ]
+        },
+        {
+          "anchor": "expertise",
+          "locale": "ru",
+          "order": 1,
+          "title": "Экспертиза",
+          "body": "Старше 50 лет **и** известного автора — нужна экспертиза Национального музея. Срок — около месяца, стоимость — [по тарифу музея](https://example.net/arcadia-museum/fees).",
+          "sources": [
+            {
+              "authority": "Национальный музей Аркадии (вымышленный)",
+              "document_title": "Порядок проведения экспертизы",
+              "document_date": "2024-02-02",
+              "url": "https://example.net/arcadia-museum/expertise",
+              "quote": "Экспертиза проводится в срок до тридцати дней."
+            }
+          ]
+        },
+        {
+          "anchor": "expertise",
+          "locale": "en",
+          "order": 1,
+          "title": "Expert examination",
+          "body": "Over 50 years old **and** by a known author — an examination by the National Museum is required. About a month; fees [per the museum tariff](https://example.net/arcadia-museum/fees).",
+          "sources": [
+            {
+              "authority": "National Museum of Arcadia (fictional)",
+              "document_title": "Examination procedure",
+              "document_date": "2024-02-02",
+              "url": "https://example.net/arcadia-museum/expertise",
+              "quote": "The examination is carried out within thirty days."
+            }
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "anchor": "q-need-expertise",
+          "locale": "ru",
+          "order": 0,
+          "question": "Нужна ли экспертиза для картины моего деда?",
+          "answer": "Только если ей **больше 50 лет и автор известен**. Иначе — нет.",
+          "section_anchor": "not-cultural"
+        },
+        {
+          "anchor": "q-how-long",
+          "locale": "ru",
+          "order": 1,
+          "question": "Сколько длится экспертиза?",
+          "answer": "До **30 дней**.",
+          "section_anchor": "expertise"
+        },
+        {
+          "anchor": "q-how-long",
+          "locale": "en",
+          "order": 1,
+          "question": "How long does the examination take?",
+          "answer": "Up to **30 days**.",
+          "section_anchor": "expertise"
+        }
+      ],
+      "requirements": [
+        {
+          "code": "art_expertise",
+          "title": "Заключение экспертизы",
+          "issuer": "Национальный музей Аркадии (вымышленный)",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": {"all": [
+            {"attr": "age_years", "op": ">=", "value": 50},
+            {"attr": "author_known", "op": "==", "value": true}
+          ]},
+          "valid_for_days": 365,
+          "lead_time_days": 30,
+          "cost_estimate": 120,
+          "currency": "EUR",
+          "notes": "Только для предметов старше 50 лет с известным автором."
+        },
+        {
+          "code": "art_photos",
+          "title": "Фотографии предмета",
+          "obtained_by": "sender",
+          "is_mandatory": false,
+          "condition": {"attr": "author_known", "op": "!=", "value": true},
+          "lead_time_days": 1,
+          "notes": "Две фотографии на светлом фоне — на случай вопросов на выезде."
+        }
+      ]
+    },
+    {
+      "direction": "transit",
+      "jurisdiction": "XT-HUB",
+      "category": "medicine",
+      "title": "[ТЕСТ] Транзит лекарств через хаб Транзитании",
+      "sections": [
+        {
+          "anchor": "airside",
+          "locale": "ru",
+          "order": 0,
+          "title": "Если остаётесь в транзитной зоне",
+          "body": "Декларировать ничего не нужно, пока вы **не проходите паспортный контроль**. Багаж оформлен до конечного пункта — см. [правила хаба](https://example.com/transitania-hub/transit).",
+          "sources": [
+            {
+              "authority": "Администрация хаба Транзитании (вымышленная)",
+              "document_title": "Правила транзита",
+              "document_date": "2025-05-05",
+              "url": "https://example.com/transitania-hub/transit",
+              "quote": "Пассажир, не покидающий транзитную зону, таможенному декларированию не подлежит."
+            },
+            {
+              "authority": "Таможня Транзитании (вымышленная)",
+              "document_title": "Разъяснение № 12",
+              "url": "https://example.com/transitania-customs/12",
+              "quote": "Багаж, оформленный до пункта назначения, в транзитной зоне не досматривается без оснований."
+            }
+          ]
+        },
+        {
+          "anchor": "airside",
+          "locale": "en",
+          "order": 0,
+          "title": "If you stay airside",
+          "body": "Nothing to declare as long as you **do not pass passport control**. Bags are checked through — see the [hub rules](https://example.com/transitania-hub/transit).",
+          "sources": [
+            {
+              "authority": "Transitania Hub Authority (fictional)",
+              "document_title": "Transit rules",
+              "document_date": "2025-05-05",
+              "url": "https://example.com/transitania-hub/transit",
+              "quote": "A passenger who does not leave the transit area is not subject to customs declaration."
+            }
+          ]
+        },
+        {
+          "anchor": "landside",
+          "locale": "ru",
+          "order": 1,
+          "title": "Если выходите в город",
+          "body": "Как только вы прошли паспортный контроль, действуют правила **ввоза в Транзитанию**: аркадин запрещён, остальные лекарства — до 30 дней приёма.",
+          "sources": [
+            {
+              "authority": "Таможня Транзитании (вымышленная)",
+              "document_title": "Таможенный кодекс Транзитании, ст. 40",
+              "document_date": "2022-09-01",
+              "url": "https://example.com/transitania-customs/code-40",
+              "quote": "Лица, прошедшие пограничный контроль, перемещают товары по правилам ввоза."
+            }
+          ]
+        },
+        {
+          "anchor": "landside",
+          "locale": "en",
+          "order": 1,
+          "title": "If you go landside",
+          "body": "Once you pass passport control, the **Transitania import** rules apply: arcadine is banned, other medicines up to a 30-day supply.",
+          "sources": [
+            {
+              "authority": "Customs of Transitania (fictional)",
+              "document_title": "Customs Code of Transitania, art. 40",
+              "document_date": "2022-09-01",
+              "url": "https://example.com/transitania-customs/code-40",
+              "quote": "Persons who have passed border control move goods under the import rules."
+            }
+          ]
+        },
+        {
+          "anchor": "connection-time",
+          "locale": "ru",
+          "order": 2,
+          "title": "Минимальное время стыковки",
+          "placeholder": true
+        }
+      ],
+      "questions": [
+        {
+          "anchor": "q-declare",
+          "locale": "ru",
+          "order": 0,
+          "question": "Нужно ли что-то декларировать при пересадке?",
+          "answer": "Нет, если вы **не выходите** из транзитной зоны.",
+          "section_anchor": "airside"
+        },
+        {
+          "anchor": "q-leave-airport",
+          "locale": "ru",
+          "order": 1,
+          "question": "А если у меня ночь в городе между рейсами?",
+          "answer": "Тогда вы **ввозите** лекарства в Транзитанию, и действуют её правила.",
+          "section_anchor": "landside"
+        },
+        {
+          "anchor": "q-declare",
+          "locale": "en",
+          "order": 0,
+          "question": "Do I declare anything on a connection?",
+          "answer": "No, as long as you **stay airside**.",
+          "section_anchor": "airside"
+        }
+      ],
+      "requirements": [
+        {
+          "code": "transit_declaration",
+          "title": "Транзитная декларация",
+          "issuer": "Таможня хаба Транзитании (вымышленная)",
+          "obtained_by": "carrier",
+          "is_mandatory": true,
+          "condition": {"all": [
+            {"attr": "count", "op": ">=", "value": 2},
+            {"attr": "purpose", "op": "not_in", "value": ["personal"]}
+          ]},
+          "valid_for_days": 2,
+          "lead_time_days": 1,
+          "cost_estimate": 10,
+          "currency": "XTS",
+          "notes": "Заполняет перевозчик на стойке трансфера. Валюта XTS — тестовый код ISO."
+        },
+        {
+          "code": "onward_boarding_pass",
+          "title": "Посадочный на следующий рейс",
+          "issuer": "Авиакомпания",
+          "obtained_by": "carrier",
+          "is_mandatory": false,
+          "condition": null,
+          "lead_time_days": 0,
+          "notes": "Показывают, если спросят, что вы действительно летите дальше."
+        }
+      ]
+    },
+    {
+      "direction": "import",
+      "jurisdiction": "XB",
+      "category": "medicine",
+      "title": "[ТЕСТ] Ввоз лекарств в Борею",
+      "sections": [
+        {
+          "anchor": "banned",
+          "locale": "ru",
+          "order": 0,
+          "title": "Запрещено к ввозу",
+          "body": "- **аркадин** и всё, что его содержит;\n- снотворные без рецепта;\n- лекарства для другого человека без [доверенности получателя](https://example.org/borea/proxy-form).\n\nНарушение — **уголовное дело**, а не штраф: см. [судебную практику](https://example.org/borea/cases).",
+          "sources": [
+            {
+              "authority": "Агентство лекарственного контроля Бореи (вымышленное)",
+              "document_title": "Перечень запрещённых веществ",
+              "document_date": "2025-07-01",
+              "url": "https://example.org/borea/banned-list",
+              "quote": "Аркадин и его соли включены в Список I и запрещены к ввозу."
+            },
+            {
+              "authority": "Уголовный кодекс Бореи (вымышленный)",
+              "document_title": "Статья 210",
+              "url": "https://example.org/borea/criminal-code-210",
+              "quote": "Ввоз веществ Списка I, в том числе через третье лицо, наказывается лишением свободы."
+            }
+          ]
+        },
+        {
+          "anchor": "banned",
+          "locale": "en",
+          "order": 0,
+          "title": "Not allowed in",
+          "body": "- **arcadine** and anything containing it;\n- sleeping pills without a prescription;\n- medicines for another person without the [recipient's power of attorney](https://example.org/borea/proxy-form).\n\nA breach is a **criminal case**, not a fine: see [case law](https://example.org/borea/cases).",
+          "sources": [
+            {
+              "authority": "Borean Medicines Control Agency (fictional)",
+              "document_title": "List of prohibited substances",
+              "document_date": "2025-07-01",
+              "url": "https://example.org/borea/banned-list",
+              "quote": "Arcadine and its salts are included in Schedule I and may not be imported."
+            }
+          ]
+        },
+        {
+          "anchor": "personal",
+          "locale": "ru",
+          "order": 1,
+          "title": "Разрешено для личного пользования",
+          "body": "Без разрешения — **до 30 дней приёма** и не больше десяти упаковок. Для рецептурных нужно письмо врача на английском. Сверх десяти упаковок — [лицензия на ввоз](#recipient).",
+          "sources": [
+            {
+              "authority": "Агентство лекарственного контроля Бореи (вымышленное)",
+              "document_title": "Правила ввоза для личного пользования",
+              "document_date": "2025-07-01",
+              "url": "https://example.org/borea/personal-import",
+              "quote": "Допускается ввоз лекарственных средств для личного пользования в количестве, не превышающем тридцатидневного курса и десяти упаковок."
+            }
+          ]
+        },
+        {
+          "anchor": "personal",
+          "locale": "en",
+          "order": 1,
+          "title": "Allowed for personal use",
+          "body": "Without a permit — **up to a 30-day supply** and no more than ten packs. Prescription medicines need a doctor's letter in English. Above ten packs — an [import licence](#recipient).",
+          "sources": [
+            {
+              "authority": "Borean Medicines Control Agency (fictional)",
+              "document_title": "Personal import rules",
+              "document_date": "2025-07-01",
+              "url": "https://example.org/borea/personal-import",
+              "quote": "Medicines for personal use may be imported in a quantity not exceeding a thirty-day course and ten packs."
+            }
+          ]
+        },
+        {
+          "anchor": "recipient",
+          "locale": "ru",
+          "order": 2,
+          "title": "Что делает получатель",
+          "body": "Если лекарства везут **для другого человека**, получатель заранее подаёт уведомление о ввозе, а для партии больше десяти упаковок — получает лицензию. Без этого груз задержат, даже если всё остальное в порядке.",
+          "sources": [
+            {
+              "authority": "Агентство лекарственного контроля Бореи (вымышленное)",
+              "document_title": "Порядок уведомления о ввозе",
+              "document_date": "2025-07-01",
+              "url": "https://example.org/borea/notice",
+              "quote": "Уведомление подаётся получателем не позднее чем за десять дней до ввоза."
+            },
+            {
+              "authority": "Таможня Бореи (вымышленная)",
+              "document_title": "Информационное письмо для перевозчиков",
+              "quote": "Груз для третьего лица без уведомления получателя подлежит задержанию."
+            }
+          ]
+        },
+        {
+          "anchor": "recipient",
+          "locale": "en",
+          "order": 2,
+          "title": "What the recipient does",
+          "body": "If the medicines are carried **for someone else**, the recipient files an import notice in advance and, above ten packs, obtains a licence. Without it the parcel is held even if everything else is in order.",
+          "sources": [
+            {
+              "authority": "Borean Medicines Control Agency (fictional)",
+              "document_title": "Import notice procedure",
+              "document_date": "2025-07-01",
+              "url": "https://example.org/borea/notice",
+              "quote": "The notice is filed by the recipient no later than ten days before import."
+            }
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "anchor": "q-limit",
+          "locale": "ru",
+          "order": 0,
+          "question": "Сколько лекарств можно ввезти для себя?",
+          "answer": "До **30 дней приёма** и не больше 10 упаковок.",
+          "section_anchor": "personal"
+        },
+        {
+          "anchor": "q-for-mom",
+          "locale": "ru",
+          "order": 1,
+          "question": "Я везу лекарства маме — что нужно от неё?",
+          "answer": "Уведомление о ввозе **за 10 дней** и доверенность на вас.",
+          "section_anchor": "recipient"
+        },
+        {
+          "anchor": "q-penalty",
+          "locale": "ru",
+          "order": 2,
+          "question": "Что будет, если в посылке окажется аркадин?",
+          "answer": "**Уголовное дело**, в том числе для того, кто вёз.",
+          "section_anchor": "banned"
+        },
+        {
+          "anchor": "q-limit",
+          "locale": "en",
+          "order": 0,
+          "question": "How much can I bring for myself?",
+          "answer": "Up to a **30-day supply** and no more than 10 packs.",
+          "section_anchor": "personal"
+        },
+        {
+          "anchor": "q-for-mom",
+          "locale": "en",
+          "order": 1,
+          "question": "I'm bringing medicine for my mother — what does she need?",
+          "answer": "An import notice **10 days ahead** and a power of attorney for you.",
+          "section_anchor": "recipient"
+        },
+        {
+          "anchor": "q-penalty",
+          "locale": "en",
+          "order": 2,
+          "question": "What if the parcel turns out to contain arcadine?",
+          "answer": "A **criminal case**, including for whoever carried it.",
+          "section_anchor": "banned"
+        }
+      ],
+      "requirements": [
+        {
+          "code": "xb_import_notice",
+          "title": "Уведомление о ввозе",
+          "issuer": "Агентство лекарственного контроля Бореи (вымышленное)",
+          "obtained_by": "recipient",
+          "is_mandatory": true,
+          "condition": {"attr": "purpose", "op": "!=", "value": "personal"},
+          "valid_for_days": 14,
+          "lead_time_days": 10,
+          "cost_estimate": 0,
+          "currency": "EUR",
+          "notes": "Подаёт получатель, не отправитель."
+        },
+        {
+          "code": "doctor_letter",
+          "title": "Письмо врача на английском",
+          "issuer": "Лечащий врач",
+          "obtained_by": "sender",
+          "is_mandatory": false,
+          "condition": {"attr": "count", "op": "<=", "value": 10},
+          "lead_time_days": 3,
+          "notes": "Для рецептурных препаратов в пределах личной нормы."
+        },
+        {
+          "code": "xb_import_licence",
+          "title": "Лицензия на ввоз",
+          "issuer": "Агентство лекарственного контроля Бореи (вымышленное)",
+          "obtained_by": "recipient",
+          "is_mandatory": true,
+          "condition": {"attr": "count", "op": ">", "value": 10},
+          "valid_for_days": 90,
+          "lead_time_days": 45,
+          "cost_estimate": 300,
+          "currency": "EUR",
+          "notes": "Больше десяти упаковок — только по лицензии."
+        }
+      ]
+    },
+    {
+      "direction": "import",
+      "jurisdiction": "XB-NO-CAP",
+      "category": "animal",
+      "title": "[ТЕСТ] Ввоз животных в Нордхавн",
+      "sections": [
+        {
+          "anchor": "city-ban",
+          "locale": "ru",
+          "order": 0,
+          "title": "Городской запрет на гибриды",
+          "body": "В черте Нордхавна нельзя держать **гибриды первого и второго поколения** (F1, F2). Правило городское: в остальной провинции действуют [общие правила страны](#vaccination).",
+          "sources": [
+            {
+              "authority": "Мэрия Нордхавна (вымышленная)",
+              "document_title": "Постановление о содержании животных № 3",
+              "document_date": "2024-04-04",
+              "url": "https://example.net/nordhavn/decree-3",
+              "quote": "Содержание гибридов поколений F1 и F2 в черте города запрещается."
+            }
+          ]
+        },
+        {
+          "anchor": "vaccination",
+          "locale": "ru",
+          "order": 1,
+          "title": "Прививки и чип",
+          "body": "Кошкам и собакам нужны **прививка от бешенства** не позже чем за 30 дней до ввоза и микрочип. Животным младше года — справка о возрасте.",
+          "sources": [
+            {
+              "authority": "Ветеринарная служба Бореи (вымышленная)",
+              "document_title": "Ветеринарные правила ввоза",
+              "document_date": "2023-12-12",
+              "url": "https://example.net/borea-vet/import",
+              "quote": "Вакцинация против бешенства проводится не позднее чем за тридцать дней до ввоза."
+            },
+            {
+              "authority": "Ветеринарная служба Бореи (вымышленная)",
+              "document_title": "Требования к идентификации",
+              "quote": "Ввозимое животное должно быть идентифицировано микрочипом."
+            }
+          ]
+        },
+        {
+          "anchor": "vaccination",
+          "locale": "en",
+          "order": 1,
+          "title": "Vaccination and microchip",
+          "body": "Cats and dogs need a **rabies vaccination** at least 30 days before entry and a microchip. Animals under a year old need an age certificate.",
+          "sources": [
+            {
+              "authority": "Veterinary Service of Borea (fictional)",
+              "document_title": "Veterinary import rules",
+              "document_date": "2023-12-12",
+              "url": "https://example.net/borea-vet/import",
+              "quote": "Rabies vaccination is given no later than thirty days before entry."
+            }
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "anchor": "q-savannah",
+          "locale": "ru",
+          "order": 0,
+          "question": "Можно ли привезти саванну F3?",
+          "answer": "Да, с **разрешением мэрии**. F1 и F2 — нельзя.",
+          "section_anchor": "city-ban"
+        },
+        {
+          "anchor": "q-vaccine",
+          "locale": "ru",
+          "order": 1,
+          "question": "Когда делать прививку?",
+          "answer": "Не позже чем **за 30 дней** до вылета.",
+          "section_anchor": "vaccination"
+        },
+        {
+          "anchor": "q-vaccine",
+          "locale": "en",
+          "order": 1,
+          "question": "When should the vaccination be done?",
+          "answer": "At least **30 days** before the flight.",
+          "section_anchor": "vaccination"
+        }
+      ],
+      "requirements": [
+        {
+          "code": "rabies_cert",
+          "title": "Сертификат о вакцинации от бешенства",
+          "issuer": "Ветеринар",
+          "obtained_by": "sender",
+          "is_mandatory": true,
+          "condition": {"attr": "species", "op": "in", "value": ["cat", "dog"]},
+          "valid_for_days": 365,
+          "lead_time_days": 30,
+          "cost_estimate": 60,
+          "currency": "EUR",
+          "notes": "Прививка — не позже чем за 30 дней до ввоза."
+        },
+        {
+          "code": "hybrid_permit",
+          "title": "Разрешение мэрии на гибрида",
+          "issuer": "Мэрия Нордхавна (вымышленная)",
+          "obtained_by": "recipient",
+          "is_mandatory": true,
+          "condition": {"all": [
+            {"attr": "breed", "op": "==", "value": "savannah"},
+            {"attr": "generation", "op": "not_in", "value": ["F1", "F2"]}
+          ]},
+          "valid_for_days": 180,
+          "lead_time_days": 20,
+          "cost_estimate": 25,
+          "currency": "EUR",
+          "notes": "F1 и F2 не разрешаются вовсе; F3 и старше — по разрешению."
+        },
+        {
+          "code": "age_certificate",
+          "title": "Справка о возрасте животного",
+          "issuer": "Ветеринар",
+          "obtained_by": "sender",
+          "is_mandatory": false,
+          "condition": {"attr": "age_years", "op": "<", "value": 1},
+          "lead_time_days": 2,
+          "notes": "Для животных младше года."
+        }
+      ]
+    }
+  ]
+}

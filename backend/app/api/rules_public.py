@@ -26,6 +26,10 @@ Endpoints:
   the prerender step that turns it into files.
 - `GET /api/rules/{category}/{direction}/{country}` — one set in full.
 - `GET /api/rules/{category}/{direction}/{country}/markdown` — the same as a file.
+
+Functions (PROJECT §6.2a):
+- `assemble(db, rule_set, locale)` — one set as the page shows it.
+  Called by: `read_rule`, `api/rules_admin.preview_set` (T_RULES.7).
 """
 from __future__ import annotations
 
@@ -502,6 +506,22 @@ async def read_rule(
         # must not be discoverable by the shape of the answer.
         raise HTTPException(status_code=404, detail="No published rules for this corridor")
 
+    return await assemble(db, rule_set, locale)
+
+
+async def assemble(db: AsyncSession, rule_set: RuleSet, locale: str) -> RuleSetOut:
+    """One set as the corridor page shows it, whatever its status.
+
+    Split out of `read_rule` for T_RULES.7: the editor's preview of a draft has
+    to be **this** assembly, not a second one. A preview built by other code
+    previews that code, and the first locale-fallback rule it gets wrong shows
+    the editor a page no reader will ever see.
+
+    The status check stays with the caller: the public endpoint serves only
+    `published`, the preview serves anything to `RULES_EDIT`.
+
+    Called by: `read_rule`, `api/rules_admin.preview_set`.
+    """
     wanted = (locale or FALLBACK_LOCALE).split("-")[0].lower()
     if wanted not in CORPUS_LOCALES:
         wanted = FALLBACK_LOCALE

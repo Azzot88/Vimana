@@ -1878,6 +1878,8 @@
     "daysUnit": "jours",
     "contents": "Sommaire",
     "missingCrumb": "Corridor introuvable",
+    "previewCrumb": "Éditeur des règles",
+    "previewBanner": "Aperçu · statut : {{status}}. Voici la page telle qu’un lecteur la verra une fois publiée. Pour l’instant, seuls les éditeurs de règles la voient : elle n’apparaît ni dans l’annuaire, ni dans la recherche, ni à une adresse publique.",
     "packetTitle": "Réunir tout cela prend des semaines",
     "packetBody": "Nous construisons un service qui rassemble ce dossier pour votre date de départ. Il n’est pas encore ouvert. Laissez une adresse, nous vous écrirons.",
     "packetCta": "Laisser une adresse"
@@ -1968,7 +1970,8 @@
     "answersFromMissing": "Cette section n’existe pas dans ce jeu",
     "questionAnchor": "Ancre de la question",
     "publishedLive": "La page est en ligne pour les lecteurs comme pour les moteurs de recherche : elle est rendue à la demande.",
-    "openPublicPage": "Ouvrir la page"
+    "openPublicPage": "Ouvrir la page",
+    "preview": "Aperçu de la page"
   },
   "adminJournal": {
     "title": "Journal des rôles",

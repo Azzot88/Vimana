@@ -1878,6 +1878,8 @@
     "daysUnit": "días",
     "contents": "Contenido",
     "missingCrumb": "Corredor no encontrado",
+    "previewCrumb": "Editor de reglas",
+    "previewBanner": "Vista previa · estado: {{status}}. Así verá la página un lector cuando se publique. Por ahora solo la ven los editores de reglas: no aparece en el directorio, en la búsqueda ni en una dirección pública.",
     "packetTitle": "Reunir esto por su cuenta lleva semanas",
     "packetBody": "Estamos construyendo un servicio que reúne este paquete para su fecha de salida. Todavía no está abierto. Deje una dirección y le escribiremos.",
     "packetCta": "Dejar una dirección"
@@ -1968,7 +1970,8 @@
     "answersFromMissing": "No existe esa sección en este conjunto",
     "questionAnchor": "Ancla de la pregunta",
     "publishedLive": "La página está publicada para lectores y buscadores: se renderiza a petición.",
-    "openPublicPage": "Abrir la página"
+    "openPublicPage": "Abrir la página",
+    "preview": "Vista previa de la página"
   },
   "adminJournal": {
     "title": "Historial de roles",

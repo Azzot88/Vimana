@@ -18,6 +18,7 @@ import uuid as uuidlib
 import pytest
 from sqlalchemy import delete, select
 
+from app.core.rule_status import is_fictional_jurisdiction
 from app.models.rules import (
     DocumentRequirement,
     Jurisdiction,
@@ -66,19 +67,33 @@ async def publisher(client, session_maker):
     return headers
 
 
-@pytest.fixture
-async def corridor(session_maker):
-    """A private jurisdiction and category, removed afterwards."""
+async def _make_corridor(session_maker, prefix: str):
     suffix = uuidlib.uuid4().hex[:6]
-    code, cat_key = f"ZZ-{suffix}", f"testcat-{suffix}"
-
+    code, cat_key = f"{prefix}-{suffix}", f"testcat-{suffix}"
     async with session_maker() as db:
         db.add(Jurisdiction(code=code, kind=JurisdictionKind.country, name="Testland"))
         db.add(Category(name_key=cat_key, is_default=False, usage_count=0))
         await db.commit()
+    return code, cat_key
 
+
+@pytest.fixture
+async def corridor(session_maker):
+    """A private jurisdiction and category, removed afterwards."""
+    code, cat_key = await _make_corridor(session_maker, "ZZ")
     yield code, cat_key
+    await _drop_corridor(session_maker, code, cat_key)
 
+
+@pytest.fixture
+async def fictional_corridor(session_maker):
+    """T_RULES.7 — the same, in the range `core/rule_status` refuses to publish."""
+    code, cat_key = await _make_corridor(session_maker, "XQ")
+    yield code, cat_key
+    await _drop_corridor(session_maker, code, cat_key)
+
+
+async def _drop_corridor(session_maker, code: str, cat_key: str) -> None:
     async with session_maker() as db:
         sets = (
             await db.execute(select(RuleSet).where(RuleSet.jurisdiction_code == code))
@@ -575,3 +590,109 @@ async def test_questions_are_frozen_with_the_set(client, editor, publisher, corr
             f"/api/admin/rules/questions/{question_id}", headers=editor
         )
     ).status_code == 409
+
+
+# --- T_RULES.7: preview and the fictional range -----------------------------
+
+async def test_an_editor_previews_a_draft_as_the_page_would_show_it(
+    client, editor, corridor
+):
+    """The draft is assembled by the same code as the public page, and the
+    public page still refuses it."""
+    code, cat_key = corridor
+    set_id = await _new_set(client, editor, corridor)
+    section_id = await _section(client, editor, set_id)
+    assert (await _source(client, editor, section_id)).status_code == 201
+    assert (await _question(client, editor, set_id)).status_code == 201
+
+    resp = await client.get(f"/api/admin/rules/{set_id}/preview", headers=editor)
+    assert resp.status_code == 200, resp.text
+    page = resp.json()
+    assert page["status"] == "draft"
+    assert page["jurisdiction_code"] == code
+    assert [s["anchor"] for s in page["sections"]] == ["overview"]
+    assert page["sections"][0]["sources"][0]["quote"] == "A verbatim quotation."
+    assert [q["anchor"] for q in page["questions"]] == ["q-1"]
+    # Nothing has been published, so there is no "what changed" line.
+    assert page["published_note"] == ""
+
+    public = await client.get(f"/api/rules/{cat_key}/import/{code}")
+    assert public.status_code == 404
+
+
+async def test_the_preview_falls_back_per_section_like_the_page(
+    client, editor, corridor
+):
+    set_id = await _new_set(client, editor, corridor)
+    await _section(client, editor, set_id)  # English only
+
+    page = (
+        await client.get(
+            f"/api/admin/rules/{set_id}/preview?locale=ru", headers=editor
+        )
+    ).json()
+    assert page["locale"] == "ru"
+    assert page["sections"][0]["locale"] == "en"
+    assert page["fallback_locale"] is True
+
+
+async def test_the_preview_is_refused_to_an_ordinary_account(
+    client, editor, corridor, session_maker
+):
+    set_id = await _new_set(client, editor, corridor)
+    _id, headers = await _account(client, "rules-peek", [], session_maker)
+    resp = await client.get(f"/api/admin/rules/{set_id}/preview", headers=headers)
+    assert resp.status_code == 403
+    anonymous = await client.get(f"/api/admin/rules/{set_id}/preview")
+    assert anonymous.status_code == 401
+
+
+async def test_the_preview_of_a_missing_set_is_404(client, editor):
+    resp = await client.get(
+        f"/api/admin/rules/{uuidlib.uuid4()}/preview", headers=editor
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "code, fictional",
+    [
+        ("XA", True),
+        ("XB-NO-CAP", True),
+        ("xt-hub", True),
+        ("XK", False),  # Kosovo: a real place on the user-assigned code
+        ("ZZ-abc123", False),  # the suite's throwaway range publishes on purpose
+        ("US", False),
+        ("US-NY", False),
+        ("X1", False),
+        ("", False),
+    ],
+)
+def test_the_fictional_range(code, fictional):
+    assert is_fictional_jurisdiction(code) is fictional
+
+
+async def test_a_fictional_jurisdiction_is_never_published(
+    client, editor, publisher, fictional_corridor
+):
+    """Cited and complete, and still refused: nobody can make `XQ` a country."""
+    set_id = await _new_set(client, editor, fictional_corridor)
+    section_id = await _section(client, editor, set_id)
+    assert (await _source(client, editor, section_id)).status_code == 201
+
+    detail = (await client.get(f"/api/admin/rules/{set_id}", headers=editor)).json()
+    assert any("fictional" in b for b in detail["blockers"])
+
+    await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=editor, json={"to": "review"}
+    )
+    refused = await client.post(
+        f"/api/admin/rules/{set_id}/status", headers=publisher, json={"to": "published"}
+    )
+    assert refused.status_code == 409
+    assert "fictional" in refused.json()["detail"]
+
+    # Still previewable — that is the whole point of the range.
+    preview = await client.get(f"/api/admin/rules/{set_id}/preview", headers=editor)
+    assert preview.status_code == 200
+    assert preview.json()["status"] == "review"

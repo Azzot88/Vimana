@@ -20,6 +20,8 @@ the two permissions meaningless: `RULES_EDIT` writes and sends onward,
 paper.
 
 Functions (PROJECT §6.2a):
+- `is_fictional_jurisdiction(code)` — the ISO user-assigned range `XA`–`XZ`
+  minus `XK`. Called by: `publication_blockers` (T_RULES.7).
 - `publication_blockers(db, rule_set)` — every reason this set cannot be
   published, as sentences. Empty list = publishable.
   Called by: `transition`, and `api/rules_admin` to show them before the attempt.
@@ -63,9 +65,37 @@ ALLOWED: dict[RuleStatus, tuple[RuleStatus, ...]] = {
 }
 
 
+def is_fictional_jurisdiction(code: str) -> bool:
+    """True for a jurisdiction no real country can ever have (T_RULES.7).
+
+    ISO 3166-1 keeps `XA`–`XZ` for user assignment, so no state will ever be
+    given one of them — which makes the range a marker that needs no column and
+    no migration. `XK` is the exception: it is the de facto code for Kosovo, a
+    real place with real border rules. Checked on the country part, so `XB-NO`
+    and `XB-NO-CAP` are fictional because `XB` is.
+
+    The test corridor (`data/rules/xa-test-corridor.json`) lives in this range.
+    Other ranges ISO leaves free (`ZZ`, `QM`–`QZ`) are not claimed here: the
+    test suite builds throwaway `ZZ-…` jurisdictions and publishes them on
+    purpose.
+    """
+    country = (code or "").split("-", 1)[0].upper()
+    return len(country) == 2 and country[0] == "X" and country.isalpha() and country != "XK"
+
+
 async def publication_blockers(db: AsyncSession, rule_set: RuleSet) -> list[str]:
     """Every reason this set may not be published. Empty list means it may."""
     blockers: list[str] = []
+
+    # First and unconditional: a fictional corridor is a test fixture for the
+    # page, and publishing it would put invented law in front of real readers.
+    # A placeholder section would also block it, but an editor can delete a
+    # placeholder; nobody can make `XA` a real country.
+    if is_fictional_jurisdiction(rule_set.jurisdiction_code):
+        blockers.append(
+            f"Jurisdiction `{rule_set.jurisdiction_code}` is fictional (ISO 3166 "
+            f"user-assigned range): a test corpus is previewed, never published."
+        )
 
     sections = (
         await db.execute(

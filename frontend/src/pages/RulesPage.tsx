@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { bootstrapped, readRule, type PublicRuleSet } from '../api/rulesPublic'
+import { previewRuleSet, type RuleStatus } from '../api/rules'
 import { usePrefs } from '../hooks/usePrefs'
 import { freshnessOf } from '../lib/format'
 import { renderMarkdown } from '../lib/markdown'
@@ -44,43 +45,69 @@ import MonoText from '../components/MonoText'
  * document, and a reference document read on a phone or scrolled to from a
  * search result needs a visible map of itself.
  */
-export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
+export default function RulesPage({
+  initial,
+  previewSetId,
+}: {
+  initial?: PublicRuleSet
+  /** T_RULES.7 — render a set of any status from the editor's endpoint. Only
+   *  `AdminRulePreviewPage` passes it, after the same role check as the editor;
+   *  the server checks `rules:edit` again on every request. */
+  previewSetId?: string
+}) {
   const { t, i18n } = useTranslation()
   const prefs = usePrefs()
   const params = useParams<{ category: string; direction: string; country: string }>()
 
   // `initial` on the server, the payload it shipped on the client. Both must
   // produce the same first render or hydration throws the server's markup away
-  // and paints a skeleton over a finished page (T_OPS.2).
-  const seed = initial ?? bootstrapped<PublicRuleSet>()
+  // and paints a skeleton over a finished page (T_OPS.2). A preview is never
+  // server-rendered, so it never takes a seed: a payload left in the document
+  // by a public page must not be shown under a draft's banner.
+  const seed = previewSetId ? undefined : (initial ?? bootstrapped<PublicRuleSet>())
   const [data, setData] = useState<PublicRuleSet | null>(seed ?? null)
+  const [previewStatus, setPreviewStatus] = useState<RuleStatus | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'missing' | 'failed'>(
     seed ? 'idle' : 'loading',
   )
 
   useEffect(() => {
-    // Prerendered markup is already correct for the first paint; the fetch
-    // still runs so a page served from a file built last deploy refreshes
-    // itself for a reader who is looking at it now.
-    if (!params.category || !params.direction || !params.country) return
     // Guarded because switching language starts a second request while the
     // first is still in flight, and without this the slower one wins by
     // landing last.
     let live = true
+    const failed = (err: { response?: { status?: number } }) => {
+      if (!live || seed) return // keep what the server already showed
+      setState(err?.response?.status === 404 ? 'missing' : 'failed')
+    }
+    if (previewSetId) {
+      previewRuleSet(previewSetId, i18n.language)
+        .then(({ data: fresh }) => {
+          if (!live) return
+          setData(fresh)
+          setPreviewStatus(fresh.status)
+          setState('idle')
+        })
+        .catch(failed)
+      return () => {
+        live = false
+      }
+    }
+    // Prerendered markup is already correct for the first paint; the fetch
+    // still runs so a page served from a file built last deploy refreshes
+    // itself for a reader who is looking at it now.
+    if (!params.category || !params.direction || !params.country) return
     readRule(params.category, params.direction, params.country, i18n.language)
       .then(({ data: fresh }) => {
         if (!live) return
         setData(fresh)
         setState('idle')
       })
-      .catch((err: { response?: { status?: number } }) => {
-        if (!live || seed) return // keep what the server already showed
-        setState(err?.response?.status === 404 ? 'missing' : 'failed')
-      })
+      .catch(failed)
     return () => {
       live = false
     }
-  }, [params.category, params.direction, params.country, i18n.language])
+  }, [previewSetId, params.category, params.direction, params.country, i18n.language])
 
   const crumbs = (last: string) => [
     { label: t('rulesIndex.crumbHome'), to: '/' },
@@ -169,18 +196,38 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
       // back does not cost the reader the map of the document.
       <article className="lg:grid lg:grid-cols-[minmax(0,48rem)_13rem] lg:justify-center lg:gap-10">
         <div className="min-w-0">
+        {/* T_RULES.7 — said before anything else, so a screenshot of a draft
+            cannot pass for the live corridor. */}
+        {previewSetId && (
+          <p
+            role="status"
+            className="mb-5 rounded-field border border-amber/40 bg-amber/10 px-3 py-2 text-xs font-body leading-relaxed text-navy"
+          >
+            {t('rulesPage.previewBanner', {
+              status: t(`adminRules.status.${previewStatus ?? 'draft'}`),
+            })}
+          </p>
+        )}
         <Breadcrumbs
-          items={[
-            { label: t('rulesIndex.crumbHome'), to: '/' },
-            { label: t('rulesIndex.navLink'), to: '/rules' },
-            { label: category, to: '/rules' },
-            // The corridor's own title, not a direction glued to a country
-            // name. `"Вывоз из" + "Россия"` produced "Вывоз из Россия": Russian
-            // declines the country and a template cannot. The title is prose an
-            // editor wrote, so it is already correct in whatever language the
-            // corpus is written in.
-            { label: data.title || t('rulesPage.untitled') },
-          ]}
+          items={
+            previewSetId
+              ? [
+                  { label: t('rulesPage.previewCrumb'), to: '/admin/rules' },
+                  { label: data.title || t('rulesPage.untitled') },
+                ]
+              : [
+                  { label: t('rulesIndex.crumbHome'), to: '/' },
+                  { label: t('rulesIndex.navLink'), to: '/rules' },
+                  { label: category, to: '/rules' },
+                  // The corridor's own title, not a direction glued to a
+                  // country name. `"Вывоз из" + "Россия"` produced "Вывоз из
+                  // Россия": Russian declines the country and a template
+                  // cannot. The title is prose an editor wrote, so it is
+                  // already correct in whatever language the corpus is
+                  // written in.
+                  { label: data.title || t('rulesPage.untitled') },
+                ]
+          }
         />
 
         <header className="mt-5">
@@ -475,12 +522,16 @@ export default function RulesPage({ initial }: { initial?: PublicRuleSet }) {
                   this is the text itself rather than a conversion of it. A real
                   link, not a script-driven save: the URL works with `curl` and
                   survives being pasted to somebody else. */}
-              <a
-                href={`/api/rules/${data.category_key}/${data.direction}/${data.jurisdiction_code}/markdown?locale=${data.locale}`}
-                className="text-sm font-display font-medium text-cyan transition-colors hover:text-navy"
-              >
-                {t('rulesPage.downloadMd')}
-              </a>
+              {/* Not in a preview: the public address serves published sets
+                  only, so the link would answer 404 for every draft. */}
+              {!previewSetId && (
+                <a
+                  href={`/api/rules/${data.category_key}/${data.direction}/${data.jurisdiction_code}/markdown?locale=${data.locale}`}
+                  className="text-sm font-display font-medium text-cyan transition-colors hover:text-navy"
+                >
+                  {t('rulesPage.downloadMd')}
+                </a>
+              )}
               {/* §9.1 - what this page is and is not. Said once, plainly. */}
               <p className="mt-4 max-w-[65ch] text-xs font-body leading-relaxed text-navy/45">
                 {t('rulesPage.disclaimer')}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import {
   addQuestion,
   addRequirement,
@@ -27,6 +27,7 @@ import MonoText from '../components/MonoText'
 import RuleSectionCard from '../components/RuleSectionCard'
 import RuleRequirementRow from '../components/RuleRequirementRow'
 import RuleQuestionRow from '../components/RuleQuestionRow'
+import RulesPage from './RulesPage'
 
 /**
  * T3.11.02 — the rules editor.
@@ -476,6 +477,19 @@ export default function AdminRulesPage() {
                 </p>
               )}
 
+              {/* T_RULES.7 — the page as a reader would get it, in any status.
+                  A link rather than a panel here: the page has its own layout,
+                  and a cramped copy of it inside the editor would preview
+                  something nobody will ever see. */}
+              <a
+                href={`/admin/rules/${detail.id}/preview`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-xs font-body text-cyan underline underline-offset-2 transition-colors hover:text-navy"
+              >
+                {t('adminRules.preview')}
+              </a>
+
               {/* T_OPS.2 — the line that used to warn about a deploy delay.
                   It is gone as a warning because the delay is gone: `/rules` is
                   rendered per request from the database now, so publishing and
@@ -817,4 +831,25 @@ export default function AdminRulesPage() {
       </div>
     </div>
   )
+}
+
+/**
+ * T_RULES.7 — `/admin/rules/:setId/preview`: one set, in any status, rendered
+ * by the public corridor page itself.
+ *
+ * The same role check as the editor, and for the same reason the server checks
+ * `rules:edit` on the endpoint: a draft reads, to a stranger, exactly like the
+ * live answer. The check here only spares a non-editor a page of errors; the
+ * endpoint is what actually refuses.
+ *
+ * The fictional test corridor (`data/rules/xa-test-corridor.json`) is seen
+ * only through this page — `core/rule_status` will not let it be published.
+ */
+export function AdminRulePreviewPage() {
+  const user = useAuthStore((s) => s.user)
+  const { setId } = useParams<{ setId: string }>()
+  if (!(hasRole(user, 'compliance_editor') || isSuperuser(user))) {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <RulesPage previewSetId={setId} />
 }

@@ -20,6 +20,7 @@ Endpoints:
 - `GET           /api/admin/rules/{set_id}`              — one set, in full
 - `PATCH/DELETE  /api/admin/rules/{set_id}`              — edit / drop a draft
 - `POST          /api/admin/rules/{set_id}/status`       — draft→review→published
+- `GET           /api/admin/rules/{set_id}/preview`      — the page as a reader would see it (T_RULES.7)
 - `POST          /api/admin/rules/{set_id}/sections`
 - `PATCH/DELETE  /api/admin/rules/sections/{section_id}`
 - `POST          /api/admin/rules/sections/{section_id}/sources`
@@ -35,11 +36,12 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.rules_public import FALLBACK_LOCALE, RuleSetOut as PublicRuleSetOut, assemble
 from app.core.database import get_db
 from app.core.permissions import Permission, require_perm
 from app.core.rule_conditions import ConditionError, validate_condition
@@ -453,6 +455,35 @@ async def status_history(
             )
         ).scalars().all()
     )
+
+
+class PreviewOut(PublicRuleSetOut):
+    """The public page's payload plus the one thing a reader never sees: whose
+    eyes this is for. The page puts `status` in a banner, so a draft cannot be
+    mistaken for the live corridor in a screenshot."""
+
+    status: RuleStatus
+
+
+@router.get("/admin/rules/{set_id}/preview", response_model=PreviewOut)
+async def preview_set(
+    set_id: uuid.UUID,
+    _: User = Depends(require_perm(Permission.RULES_EDIT)),
+    db: AsyncSession = Depends(get_db),
+    locale: str = Query(default=FALLBACK_LOCALE, max_length=5),
+):
+    """T_RULES.7 — any set, in any status, exactly as the corridor page would
+    show it.
+
+    Behind `RULES_EDIT`, like every other read in this module. A draft is
+    somebody's unchecked work, and the public endpoint refuses it for the same
+    reason: to a stranger it reads exactly like the current answer. This is how
+    an editor sees the page before anybody else can — and how the fictional
+    test corridor, which can never be published, is seen at all.
+    """
+    rule_set = await _get_set(db, set_id)
+    page = await assemble(db, rule_set, locale)
+    return PreviewOut(**page.model_dump(), status=rule_set.status)
 
 
 # ────────────────────────────── sections ───────────────────────────────

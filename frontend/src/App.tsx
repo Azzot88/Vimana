@@ -52,6 +52,9 @@ const AdminEmailPage = lazy(() => import('./pages/AdminEmailPage'))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage'))
 const AdminRulesPage = lazy(() => import('./pages/AdminRulesPage'))
+const AdminRulePreviewPage = lazy(() =>
+  import('./pages/AdminRulesPage').then((m) => ({ default: m.AdminRulePreviewPage })),
+)
 const RulesPage = lazy(() => import('./pages/RulesPage'))
 const RulesIndexPage = lazy(() => import('./pages/RulesIndexPage'))
 const ChecklistWizardPage = lazy(() => import('./pages/ChecklistWizardPage'))
@@ -161,6 +164,11 @@ export default function App() {
                 and is signed in, but a navigation bar around a single question
                 invites wandering off before answering it. */}
             <Route path="/welcome" element={<WelcomePage />} />
+            {/* T_RULES.7 — protected and outside `Layout`: the preview is the
+                public corridor page, which brings its own chrome, and a draft
+                must not be reachable without an account. The editor's role is
+                checked by the page and `rules:edit` by the endpoint. */}
+            <Route path="/admin/rules/:setId/preview" element={<AdminRulePreviewPage />} />
             {/* T3.11.26 — the panel has its own address (owner's decision
                 2026-09-07). It used to be a redirect onto `/send` or
                 `/carrier`, which was fine while those *were* the panel; `/send`

@@ -1,4 +1,5 @@
 import api from './client'
+import type { PublicRuleSet } from './rulesPublic'
 
 /** T3.11.02 — the rules editor's client. `import` is the wire value; the
  *  Python member is `import_` only because the word is a keyword there. */
@@ -120,6 +121,13 @@ export const changeRuleStatus = (id: string, to: RuleStatus, note = '') =>
 
 export const ruleHistory = (id: string) =>
   api.get<StatusEvent[]>(`/api/admin/rules/${id}/history`)
+
+/** T_RULES.7 — a set in any status, assembled by the same server code as the
+ *  public page, plus the status the preview banner names. `rules:edit` only. */
+export type RulePreview = PublicRuleSet & { status: RuleStatus }
+
+export const previewRuleSet = (id: string, locale: string) =>
+  api.get<RulePreview>(`/api/admin/rules/${id}/preview`, { params: { locale } })
 
 export const addSection = (
   setId: string,

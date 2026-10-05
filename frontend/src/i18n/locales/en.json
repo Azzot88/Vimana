@@ -2175,6 +2175,8 @@
     "daysUnit": "days",
     "contents": "Contents",
     "missingCrumb": "Corridor not found",
+    "previewCrumb": "Rules editor",
+    "previewBanner": "Preview · status: {{status}}. This is how a reader will see the page once it is published. Right now only rules editors can see it: it is not in the directory, in search or at a public address.",
     "packetTitle": "Collecting this yourself takes weeks",
     "packetBody": "We are building a service that assembles this packet against your departure date. It is not open yet. Leave an address and we will write when it is.",
     "packetCta": "Leave an address"
@@ -2265,7 +2267,8 @@
     "answersFromMissing": "No such section in this set",
     "questionAnchor": "Question anchor",
     "publishedLive": "The page is live for readers and for search engines: it is rendered on request.",
-    "openPublicPage": "Open the page"
+    "openPublicPage": "Open the page",
+    "preview": "Preview the page"
   },
   "adminJournal": {
     "title": "Role journal",

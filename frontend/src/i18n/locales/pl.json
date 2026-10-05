@@ -1895,6 +1895,8 @@
     "daysUnit": "dni",
     "contents": "Spis treści",
     "missingCrumb": "Nie znaleziono korytarza",
+    "previewCrumb": "Edytor zasad",
+    "previewBanner": "Podgląd · status: {{status}}. Tak strona będzie wyglądać dla czytelnika po publikacji. Na razie widzą ją tylko redaktorzy zasad: nie trafia do katalogu, wyszukiwarki ani pod publiczny adres.",
     "packetTitle": "Zebranie tego samemu zajmuje tygodnie",
     "packetBody": "Budujemy usługę, która zbierze ten komplet na twoją datę wylotu. Jeszcze nie działa. Zostaw adres, napiszemy, gdy ruszy.",
     "packetCta": "Zostaw adres",
@@ -1986,7 +1988,8 @@
     "answersFromMissing": "Nie ma takiej sekcji w tym zestawie",
     "questionAnchor": "Kotwica pytania",
     "publishedLive": "Strona jest dostępna dla czytelników i dla wyszukiwarek: renderuje się na żądanie.",
-    "openPublicPage": "Otwórz stronę"
+    "openPublicPage": "Otwórz stronę",
+    "preview": "Podgląd strony"
   },
   "adminJournal": {
     "title": "Dziennik ról",

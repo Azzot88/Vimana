@@ -347,6 +347,9 @@ MATRIX: dict[tuple[str, str], Case] = {
         DENIED, "publishing somebody else's claim about the law", json={"to": "review"}
     ),
     ("GET", "/api/admin/rules/{set_id}/history"): Case(DENIED, "rules:edit only"),
+    ("GET", "/api/admin/rules/{set_id}/preview"): Case(
+        DENIED, "T_RULES.7 — a draft reads like the live answer to a stranger"
+    ),
     ("POST", "/api/admin/rules/{set_id}/sections"): Case(
         DENIED, "rules:edit only", json={"anchor": "probe"}
     ),

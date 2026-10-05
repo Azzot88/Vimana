@@ -18,11 +18,15 @@ import pytest
 from sqlalchemy import delete, select
 
 from app.cli.load_rules import CorpusError, load, validate
-from app.core.rule_status import publication_blockers
+from app.core.rule_conditions import MEMBERSHIP_OPS, ORDERED_OPS
+from app.core.rule_status import is_fictional_jurisdiction, publication_blockers
 from app.models.marketplace import Category
 from app.models.rules import (
     DocumentRequirement,
     Jurisdiction,
+    JurisdictionKind,
+    ObtainedBy,
+    RuleDirection,
     RuleQuestion,
     RuleSection,
     RuleSet,
@@ -427,3 +431,105 @@ def test_every_shipped_corpus_answers_questions(filename):
     for question in questions:
         assert question["section_anchor"] in anchors, f"{filename}: {question['anchor']}"
         assert question["answer"].strip(), f"{filename}: {question['anchor']}"
+
+
+# --- T_RULES.7: the fictional test corridor ---------------------------------
+
+TEST_CORRIDOR = (
+    Path(__file__).resolve().parent.parent / "app" / "data" / "rules" / "xa-test-corridor.json"
+)
+
+
+def _ops(condition) -> set[str]:
+    if not condition:
+        return set()
+    for group in ("all", "any"):
+        if group in condition:
+            return {leaf["op"] for leaf in condition[group]}
+    return {condition["op"]}
+
+
+def test_the_test_corridor_exercises_everything_the_loader_accepts():
+    """The file exists to show every field on the page, so "every" is asserted:
+    a corpus that quietly stops using a field stops testing its rendering."""
+    corpus = json.loads(TEST_CORRIDOR.read_text(encoding="utf-8"))
+    assert validate(corpus) == []
+
+    codes = [node["code"] for node in corpus["jurisdictions"]]
+    assert all(is_fictional_jurisdiction(code) for code in codes), codes
+    assert {node["kind"] for node in corpus["jurisdictions"]} == {
+        kind.value for kind in JurisdictionKind
+    }
+
+    sets = corpus["sets"]
+    assert all(is_fictional_jurisdiction(s["jurisdiction"]) for s in sets)
+    assert {s["direction"] for s in sets} == {d.value for d in RuleDirection}
+    assert all(s["title"].startswith("[ТЕСТ]") for s in sets)
+
+    sections = [sec for s in sets for sec in s["sections"]]
+    assert {sec["locale"] for sec in sections} == {"en", "ru"}
+    assert any(sec.get("placeholder") for sec in sections)
+    sources = [src for sec in sections for src in sec.get("sources", [])]
+    assert any(src.get("url") and src.get("document_date") for src in sources)
+    assert any(not src.get("url") for src in sources)
+    assert any(not src.get("document_date") for src in sources)
+
+    requirements = [r for s in sets for r in s["requirements"]]
+    assert {r["obtained_by"] for r in requirements} == {o.value for o in ObtainedBy}
+    assert {r.get("is_mandatory", True) for r in requirements} == {True, False}
+    assert any(r.get("condition") is None for r in requirements)
+    assert any("all" in (r.get("condition") or {}) for r in requirements)
+    assert any("any" in (r.get("condition") or {}) for r in requirements)
+    used_ops = set().union(*(_ops(r.get("condition")) for r in requirements))
+    assert used_ops == set(ORDERED_OPS) | set(MEMBERSHIP_OPS)
+
+
+async def test_the_test_corridor_loads_and_can_never_be_published(session_maker):
+    corpus = json.loads(TEST_CORRIDOR.read_text(encoding="utf-8"))
+    set_codes = [s["jurisdiction"] for s in corpus["sets"]]
+    try:
+        async with session_maker() as db:
+            counts = await load(db, corpus, replace=True)
+        assert counts["sets"] == len(corpus["sets"])
+
+        async with session_maker() as db:
+            loaded = (
+                await db.execute(
+                    select(RuleSet).where(RuleSet.jurisdiction_code.in_(set_codes))
+                )
+            ).scalars().all()
+            assert {rs.status for rs in loaded} == {RuleStatus.draft}
+            for rs in loaded:
+                blockers = await publication_blockers(db, rs)
+                assert any("fictional" in b for b in blockers), rs.jurisdiction_code
+            # The city hangs under its province, the province under its country.
+            city = await db.get(Jurisdiction, "XB-NO-CAP")
+            assert city.parent_code == "XB-NO"
+    finally:
+        async with session_maker() as db:
+            for rs_id in (
+                await db.execute(
+                    select(RuleSet.id).where(RuleSet.jurisdiction_code.in_(set_codes))
+                )
+            ).scalars().all():
+                for sec_id in (
+                    await db.execute(
+                        select(RuleSection.id).where(RuleSection.rule_set_id == rs_id)
+                    )
+                ).scalars().all():
+                    await db.execute(
+                        delete(RuleSource).where(RuleSource.section_id == sec_id)
+                    )
+                await db.execute(delete(RuleSection).where(RuleSection.rule_set_id == rs_id))
+                await db.execute(
+                    delete(DocumentRequirement).where(DocumentRequirement.rule_set_id == rs_id)
+                )
+                await db.execute(delete(RuleQuestion).where(RuleQuestion.rule_set_id == rs_id))
+                await db.execute(
+                    delete(RuleStatusEvent).where(RuleStatusEvent.rule_set_id == rs_id)
+                )
+            await db.execute(delete(RuleSet).where(RuleSet.jurisdiction_code.in_(set_codes)))
+            # Children before parents: `parent_code` is a foreign key.
+            for code in reversed([node["code"] for node in corpus["jurisdictions"]]):
+                await db.execute(delete(Jurisdiction).where(Jurisdiction.code == code))
+            await db.commit()
