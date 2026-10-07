@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../stores/auth'
+import Layout from '../Layout'
 import LanguageSwitcher from '../LanguageSwitcher'
 import MonoText from '../MonoText'
 import { APP_VERSION } from '../../version'
@@ -28,6 +29,13 @@ interface Props {
   source: WaitlistSource
   /** Nav button for a guest. Signed-in visitors always get "go to the panel". */
   navCtaKey?: string
+  /** T_UX.40 — a signed-in visitor gets the app's own shell (`Layout`: the
+   *  navigation, the bell, the bottom bar) instead of this marketing frame.
+   *  For pages that are both public and part of the product — the rules
+   *  directory is linked from the signed-in nav, and arriving there from
+   *  «Правила» into a different header with no way back was the bug. A guest
+   *  still gets this frame, which is also what the server renders. */
+  appChromeWhenSignedIn?: boolean
   children: (openWaitlist: () => void) => ReactNode
 }
 
@@ -42,11 +50,13 @@ export function LandingLabel({ children }: { children: ReactNode }) {
 export default function LandingShell({
   source,
   navCtaKey = 'landing.ctaInvite',
+  appChromeWhenSignedIn = false,
   children,
 }: Props) {
   const { t, i18n } = useTranslation()
   const token = useAuthStore((s) => s.token)
   const user = useAuthStore((s) => s.user)
+  const authState = useAuthStore((s) => s.authState)
   const nameRef = useRef<HTMLInputElement>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -102,6 +112,122 @@ export default function LandingShell({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // The waitlist dialog belongs to both frames: the packet button on a rules
+  // page opens it for a signed-in reader as much as for a guest.
+  const waitlistModal = modalOpen && (
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center bg-navy/50 px-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeModal()
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="waitlist-title"
+        className="w-full max-w-md rounded-card border border-navy/10 bg-white p-6 shadow-lift"
+      >
+        {submitted ? (
+          <div className="space-y-3">
+            <h2 id="waitlist-title" className="font-display text-xl font-bold tracking-tight">
+              {t('landing.modalSuccessTitle')}
+            </h2>
+            <p className="font-body text-sm leading-relaxed text-navy/70">
+              {t('landing.modalSuccessText', { email: successEmail })}
+            </p>
+            <button
+              type="button"
+              onClick={closeModal}
+              className="mt-2 w-full rounded-field border border-navy/20 py-2.5 font-body text-sm text-navy transition-colors hover:bg-navy/5"
+            >
+              {t('common.close')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between gap-4">
+              {/* Only business gets its own wording. A company is not
+                  asking for a beta invite, it is asking to talk — and the
+                  other three audiences are asking for exactly the same
+                  thing as each other, so three copies of one sentence
+                  would be three places to keep in step for nothing. */}
+              <h2 id="waitlist-title" className="font-display text-xl font-bold tracking-tight">
+                {t(source === 'business' ? 'landing.modalTitleBusiness' : 'landing.modalTitle')}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label={t('common.close') as string}
+                className="-mr-1 -mt-1 rounded-field px-2 py-1 text-navy/40 transition-colors hover:bg-navy/5 hover:text-navy"
+              >
+                ×
+              </button>
+            </div>
+            <p className="mt-2 font-body text-sm leading-relaxed text-navy/65">
+              {t(source === 'business' ? 'landing.modalSubBusiness' : 'landing.modalSub')}
+            </p>
+            <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+              <div>
+                <label
+                  htmlFor="waitlist-name"
+                  className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-navy/45"
+                >
+                  {t('landing.modalName')}
+                </label>
+                <input
+                  ref={nameRef}
+                  id="waitlist-name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  className="w-full rounded-field border border-navy/20 px-3 py-2.5 font-body text-sm text-navy"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="waitlist-email"
+                  className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-navy/45"
+                >
+                  {t('landing.modalEmail')}
+                </label>
+                <input
+                  id="waitlist-email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  className="w-full rounded-field border border-navy/20 px-3 py-2.5 font-body text-sm text-navy"
+                />
+              </div>
+              {submitError && (
+                <p className="font-mono text-xs text-danger">{submitError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-field bg-navy py-3 font-display text-sm font-semibold text-ivory transition-colors hover:bg-navy-mid disabled:opacity-50"
+              >
+                {submitting ? t('common.sending') : t('landing.modalSubmit')}
+              </button>
+            </form>
+            <p className="mt-3 font-body text-[11.5px] leading-relaxed text-navy/45">
+              {t('landing.modalFine')}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  if (appChromeWhenSignedIn && authState === 'authenticated' && user) {
+    return (
+      <Layout>
+        {children(openWaitlist)}
+        {waitlistModal}
+      </Layout>
+    )
   }
 
   return (
@@ -183,110 +309,7 @@ export default function LandingShell({
         </div>
       </footer>
 
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-navy/50 px-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeModal()
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="waitlist-title"
-            className="w-full max-w-md rounded-card border border-navy/10 bg-white p-6 shadow-lift"
-          >
-            {submitted ? (
-              <div className="space-y-3">
-                <h2 id="waitlist-title" className="font-display text-xl font-bold tracking-tight">
-                  {t('landing.modalSuccessTitle')}
-                </h2>
-                <p className="font-body text-sm leading-relaxed text-navy/70">
-                  {t('landing.modalSuccessText', { email: successEmail })}
-                </p>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="mt-2 w-full rounded-field border border-navy/20 py-2.5 font-body text-sm text-navy transition-colors hover:bg-navy/5"
-                >
-                  {t('common.close')}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-start justify-between gap-4">
-                  {/* Only business gets its own wording. A company is not
-                      asking for a beta invite, it is asking to talk — and the
-                      other three audiences are asking for exactly the same
-                      thing as each other, so three copies of one sentence
-                      would be three places to keep in step for nothing. */}
-                  <h2 id="waitlist-title" className="font-display text-xl font-bold tracking-tight">
-                    {t(source === 'business' ? 'landing.modalTitleBusiness' : 'landing.modalTitle')}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    aria-label={t('common.close') as string}
-                    className="-mr-1 -mt-1 rounded-field px-2 py-1 text-navy/40 transition-colors hover:bg-navy/5 hover:text-navy"
-                  >
-                    ×
-                  </button>
-                </div>
-                <p className="mt-2 font-body text-sm leading-relaxed text-navy/65">
-                  {t(source === 'business' ? 'landing.modalSubBusiness' : 'landing.modalSub')}
-                </p>
-                <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-                  <div>
-                    <label
-                      htmlFor="waitlist-name"
-                      className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-navy/45"
-                    >
-                      {t('landing.modalName')}
-                    </label>
-                    <input
-                      ref={nameRef}
-                      id="waitlist-name"
-                      name="name"
-                      type="text"
-                      autoComplete="name"
-                      className="w-full rounded-field border border-navy/20 px-3 py-2.5 font-body text-sm text-navy"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="waitlist-email"
-                      className="mb-1 block font-mono text-[11px] uppercase tracking-[0.12em] text-navy/45"
-                    >
-                      {t('landing.modalEmail')}
-                    </label>
-                    <input
-                      id="waitlist-email"
-                      name="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      className="w-full rounded-field border border-navy/20 px-3 py-2.5 font-body text-sm text-navy"
-                    />
-                  </div>
-                  {submitError && (
-                    <p className="font-mono text-xs text-danger">{submitError}</p>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full rounded-field bg-navy py-3 font-display text-sm font-semibold text-ivory transition-colors hover:bg-navy-mid disabled:opacity-50"
-                  >
-                    {submitting ? t('common.sending') : t('landing.modalSubmit')}
-                  </button>
-                </form>
-                <p className="mt-3 font-body text-[11.5px] leading-relaxed text-navy/45">
-                  {t('landing.modalFine')}
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {waitlistModal}
     </div>
   )
 }

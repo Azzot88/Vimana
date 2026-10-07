@@ -345,7 +345,10 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
   const questionTotal = totals.reduce((n, e) => n + e.question_count, 0)
 
   return (
-    <LandingShell source="sender">
+    // T_UX.40 — signed in, the directory sits inside the app's own shell: it is
+    // «Правила» in that navigation, and leaving the navigation to read it was
+    // the bug. A guest and the server render keep the public frame.
+    <LandingShell source="sender" appChromeWhenSignedIn>
       {(openWaitlist) => (
         // Back to the measure the page had before the rebuild (owner's
         // decision 2026-09-02). The catalogue has no side rail, so the cap is

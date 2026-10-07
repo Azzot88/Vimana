@@ -561,7 +561,8 @@ export default function RulesPage({
   // is a sender, and the waitlist entry should say so rather than pool every
   // rules reader under a fourth source that means nothing to whoever reads it.
   return (
-    <LandingShell source="sender">
+    // T_UX.40 — the app's own shell for a signed-in reader, as on the directory.
+    <LandingShell source="sender" appChromeWhenSignedIn>
       {(openWaitlist) => (
         // Capped at the old measure below `lg`; released above it so the
         // article's own grid can put the contents rail alongside the text
