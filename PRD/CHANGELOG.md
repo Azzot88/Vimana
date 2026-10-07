@@ -20,6 +20,8 @@
 
 ## Записи
 
+- **2026-10-06 · MILESTONE** · **T_RULES.7: вымышленный коридор и предпросмотр черновика для редакторов правил.** Корпус `xa-test-corridor.json` — Аркадия → хаб Транзитании → Борея и её город, пять наборов, все поля, которые принимает загрузчик; грузится черновиком. Набор с юрисдикцией `XA`–`XZ` (кроме `XK`) опубликовать нельзя. `GET /api/admin/rules/{id}/preview` под `rules:edit` собирает страницу той же функцией, что публичный адрес; экран `/admin/rules/:setId/preview` — та же страница коридора с баннером статуса. Сьют 2753 passed, фронт 355 passed. · `backend/app/{api/rules_admin,api/rules_public,core/rule_status}.py`, `backend/app/data/rules/xa-test-corridor.json`, `frontend/src/{App,pages/RulesPage,pages/AdminRulesPage}.tsx`, `frontend/src/api/rules.ts`
+
 - **2026-09-24 · MILESTONE** · **T_UX.30: после входа человек оказывается там, где нажал.** Ссылка получателя писала `?next=`, которого вход не читал, а новый аккаунт после `/welcome` всегда уходил на панель. Теперь один параметр `returnUrl`, его несут `/welcome` и `/verify-email`, `ProtectedRoute` запоминает адрес, по умолчанию — панель при любом способе входа. Фронт 343 passed. · `frontend/src/lib/returnTo.ts`, `frontend/src/{App,pages/*,components/*}.tsx`
 
 - **2026-09-24 · FIX** · **Тест SSE-потока падал только в полном прогоне: перезагрузка подменяла `app.main.app`.** `test_docs_exposure` перезагружал `app.main` и не возвращал исходный экземпляр; после него `from app.main import app` отдавал приложение без подмен conftest, и запрос шёл в пул основной базы, а не в `vimana_test`. Teardown возвращает экземпляр сессии. До правки полный прогон: 1 failed, 2726 passed. · `backend/tests/test_docs_exposure.py`
