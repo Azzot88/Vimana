@@ -14,6 +14,7 @@ import CargoFields, {
 import DepartureChip from '../components/DepartureChip'
 import LeadTimeWarning from '../components/LeadTimeWarning'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 import UBAChip from '../components/UBAChip'
 import { usePrefs } from '../hooks/usePrefs'
 import { routeChain } from '../lib/format'
@@ -142,16 +143,12 @@ export default function RespondPage() {
     }
   }
 
-  const back = (
-    <Link to="/trips" className="text-sm font-body text-navy/50 hover:text-navy">
-      ← {t('respond.back')}
-    </Link>
-  )
+  const back = { to: '/trips', label: t('respond.back') }
 
   if (missing) {
     return (
-      <div className="space-y-4">
-        {back}
+      <div className="space-y-4 max-w-3xl">
+        <PageHeader back={back} title={t('respond.title')} />
         <p className="text-sm font-body text-navy/60">{t('respond.tripGone')}</p>
       </div>
     )
@@ -174,8 +171,7 @@ export default function RespondPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {back}
-      <h1 className="font-display font-bold text-2xl text-navy">{t('respond.title')}</h1>
+      <PageHeader back={back} title={t('respond.title')} />
 
       <section
         data-testid="respond-trip"

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/auth'
 import { isSuperuser } from '../lib/permissions'
+import PageHeader from '../components/PageHeader'
 import {
   listParams,
   paramHistory,
@@ -129,11 +130,8 @@ export default function AdminParamsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-display font-semibold text-navy">
-        {t('adminParams.title')}
-      </h1>
-      <p className="text-sm font-body text-navy/50 mt-1">{t('adminParams.hint')}</p>
+    <div className="max-w-4xl">
+      <PageHeader title={t('adminParams.title')} description={t('adminParams.hint')} />
 
       <div className="mt-6 flex flex-wrap items-end gap-3">
         <div>

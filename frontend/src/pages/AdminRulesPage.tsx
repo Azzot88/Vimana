@@ -28,6 +28,7 @@ import RuleSectionCard from '../components/RuleSectionCard'
 import RuleRequirementRow from '../components/RuleRequirementRow'
 import RuleQuestionRow from '../components/RuleQuestionRow'
 import RulesPage from './RulesPage'
+import PageHeader from '../components/PageHeader'
 
 /**
  * T3.11.02 — the rules editor.
@@ -188,15 +189,8 @@ export default function AdminRulesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('adminRules.title')}
-        </h1>
-        {/* §9b — what this is and where it lands. */}
-        <p className="text-sm font-body text-navy/60 mt-1">
-          {t('adminRules.description')}
-        </p>
-      </div>
+      {/* §9b — what this is and where it lands. */}
+      <PageHeader title={t('adminRules.title')} description={t('adminRules.description')} />
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 

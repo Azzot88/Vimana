@@ -25,9 +25,10 @@ const member = {
   can_send: true,
 } as unknown as User
 
-const page = (open: () => void) => (
+const page = (open: () => void, frame?: string) => (
   <div>
     <p>rules body</p>
+    <p>frame:{frame}</p>
     <button type="button" onClick={open}>
       packet
     </button>
@@ -46,6 +47,7 @@ describe('LandingShell with appChromeWhenSignedIn', () => {
       </LandingShell>,
     )
     expect(screen.getByText('rules body')).toBeInTheDocument()
+    expect(screen.getByText('frame:landing')).toBeInTheDocument()
     expect(screen.getByText(`Vimana · ${t('landing.footerTagline')}`)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: t('nav.dashboard') })).not.toBeInTheDocument()
   })
@@ -58,6 +60,7 @@ describe('LandingShell with appChromeWhenSignedIn', () => {
       </LandingShell>,
     )
     expect(screen.getByText('rules body')).toBeInTheDocument()
+    expect(screen.getByText('frame:app')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: t('nav.rules') }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: t('nav.dashboard') }).length).toBeGreaterThan(0)
     expect(

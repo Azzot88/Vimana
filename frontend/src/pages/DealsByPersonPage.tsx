@@ -7,6 +7,7 @@ import { roleIn } from '../lib/dealRole'
 import { listMyInquiries } from '../api/inquiry'
 import DealSummaryCard from '../components/DealSummaryCard'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 
 /** T3.11.26 — every deal, grouped by the person it is with.
  *
@@ -113,28 +114,24 @@ export default function DealsByPersonPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('deals.byPersonTitle')}
-        </h1>
-        <div className="flex items-center gap-2">
-          {(['recent', 'count'] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={sort === key}
-              onClick={() => setSort(key)}
-              className={`px-3 py-2 min-h-[2.75rem] rounded-field border text-xs font-body transition-colors ${
-                sort === key
-                  ? 'border-cyan bg-cyan/5 text-cyan'
-                  : 'border-navy/15 text-navy/60 hover:border-navy/40'
-              }`}
-            >
-              {t(`deals.sortBy.${key}`)}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title={t('deals.byPersonTitle')}
+        aside={(['recent', 'count'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={sort === key}
+            onClick={() => setSort(key)}
+            className={`px-3 py-2 min-h-[2.75rem] rounded-field border text-xs font-body transition-colors ${
+              sort === key
+                ? 'border-cyan bg-cyan/5 text-cyan'
+                : 'border-navy/15 text-navy/60 hover:border-navy/40'
+            }`}
+          >
+            {t(`deals.sortBy.${key}`)}
+          </button>
+        ))}
+      />
 
       {groups.length === 0 ? (
         <div className="text-center py-12">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import PageHeader from '../components/PageHeader'
 import {
   getEmailTemplates,
   getMailStatus,
@@ -142,27 +142,19 @@ export default function AdminEmailPage() {
 
   if (!isSuper) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="max-w-3xl">
         <p className="font-body text-sm text-muted">{t('adminEmail.forbidden')}</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="font-display font-bold text-2xl text-navy">
-            {t('adminEmail.title')}
-          </h1>
-          <p className="text-sm font-body text-muted mt-1 max-w-xl">
-            {t('adminEmail.subtitle')}
-          </p>
-        </div>
-        <Link to="/profile" className="text-sm font-body text-link hover:underline">
-          {t('adminEmail.back')}
-        </Link>
-      </div>
+    <div className="max-w-4xl space-y-6">
+      <PageHeader
+        back={{ to: '/profile', label: t('adminEmail.back') }}
+        title={t('adminEmail.title')}
+        description={t('adminEmail.subtitle')}
+      />
 
       {error && (
         <p className="rounded-field border border-danger/30 bg-danger/5 p-3 text-sm font-body text-danger">

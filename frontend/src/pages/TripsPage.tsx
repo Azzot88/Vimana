@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import PageHeader from '../components/PageHeader'
 import { useAuthStore } from '../stores/auth'
 import { listTrips, type Trip } from '../api/trips'
 import AirportSelect from '../components/AirportSelect'
@@ -109,7 +110,7 @@ export default function TripsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display font-bold text-2xl text-navy">{t('trips.title')}</h1>
+      <PageHeader title={t('trips.title')} />
 
       <form onSubmit={handleSearch} className="bg-white rounded-card border border-navy/10 p-4 grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-3 md:items-end">
         <div className="md:flex-1 md:min-w-[160px]">

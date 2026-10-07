@@ -12,6 +12,7 @@ import {
 import { listDeals, type Deal } from '../api/deals'
 import { useAuthStore } from '../stores/auth'
 import { usePrefs } from '../hooks/usePrefs'
+import PageHeader from '../components/PageHeader'
 import { useLiveBeat } from '../hooks/useLiveBeat'
 import AddressCard, { isAddressMessage } from '../components/AddressCard'
 import ShareAddressModal from '../components/ShareAddressModal'
@@ -178,19 +179,17 @@ export default function ChatPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display font-bold text-2xl text-navy truncate">
-            {t('inquiry.chatWith', { name })}
-          </h1>
-          <MonoText className="text-xs text-navy/40">
-            {t('inquiry.encryptedNotice')}
-          </MonoText>
-        </div>
-        <Link to="/deals" className="text-sm font-body text-cyan hover:underline">
-          {t('chats.allDeals')}
-        </Link>
-      </header>
+      <PageHeader
+        title={t('inquiry.chatWith', { name })}
+        description={
+          <MonoText className="text-xs text-navy/40">{t('inquiry.encryptedNotice')}</MonoText>
+        }
+        aside={
+          <Link to="/deals" className="text-sm font-body text-cyan hover:underline">
+            {t('chats.allDeals')}
+          </Link>
+        }
+      />
 
       {/* The deals nested in this chat. With one of them the list is a card;
           with several it is the choice the owner asked for — «должна быть

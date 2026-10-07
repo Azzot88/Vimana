@@ -10,6 +10,8 @@ import {
 import { rulesIndex, type RuleIndexEntry } from '../api/rulesPublic'
 import DateTimeField from '../components/DateTimeField'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
+import LandingShell from '../components/landing/LandingShell'
 import { usePrefs } from '../hooks/usePrefs'
 
 /** T3.11.06 — «что мне нужно собрать, и не поздно ли уже».
@@ -188,209 +190,213 @@ export default function ChecklistWizardPage() {
   )
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      <div>
-        <h1 className="font-display font-semibold text-2xl text-navy">
-          {t('checklist.title')}
-        </h1>
-        {/* DESIGNGUIDELINES §9b — what this screen does and what it does not. */}
-        <p className="text-sm font-body text-navy/60 mt-1">
-          {t('checklist.lead')}
-        </p>
-      </div>
+    // T_UX.40 — the checklist had no frame at all: no header, no way to the rest
+    // of the site. It now wears the same two frames as the rules pages it is
+    // reached from — the public one for a guest, the app shell when signed in.
+    <LandingShell source="sender" appChromeWhenSignedIn>
+      {(_openWaitlist, frame) => (
+        <div
+          className={
+            frame === 'app' ? 'max-w-3xl space-y-6' : 'mx-auto max-w-3xl space-y-6 py-8 sm:py-12'
+          }
+        >
+          {/* DESIGNGUIDELINES §9b — what this screen does and what it does not. */}
+          <PageHeader title={t('checklist.title')} description={t('checklist.lead')} />
 
-      <section className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-        <label className="block">
-          <span className="block text-xs font-body text-navy/40 mb-1">
-            {t('checklist.category')}
-          </span>
-          <select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value)
-              setOrigin('')
-              setDestination('')
-              setResult(null)
-            }}
-            className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm"
-          >
-            <option value="">—</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {t(`categories.${c}`, { defaultValue: c })}
-              </option>
-            ))}
-          </select>
-        </label>
+          <section className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
+            <label className="block">
+              <span className="block text-xs font-body text-navy/40 mb-1">
+                {t('checklist.category')}
+              </span>
+              <select
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value)
+                  setOrigin('')
+                  setDestination('')
+                  setResult(null)
+                }}
+                className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm"
+              >
+                <option value="">—</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`categories.${c}`, { defaultValue: c })}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <div className="flex flex-wrap gap-3">
-          <label className="flex-1 min-w-[9rem]">
-            <span className="block text-xs font-body text-navy/40 mb-1">
-              {t('checklist.from')}
-            </span>
-            <select
-              value={origin}
-              disabled={!category}
-              onChange={(e) => setOrigin(e.target.value)}
-              className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm disabled:bg-navy/5"
-            >
-              <option value="">—</option>
-              {origins.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex-1 min-w-[9rem]">
-            <span className="block text-xs font-body text-navy/40 mb-1">
-              {t('checklist.to')}
-            </span>
-            <select
-              value={destination}
-              disabled={!category}
-              onChange={(e) => setDestination(e.target.value)}
-              className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm disabled:bg-navy/5"
-            >
-              <option value="">—</option>
-              {destinations.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        {/* Optional, and the screen says what leaving it empty costs rather than
-            demanding it: a person who has not chosen a flight still deserves the
-            list, they just do not get the deadlines. */}
-        <div>
-          <span className="block text-xs font-body text-navy/40 mb-1">
-            {t('checklist.departAt')}
-          </span>
-          <DateTimeField value={departAt} onChange={setDepartAt} style={prefs.style} />
-          <p className="text-[11px] font-body text-navy/40 mt-1">
-            {t('checklist.departHint')}
-          </p>
-        </div>
-
-        {category && origin && destination && (
-          <button
-            type="button"
-            onClick={build}
-            disabled={busy}
-            className="bg-navy text-ivory font-display font-medium text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-navy-mid disabled:opacity-50"
-          >
-            {busy ? t('common.loading') : t('checklist.build')}
-          </button>
-        )}
-        {categories.length === 0 && (
-          <p className="text-xs font-body text-navy/40">
-            {t('checklist.noCorpus')}
-          </p>
-        )}
-      </section>
-
-      {/* The questionnaire, built from what the corpus asks. Shown after the
-          first build rather than before it: the questions depend on the
-          corridor, and asking them up front would ask about rules that do not
-          apply here. */}
-      {result && result.asks.length > 0 && (
-        <section className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
-          <h2 className="font-display font-semibold text-sm text-navy">
-            {t('checklist.questions')}
-          </h2>
-          <p className="text-[11px] font-body text-navy/40">
-            {t('checklist.questionsHint')}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {result.asks.map((attr) => (
-              <label key={attr} className="flex-1 min-w-[10rem]">
+            <div className="flex flex-wrap gap-3">
+              <label className="flex-1 min-w-[9rem]">
                 <span className="block text-xs font-body text-navy/40 mb-1">
-                  {t(`checklist.attr.${attr}`, { defaultValue: attr })}
+                  {t('checklist.from')}
                 </span>
-                {/* DESIGNGUIDELINES §9b — every question says what it changes.
-                    Without it the form asks a stranger for their pet's
-                    generation and gives no reason, which reads as data
-                    collection rather than as a question with consequences. */}
-                <span className="block text-[11px] font-body text-navy/40 mb-1">
-                  {t(`checklist.attrEffect.${attr}`, { defaultValue: '' })}
-                </span>
-                <input
-                  value={raw[attr] ?? ''}
-                  onChange={(e) => answer(attr, e.target.value)}
-                  placeholder={
-                    t(`checklist.attrHint.${attr}`, { defaultValue: '' }) as string
-                  }
-                  className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm"
-                />
-              </label>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={build}
-            disabled={busy}
-            className="border border-navy/20 text-navy font-body text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-navy/5 disabled:opacity-50"
-          >
-            {t('checklist.rebuild')}
-          </button>
-        </section>
-      )}
-
-      {error && <p className="text-xs font-mono text-danger">{error}</p>}
-
-      {result && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h2 className="font-display font-semibold text-lg text-navy">
-              {t('checklist.result', { count: result.items.length })}
-            </h2>
-            {result.corridor.length > 0 && (
-              <MonoText className="text-xs text-navy/40">
-                {result.corridor.join(' → ')}
-              </MonoText>
-            )}
-          </div>
-
-          {result.items.length === 0 ? (
-            <p className="text-sm font-body text-navy/50">
-              {t('checklist.empty')}
-            </p>
-          ) : (
-            <ul className="space-y-2">{result.items.map(row)}</ul>
-          )}
-
-          {result.items.length > 0 && (
-            <div className="space-y-2 pt-2">
-              {savedId ? (
-                <p className="text-xs font-body text-navy/60">
-                  {t('checklist.saved')}{' '}
-                  <MonoText className="text-xs text-navy">{savedId}</MonoText>
-                </p>
-              ) : (
-
-                <button
-                  type="button"
-                  onClick={keep}
-                  disabled={busy}
-                  className="border border-cyan/40 text-cyan font-body text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-cyan/10 disabled:opacity-50"
+                <select
+                  value={origin}
+                  disabled={!category}
+                  onChange={(e) => setOrigin(e.target.value)}
+                  className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm disabled:bg-navy/5"
                 >
-                  {t('checklist.keep')}
-                </button>
-              )}
-              {/* §9.1 — what this is and what it is not, in the same place as
-                  the list. The platform collects published requirements; it does
-                  not rule on anybody's paperwork. */}
-              <p className="text-[11px] font-body text-navy/40">
-                {t('checklist.disclaimer')}
+                  <option value="">—</option>
+                  {origins.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex-1 min-w-[9rem]">
+                <span className="block text-xs font-body text-navy/40 mb-1">
+                  {t('checklist.to')}
+                </span>
+                <select
+                  value={destination}
+                  disabled={!category}
+                  onChange={(e) => setDestination(e.target.value)}
+                  className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm disabled:bg-navy/5"
+                >
+                  <option value="">—</option>
+                  {destinations.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {/* Optional, and the screen says what leaving it empty costs rather than
+                demanding it: a person who has not chosen a flight still deserves the
+                list, they just do not get the deadlines. */}
+            <div>
+              <span className="block text-xs font-body text-navy/40 mb-1">
+                {t('checklist.departAt')}
+              </span>
+              <DateTimeField value={departAt} onChange={setDepartAt} style={prefs.style} />
+              <p className="text-[11px] font-body text-navy/40 mt-1">
+                {t('checklist.departHint')}
               </p>
             </div>
+
+            {category && origin && destination && (
+              <button
+                type="button"
+                onClick={build}
+                disabled={busy}
+                className="bg-navy text-ivory font-display font-medium text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-navy-mid disabled:opacity-50"
+              >
+                {busy ? t('common.loading') : t('checklist.build')}
+              </button>
+            )}
+            {categories.length === 0 && (
+              <p className="text-xs font-body text-navy/40">
+                {t('checklist.noCorpus')}
+              </p>
+            )}
+          </section>
+
+          {/* The questionnaire, built from what the corpus asks. Shown after the
+              first build rather than before it: the questions depend on the
+              corridor, and asking them up front would ask about rules that do not
+              apply here. */}
+          {result && result.asks.length > 0 && (
+            <section className="bg-white rounded-card border border-navy/10 p-4 space-y-3">
+              <h2 className="font-display font-semibold text-sm text-navy">
+                {t('checklist.questions')}
+              </h2>
+              <p className="text-[11px] font-body text-navy/40">
+                {t('checklist.questionsHint')}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {result.asks.map((attr) => (
+                  <label key={attr} className="flex-1 min-w-[10rem]">
+                    <span className="block text-xs font-body text-navy/40 mb-1">
+                      {t(`checklist.attr.${attr}`, { defaultValue: attr })}
+                    </span>
+                    {/* DESIGNGUIDELINES §9b — every question says what it changes.
+                        Without it the form asks a stranger for their pet's
+                        generation and gives no reason, which reads as data
+                        collection rather than as a question with consequences. */}
+                    <span className="block text-[11px] font-body text-navy/40 mb-1">
+                      {t(`checklist.attrEffect.${attr}`, { defaultValue: '' })}
+                    </span>
+                    <input
+                      value={raw[attr] ?? ''}
+                      onChange={(e) => answer(attr, e.target.value)}
+                      placeholder={
+                        t(`checklist.attrHint.${attr}`, { defaultValue: '' }) as string
+                      }
+                      className="w-full px-3 py-2 rounded-field border border-navy/15 font-body text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={build}
+                disabled={busy}
+                className="border border-navy/20 text-navy font-body text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-navy/5 disabled:opacity-50"
+              >
+                {t('checklist.rebuild')}
+              </button>
+            </section>
           )}
-        </section>
+
+          {error && <p className="text-xs font-mono text-danger">{error}</p>}
+
+          {result && (
+            <section className="space-y-3">
+              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                <h2 className="font-display font-semibold text-lg text-navy">
+                  {t('checklist.result', { count: result.items.length })}
+                </h2>
+                {result.corridor.length > 0 && (
+                  <MonoText className="text-xs text-navy/40">
+                    {result.corridor.join(' → ')}
+                  </MonoText>
+                )}
+              </div>
+
+              {result.items.length === 0 ? (
+                <p className="text-sm font-body text-navy/50">
+                  {t('checklist.empty')}
+                </p>
+              ) : (
+                <ul className="space-y-2">{result.items.map(row)}</ul>
+              )}
+
+              {result.items.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  {savedId ? (
+                    <p className="text-xs font-body text-navy/60">
+                      {t('checklist.saved')}{' '}
+                      <MonoText className="text-xs text-navy">{savedId}</MonoText>
+                    </p>
+                  ) : (
+
+                    <button
+                      type="button"
+                      onClick={keep}
+                      disabled={busy}
+                      className="border border-cyan/40 text-cyan font-body text-sm px-4 py-2 min-h-[2.75rem] rounded-field hover:bg-cyan/10 disabled:opacity-50"
+                    >
+                      {t('checklist.keep')}
+                    </button>
+                  )}
+                  {/* §9.1 — what this is and what it is not, in the same place as
+                      the list. The platform collects published requirements; it does
+                      not rule on anybody's paperwork. */}
+                  <p className="text-[11px] font-body text-navy/40">
+                    {t('checklist.disclaimer')}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
       )}
-    </div>
+    </LandingShell>
   )
 }
 

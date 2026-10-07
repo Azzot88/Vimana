@@ -83,10 +83,10 @@ export default function ProfileVaultPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display font-bold text-xl text-navy">{t('vault.title')}</h1>
-        <p className="text-sm font-body text-navy/50 mt-1">{t('vault.lead')}</p>
-      </div>
+      {/* T_UX.40 — the section title is `ProfileLayout`'s `h1` («Сейф»); a
+          second `h1` with the same word was a duplicate heading. The lead stays:
+          it is the §9b line under that title. */}
+      <p className="text-sm font-body text-navy/60">{t('vault.lead')}</p>
 
       {loading ? (
         <p className="text-sm font-body text-navy/40 text-center py-8">

@@ -444,7 +444,7 @@ export default function DealVaultPage() {
         >
           ← {t('nav.dashboard')}
         </Link>
-        <h1 className="font-display font-bold text-xl text-navy">DealVault</h1>
+        <h1 className="font-display text-2xl font-bold text-navy">DealVault</h1>
         {/* T3.11.24 — the recipient is chosen, not typed. The button used to
             mint a link and copy it silently, which answered only one of the
             three ways a sender knows their recipient: from contacts, by public

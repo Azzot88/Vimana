@@ -6,8 +6,9 @@ import { previewRuleSet, type RuleStatus } from '../api/rules'
 import { usePrefs } from '../hooks/usePrefs'
 import { freshnessOf } from '../lib/format'
 import { renderMarkdown } from '../lib/markdown'
-import LandingShell from '../components/landing/LandingShell'
+import LandingShell, { type ShellFrame } from '../components/landing/LandingShell'
 import Breadcrumbs from '../components/Breadcrumbs'
+import PageHeader from '../components/PageHeader'
 import MonoText from '../components/MonoText'
 
 /**
@@ -128,10 +129,26 @@ export default function RulesPage({
     </div>
   )
 
-  const body = (openWaitlist: () => void) => {
+  // T_UX.40 — in the app shell the way back is one link, the same one nested
+  // screens use (`PageHeader.back`), instead of a trail whose first two steps
+  // repeat the navigation bar.
+  const back = previewSetId
+    ? { to: '/admin/rules', label: t('rulesPage.previewCrumb') }
+    : { to: '/rules', label: t('rulesIndex.navLink') }
+
+  const body = (openWaitlist: () => void, frame: ShellFrame) => {
     if (state === 'loading') return skeleton
 
     if (state === 'missing' || (state === 'idle' && !data)) {
+      if (frame === 'app') {
+        return (
+          <PageHeader
+            back={back}
+            title={t('rulesPage.missingTitle')}
+            description={t('rulesPage.missingBody')}
+          />
+        )
+      }
       return (
         <>
           <Breadcrumbs items={crumbs(t('rulesPage.missingCrumb'))} />
@@ -149,7 +166,11 @@ export default function RulesPage({
     if (state === 'failed' || !data) {
       return (
         <>
-          <Breadcrumbs items={crumbs(t('rulesPage.missingCrumb'))} />
+          {frame === 'app' ? (
+            <PageHeader back={back} title={t('rulesPage.missingCrumb')} />
+          ) : (
+            <Breadcrumbs items={crumbs(t('rulesPage.missingCrumb'))} />
+          )}
           <p className="mt-5 font-mono text-sm text-danger">{t('rulesPage.failed')}</p>
         </>
       )
@@ -159,6 +180,22 @@ export default function RulesPage({
     const category = t(`categories.${data.category_key}`, {
       defaultValue: data.category_key,
     })
+    const title = data.title || t('rulesPage.untitled')
+
+    // The same departure-board line as the catalogue row, so a reader arriving
+    // from there recognises where they landed. The arrow points the way the
+    // goods travel. Above the title in both frames.
+    const directionLine = (
+      <MonoText className="text-[11px] uppercase tracking-[0.14em] text-cyan">
+        {data.direction === 'export'
+          ? `${data.jurisdiction_code} →`
+          : `→ ${data.jurisdiction_code}`}
+        <span className="text-navy/35">
+          {' · '}
+          {category}
+        </span>
+      </MonoText>
+    )
 
     // Built once and rendered twice: as a rail beside the text on a wide
     // screen, and as a disclosure at the top of the page where the rail does
@@ -194,7 +231,13 @@ export default function RulesPage({
       // before the rebuild (owner's decision 2026-09-02), and the contents rail
       // sits in the margin beside it rather than inside it, so getting the text
       // back does not cost the reader the map of the document.
-      <article className="lg:grid lg:grid-cols-[minmax(0,48rem)_13rem] lg:justify-center lg:gap-10">
+      // In the app shell the grid starts under the logo like every other screen
+      // (DESIGNGUIDELINES §9c); centred is the public frame's measure.
+      <article
+        className={`lg:grid lg:grid-cols-[minmax(0,48rem)_13rem] lg:gap-10 ${
+          frame === 'app' ? 'lg:justify-start' : 'lg:justify-center'
+        }`}
+      >
         <div className="min-w-0">
         {/* T_RULES.7 — said before anything else, so a screenshot of a draft
             cannot pass for the live corridor. */}
@@ -208,50 +251,48 @@ export default function RulesPage({
             })}
           </p>
         )}
-        <Breadcrumbs
-          items={
-            previewSetId
-              ? [
-                  { label: t('rulesPage.previewCrumb'), to: '/admin/rules' },
-                  { label: data.title || t('rulesPage.untitled') },
-                ]
-              : [
-                  { label: t('rulesIndex.crumbHome'), to: '/' },
-                  { label: t('rulesIndex.navLink'), to: '/rules' },
-                  { label: category, to: '/rules' },
-                  // The corridor's own title, not a direction glued to a
-                  // country name. `"Вывоз из" + "Россия"` produced "Вывоз из
-                  // Россия": Russian declines the country and a template
-                  // cannot. The title is prose an editor wrote, so it is
-                  // already correct in whatever language the corpus is
-                  // written in.
-                  { label: data.title || t('rulesPage.untitled') },
-                ]
-          }
-        />
+        {frame === 'app' ? (
+          <PageHeader back={back} eyebrow={directionLine} title={title} />
+        ) : (
+          <Breadcrumbs
+            items={
+              previewSetId
+                ? [
+                    { label: t('rulesPage.previewCrumb'), to: '/admin/rules' },
+                    { label: title },
+                  ]
+                : [
+                    { label: t('rulesIndex.crumbHome'), to: '/' },
+                    { label: t('rulesIndex.navLink'), to: '/rules' },
+                    { label: category, to: '/rules' },
+                    // The corridor's own title, not a direction glued to a
+                    // country name. `"Вывоз из" + "Россия"` produced "Вывоз из
+                    // Россия": Russian declines the country and a template
+                    // cannot. The title is prose an editor wrote, so it is
+                    // already correct in whatever language the corpus is
+                    // written in.
+                    { label: title },
+                  ]
+            }
+          />
+        )}
 
-        <header className="mt-5">
-          {/* The same departure-board line as the catalogue row, so a reader
-              arriving from there recognises where they landed. The arrow points
-              the way the goods travel. */}
-          <MonoText className="text-[11px] uppercase tracking-[0.14em] text-cyan">
-            {data.direction === 'export'
-              ? `${data.jurisdiction_code} →`
-              : `→ ${data.jurisdiction_code}`}
-            <span className="text-navy/35">
-              {' · '}
-              {category}
-            </span>
-          </MonoText>
-
-          <h1 className="mt-2 max-w-[22ch] font-display text-4xl font-bold leading-[1.05] tracking-tight text-navy sm:text-5xl">
-            {data.title || t('rulesPage.untitled')}
-          </h1>
+        <div className={frame === 'app' ? '' : 'mt-5'}>
+          {frame === 'landing' && (
+            <>
+              {directionLine}
+              <h1 className="mt-2 max-w-[22ch] font-display text-4xl font-bold leading-[1.05] tracking-tight text-navy sm:text-5xl">
+                {title}
+              </h1>
+            </>
+          )}
 
           {/* Freshness beside the claim, not under it. A rule that went stale
               in silence is the costliest thing this block can produce: the
               reader believes they have prepared. */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div
+            className={`${frame === 'app' ? 'mt-3' : 'mt-4'} flex flex-wrap items-center gap-x-4 gap-y-2`}
+          >
             {fresh ? (
               <MonoText
                 className={`text-xs ${fresh.stale ? 'text-amber' : 'text-navy/55'}`}
@@ -290,7 +331,7 @@ export default function RulesPage({
               {t('rulesPage.partiallyTranslated')}
             </p>
           )}
-        </header>
+        </div>
 
         {/* The contents where the rail does not fit. A native `details` rather
             than a state hook: it is a disclosure, it works before JavaScript
@@ -563,12 +604,19 @@ export default function RulesPage({
   return (
     // T_UX.40 — the app's own shell for a signed-in reader, as on the directory.
     <LandingShell source="sender" appChromeWhenSignedIn>
-      {(openWaitlist) => (
+      {(openWaitlist, frame) => (
         // Capped at the old measure below `lg`; released above it so the
         // article's own grid can put the contents rail alongside the text
-        // instead of taking a bite out of it.
-        <div className="mx-auto max-w-3xl py-8 sm:py-12 lg:max-w-none">
-          {body(openWaitlist)}
+        // instead of taking a bite out of it. In the app shell the gutters and
+        // the vertical rhythm are the shell's (DESIGNGUIDELINES §9c).
+        <div
+          className={
+            frame === 'app'
+              ? 'max-w-3xl lg:max-w-none'
+              : 'mx-auto max-w-3xl py-8 sm:py-12 lg:max-w-none'
+          }
+        >
+          {body(openWaitlist, frame)}
         </div>
       )}
     </LandingShell>

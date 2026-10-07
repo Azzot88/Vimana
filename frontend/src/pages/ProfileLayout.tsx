@@ -5,6 +5,7 @@ import { hasRole } from '../lib/permissions'
 import type { UserRole } from '../api/auth'
 import { useBentoLayout } from '../hooks/useBentoLayout'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 import { APP_VERSION } from '../version'
 
 /**
@@ -128,12 +129,7 @@ export default function ProfileLayout() {
           thing, and every card in every section already starts at `h2`. This
           keeps one heading level per screen without touching twenty
           components. */}
-      <div>
-        <p className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
-          {t('profile.title')}
-        </p>
-        <h1 className="font-display font-bold text-2xl text-navy">{t(active.labelKey)}</h1>
-      </div>
+      <PageHeader eyebrow={t('profile.title')} title={t(active.labelKey)} />
 
       {isPhone ? (
         <div className="space-y-4">

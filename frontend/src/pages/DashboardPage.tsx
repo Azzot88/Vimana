@@ -380,7 +380,7 @@ export default function DashboardPage() {
           <span aria-hidden="true" className="text-2xl">
             {isCarrier ? '✈️' : '📦'}
           </span>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-navy">
+          <h1 className="font-display text-2xl font-bold text-navy">
             {user ? t('dashboard.welcome', { name: user.display_name }) : 'Dashboard'}
           </h1>
         </div>

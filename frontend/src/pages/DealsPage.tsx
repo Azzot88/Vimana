@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import PageHeader from '../components/PageHeader'
 import { useAuthStore } from '../stores/auth'
 import { listDeals, type Deal } from '../api/deals'
 import { roleIn } from '../lib/dealRole'
@@ -31,7 +32,7 @@ export default function DealsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display font-bold text-2xl text-navy">{t('deals.title')}</h1>
+      <PageHeader title={t('deals.title')} />
       {deals.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm font-body text-navy/40">{t('deals.noDeals')}</p>

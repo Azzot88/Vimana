@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import PageHeader from '../components/PageHeader'
 import {
   corridorDemand,
   fileRequest,
@@ -93,14 +94,9 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      <div>
-        <h1 className="font-display font-semibold text-2xl text-navy">
-          {t('requests.title')}
-        </h1>
-        {/* DESIGNGUIDELINES §9b — what this does, and what it is not. */}
-        <p className="text-sm font-body text-navy/60 mt-1">{t('requests.lead')}</p>
-      </div>
+    <div className="max-w-3xl space-y-6">
+      {/* DESIGNGUIDELINES §9b — what this does, and what it is not. */}
+      <PageHeader title={t('requests.title')} description={t('requests.lead')} />
 
       <form
         onSubmit={submit}

@@ -25,6 +25,10 @@ import { APP_VERSION } from '../../version'
 /** Frozen with the endpoint and its admin read (T_UX.7): `{email, name, source}`. */
 export type WaitlistSource = 'landing' | 'carrier' | 'sender' | 'business'
 
+/** T_UX.40 — which frame a page is drawn in: this marketing frame, or the app's
+ *  `Layout` for a signed-in visitor (`appChromeWhenSignedIn`). */
+export type ShellFrame = 'landing' | 'app'
+
 interface Props {
   source: WaitlistSource
   /** Nav button for a guest. Signed-in visitors always get "go to the panel". */
@@ -36,7 +40,9 @@ interface Props {
    *  «Правила» into a different header with no way back was the bug. A guest
    *  still gets this frame, which is also what the server renders. */
   appChromeWhenSignedIn?: boolean
-  children: (openWaitlist: () => void) => ReactNode
+  /** The frame the page is drawn in, so a page that lives in both can drop what the
+   *  other frame already provides — breadcrumbs and its own gutters in the app. */
+  children: (openWaitlist: () => void, frame: ShellFrame) => ReactNode
 }
 
 export function LandingLabel({ children }: { children: ReactNode }) {
@@ -224,7 +230,7 @@ export default function LandingShell({
   if (appChromeWhenSignedIn && authState === 'authenticated' && user) {
     return (
       <Layout>
-        {children(openWaitlist)}
+        {children(openWaitlist, 'app')}
         {waitlistModal}
       </Layout>
     )
@@ -270,7 +276,7 @@ export default function LandingShell({
       </nav>
 
       <main id="main" className="mx-auto max-w-5xl px-5">
-        {children(openWaitlist)}
+        {children(openWaitlist, 'landing')}
       </main>
 
       <footer className="border-t border-navy/10">

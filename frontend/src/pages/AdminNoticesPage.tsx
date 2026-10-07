@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
+import PageHeader from '../components/PageHeader'
 import { isSuperuser } from '../lib/permissions'
 import {
   createPlatformNotice,
@@ -101,7 +102,7 @@ export default function AdminNoticesPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display font-bold text-2xl text-navy">Notices</h1>
+      <PageHeader title="Notices" />
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 
       <section className="bg-white rounded-card border border-navy/10 p-6 space-y-4">

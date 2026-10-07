@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createInvite, type Invite } from '../api/social'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 
 /**
  * T_UX.7 pt.3 — translated. Every string here was Russian in the source.
@@ -57,7 +58,7 @@ export default function InvitePage() {
 
   return (
     <div className="max-w-md space-y-6">
-      <h1 className="font-display font-bold text-2xl text-navy">{t('invite.title')}</h1>
+      <PageHeader title={t('invite.title')} />
 
       <div className="bg-white rounded-card border border-navy/10 p-6 space-y-4">
         <p className="text-sm font-body text-navy/60">{t('invite.hint')}</p>

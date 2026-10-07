@@ -6,6 +6,7 @@ import { deleteUser, listAllUsers, offerRole, revokeRole } from '../api/admin'
 import type { User, UserRole } from '../api/auth'
 import { isSuperuser } from '../lib/permissions'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 
 const E2E_MARKER = '@e2e.vimana.local'
 
@@ -153,14 +154,14 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('admin.usersTitle')}
-        </h1>
-        <MonoText className="text-xs text-navy/50">
-          {users.length} total {testCount > 0 && `· ${testCount} test`}
-        </MonoText>
-      </div>
+      <PageHeader
+        title={t('admin.usersTitle')}
+        aside={
+          <MonoText className="text-xs text-navy/50">
+            {users.length} total {testCount > 0 && `· ${testCount} test`}
+          </MonoText>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-xs font-body text-navy/70 cursor-pointer">

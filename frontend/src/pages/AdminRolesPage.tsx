@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import PageHeader from '../components/PageHeader'
 import { Navigate } from 'react-router-dom'
 import { openRoleOffers, revokeRole, type PendingOffer } from '../api/admin'
 import { isSuperuser } from '../lib/permissions'
@@ -72,15 +73,8 @@ export default function AdminRolesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display font-bold text-2xl text-navy">
-          {t('adminRoles.title')}
-        </h1>
-        {/* §9b — what this screen is and what it does not cover. */}
-        <p className="text-sm font-body text-navy/60 mt-1">
-          {t('adminRoles.description')}
-        </p>
-      </div>
+      {/* §9b — what this screen is and what it does not cover. */}
+      <PageHeader title={t('adminRoles.title')} description={t('adminRoles.description')} />
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 

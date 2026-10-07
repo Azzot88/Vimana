@@ -49,7 +49,7 @@ export default function CarrierPage() {
   const isMe = me?.id === carrierId
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+    <div className="max-w-3xl space-y-5">
       <Link
         to="/trips"
         className="text-xs font-body text-navy/40 hover:text-navy transition-colors"
@@ -59,7 +59,7 @@ export default function CarrierPage() {
 
       <div className="bg-white rounded-card border border-navy/10 p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-display font-semibold text-navy">
+          <h1 className="font-display text-2xl font-bold text-navy">
             {first?.carrier_name ?? t('carrier.unknown')}
           </h1>
           <UBAChip uba={first?.carrier_uba} level={first?.carrier_uba_level} />

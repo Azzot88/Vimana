@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import { roleJournal } from '../api/admin'
 import type { RoleGrant } from '../api/roles'
 import { isSuperuser } from '../lib/permissions'
 import { usePrefs } from '../hooks/usePrefs'
 import { useAuthStore } from '../stores/auth'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 
 /**
  * T_UX.25 — where a role came from, and where it went.
@@ -62,19 +63,12 @@ export default function AdminRoleJournalPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          to="/admin/users"
-          className="text-xs font-body text-navy/40 hover:text-navy transition-colors"
-        >
-          ← {t('adminJournal.back')}
-        </Link>
-        <h1 className="font-display font-bold text-xl text-navy">
-          {t('adminJournal.title')}
-        </h1>
-        <MonoText className="text-xs text-navy/40">{userId}</MonoText>
-      </div>
-      <p className="text-sm font-body text-navy/50">{t('adminJournal.lead')}</p>
+      <PageHeader
+        back={{ to: '/admin/users', label: t('adminJournal.back') }}
+        title={t('adminJournal.title')}
+        description={t('adminJournal.lead')}
+        aside={<MonoText className="text-xs text-navy/40">{userId}</MonoText>}
+      />
 
       {error && <p className="text-xs font-mono text-danger">{error}</p>}
 

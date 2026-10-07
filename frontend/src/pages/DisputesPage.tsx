@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { listDeals, type Deal } from '../api/deals'
 import { usePrefs } from '../hooks/usePrefs'
 import MonoText from '../components/MonoText'
+import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import ArbiterQueue from '../components/ArbiterQueue'
 import { useAuthStore } from '../stores/auth'
@@ -37,10 +38,8 @@ export default function DisputesPage() {
   }, [t])
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-      <h1 className="text-xl font-display font-semibold text-navy">
-        {t('nav.disputes')}
-      </h1>
+    <div className="max-w-3xl space-y-4">
+      <PageHeader title={t('nav.disputes')} />
       <h2 className="text-xs font-display font-semibold text-navy/50 uppercase tracking-wide">
         {t('disputes.mine')}
       </h2>

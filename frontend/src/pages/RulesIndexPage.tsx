@@ -6,6 +6,7 @@ import { usePrefs } from '../hooks/usePrefs'
 import { freshnessOf } from '../lib/format'
 import LandingShell from '../components/landing/LandingShell'
 import Breadcrumbs from '../components/Breadcrumbs'
+import PageHeader from '../components/PageHeader'
 import MonoText from '../components/MonoText'
 
 /**
@@ -349,26 +350,36 @@ export default function RulesIndexPage({ initial }: { initial?: RuleIndexEntry[]
     // «Правила» in that navigation, and leaving the navigation to read it was
     // the bug. A guest and the server render keep the public frame.
     <LandingShell source="sender" appChromeWhenSignedIn>
-      {(openWaitlist) => (
+      {(openWaitlist, frame) => (
         // Back to the measure the page had before the rebuild (owner's
         // decision 2026-09-02). The catalogue has no side rail, so the cap is
-        // simply the reading width and holds at every size.
-        <div className="mx-auto max-w-3xl py-8 sm:py-12">
-          <Breadcrumbs
-            items={[
-              { label: t('rulesIndex.crumbHome'), to: '/' },
-              { label: t('rulesIndex.navLink') },
-            ]}
-          />
+        // simply the reading width and holds at every size. In the app shell
+        // the gutters and the vertical rhythm are the shell's (DESIGNGUIDELINES
+        // §9c): the column sits under the logo like every other screen.
+        <div className={frame === 'app' ? 'max-w-3xl' : 'mx-auto max-w-3xl py-8 sm:py-12'}>
+          {frame === 'app' ? (
+            // No breadcrumbs here: «Правила» is lit in the navigation above,
+            // and a trail of «Главная / Правила» under it says the same twice.
+            <PageHeader title={t('rulesIndex.title')} description={t('rulesIndex.lede')} />
+          ) : (
+            <>
+              <Breadcrumbs
+                items={[
+                  { label: t('rulesIndex.crumbHome'), to: '/' },
+                  { label: t('rulesIndex.navLink') },
+                ]}
+              />
 
-          <header className="mt-5 max-w-[46ch]">
-            <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-navy sm:text-5xl">
-              {t('rulesIndex.title')}
-            </h1>
-            <p className="mt-4 max-w-[62ch] text-base font-body leading-relaxed text-navy/70">
-              {t('rulesIndex.lede')}
-            </p>
-          </header>
+              <header className="mt-5 max-w-[46ch]">
+                <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-navy sm:text-5xl">
+                  {t('rulesIndex.title')}
+                </h1>
+                <p className="mt-4 max-w-[62ch] text-base font-body leading-relaxed text-navy/70">
+                  {t('rulesIndex.lede')}
+                </p>
+              </header>
+            </>
+          )}
 
           {/* The scale of the corpus, from the corpus. This is the trust
               signal for a reference work, and every number here is counted
